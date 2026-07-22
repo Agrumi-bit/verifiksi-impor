@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" preserveAspectRatio="xMidYMax slice" role="img" aria-label="Ilustrasi bangunan gudang">
+  <defs>
+    <linearGradient id="gudang-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f3e6dd" />
+      <stop offset="100%" stop-color="#e9d3c4" />
+    </linearGradient>
+    <linearGradient id="gudang-wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b7a396" />
+      <stop offset="100%" stop-color="#a08c7e" />
+    </linearGradient>
+  </defs>
+
+  <rect width="400" height="220" fill="url(#gudang-sky)" />
+  <rect x="0" y="188" width="400" height="32" fill="#d8c3b3" />
+
+  <!-- main shed body -->
+  <rect x="56" y="108" width="290" height="80" fill="url(#gudang-wall)" />
+
+  <!-- corrugated roof -->
+  <polyline points="40,108 70,84 110,108 150,84 190,108 230,84 270,108 310,84 350,108 362,108"
+    fill="none" stroke="#6b5847" stroke-width="8" stroke-linejoin="round" stroke-linecap="round" />
+  <rect x="40" y="104" width="322" height="8" fill="#6b5847" />
+
+  <!-- roofline clerestory windows -->
+  <g fill="#f7ede6" fill-opacity="0.75">
+    <rect x="80" y="114" width="20" height="8" rx="1" />
+    <rect x="112" y="114" width="20" height="8" rx="1" />
+    <rect x="144" y="114" width="20" height="8" rx="1" />
+    <rect x="238" y="114" width="20" height="8" rx="1" />
+    <rect x="270" y="114" width="20" height="8" rx="1" />
+    <rect x="302" y="114" width="20" height="8" rx="1" />
+  </g>
+
+  <!-- large roller shutter door -->
+  <rect x="168" y="138" width="66" height="50" rx="3" fill="#7c6858" />
+  <g stroke="#e0662e" stroke-width="3" stroke-opacity="0.55">
+    <line x1="170" y1="146" x2="232" y2="146" />
+    <line x1="170" y1="154" x2="232" y2="154" />
+    <line x1="170" y1="162" x2="232" y2="162" />
+    <line x1="170" y1="170" x2="232" y2="170" />
+    <line x1="170" y1="178" x2="232" y2="178" />
+  </g>
+  <rect x="168" y="138" width="66" height="6" fill="#e0662e" />
+
+  <!-- side personnel door + window -->
+  <rect x="76" y="156" width="22" height="32" rx="2" fill="#4a3c30" />
+  <rect x="252" y="150" width="26" height="22" rx="2" fill="#f7ede6" fill-opacity="0.8" />
+  <rect x="300" y="150" width="26" height="22" rx="2" fill="#f7ede6" fill-opacity="0.8" />
+
+  <!-- loading dock platform -->
+  <rect x="160" y="188" width="82" height="8" fill="#8a7565" />
+
+  <!-- delivery truck silhouette -->
+  <g fill="#3a2f27" fill-opacity="0.75">
+    <rect x="296" y="166" width="52" height="22" rx="2" />
+    <rect x="344" y="172" width="20" height="16" rx="2" />
+    <circle cx="312" cy="190" r="6" />
+    <circle cx="356" cy="190" r="6" />
+  </g>
+</svg>

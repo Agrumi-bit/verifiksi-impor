@@ -1,0 +1,447 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+
+  role String? @default("SURVEYOR")
+
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  assignments            Assignment[] @relation("SurveyorAssignments")
+  verifikatorAssignments Assignment[] @relation("VerifikatorAssignments")
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  ADMINISTRATIVE_REVIEW
+  SURVEY_SCHEDULED
+  FIELD_VERIFICATION
+  VERIFICATION
+  TECHNICAL_REVIEW
+  COMPLIANCE_REVIEW
+  REPORT_GENERATION
+  COMPLETED
+  RETURNED
+  REJECTED
+  WITHDRAWN
+}
+
+model Application {
+  id                  String            @id @default(cuid())
+  applicationNumber   String            @unique
+  verificationType    String
+  applicationCategory String
+  status              ApplicationStatus @default(SUBMITTED)
+  payload             Json
+  companyId           String?
+  company             Company?          @relation(fields: [companyId], references: [id])
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  assignments Assignment[]
+
+  @@index([companyId])
+  @@map("application")
+}
+
+enum MitraType {
+  INDUSTRI
+  NON_INDUSTRI
+}
+
+enum MitraStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Mitra {
+  id     String      @id @default(cuid())
+  type   MitraType
+  status MitraStatus @default(ACTIVE)
+
+  name            String
+  nibNumber       String
+  nibDocumentPath String
+  address         String
+  city            String
+  province        String
+  contactName     String
+  contactPhone    String
+  contactEmail    String
+
+  // Mitra Industri only
+  lhvkiNumber       String?
+  lhvkiIssueDate    DateTime?
+  lhvkiDocumentPath String?
+
+  // Mitra Non Industri only
+  contractNumber       String?
+  contractDate         DateTime?
+  contractDocumentPath String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@map("mitra")
+}
+
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Company {
+  id     String        @id @default(cuid())
+  status CompanyStatus @default(ACTIVE)
+
+  companyName        String
+  companyType        String
+  investmentStatus   String
+  companyEmail       String
+  companyPhone       String
+  companyWebsite     String?
+  contactFullName    String
+  contactDesignation String
+  contactEmail       String
+  contactPhone       String
+
+  nibNumber                String
+  nibIssueDate             DateTime
+  nibDocumentPath          String
+  kbliEntries              Json
+  kbliDocumentPath         String
+  notarialDeedNumber       String
+  notarialDeedIssueDate    DateTime
+  notarialIssuingAuthority String
+  notarialAmendmentInfo    String?
+  notarialDocumentPath     String
+
+  locations Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        User[]
+  applications Application[]
+  merks        Merk[]
+
+  @@map("company")
+}
+
+enum MerkOwnershipType {
+  MILIK_SENDIRI
+  LISENSI
+}
+
+enum MerkStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Merk {
+  id     String     @id @default(cuid())
+  status MerkStatus @default(ACTIVE)
+
+  brandName                String
+  productCategory          String
+  countryOfOrigin          String
+  registrationNumber       String
+  registrationDocumentPath String
+
+  ownershipType  MerkOwnershipType
+  brandOwnerName String
+
+  licenseAgreementNumber String?
+  licenseStartDate       DateTime?
+  licenseEndDate         DateTime?
+  licenseDocumentPath    String?
+
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@map("merk")
+}
+
+enum MasterDataStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model UnitOfMeasurement {
+  id          String             @id @default(cuid())
+  status      MasterDataStatus   @default(ACTIVE)
+  name        String
+  symbol      String
+  description String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  hsCodes     HsCodeMasterData[]
+
+  @@map("unit_of_measurement")
+}
+
+model CommodityGroup {
+  id          String              @id @default(cuid())
+  status      MasterDataStatus    @default(ACTIVE)
+  name        String
+  code        String
+  description String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  subGroups   CommoditySubGroup[]
+  hsCodes     HsCodeMasterData[]
+
+  @@map("commodity_group")
+}
+
+model CommoditySubGroup {
+  id               String             @id @default(cuid())
+  status           MasterDataStatus   @default(ACTIVE)
+  name             String
+  code             String
+  description      String?
+  commodityGroupId String
+  commodityGroup   CommodityGroup     @relation(fields: [commodityGroupId], references: [id])
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  hsCodes          HsCodeMasterData[]
+
+  @@index([commodityGroupId])
+  @@map("commodity_sub_group")
+}
+
+model KbliMasterData {
+  id          String           @id @default(cuid())
+  status      MasterDataStatus @default(ACTIVE)
+  code        String
+  description String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("kbli_master_data")
+}
+
+model HsCodeMasterData {
+  id                  String            @id @default(cuid())
+  status              MasterDataStatus  @default(ACTIVE)
+  hsCode              String
+  description         String
+  commodityGroupId    String
+  commodityGroup      CommodityGroup    @relation(fields: [commodityGroupId], references: [id])
+  commoditySubGroupId String
+  commoditySubGroup   CommoditySubGroup @relation(fields: [commoditySubGroupId], references: [id])
+  unitOfMeasurementId String
+  unitOfMeasurement   UnitOfMeasurement @relation(fields: [unitOfMeasurementId], references: [id])
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@index([commodityGroupId])
+  @@index([commoditySubGroupId])
+  @@index([unitOfMeasurementId])
+  @@map("hs_code_master_data")
+}
+
+enum AssignmentStatus {
+  ASSIGNED
+  SCHEDULED
+  IN_PROGRESS
+  SUBMITTED
+  RETURNED
+  COMPLETED
+}
+
+enum AssignmentPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model Assignment {
+  id               String             @id @default(cuid())
+  assignmentNumber String             @unique
+  status           AssignmentStatus   @default(ASSIGNED)
+  priority         AssignmentPriority @default(MEDIUM)
+
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+
+  surveyorId String
+  surveyor   User   @relation("SurveyorAssignments", fields: [surveyorId], references: [id])
+
+  verifikatorId String?
+  verifikator   User?   @relation("VerifikatorAssignments", fields: [verifikatorId], references: [id])
+
+  scheduledDate   DateTime?
+  scheduledTime   String?
+  dueDate         DateTime?
+  location        String?
+  teamMembers     Json?
+  businessType    String?
+  productCategory String?
+
+  // Verifikator's desk-review layer, populated once the assignment reaches
+  // SUBMITTED (all location visits completed by the surveyor). Keyed JSON
+  // maps mirror the LocationVisit.checklist/findings pattern used elsewhere
+  // in this schema rather than adding relational tables for what is
+  // fundamentally a per-item decision map over the Application.payload
+  // document/product lists.
+  documentVerifications Json?
+  productVerifications  Json?
+  validationNotes       String?
+  validatedAt           DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  report         SurveyReport?
+  locationVisits LocationVisit[]
+
+  @@index([applicationId])
+  @@index([surveyorId])
+  @@index([verifikatorId])
+  @@map("assignment")
+}
+
+enum LocationVisitStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model LocationVisit {
+  id     String              @id @default(cuid())
+  status LocationVisitStatus @default(NOT_STARTED)
+
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+
+  locationType String
+  address      String
+  city         String?
+  description  String?
+
+  scheduledDate DateTime?
+  scheduledTime String?
+
+  checklist              Json?
+  fieldObservationNotes  String?
+  photos                 Json?
+  interviews             Json?
+  findings               Json?
+  reportSummary          String?
+  officeVerification     Json?
+  warehouseVerification  Json?
+  factoryVerification    Json?
+
+  submittedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([assignmentId])
+  @@map("location_visit")
+}
+
+enum SurveyReportStatus {
+  DRAFT
+  SUBMITTED
+  RETURNED
+  APPROVED
+}
+
+model SurveyReport {
+  id     String             @id @default(cuid())
+  status SurveyReportStatus @default(DRAFT)
+
+  assignmentId String     @unique
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+
+  checklist Json?
+  evidence  Json?
+  findings  Json?
+  notes     String?
+
+  submittedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("survey_report")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}

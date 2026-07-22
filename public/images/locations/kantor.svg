@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" preserveAspectRatio="xMidYMax slice" role="img" aria-label="Ilustrasi gedung kantor">
+  <defs>
+    <linearGradient id="kantor-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f3e6dd" />
+      <stop offset="100%" stop-color="#e9d3c4" />
+    </linearGradient>
+    <linearGradient id="kantor-tower" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a68f80" />
+      <stop offset="100%" stop-color="#8a7565" />
+    </linearGradient>
+    <linearGradient id="kantor-tower-side" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#7c6858" />
+      <stop offset="100%" stop-color="#6b5847" />
+    </linearGradient>
+  </defs>
+
+  <rect width="400" height="220" fill="url(#kantor-sky)" />
+  <rect x="0" y="188" width="400" height="32" fill="#d8c3b3" />
+
+  <!-- background low block -->
+  <rect x="24" y="128" width="70" height="60" fill="#c7b3a3" />
+  <rect x="306" y="140" width="66" height="48" fill="#c7b3a3" />
+
+  <!-- main tower -->
+  <rect x="128" y="46" width="108" height="142" fill="url(#kantor-tower)" />
+  <rect x="236" y="60" width="26" height="128" fill="url(#kantor-tower-side)" />
+
+  <!-- rooftop unit -->
+  <rect x="158" y="34" width="30" height="14" rx="2" fill="#6b5847" />
+  <rect x="166" y="24" width="4" height="12" fill="#6b5847" />
+
+  <!-- curtain-wall window grid -->
+  <g fill="#f7ede6" fill-opacity="0.82">
+    <rect x="138" y="58" width="16" height="20" rx="1.5" />
+    <rect x="160" y="58" width="16" height="20" rx="1.5" />
+    <rect x="182" y="58" width="16" height="20" rx="1.5" />
+    <rect x="204" y="58" width="16" height="20" rx="1.5" />
+    <rect x="138" y="86" width="16" height="20" rx="1.5" />
+    <rect x="160" y="86" width="16" height="20" rx="1.5" />
+    <rect x="182" y="86" width="16" height="20" rx="1.5" />
+    <rect x="204" y="86" width="16" height="20" rx="1.5" />
+    <rect x="138" y="114" width="16" height="20" rx="1.5" />
+    <rect x="160" y="114" width="16" height="20" rx="1.5" />
+    <rect x="182" y="114" width="16" height="20" rx="1.5" />
+    <rect x="204" y="114" width="16" height="20" rx="1.5" />
+    <rect x="138" y="142" width="16" height="20" rx="1.5" />
+    <rect x="160" y="142" width="16" height="20" rx="1.5" />
+    <rect x="182" y="142" width="16" height="20" rx="1.5" />
+    <rect x="204" y="142" width="16" height="20" rx="1.5" />
+  </g>
+  <g fill="#f0e2d6" fill-opacity="0.55">
+    <rect x="242" y="70" width="14" height="18" rx="1.5" />
+    <rect x="242" y="96" width="14" height="18" rx="1.5" />
+    <rect x="242" y="122" width="14" height="18" rx="1.5" />
+    <rect x="242" y="148" width="14" height="18" rx="1.5" />
+  </g>
+
+  <!-- entrance canopy -->
+  <rect x="150" y="176" width="64" height="6" rx="2" fill="#e0662e" />
+  <rect x="168" y="164" width="28" height="24" fill="#3a2f27" fill-opacity="0.85" />
+
+  <!-- signage strip -->
+  <rect x="138" y="50" width="82" height="4" rx="2" fill="#e0662e" />
+
+  <!-- ground planting -->
+  <circle cx="108" cy="184" r="9" fill="#c1440e" fill-opacity="0.4" />
+  <rect x="104" y="182" width="8" height="10" fill="#6b5847" />
+  <circle cx="284" cy="180" r="10" fill="#c1440e" fill-opacity="0.4" />
+  <rect x="279" y="178" width="10" height="12" fill="#6b5847" />
+</svg>

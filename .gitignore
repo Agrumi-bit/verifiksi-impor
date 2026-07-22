@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+
+# local file storage (see AGENTS.md Storage Strategy) — keep the tree, ignore uploaded content
+/storage/*/*
+!/storage/*/.gitkeep

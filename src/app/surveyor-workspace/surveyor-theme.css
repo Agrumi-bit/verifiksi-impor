@@ -1,0 +1,166 @@
+/*
+ * Surveyor Workspace design system, ported from a Google Stitch export.
+ * Fully isolated from the shared shadcn theme in globals.css:
+ *   - all tokens are registered under an `sv-` prefix (bg-sv-primary, text-sv-on-surface, …)
+ *   - the actual color VALUES only exist inside `.surveyor-theme`, applied once on the
+ *     workspace root layout, so nothing here can affect Admin or Company Workspace.
+ *
+ * Source values are the exact Material 3 tokens from the Stitch tailwind.config.
+ * Five tokens (surface, on-surface, on-background, primary-fixed, surface-variant) were
+ * referenced by class name in the exported HTML but missing from the exported config —
+ * they're filled in here with the closest Material 3-consistent value and marked below.
+ */
+
+@theme inline {
+  --font-sv-headline-md: "Hanken Grotesk", sans-serif;
+  --font-sv-body-md: "Inter", sans-serif;
+  --font-sv-headline-lg-mobile: "Hanken Grotesk", sans-serif;
+  --font-sv-headline-lg: "Hanken Grotesk", sans-serif;
+  --font-sv-status-label: "Inter", sans-serif;
+  --font-sv-body-lg: "Inter", sans-serif;
+  --font-sv-label-caps: "JetBrains Mono", monospace;
+
+  --text-sv-headline-md: 20px;
+  --text-sv-headline-md--line-height: 28px;
+  --text-sv-headline-md--font-weight: 600;
+
+  --text-sv-body-md: 16px;
+  --text-sv-body-md--line-height: 24px;
+  --text-sv-body-md--font-weight: 400;
+
+  --text-sv-headline-lg-mobile: 24px;
+  --text-sv-headline-lg-mobile--line-height: 30px;
+  --text-sv-headline-lg-mobile--letter-spacing: -0.01em;
+  --text-sv-headline-lg-mobile--font-weight: 700;
+
+  --text-sv-headline-lg: 32px;
+  --text-sv-headline-lg--line-height: 40px;
+  --text-sv-headline-lg--letter-spacing: -0.02em;
+  --text-sv-headline-lg--font-weight: 700;
+
+  --text-sv-status-label: 14px;
+  --text-sv-status-label--line-height: 20px;
+  --text-sv-status-label--font-weight: 600;
+
+  --text-sv-body-lg: 18px;
+  --text-sv-body-lg--line-height: 28px;
+  --text-sv-body-lg--font-weight: 400;
+
+  --text-sv-label-caps: 12px;
+  --text-sv-label-caps--line-height: 16px;
+  --text-sv-label-caps--letter-spacing: 0.05em;
+  --text-sv-label-caps--font-weight: 600;
+
+  --radius-sv: 0.125rem;
+  --radius-sv-lg: 0.25rem;
+  --radius-sv-xl: 0.5rem;
+  --radius-sv-full: 0.75rem;
+
+  --spacing-sv-gutter-mobile: 16px;
+  --spacing-sv-touch-target: 44px;
+  --spacing-sv-margin-safe: 16px;
+  --spacing-sv-base: 8px;
+  --spacing-sv-gutter-desktop: 24px;
+
+  --color-sv-tertiary-fixed-dim: var(--sv-tertiary-fixed-dim);
+  --color-sv-surface-tint: var(--sv-surface-tint);
+  --color-sv-on-tertiary-fixed-variant: var(--sv-on-tertiary-fixed-variant);
+  --color-sv-inverse-primary: var(--sv-inverse-primary);
+  --color-sv-secondary-fixed: var(--sv-secondary-fixed);
+  --color-sv-on-secondary-fixed-variant: var(--sv-on-secondary-fixed-variant);
+  --color-sv-background: var(--sv-background);
+  --color-sv-surface-container-low: var(--sv-surface-container-low);
+  --color-sv-secondary-container: var(--sv-secondary-container);
+  --color-sv-primary: var(--sv-primary);
+  --color-sv-surface-container: var(--sv-surface-container);
+  --color-sv-error: var(--sv-error);
+  --color-sv-on-surface-variant: var(--sv-on-surface-variant);
+  --color-sv-on-tertiary-fixed: var(--sv-on-tertiary-fixed);
+  --color-sv-primary-fixed-dim: var(--sv-primary-fixed-dim);
+  --color-sv-inverse-surface: var(--sv-inverse-surface);
+  --color-sv-on-secondary-container: var(--sv-on-secondary-container);
+  --color-sv-tertiary-fixed: var(--sv-tertiary-fixed);
+  --color-sv-on-primary-fixed-variant: var(--sv-on-primary-fixed-variant);
+  --color-sv-on-error-container: var(--sv-on-error-container);
+  --color-sv-surface-container-lowest: var(--sv-surface-container-lowest);
+  --color-sv-inverse-on-surface: var(--sv-inverse-on-surface);
+  --color-sv-tertiary-container: var(--sv-tertiary-container);
+  --color-sv-error-container: var(--sv-error-container);
+  --color-sv-on-tertiary-container: var(--sv-on-tertiary-container);
+  --color-sv-surface-container-highest: var(--sv-surface-container-highest);
+  --color-sv-on-tertiary: var(--sv-on-tertiary);
+  --color-sv-on-error: var(--sv-on-error);
+  --color-sv-outline-variant: var(--sv-outline-variant);
+  --color-sv-surface-container-high: var(--sv-surface-container-high);
+  --color-sv-on-primary-container: var(--sv-on-primary-container);
+  --color-sv-outline: var(--sv-outline);
+  --color-sv-on-secondary-fixed: var(--sv-on-secondary-fixed);
+  --color-sv-on-primary: var(--sv-on-primary);
+  --color-sv-tertiary: var(--sv-tertiary);
+  --color-sv-on-primary-fixed: var(--sv-on-primary-fixed);
+  --color-sv-surface-dim: var(--sv-surface-dim);
+  --color-sv-secondary: var(--sv-secondary);
+  --color-sv-primary-container: var(--sv-primary-container);
+  --color-sv-surface-bright: var(--sv-surface-bright);
+  --color-sv-secondary-fixed-dim: var(--sv-secondary-fixed-dim);
+  --color-sv-on-secondary: var(--sv-on-secondary);
+  /* not present in the exported config; inferred, see file header */
+  --color-sv-surface: var(--sv-surface);
+  --color-sv-on-surface: var(--sv-on-surface);
+  --color-sv-on-background: var(--sv-on-background);
+  --color-sv-primary-fixed: var(--sv-primary-fixed);
+  --color-sv-surface-variant: var(--sv-surface-variant);
+}
+
+.surveyor-theme {
+  --sv-tertiary-fixed-dim: #c5c7c8;
+  --sv-surface-tint: #a63b00;
+  --sv-on-tertiary-fixed-variant: #454748;
+  --sv-inverse-primary: #ffb599;
+  --sv-secondary-fixed: #e5e2e1;
+  --sv-on-secondary-fixed-variant: #474746;
+  --sv-background: #fff8f6;
+  --sv-surface-container-low: #fff1ec;
+  --sv-secondary-container: #e2dfde;
+  --sv-primary: #a63b00;
+  --sv-surface-container: #ffe9e2;
+  --sv-error: #ba1a1a;
+  --sv-on-surface-variant: #594138;
+  --sv-on-tertiary-fixed: #191c1d;
+  --sv-primary-fixed-dim: #ffb599;
+  --sv-inverse-surface: #3c2d27;
+  --sv-on-secondary-container: #636262;
+  --sv-tertiary-fixed: #e1e3e4;
+  --sv-on-primary-fixed-variant: #7f2b00;
+  --sv-on-error-container: #93000a;
+  --sv-surface-container-lowest: #ffffff;
+  --sv-inverse-on-surface: #ffede7;
+  --sv-tertiary-container: #8f9192;
+  --sv-error-container: #ffdad6;
+  --sv-on-tertiary-container: #272a2b;
+  --sv-surface-container-highest: #f7ddd4;
+  --sv-on-tertiary: #ffffff;
+  --sv-on-error: #ffffff;
+  --sv-outline-variant: #e1bfb3;
+  --sv-surface-container-high: #fde3da;
+  --sv-on-primary-container: #4f1800;
+  --sv-outline: #8d7166;
+  --sv-on-secondary-fixed: #1c1b1b;
+  --sv-on-primary: #ffffff;
+  --sv-tertiary: #5c5f60;
+  --sv-on-primary-fixed: #370e00;
+  --sv-surface-dim: #eed5cc;
+  --sv-secondary: #5f5e5e;
+  --sv-primary-container: #f26522;
+  --sv-surface-bright: #fff8f6;
+  --sv-secondary-fixed-dim: #c8c6c5;
+  --sv-on-secondary: #ffffff;
+
+  /* inferred (not in the exported config) — surface/on-surface treated as equal to
+     background/on-background per standard Material 3 baseline for this palette */
+  --sv-surface: #fff8f6;
+  --sv-on-surface: #261813;
+  --sv-on-background: #261813;
+  --sv-primary-fixed: #ffdbce;
+  --sv-surface-variant: #f7ddd4;
+}
