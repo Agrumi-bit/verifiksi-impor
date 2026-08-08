@@ -19,12 +19,10 @@ services:
       - "3000"
 
   migrate:
-    image: ghcr.io/agrumi-bit/verifiksi-impor:latest
+    image: ghcr.io/agrumi-bit/verifiksi-impor-migrate:latest
     restart: "no"
-    user: root
     environment:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/verifikasi_impor?schema=public
-    command: ["npx", "--yes", "prisma@7.8.0", "migrate", "deploy"]
     depends_on:
       postgres:
         condition: service_healthy

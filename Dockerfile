@@ -12,6 +12,10 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
+FROM builder AS migrator
+WORKDIR /app
+CMD ["npx", "prisma", "migrate", "deploy"]
+
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
