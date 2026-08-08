@@ -42,14 +42,20 @@ services:
       timeout: 5s
       retries: 10
 
-  nginx:
-    image: ghcr.io/agrumi-bit/verifiksi-impor-nginx:latest
+  caddy:
+    image: ghcr.io/agrumi-bit/verifiksi-impor-caddy:latest
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       - app
 
 volumes:
   postgres_data:
   app_storage:
+  caddy_data:
+  caddy_config:
