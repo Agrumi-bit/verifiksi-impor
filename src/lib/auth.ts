@@ -1,7 +1,37 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { admin, createAccessControl } from "better-auth/plugins";
 
 import { db } from "@/lib/db";
+import { ROLES } from "@/modules/users/roles";
+
+// The admin plugin validates every session's `role` value against this
+// statement/role map (not just on admin.* calls) — every role string this
+// app actually uses (src/modules/users/roles.ts) must have an entry here,
+// or session lookups for that user 500 with "Invalid admin roles".
+const adminStatement = {
+  user: [
+    "create",
+    "list",
+    "set-role",
+    "ban",
+    "impersonate",
+    "delete",
+    "set-password",
+    "set-email",
+    "get",
+    "update",
+  ],
+  session: ["list", "revoke", "delete"],
+} as const;
+
+const accessControl = createAccessControl(adminStatement);
+const fullAccessRole = accessControl.newRole(adminStatement);
+const noAccessRole = accessControl.newRole({ user: [], session: [] });
+
+const authorizationRoles = Object.fromEntries(
+  ROLES.map((role) => [role, role === "SUPER_ADMIN" || role === "ADMIN" ? fullAccessRole : noAccessRole]),
+);
 
 export const auth = betterAuth({
   database: prismaAdapter(db, {
@@ -12,6 +42,16 @@ export const auth = betterAuth({
   },
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
+  plugins: [
+    admin({
+      defaultRole: "SURVEYOR",
+      ac: accessControl,
+      roles: authorizationRoles,
+      // Matches the actual role strings this app uses (src/modules/users/roles.ts) —
+      // only these roles may call admin.* endpoints (setUserPassword, banUser, etc).
+      adminRoles: ["SUPER_ADMIN", "ADMIN"],
+    }),
+  ],
   user: {
     additionalFields: {
       role: {

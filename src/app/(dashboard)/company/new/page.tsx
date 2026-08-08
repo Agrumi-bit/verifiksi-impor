@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { CompanyWizard } from "@/modules/company/components/company-wizard";
 
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function NewCompanyPage() {
-  return <CompanyWizard />;
+  return (
+    <Suspense>
+      <CompanyWizard />
+    </Suspense>
+  );
 }

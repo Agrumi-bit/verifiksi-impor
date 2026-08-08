@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Controller, type UseFormReturn } from "react-hook-form";
 
 import { SelectableCard } from "@/components/form/selectable-card";
@@ -7,7 +8,13 @@ import {
   IMPORT_TYPES,
   type ApplicationWizardValues,
   type ImportType,
+  type VerificationType,
 } from "../../schema";
+
+const REQUIRED_VERIFICATION_TYPE: Record<string, VerificationType> = {
+  "API-P": "VKI",
+  "API-U": "VIU",
+};
 
 const VERIFICATION_TYPE_OPTIONS = [
   {
@@ -88,8 +95,18 @@ type Step1Props = {
 };
 
 export function Step1ApplicationInformation({ form }: Step1Props) {
-  const { control, watch } = form;
+  const { control, watch, setValue } = form;
   const verificationType = watch("verificationType");
+  const companyName = watch("companyName");
+  const companyApiType = watch("companyApiType");
+  const requiredType = companyApiType ? REQUIRED_VERIFICATION_TYPE[companyApiType] : undefined;
+
+  useEffect(() => {
+    if (requiredType && verificationType !== requiredType) {
+      setValue("verificationType", requiredType, { shouldValidate: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requiredType]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -97,6 +114,12 @@ export function Step1ApplicationInformation({ form }: Step1Props) {
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Verification Type
         </h2>
+        {requiredType && (
+          <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
+            {companyName} terdaftar dengan Jenis API <strong>{companyApiType}</strong>, sehingga hanya{" "}
+            <strong>{requiredType}</strong> yang tersedia untuk perusahaan ini.
+          </p>
+        )}
         <Controller
           control={control}
           name="verificationType"
@@ -108,6 +131,7 @@ export function Step1ApplicationInformation({ form }: Step1Props) {
                     key={option.value}
                     selected={field.value === option.value}
                     onSelect={() => field.onChange(option.value)}
+                    disabled={Boolean(requiredType) && option.value !== requiredType}
                   >
                     <div className="flex items-center justify-between">
                       <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-semibold">

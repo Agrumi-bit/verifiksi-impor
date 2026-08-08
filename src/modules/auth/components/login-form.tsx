@@ -51,7 +51,9 @@ export function LoginForm() {
           ? "/surveyor-workspace"
           : role === "VERIFIKATOR"
             ? "/verifikator-workspace"
-            : "/";
+            : role === "CUSTOMER_RELATIONSHIP"
+              ? "/customer-relation-workspace"
+              : "/";
 
     router.push(explicitRedirect ?? defaultRedirect);
     router.refresh();

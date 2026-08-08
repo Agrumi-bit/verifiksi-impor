@@ -4,8 +4,16 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import { getApplicationDocumentMeta, setApplicationDocumentVerificationStatus } from "@/modules/applications/document-versions";
+import { getDocumentMeta, setDocumentVerificationStatus } from "@/modules/company/document-versions";
 import { DOC_VERIFICATION_STATUSES } from "@/modules/verifikator-workspace/status";
-import { buildDocumentChecklist, documentVerificationsSchema } from "@/modules/verifikator-workspace/schema";
+import {
+  buildDocumentChecklist,
+  COMPANY_MAPPED_DOCUMENT_KEYS,
+  fromChecklistStatus,
+  toChecklistStatus,
+} from "@/modules/verifikator-workspace/schema";
+import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
 
 async function findOwnedAssignment(assignmentNumber: string, verifikatorId: string) {
   const assignment = await db.assignment.findUnique({
@@ -33,17 +41,40 @@ export async function GET(
   }
 
   const payload = assignment.application.payload as ApplicationWizardValues;
-  const checklist = buildDocumentChecklist(payload);
-  const decisions = documentVerificationsSchema.parse(assignment.documentVerifications ?? {});
 
-  return NextResponse.json({
-    data: checklist.map((item) => ({
+  const company = assignment.application.companyId
+    ? await db.company.findUnique({ where: { id: assignment.application.companyId } })
+    : null;
+
+  const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company));
+
+  const companyKeys = checklist.filter((item) => item.key in COMPANY_MAPPED_DOCUMENT_KEYS).map((item) => item.key);
+  const appOnlyKeys = checklist.filter((item) => !(item.key in COMPANY_MAPPED_DOCUMENT_KEYS)).map((item) => item.key);
+
+  const companyMeta = company
+    ? await getDocumentMeta(
+        company.id,
+        companyKeys.map((key) => COMPANY_MAPPED_DOCUMENT_KEYS[key]),
+        company.createdAt,
+      )
+    : {};
+  const appMeta = await getApplicationDocumentMeta(assignment.application.id, appOnlyKeys, assignment.application.createdAt);
+
+  const data = checklist.map((item) => {
+    const meta = item.key in COMPANY_MAPPED_DOCUMENT_KEYS ? companyMeta[COMPANY_MAPPED_DOCUMENT_KEYS[item.key]] : appMeta[item.key];
+    return {
       ...item,
-      status: decisions[item.key]?.status ?? "PENDING",
-      note: decisions[item.key]?.note ?? "",
-      verifiedAt: decisions[item.key]?.verifiedAt ?? null,
-    })),
+      status: meta ? toChecklistStatus(meta.verificationStatus) : "PENDING",
+      note: meta?.rejectionNote ?? "",
+      verifiedAt: meta?.verifiedAt ?? null,
+      version: meta?.version ?? 1,
+      uploadedByName: meta?.uploadedByName ?? null,
+      uploadedAt: meta?.uploadedAt ?? null,
+      checklistResult: meta?.checklistResult ?? null,
+    };
   });
+
+  return NextResponse.json({ data });
 }
 
 const patchSchema = z.object({
@@ -78,24 +109,44 @@ export async function PATCH(
   if (!parsed.success) {
     return NextResponse.json({ error: "Data tidak valid" }, { status: 400 });
   }
-
-  const payload = assignment.application.payload as ApplicationWizardValues;
-  const validKeys = new Set(buildDocumentChecklist(payload).map((item) => item.key));
-  if (!validKeys.has(parsed.data.key)) {
-    return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
+  if (parsed.data.status === "PENDING") {
+    return NextResponse.json({ error: "Status tidak valid" }, { status: 400 });
   }
 
-  const decisions = documentVerificationsSchema.parse(assignment.documentVerifications ?? {});
-  decisions[parsed.data.key] = {
-    status: parsed.data.status,
-    note: parsed.data.note,
-    verifiedAt: new Date().toISOString(),
-  };
+  const payload = assignment.application.payload as ApplicationWizardValues;
+  const company = assignment.application.companyId
+    ? await db.company.findUnique({ where: { id: assignment.application.companyId } })
+    : null;
+  const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company));
+  const item = checklist.find((c) => c.key === parsed.data.key);
+  if (!item) {
+    return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
+  }
+  if (!item.documentPath && parsed.data.status !== "NOT_APPLICABLE") {
+    return NextResponse.json({ error: "Dokumen belum diunggah oleh perusahaan" }, { status: 400 });
+  }
 
-  const updated = await db.assignment.update({
-    where: { id: assignment.id },
-    data: { documentVerifications: decisions },
-  });
+  const status = fromChecklistStatus(parsed.data.status);
+  const note = parsed.data.note ?? null;
 
-  return NextResponse.json({ data: updated.documentVerifications });
+  if (item.key in COMPANY_MAPPED_DOCUMENT_KEYS) {
+    if (!company) {
+      return NextResponse.json({ error: "Perusahaan tidak ditemukan" }, { status: 404 });
+    }
+    const fieldKey = COMPANY_MAPPED_DOCUMENT_KEYS[item.key];
+    await setDocumentVerificationStatus(company.id, fieldKey, company[fieldKey] ?? item.documentPath, company.createdAt, status, verifikatorId, note, "VERIFIKATOR");
+  } else {
+    await setApplicationDocumentVerificationStatus(
+      assignment.application.id,
+      item.key,
+      item.documentPath,
+      assignment.application.createdAt,
+      status,
+      verifikatorId,
+      note,
+      "VERIFIKATOR",
+    );
+  }
+
+  return NextResponse.json({ data: { key: item.key, status: parsed.data.status } });
 }

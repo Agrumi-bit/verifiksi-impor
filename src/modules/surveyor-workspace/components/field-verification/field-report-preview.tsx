@@ -4,7 +4,6 @@ import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
-import { useSession } from "@/lib/auth-client";
 import { MaterialIcon } from "../material-icon";
 import {
   CAPACITY_QUESTIONS,
@@ -27,6 +26,8 @@ import {
   type FieldVerificationValues,
   type SectionKind,
 } from "./schema";
+import { REPORT_CHECKLIST_SECTIONS, reportResultLabels, type ReportChecklistContext } from "@/modules/verifikator-workspace/report-checklist-items";
+import type { ReportVerificationState } from "@/modules/verifikator-workspace/report-verification";
 import "../report/office-report-preview.css";
 
 const FONT_LINKS = (
@@ -41,8 +42,8 @@ const FONT_LINKS = (
 
 type PayloadLocation = {
   buildingStatus?: "MILIK_SENDIRI" | "SEWA" | null;
-  ownershipDocumentPath?: string | null;
-  leaseDocumentPath?: string | null;
+  ownershipDocuments?: { type: string; documentPath?: string | null }[] | null;
+  leaseDocuments?: { type: string; documentPath?: string | null }[] | null;
   leaseOriginalOwnerName?: string | null;
   leaseStartDate?: string | null;
   leaseEndDate?: string | null;
@@ -67,6 +68,7 @@ type LocationReportDetail = {
   assignmentNumber: string;
   applicationNumber: string;
   verificationType: string;
+  surveyorName: string | null;
   company: {
     companyName: string;
     nibNumber: string | null;
@@ -77,6 +79,16 @@ type LocationReportDetail = {
     kbliDocumentPath: string | null;
   };
   payloadLocation: PayloadLocation | null;
+  reportVerification: ReportVerificationState | null;
+};
+
+const DECISION_META: Record<
+  NonNullable<ReportVerificationState["decision"]>,
+  { label: string; icon: string; color: string }
+> = {
+  VERIFIED: { label: "Disetujui", icon: "✓", color: "var(--ok-fg)" },
+  REJECTED: { label: "Ditolak", icon: "✕", color: "var(--bad-soft-fg)" },
+  REVISION: { label: "Revisi Diminta", icon: "◐", color: "var(--gold-soft-ink)" },
 };
 
 function fmtDate(value: string | null | undefined): string {
@@ -196,12 +208,11 @@ type Props = {
   kind: FieldKind;
   assignmentId: string;
   locationId: string;
-  basePath?: "/api/surveyor-workspace" | "/api/verifikator-workspace";
+  basePath?: "/api/surveyor-workspace" | "/api/verifikator-workspace" | "/api/company-workspace";
   backHref?: string;
 };
 
 export function FieldReportPreview({ kind, assignmentId, locationId, basePath = "/api/surveyor-workspace", backHref }: Props) {
-  const { data: session } = useSession();
   const dataField = kind === "GUDANG" ? "warehouseVerification" : "factoryVerification";
   const label = LOCATION_LABEL[kind];
   const docPrefix = kind === "GUDANG" ? "LV-GDG" : "LV-PBR";
@@ -230,7 +241,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
   const findings = computeFindings(kind, fv);
   const kinds = computeSectionKinds(kind, fv, buildingStatus);
   const titles = sectionTitles(kind);
-  const surveyorName = session?.user.name ?? "—";
+  const surveyorName = data.surveyorName ?? "—";
   const docTypes = docTypeDefs(kind);
   const docsFilled = Object.values(fv.documentation).filter((d) => d.filePath).length;
   const company = data.company.companyName;
@@ -285,9 +296,23 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
         fv.conclusionRecommendation ? ` — Direkomendasikan untuk ${fv.conclusionRecommendation}` : ""
       }`;
 
-  const totalPages = idxConclusion + 5; // approval+toc+exec+info (4) + content pages (idxConclusion - 1, since 0&1 combine) + lampiran (1)
+  const totalPages = idxConclusion + 6; // approval+toc+exec+info (4) + content pages (idxConclusion - 1, since 0&1 combine) + verifikator review (1) + lampiran (1)
   const pageForSection = (i: number) => (i <= 1 ? 5 : 5 + (i - 1));
-  const lampiranPage = pageForSection(idxConclusion) + 1;
+  const verifikatorReviewPage = pageForSection(idxConclusion) + 1;
+  const lampiranPage = verifikatorReviewPage + 1;
+
+  const reportVerification = data.reportVerification;
+  const reviewDecision = reportVerification?.decision ?? null;
+  const reviewContext: ReportChecklistContext = {
+    applicationNumber: data.applicationNumber,
+    companyName: company,
+    surveyorName,
+    visitDate: data.submittedAt,
+    address: data.address,
+    city: data.city,
+    buildingStatus,
+    documentationCount: docsFilled,
+  };
 
   return (
     <div className="report-doc">
@@ -414,17 +439,31 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
               )}
             </div>
             <div className="rd-card-lg" style={{ background: "#fff", padding: 20 }}>
-              <span className="rd-approval-badge" style={{ color: "var(--ink-faint)", background: "var(--stripe)" }}>
+              <span
+                className="rd-approval-badge"
+                style={
+                  reviewDecision
+                    ? { color: "var(--ok-fg)", background: "var(--ok-bg)" }
+                    : { color: "var(--ink-faint)", background: "var(--stripe)" }
+                }
+              >
                 DIPERIKSA OLEH
               </span>
-              <div className="rd-approval-name" style={{ color: "var(--ink-faint)" }}>
-                Menunggu penunjukan
+              <div className="rd-approval-name" style={reviewDecision ? undefined : { color: "var(--ink-faint)" }}>
+                {reportVerification?.verifiedByName ?? "Menunggu penunjukan"}
               </div>
               <div className="rd-approval-role">Verifikator Dokumen</div>
               <div className="rd-approval-sign">Tanda tangan</div>
-              <div className="rd-approval-status" style={{ color: "var(--gold-soft-ink)" }}>
-                ◐ Menunggu
-              </div>
+              {reviewDecision ? (
+                <div className="rd-approval-status" style={{ color: DECISION_META[reviewDecision].color }}>
+                  {DECISION_META[reviewDecision].icon} {DECISION_META[reviewDecision].label}
+                  {reportVerification?.verifiedAt ? ` — ${fmtDate(reportVerification.verifiedAt)}` : ""}
+                </div>
+              ) : (
+                <div className="rd-approval-status" style={{ color: "var(--gold-soft-ink)" }}>
+                  ◐ Menunggu
+                </div>
+              )}
             </div>
             <div className="rd-card-lg" style={{ background: "#fff", padding: 20 }}>
               <span className="rd-approval-badge" style={{ color: "var(--ink-faint)", background: "var(--stripe)" }}>
@@ -464,6 +503,17 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
                   </td>
                   <td>Internal — Terbatas</td>
                 </tr>
+                {reviewDecision && (
+                  <tr>
+                    <td>2.0 — Direview Verifikator</td>
+                    <td>
+                      <Pill kind={reviewDecision === "VERIFIED" ? "ok" : reviewDecision === "REJECTED" ? "bad" : "warn"}>
+                        {DECISION_META[reviewDecision].label}
+                      </Pill>
+                    </td>
+                    <td>Internal — Terbatas</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -501,6 +551,11 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
                 </a>
               );
             })}
+            <a href="#verifikator-review" className="rd-toc-row">
+              <span className="rd-toc-num rd-toc-num-gold">{titles.length}</span>
+              <span className="rd-toc-label">Pemeriksaan oleh Verifikator</span>
+              <span className="rd-toc-page">{String(verifikatorReviewPage).padStart(2, "0")}</span>
+            </a>
             <a href="#lampiran" className="rd-toc-row">
               <span className="rd-toc-num">A</span>
               <span className="rd-toc-label">Lampiran</span>
@@ -744,7 +799,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
             <div className="rd-card">
               <div className="rd-card-label">{isSewa ? "DOKUMEN SEWA" : "DOKUMEN KEPEMILIKAN"}</div>
               <div className="rd-card-value" style={{ fontSize: 13.5 }}>
-                {(isSewa ? data.payloadLocation?.leaseDocumentPath : data.payloadLocation?.ownershipDocumentPath)
+                {((isSewa ? data.payloadLocation?.leaseDocuments : data.payloadLocation?.ownershipDocuments) ?? []).length > 0
                   ? "Tersedia & Diperiksa"
                   : "Belum Diunggah"}
               </div>
@@ -1110,6 +1165,86 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
           </div>
         </PageShell>
 
+        {/* PEMERIKSAAN OLEH VERIFIKATOR */}
+        <PageShell pageNo={verifikatorReviewPage} totalPages={totalPages} companyName={company} label={label} id="verifikator-review">
+          <div className="rd-eyebrow">PEMERIKSAAN OLEH VERIFIKATOR</div>
+          <h2 className="rd-page-title rd-serif" style={{ fontSize: 22 }}>
+            Uraian Verifikasi Laporan Hasil Survei
+          </h2>
+          <p className="rd-lede" style={{ marginBottom: 14 }}>
+            Hasil pemeriksaan administratif dan lokasi/fasilitas atas laporan ini oleh verifikator dokumen, sebelum
+            diteruskan untuk persetujuan Project Manager.
+          </p>
+
+          {!reviewDecision && (
+            <div className="rd-card-lg" style={{ background: "#fff", padding: 20, marginBottom: 18 }}>
+              <span className="rd-approval-status" style={{ color: "var(--gold-soft-ink)" }}>
+                ◐ Laporan ini belum direview oleh verifikator.
+              </span>
+            </div>
+          )}
+
+          {REPORT_CHECKLIST_SECTIONS.map((section) => (
+            <div key={section.key} style={{ marginBottom: 18 }}>
+              <div className="rd-eyebrow" style={{ marginBottom: 10 }}>
+                {section.title}
+              </div>
+              <div className="rd-card-lg" style={{ background: "#fff", overflow: "hidden" }}>
+                <table className="rd-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: "5%" }}>NO</th>
+                      <th style={{ width: "30%" }}>ITEM</th>
+                      <th style={{ width: "20%" }}>DATA SISTEM</th>
+                      <th style={{ width: "15%" }}>HASIL</th>
+                      <th>CATATAN</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {section.items.map((item) => {
+                      const result = reportVerification?.items[item.id];
+                      const labels = reportResultLabels(item);
+                      const sourceValue = item.getValue?.(reviewContext);
+                      return (
+                        <tr key={item.id} className={result?.result === "FAIL" ? "rd-row-bad" : undefined}>
+                          <td>{item.no}</td>
+                          <td>{item.title}</td>
+                          <td style={{ color: "var(--ink-faint)" }}>{sourceValue || "—"}</td>
+                          <td>
+                            {!result?.result ? (
+                              <Pill kind="warn">Belum Diisi</Pill>
+                            ) : result.result === "PASS" ? (
+                              <Pill kind="ok">{labels.pass}</Pill>
+                            ) : result.result === "FAIL" ? (
+                              <Pill kind="bad">{labels.fail}</Pill>
+                            ) : (
+                              <Pill kind="warn">{labels.na}</Pill>
+                            )}
+                          </td>
+                          <td style={{ color: "var(--ink-faint)" }}>{result?.note || "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+
+          {reviewDecision && (
+            <div style={{ borderRadius: 16, background: "var(--navy-deep)", padding: "18px 20px" }}>
+              <div style={{ fontWeight: 700, fontSize: 8.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--gold)", marginBottom: 9 }}>
+                Keputusan Verifikator
+              </div>
+              <div style={{ fontSize: 12, lineHeight: 1.65, color: "oklch(0.9 0.01 250)" }}>
+                {DECISION_META[reviewDecision].icon} {DECISION_META[reviewDecision].label} oleh {reportVerification?.verifiedByName} —{" "}
+                {fmtDate(reportVerification?.verifiedAt)}
+                {reportVerification?.decisionNote ? ` — "${reportVerification.decisionNote}"` : ""}
+              </div>
+            </div>
+          )}
+        </PageShell>
+
         {/* LAMPIRAN */}
         <PageShell pageNo={lampiranPage} totalPages={totalPages} companyName={company} label={label} id="lampiran">
           <div className="rd-eyebrow">LAMPIRAN</div>
@@ -1141,7 +1276,10 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
                   <td style={{ color: "var(--ink-faint)" }}>03</td>
                   <td>{isSewa ? `Dokumen Sewa ${label}` : `Dokumen Kepemilikan ${label}`}</td>
                   <td style={{ fontWeight: 600, textAlign: "right" }} className="rd-mono">
-                    {basename(isSewa ? data.payloadLocation?.leaseDocumentPath : data.payloadLocation?.ownershipDocumentPath)}
+                    {(isSewa ? data.payloadLocation?.leaseDocuments : data.payloadLocation?.ownershipDocuments)
+                      ?.map((entry) => basename(entry.documentPath))
+                      .filter(Boolean)
+                      .join(", ") || "—"}
                   </td>
                 </tr>
                 {isWarehouse ? (
@@ -1187,12 +1325,20 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
           <div className="rd-eyebrow" style={{ marginBottom: 10 }}>
             C. RIWAYAT PERUBAHAN DOKUMEN
           </div>
-          <div className="rd-card">
+          <div className="rd-card" style={{ marginBottom: reviewDecision ? 10 : 0 }}>
             <div style={{ fontWeight: 600, fontSize: 12, color: "var(--ink)", marginBottom: 2 }}>Versi 1.0</div>
             <div style={{ fontSize: 11.5, color: "var(--ink-faint)" }}>
               Draf disusun oleh surveyor — {fmtDate(data.submittedAt ?? fv.actualVisitDate)}
             </div>
           </div>
+          {reviewDecision && (
+            <div className="rd-card">
+              <div style={{ fontWeight: 600, fontSize: 12, color: "var(--ink)", marginBottom: 2 }}>Versi 2.0</div>
+              <div style={{ fontSize: 11.5, color: "var(--ink-faint)" }}>
+                Direview oleh {reportVerification?.verifiedByName} — {fmtDate(reportVerification?.verifiedAt)}
+              </div>
+            </div>
+          )}
         </PageShell>
       </main>
     </div>

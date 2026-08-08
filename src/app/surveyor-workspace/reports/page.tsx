@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-import { ReportTable } from "@/modules/surveyor-workspace/components/report-table";
+import { ReportsGrid } from "@/modules/surveyor-workspace/components/reports-grid";
 
 export const metadata: Metadata = {
   title: "Reports — Surveyor Workspace",
 };
 
 export default function SurveyorReportsPage() {
-  return <ReportTable />;
+  return <ReportsGrid />;
 }

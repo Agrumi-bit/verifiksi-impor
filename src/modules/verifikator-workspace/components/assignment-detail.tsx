@@ -3,15 +3,25 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { useSession } from "@/lib/auth-client";
+import { toast } from "sonner";
 
 import { MaterialIcon } from "./material-icon";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
-import { ASSIGNMENT_STATUS_LABELS, type AssignmentPriorityValue, type AssignmentStatusValue } from "../status";
+import {
+  ASSIGNMENT_PRIORITY_BADGE,
+  ASSIGNMENT_STATUS_PILL,
+  type AssignmentPriorityValue,
+  type AssignmentStatusValue,
+} from "../status";
 import { OverviewTab } from "./detail/overview-tab";
-import { SurveyReportTab } from "./detail/survey-report-tab";
+import { FieldVerificationTab } from "./detail/field-verification-tab";
 import { DocumentVerificationTab } from "./detail/document-verification-tab";
+import { MachineVerificationTab } from "./detail/machine-verification-tab";
 import { ProductVerificationTab } from "./detail/product-verification-tab";
+import { ProductionQuantityTab } from "./detail/production-quantity-tab";
+import { DraftReportTab } from "./detail/draft-report-tab";
+import { TeamTab } from "./detail/team-tab";
+import { CommunicationTab } from "./detail/communication-tab";
 import { DecisionPanel } from "./detail/decision-panel";
 
 export type LocationVisitSummary = {
@@ -22,6 +32,14 @@ export type LocationVisitSummary = {
   status: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED";
   submittedAt: string | null;
 };
+
+export type TeamMemberSummary = {
+  name: string;
+  date: string | null;
+  assignmentId: string;
+  letterNumber: string | null;
+  letterStatus: string;
+} | null;
 
 export type AssignmentDetailData = {
   id: string;
@@ -36,6 +54,7 @@ export type AssignmentDetailData = {
     applicationNumber: string;
     verificationType: string;
     applicationCategory: string;
+    createdAt: string;
     payload: ApplicationWizardValues;
   };
   company: {
@@ -44,6 +63,9 @@ export type AssignmentDetailData = {
     businessAddress: string | null;
     kbliEntries: { code: string; description: string }[];
     locations: ApplicationWizardValues["locations"];
+    sktNumber: string | null;
+    sktIssuer: string | null;
+    sktDate: string | null;
   };
   verificationProgram: {
     type: string;
@@ -55,6 +77,12 @@ export type AssignmentDetailData = {
     scheduledDate: string | null;
     completionDate: string | null;
     locationVisits: LocationVisitSummary[];
+  };
+  team: {
+    surveyor: TeamMemberSummary;
+    verifikator: TeamMemberSummary;
+    technicalReviewer: TeamMemberSummary;
+    teamMembers: { name: string; role?: string }[];
   };
   progress: {
     overallProgress: number;
@@ -71,20 +99,43 @@ export type AssignmentDetailData = {
   };
 };
 
-const TAB_NAMES = ["Overview", "Survey Report", "Document Verification", "Product Verification"] as const;
-type TabName = (typeof TAB_NAMES)[number];
+const ALL_TAB_NAMES = [
+  "Overview",
+  "Documents Verification",
+  "Survey Lapangan",
+  "Verifikasi Mesin",
+  "Product Verification",
+  "Verifikasi Jumlah Produksi",
+  "Draft Report",
+  "Team",
+  "Communication",
+] as const;
+type TabName = (typeof ALL_TAB_NAMES)[number];
+
+const VKI_ONLY_TABS: TabName[] = ["Verifikasi Mesin", "Verifikasi Jumlah Produksi"];
+
+function fmtDate(value: string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function stubToast() {
+  toast.info("Fitur ini akan tersedia di iterasi berikutnya.");
+}
+
+function HeaderStat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div>
+      <div className="text-[11px] text-[#8a7565]">{label}</div>
+      <div className={`mt-0.75 text-[13.5px] font-bold ${accent ? "text-[#e0662e]" : "text-[#20180f]"}`}>{value}</div>
+    </div>
+  );
+}
 
 type Props = { id: string };
 
 export function AssignmentDetail({ id }: Props) {
   const [activeTab, setActiveTab] = useState<TabName>("Overview");
-  const { data: session } = useSession();
-  const initials = (session?.user.name ?? "?")
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["verifikator-workspace", "assignments", "detail", id],
@@ -97,109 +148,127 @@ export function AssignmentDetail({ id }: Props) {
   });
 
   if (isLoading) {
-    return <p className="mx-auto max-w-4xl py-10 text-sm text-[#7d8398]">Memuat...</p>;
+    return <p className="p-8 text-sm text-[#8a7565]">Memuat...</p>;
   }
   if (isError || !data) {
-    return (
-      <p className="mx-auto max-w-4xl py-10 text-sm text-destructive">
-        Penugasan tidak ditemukan, atau bukan milik Anda.
-      </p>
-    );
+    return <p className="p-8 text-sm text-[#c1361f]">Penugasan tidak ditemukan, atau bukan milik Anda.</p>;
   }
 
+  const isVki = data.application.verificationType === "VKI";
+  const tabNames = ALL_TAB_NAMES.filter((name) => isVki || !VKI_ONLY_TABS.includes(name));
+  const statusStyle = ASSIGNMENT_STATUS_PILL[data.status];
+
   return (
-    <div className="flex min-h-screen flex-col bg-[#f6f7fb]">
-      <header className="sticky top-0 z-50 flex h-16 flex-shrink-0 items-center justify-between border-b border-[#e4e7f2] bg-white px-6">
-        <div className="flex items-center gap-10">
-          <span className="text-xl font-bold text-[#3454d1]">IndustrialVerify</span>
-          <div className="flex h-full items-center gap-8">
-            <span className="flex h-16 items-center border-b-2 border-[#3454d1] text-base text-[#3454d1]">
-              Verifikator Workspace
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-5">
-          <MaterialIcon name="notifications" className="text-[#3454d1]" />
-          <div className="flex size-[38px] items-center justify-center rounded-full bg-[#3454d1] text-[13px] font-bold text-white">
-            {initials}
-          </div>
-        </div>
-      </header>
+    <div className="p-6">
+      <Link
+        href="/verifikator-workspace/my-assignment"
+        className="mb-4 inline-flex items-center gap-2 text-[13.5px] font-semibold text-[#4a4038]"
+      >
+        <MaterialIcon name="arrow_back" className="text-[18px]" />
+        Back to Assignments
+      </Link>
 
-      <div className="mx-auto w-full max-w-[1440px] box-border px-6 pt-6">
-        <Link
-          href="/verifikator-workspace/my-assignment"
-          className="mb-4 flex items-center gap-1.5 text-[13px] font-semibold text-[#5f6478]"
-        >
-          <MaterialIcon name="arrow_back" className="text-base" />
-          Back to My Assignment
-        </Link>
-
-        <div className="grid grid-cols-2 gap-0 rounded-[14px] border border-[#e4e7f2] bg-white px-7 py-5 shadow-sm md:grid-cols-6">
-          <div className="pr-5">
-            <div className="mb-1 text-[10.5px] uppercase tracking-wide text-[#8891ab]">Assignment ID</div>
-            <div className="text-sm font-bold">{data.assignmentNumber}</div>
-          </div>
-          <div className="border-l border-[#f0f2fa] px-5">
-            <div className="mb-1 text-[10.5px] uppercase tracking-wide text-[#8891ab]">Application ID</div>
-            <div className="text-sm font-bold">{data.application.applicationNumber}</div>
-          </div>
-          <div className="border-l border-[#f0f2fa] px-5">
-            <div className="mb-1 text-[10.5px] uppercase tracking-wide text-[#8891ab]">Tanggal Assignment</div>
-            <div className="text-sm font-bold">{new Date(data.createdAt).toLocaleDateString("id-ID")}</div>
-          </div>
-          <div className="border-l border-[#f0f2fa] px-5">
-            <div className="mb-1 text-[10.5px] uppercase tracking-wide text-[#8891ab]">Program</div>
-            <div className="text-sm font-bold">{data.application.verificationType}</div>
-          </div>
-          <div className="border-l border-[#f0f2fa] px-5">
-            <div className="mb-1 text-[10.5px] uppercase tracking-wide text-[#8891ab]">Status</div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#e8ecfb] px-2.5 py-1 text-[11.5px] font-bold text-[#3454d1]">
-              <MaterialIcon name="fact_check" className="text-[13px]" />
-              {ASSIGNMENT_STATUS_LABELS[data.status]}
+      <div className="mb-4 rounded-[10px] border border-[#f0ded0] bg-white p-5 pl-6" style={{ borderLeft: "4px solid #2f6fe0" }}>
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="text-[18px] font-extrabold text-[#20180f]">Assignment Detail</div>
+            <span
+              className="rounded-full px-3 py-1.25 text-[11px] font-bold"
+              style={{ background: statusStyle.bg, color: statusStyle.color }}
+            >
+              {data.progress.currentStage}
             </span>
-          </div>
-          <div className="border-l border-[#f0f2fa] pl-5">
-            <div className="mb-1 text-[10.5px] uppercase tracking-wide text-[#8891ab]">Priority</div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#fce8e6] px-2.5 py-1 text-[11.5px] font-bold text-[#ba1a1a]">
-              <MaterialIcon name="priority_high" className="text-[13px]" />
+            <span className={`rounded-full px-3 py-1.25 text-[11px] font-bold ${ASSIGNMENT_PRIORITY_BADGE[data.priority]}`}>
               {data.priority}
             </span>
           </div>
+          <div className="flex gap-2.5">
+            <button
+              type="button"
+              onClick={stubToast}
+              className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-4 py-2.25 text-[12.5px] font-semibold text-[#261813]"
+            >
+              <MaterialIcon name="visibility" className="text-[17px]" />
+              View Application
+            </button>
+            <button
+              type="button"
+              onClick={stubToast}
+              className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-4 py-2.25 text-[12.5px] font-semibold text-[#261813]"
+            >
+              <MaterialIcon name="download" className="text-[17px]" />
+              Download Application
+            </button>
+          </div>
+        </div>
+        <div className="mb-4 text-[13px] text-[#8a7565]">Review and verify application documents and field reports</div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <HeaderStat label="Nomor Permohonan" value={data.application.applicationNumber} />
+          <HeaderStat label="Nama Perusahaan" value={data.company.companyName} />
+          <HeaderStat label="Jenis Permohonan" value={data.application.applicationCategory} />
+          <HeaderStat label="Klasifikasi" value={data.application.verificationType} />
+          <HeaderStat label="Assigned Date" value={fmtDate(data.createdAt)} />
+          <HeaderStat label="Due Date" value={fmtDate(data.dueDate)} accent />
         </div>
       </div>
 
-      <nav className="sticky top-16 z-40 mx-auto w-full max-w-[1440px] box-border overflow-x-auto bg-[#f6f7fb] px-6 pt-5">
-        <div className="flex w-max min-w-full gap-0.5 rounded-full bg-[#eaecf3] p-[5px]">
-          {TAB_NAMES.map((name) => {
-            const isActive = activeTab === name;
-            return (
-              <button
-                key={name}
-                type="button"
-                onClick={() => setActiveTab(name)}
-                className={
-                  "whitespace-nowrap rounded-full px-[18px] py-2.5 text-[13.5px] font-semibold transition-colors " +
-                  (isActive ? "bg-white text-[#1f2437] shadow-sm" : "text-[#3d4258]")
-                }
-              >
-                {name}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+      <div className="mb-4 flex w-max max-w-full gap-0.5 overflow-x-auto rounded-[10px] bg-[#f0ede8] p-1">
+        {tabNames.map((name) => {
+          const isActive = activeTab === name;
+          return (
+            <button
+              key={name}
+              type="button"
+              onClick={() => setActiveTab(name)}
+              className={
+                "whitespace-nowrap rounded-lg px-4 py-2.25 text-[12.5px] font-bold transition-colors " +
+                (isActive ? "bg-[#e0662e] text-white" : "text-[#6b5b4c] hover:bg-white/60")
+              }
+            >
+              {name}
+            </button>
+          );
+        })}
+      </div>
 
-      <main className="mx-auto w-full max-w-[1440px] box-border flex-1 px-6 pb-10 pt-7">
+      <div className="pb-8">
         {activeTab === "Overview" && <OverviewTab data={data} />}
-        {activeTab === "Survey Report" && <SurveyReportTab assignmentId={id} locationVisits={data.surveyInformation.locationVisits} />}
-        {activeTab === "Document Verification" && (
-          <DocumentVerificationTab assignmentId={id} assignmentStatus={data.status} />
+        {activeTab === "Documents Verification" && (
+          <DocumentVerificationTab
+            assignmentId={id}
+            assignmentStatus={data.status}
+            verificationType={data.application.verificationType}
+            companyName={data.company.companyName}
+            payload={data.application.payload}
+            businessAddress={data.company.businessAddress}
+            companySkt={{ sktNumber: data.company.sktNumber, sktIssuer: data.company.sktIssuer, sktDate: data.company.sktDate }}
+          />
+        )}
+        {activeTab === "Survey Lapangan" && (
+          <FieldVerificationTab
+            assignmentId={id}
+            locationVisits={data.surveyInformation.locationVisits}
+            surveyorName={data.surveyInformation.surveyorName}
+            applicationNumber={data.application.applicationNumber}
+            companyName={data.company.companyName}
+            locations={data.company.locations}
+          />
+        )}
+        {activeTab === "Verifikasi Mesin" && (
+          <MachineVerificationTab assignmentId={id} assignmentStatus={data.status} />
         )}
         {activeTab === "Product Verification" && (
-          <ProductVerificationTab assignmentId={id} assignmentStatus={data.status} />
+          <ProductVerificationTab assignmentId={id} assignmentStatus={data.status} payload={data.application.payload} />
         )}
-      </main>
+        {activeTab === "Verifikasi Jumlah Produksi" && (
+          <ProductionQuantityTab assignmentId={id} assignmentStatus={data.status} />
+        )}
+        {activeTab === "Draft Report" && <DraftReportTab assignmentId={id} initialNotes={data.validationNotes} />}
+        {activeTab === "Team" && (
+          <TeamTab team={data.team} companyName={data.company.companyName} applicationNumber={data.application.applicationNumber} />
+        )}
+        {activeTab === "Communication" && <CommunicationTab assignmentId={id} />}
+      </div>
 
       <DecisionPanel assignmentId={id} status={data.status} quickStats={data.quickStats} />
     </div>

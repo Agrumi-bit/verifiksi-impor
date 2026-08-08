@@ -10,13 +10,14 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // A verifikator's "schedule" is desk-review work, not a field visit — the
-  // meaningful date is the validation due date on assignments already
-  // claimed by them, not the surveyor's on-site scheduledDate.
+  // scheduledDate is set by Customer Relation Workspace when the "dokumen"
+  // assignment is scheduled — mirrors surveyor-workspace's schedule route.
+  // (dueDate is never populated by any workflow, so filtering on it left
+  // this page permanently empty.)
   const assignments = await db.assignment.findMany({
-    where: { verifikatorId, dueDate: { not: null } },
+    where: { verifikatorId, scheduledDate: { not: null } },
     include: { application: true },
-    orderBy: { dueDate: "asc" },
+    orderBy: { scheduledDate: "asc" },
   });
 
   const data = assignments.map((assignment) => {
@@ -28,7 +29,9 @@ export async function GET() {
       companyName: payload?.companyName ?? "—",
       verificationType: assignment.application.verificationType,
       status: assignment.status,
-      dueDate: assignment.dueDate,
+      scheduledDate: assignment.scheduledDate,
+      scheduledTime: assignment.scheduledTime,
+      location: assignment.location,
     };
   });
 

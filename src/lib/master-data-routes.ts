@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { Prisma } from "@/generated/prisma/client";
+
+function uniqueConstraintMessage(error: unknown): string | null {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+    return null;
+  }
+  const target = error.meta?.target;
+  const fields = Array.isArray(target) ? target.join(", ") : String(target ?? "data");
+  return `Data dengan ${fields} yang sama sudah terdaftar.`;
+}
+
 /**
  * Every master data entity (Unit of Measurement, Commodity Group/Sub Group,
  * KBLI, HS Code) is a flat CRUD resource with the same list/create/update
@@ -42,8 +53,16 @@ export function createMasterDataListRoute(
         { status: 400 },
       );
     }
-    const row = await delegate.create({ data: parsed.data });
-    return NextResponse.json({ data: row }, { status: 201 });
+    try {
+      const row = await delegate.create({ data: parsed.data });
+      return NextResponse.json({ data: row }, { status: 201 });
+    } catch (error) {
+      const message = uniqueConstraintMessage(error);
+      if (message) {
+        return NextResponse.json({ error: message }, { status: 409 });
+      }
+      throw error;
+    }
   }
 
   return { GET, POST };
@@ -66,8 +85,16 @@ export function createMasterDataDetailRoute(
         { status: 400 },
       );
     }
-    const row = await delegate.update({ where: { id }, data: parsed.data });
-    return NextResponse.json({ data: row });
+    try {
+      const row = await delegate.update({ where: { id }, data: parsed.data });
+      return NextResponse.json({ data: row });
+    } catch (error) {
+      const message = uniqueConstraintMessage(error);
+      if (message) {
+        return NextResponse.json({ error: message }, { status: 409 });
+      }
+      throw error;
+    }
   }
 
   return { PATCH };

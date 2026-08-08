@@ -7,8 +7,8 @@ import { SurveyorNotes } from "../office-verification/question-list";
 import { ownershipQuestion, sewaQuestions, LOCATION_LABEL, type FieldKind, type AnswerValues } from "./schema";
 
 type PayloadLocation = {
-  ownershipDocumentPath?: string | null;
-  leaseDocumentPath?: string | null;
+  ownershipDocuments?: { type: string; documentPath?: string | null }[] | null;
+  leaseDocuments?: { type: string; documentPath?: string | null }[] | null;
   leaseOriginalOwnerName?: string | null;
   leaseStartDate?: string | null;
   leaseEndDate?: string | null;
@@ -99,7 +99,7 @@ export function SectionOwnership({
             <div>
               <div className="mb-1 text-sm font-bold text-[#1c2530]">Dokumen Kepemilikan</div>
               <div className="text-[13px] text-[#4a5568]">
-                {payloadLocation?.ownershipDocumentPath ? `Dokumen Kepemilikan ${label}` : "Belum diunggah"}
+                {(payloadLocation?.ownershipDocuments?.length ?? 0) > 0 ? `Dokumen Kepemilikan ${label}` : "Belum diunggah"}
               </div>
             </div>
             <button
@@ -124,7 +124,7 @@ export function SectionOwnership({
             <div>
               <div className="mb-1 text-sm font-bold text-[#1c2530]">Dokumen Sewa</div>
               <div className="text-[13px] text-[#4a5568]">
-                {payloadLocation?.leaseDocumentPath ? `Dokumen Sewa Menyewa ${label}` : "Belum diunggah"}
+                {(payloadLocation?.leaseDocuments?.length ?? 0) > 0 ? `Dokumen Sewa Menyewa ${label}` : "Belum diunggah"}
               </div>
             </div>
             <button

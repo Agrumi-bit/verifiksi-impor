@@ -8,26 +8,24 @@ import {
   type Path,
   type UseFormReturn,
 } from "react-hook-form";
-import { Building2, Factory, Plus, Trash2, Warehouse } from "lucide-react";
+import { Building2, ChevronDown, Factory, Plus, Trash2, Warehouse } from "lucide-react";
 
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { FormField } from "@/components/form/form-field";
 import { SelectableCard } from "@/components/form/selectable-card";
 import { FileUploadField } from "@/components/form/file-upload-field";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field, TextInput } from "@/modules/company/components/wizard-ui";
 import {
   LOCATION_TYPES,
   WAREHOUSE_REGISTRATION_TYPES,
+  OWNERSHIP_DOCUMENT_TYPES,
+  OWNERSHIP_DOCUMENT_TYPE_LABELS,
+  LEASE_DOCUMENT_TYPES,
+  LEASE_DOCUMENT_TYPE_LABELS,
   createEmptyLocation,
   type LocationType,
   type LocationValues,
+  type LocationOwnershipDocEntry,
+  type LocationLeaseDocEntry,
 } from "@/modules/shared/schema";
 
 const LOCATION_TYPE_META: Record<LocationType, { label: string; icon: typeof Building2 }> = {
@@ -56,7 +54,7 @@ type LocationItemProps<T extends FormWithLocations> = {
   typeHint?: string;
 };
 
-function LocationItemFields<T extends FormWithLocations>({
+export function LocationItemFields<T extends FormWithLocations>({
   form,
   index,
   onRemove,
@@ -79,29 +77,22 @@ function LocationItemFields<T extends FormWithLocations>({
   }) as LocationValues["buildingStatus"] | undefined;
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-border bg-muted/20 p-4">
+    <div className="flex flex-col gap-4 rounded-xl border border-[#efe2d4] bg-[#fffaf6] p-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold">Lokasi Baru</p>
+        <p className="text-[13px] font-bold text-[#20180f]">Lokasi Baru</p>
         {canRemove && (
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
             onClick={onRemove}
-            className="text-destructive hover:text-destructive"
+            className="flex items-center gap-1 text-[12px] font-semibold text-[#c1361f]"
           >
             <Trash2 className="size-3.5" />
             Hapus
-          </Button>
+          </button>
         )}
       </div>
 
-      <FormField
-        label="Location Type"
-        required
-        error={locationErrors?.locationType?.message}
-        hint={typeHint}
-      >
+      <Field label="Location Type" required error={locationErrors?.locationType?.message} hint={typeHint}>
         <Controller
           control={control}
           name={`locations.${index}.locationType` as Path<T>}
@@ -110,77 +101,85 @@ function LocationItemFields<T extends FormWithLocations>({
               {availableTypes.map((type) => {
                 const meta = LOCATION_TYPE_META[type];
                 const Icon = meta.icon;
+                const selected = field.value === type;
                 return (
                   <SelectableCard
                     key={type}
-                    selected={field.value === type}
+                    selected={selected}
                     onSelect={() => field.onChange(type)}
                     className="items-center gap-1 py-3 text-center"
                   >
-                    <Icon className="size-4" />
-                    <span className="text-xs font-medium">{meta.label}</span>
+                    <Icon className={selected ? "size-4 text-[#c14a1f]" : "size-4 text-[#8a7565]"} />
+                    <span className={selected ? "text-xs font-bold text-[#c14a1f]" : "text-xs font-medium text-[#594138]"}>
+                      {meta.label}
+                    </span>
                   </SelectableCard>
                 );
               })}
             </div>
           )}
         />
-      </FormField>
+      </Field>
 
       <div className="flex flex-col gap-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <h3 className="text-[11px] font-bold uppercase tracking-wide text-[#a68f80]">
           Address Information
         </h3>
-        <FormField label="Address" required error={locationErrors?.address?.message}>
-          <Input
+        <Field label="Jalan" required error={locationErrors?.address?.message}>
+          <TextInput
+            variant="white"
             placeholder="e.g. Jl. Industri Raya No. 15, Kawasan Industri Cimahi"
             {...register(`locations.${index}.address` as Path<T>)}
           />
-        </FormField>
+        </Field>
         <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label="City" required error={locationErrors?.city?.message}>
-            <Input placeholder="e.g. Cimahi" {...register(`locations.${index}.city` as Path<T>)} />
-          </FormField>
-          <FormField label="Province" required error={locationErrors?.province?.message}>
-            <Input
-              placeholder="Pilih Provinsi..."
-              {...register(`locations.${index}.province` as Path<T>)}
+          <Field label="Desa / Kelurahan" required error={locationErrors?.addressDesa?.message}>
+            <TextInput variant="white" placeholder="e.g. Sukaluyu" {...register(`locations.${index}.addressDesa` as Path<T>)} />
+          </Field>
+          <Field label="Kecamatan" required error={locationErrors?.addressKecamatan?.message}>
+            <TextInput
+              variant="white"
+              placeholder="e.g. Cibeunying Kaler"
+              {...register(`locations.${index}.addressKecamatan` as Path<T>)}
             />
-          </FormField>
+          </Field>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label="Country" required error={locationErrors?.country?.message}>
-            <Input {...register(`locations.${index}.country` as Path<T>)} />
-          </FormField>
-          <FormField label="Postal Code" required error={locationErrors?.postalCode?.message}>
-            <Input
-              placeholder="e.g. 40535"
-              {...register(`locations.${index}.postalCode` as Path<T>)}
-            />
-          </FormField>
+          <Field label="Kota / Kabupaten" required error={locationErrors?.city?.message}>
+            <TextInput variant="white" placeholder="e.g. Cimahi" {...register(`locations.${index}.city` as Path<T>)} />
+          </Field>
+          <Field label="Provinsi" required error={locationErrors?.province?.message}>
+            <TextInput variant="white" placeholder="e.g. Jawa Barat" {...register(`locations.${index}.province` as Path<T>)} />
+          </Field>
+        </div>
+        <div className="sm:w-1/2 sm:pr-1.5">
+          <Field label="Kode Pos" required error={locationErrors?.postalCode?.message}>
+            <TextInput variant="white" placeholder="e.g. 40535" {...register(`locations.${index}.postalCode` as Path<T>)} />
+          </Field>
         </div>
       </div>
 
-      <FormField
+      <Field
         label="Google Maps Link"
         error={locationErrors?.googleMapsLink?.message}
         hint="Link Google Maps sangat membantu saat proses verifikasi lapangan."
       >
-        <Input
+        <TextInput
+          variant="white"
           placeholder="https://maps.google.com/xxxxx"
           {...register(`locations.${index}.googleMapsLink` as Path<T>)}
         />
-      </FormField>
+      </Field>
 
       <div className="flex flex-col gap-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <h3 className="text-[11px] font-bold uppercase tracking-wide text-[#a68f80]">
           Status Bangunan
         </h3>
         <Controller
           control={control}
           name={`locations.${index}.buildingStatus` as Path<T>}
           render={({ field }) => (
-            <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-border">
+            <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-[#e8dccd]">
               {(
                 [
                   ["MILIK_SENDIRI", "Milik Sendiri"],
@@ -193,8 +192,8 @@ function LocationItemFields<T extends FormWithLocations>({
                   onClick={() => field.onChange(value)}
                   className={
                     field.value === value
-                      ? "bg-amber-500 px-3 py-2 text-sm font-medium text-white"
-                      : "bg-background px-3 py-2 text-sm font-medium hover:bg-muted/50"
+                      ? "bg-[#e0662e] px-3 py-2 text-[13px] font-semibold text-white"
+                      : "bg-white px-3 py-2 text-[13px] font-semibold text-[#594138] hover:bg-[#fdeadd]/50"
                   }
                 >
                   {label}
@@ -207,179 +206,184 @@ function LocationItemFields<T extends FormWithLocations>({
         {buildingStatus === "SEWA" ? (
           <div className="flex flex-col gap-3">
             <div className="grid gap-3 sm:grid-cols-2">
-              <FormField label="Bukti Kepemilikan" error={locationErrors?.leaseProofOfOwnership?.message}>
-                <Input {...register(`locations.${index}.leaseProofOfOwnership` as Path<T>)} />
-              </FormField>
-              <FormField
-                label="Pemilik Asli"
-                required
-                error={locationErrors?.leaseOriginalOwnerName?.message}
-              >
-                <Input {...register(`locations.${index}.leaseOriginalOwnerName` as Path<T>)} />
-              </FormField>
+              <Field label="Bukti Kepemilikan" error={locationErrors?.leaseProofOfOwnership?.message}>
+                <TextInput variant="white" {...register(`locations.${index}.leaseProofOfOwnership` as Path<T>)} />
+              </Field>
+              <Field label="Pemilik Asli" required error={locationErrors?.leaseOriginalOwnerName?.message}>
+                <TextInput variant="white" {...register(`locations.${index}.leaseOriginalOwnerName` as Path<T>)} />
+              </Field>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <FormField
-                label="Tanggal Mulai Sewa"
-                required
-                error={locationErrors?.leaseStartDate?.message}
-              >
-                <Input type="date" {...register(`locations.${index}.leaseStartDate` as Path<T>)} />
-              </FormField>
-              <FormField
-                label="Tanggal Berakhir Sewa"
-                required
-                error={locationErrors?.leaseEndDate?.message}
-              >
-                <Input type="date" {...register(`locations.${index}.leaseEndDate` as Path<T>)} />
-              </FormField>
+              <Field label="Tanggal Mulai Sewa" required error={locationErrors?.leaseStartDate?.message}>
+                <TextInput variant="white" type="date" {...register(`locations.${index}.leaseStartDate` as Path<T>)} />
+              </Field>
+              <Field label="Tanggal Berakhir Sewa" required error={locationErrors?.leaseEndDate?.message}>
+                <TextInput variant="white" type="date" {...register(`locations.${index}.leaseEndDate` as Path<T>)} />
+              </Field>
             </div>
-            <Controller
-              control={control}
-              name={`locations.${index}.leaseDocumentPath` as Path<T>}
-              render={({ field }) => (
-                <FormField
-                  label="Upload Dokumen Pendukung Kepemilikan"
-                  required
-                  error={locationErrors?.leaseDocumentPath?.message}
-                >
-                  <FileUploadField
-                    namespace="temporary"
-                    value={field.value as string | undefined}
-                    onChange={field.onChange}
-                    label="Upload Dokumen Pendukung Kepemilikan"
-                  />
-                </FormField>
-              )}
-            />
+            <Field label="Dokumen Pendukung Penguasaan" required error={locationErrors?.leaseDocuments?.message}>
+              <Controller
+                control={control}
+                name={`locations.${index}.leaseDocuments` as Path<T>}
+                render={({ field }) => {
+                  const entries = (field.value as LocationLeaseDocEntry[] | undefined) ?? [];
+                  return (
+                    <div className="flex flex-col gap-3">
+                      {LEASE_DOCUMENT_TYPES.map((type) => {
+                        const entryIndex = entries.findIndex((e) => e.type === type);
+                        const checked = entryIndex !== -1;
+                        return (
+                          <div key={type} className="rounded-lg border border-[#e8dccd] bg-white p-3">
+                            <label className="flex cursor-pointer items-center gap-2.5 text-[13px] font-semibold text-[#261813]">
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={(next) => {
+                                  if (next) field.onChange([...entries, { type, documentPath: undefined }]);
+                                  else field.onChange(entries.filter((e) => e.type !== type));
+                                }}
+                              />
+                              {LEASE_DOCUMENT_TYPE_LABELS[type]}
+                            </label>
+                            {checked && (
+                              <div className="mt-3">
+                                <FileUploadField
+                                  namespace="temporary"
+                                  value={entries[entryIndex]?.documentPath}
+                                  onChange={(path) =>
+                                    field.onChange(entries.map((e) => (e.type === type ? { ...e, documentPath: path } : e)))
+                                  }
+                                  label={`Upload ${LEASE_DOCUMENT_TYPE_LABELS[type]}`}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                }}
+              />
+            </Field>
           </div>
         ) : (
-          <Controller
-            control={control}
-            name={`locations.${index}.ownershipDocumentPath` as Path<T>}
-            render={({ field }) => (
-              <FormField
-                label="Upload Dokumen Pendukung Kepemilikan"
-                required
-                error={locationErrors?.ownershipDocumentPath?.message}
-              >
-                <FileUploadField
-                  namespace="temporary"
-                  value={field.value as string | undefined}
-                  onChange={field.onChange}
-                  label="Upload Dokumen Pendukung Kepemilikan"
-                />
-              </FormField>
-            )}
-          />
+          <Field label="Dokumen Pendukung Kepemilikan" required error={locationErrors?.ownershipDocuments?.message}>
+            <Controller
+              control={control}
+              name={`locations.${index}.ownershipDocuments` as Path<T>}
+              render={({ field }) => {
+                const entries = (field.value as LocationOwnershipDocEntry[] | undefined) ?? [];
+                return (
+                  <div className="flex flex-col gap-3">
+                    {OWNERSHIP_DOCUMENT_TYPES.map((type) => {
+                      const entryIndex = entries.findIndex((e) => e.type === type);
+                      const checked = entryIndex !== -1;
+                      return (
+                        <div key={type} className="rounded-lg border border-[#e8dccd] bg-white p-3">
+                          <label className="flex cursor-pointer items-center gap-2.5 text-[13px] font-semibold text-[#261813]">
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(next) => {
+                                if (next) field.onChange([...entries, { type, documentPath: undefined }]);
+                                else field.onChange(entries.filter((e) => e.type !== type));
+                              }}
+                            />
+                            {OWNERSHIP_DOCUMENT_TYPE_LABELS[type]}
+                          </label>
+                          {checked && (
+                            <div className="mt-3">
+                              <FileUploadField
+                                namespace="temporary"
+                                value={entries[entryIndex]?.documentPath}
+                                onChange={(path) =>
+                                  field.onChange(entries.map((e) => (e.type === type ? { ...e, documentPath: path } : e)))
+                                }
+                                label={`Upload ${OWNERSHIP_DOCUMENT_TYPE_LABELS[type]}`}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }}
+            />
+          </Field>
         )}
       </div>
 
       {locationType === "GUDANG" && (
         <div className="flex flex-col gap-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h3 className="text-[11px] font-bold uppercase tracking-wide text-[#a68f80]">
             Tanda Daftar Gudang
           </h3>
-          <FormField
-            label="Jenis Tanda Daftar Gudang"
-            required
-            error={locationErrors?.warehouseRegistrationType?.message}
-          >
+          <Field label="Jenis Tanda Daftar Gudang" required error={locationErrors?.warehouseRegistrationType?.message}>
             <Controller
               control={control}
               name={`locations.${index}.warehouseRegistrationType` as Path<T>}
               render={({ field }) => (
-                <Select value={(field.value as string) ?? ""} onValueChange={field.onChange}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue>
-                      {(value: string | null) =>
-                        (value &&
-                          WAREHOUSE_REGISTRATION_LABELS[
-                            value as (typeof WAREHOUSE_REGISTRATION_TYPES)[number]
-                          ]) ||
-                        "Pilih jenis tanda daftar gudang..."
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
+                <div className="relative">
+                  <select
+                    value={(field.value as string) ?? ""}
+                    onChange={(event) => field.onChange(event.target.value)}
+                    className="w-full appearance-none rounded-lg border border-[#e8dccd] bg-white px-3 py-2.5 pr-8 text-[13px] text-[#261813] outline-none"
+                  >
+                    <option value="" disabled>
+                      Pilih jenis tanda daftar gudang...
+                    </option>
                     {WAREHOUSE_REGISTRATION_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
+                      <option key={type} value={type}>
                         {WAREHOUSE_REGISTRATION_LABELS[type]}
-                      </SelectItem>
+                      </option>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-[#a68f80]" />
+                </div>
               )}
             />
-          </FormField>
+          </Field>
           <div className="grid gap-3 sm:grid-cols-2">
-            <FormField
-              label="Nomor Tanda Daftar Gudang"
-              required
-              error={locationErrors?.warehouseRegistrationNumber?.message}
-            >
-              <Input {...register(`locations.${index}.warehouseRegistrationNumber` as Path<T>)} />
-            </FormField>
-            <FormField
-              label="Nomor NIB Pemilik Gudang"
-              error={locationErrors?.warehouseOwnerNibNumber?.message}
-            >
-              <Input {...register(`locations.${index}.warehouseOwnerNibNumber` as Path<T>)} />
-            </FormField>
+            <Field label="Nomor Tanda Daftar Gudang" required error={locationErrors?.warehouseRegistrationNumber?.message}>
+              <TextInput variant="white" {...register(`locations.${index}.warehouseRegistrationNumber` as Path<T>)} />
+            </Field>
+            <Field label="Nomor NIB Pemilik Gudang" error={locationErrors?.warehouseOwnerNibNumber?.message}>
+              <TextInput variant="white" {...register(`locations.${index}.warehouseOwnerNibNumber` as Path<T>)} />
+            </Field>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <FormField
-              label="Tanggal Penerbitan"
-              error={locationErrors?.warehouseRegistrationIssueDate?.message}
-            >
-              <Input
-                type="date"
-                {...register(`locations.${index}.warehouseRegistrationIssueDate` as Path<T>)}
-              />
-            </FormField>
-            <FormField
-              label="Lembaga Penerbit"
-              error={locationErrors?.warehouseRegistrationIssuingAuthority?.message}
-            >
-              <Input
-                {...register(
-                  `locations.${index}.warehouseRegistrationIssuingAuthority` as Path<T>,
-                )}
-              />
-            </FormField>
+            <Field label="Tanggal Penerbitan" error={locationErrors?.warehouseRegistrationIssueDate?.message}>
+              <TextInput variant="white" type="date" {...register(`locations.${index}.warehouseRegistrationIssueDate` as Path<T>)} />
+            </Field>
+            <Field label="Lembaga Penerbit" error={locationErrors?.warehouseRegistrationIssuingAuthority?.message}>
+              <TextInput variant="white" {...register(`locations.${index}.warehouseRegistrationIssuingAuthority` as Path<T>)} />
+            </Field>
           </div>
           <Controller
             control={control}
             name={`locations.${index}.warehouseRegistrationDocumentPath` as Path<T>}
             render={({ field }) => (
-              <FormField
-                label="Upload Dokumen Tanda Daftar Gudang"
-                error={locationErrors?.warehouseRegistrationDocumentPath?.message}
-              >
+              <Field label="Upload Dokumen Tanda Daftar Gudang" error={locationErrors?.warehouseRegistrationDocumentPath?.message}>
                 <FileUploadField
                   namespace="temporary"
                   value={field.value as string | undefined}
                   onChange={field.onChange}
                   label="Upload Dokumen Pendukung Tanda Daftar Gudang"
                 />
-              </FormField>
+              </Field>
             )}
           />
           <Controller
             control={control}
             name={`locations.${index}.warehouseLayoutDocumentPath` as Path<T>}
             render={({ field }) => (
-              <FormField
-                label="Upload Layout Gudang"
-                error={locationErrors?.warehouseLayoutDocumentPath?.message}
-              >
+              <Field label="Upload Layout Gudang" error={locationErrors?.warehouseLayoutDocumentPath?.message}>
                 <FileUploadField
                   namespace="temporary"
                   value={field.value as string | undefined}
                   onChange={field.onChange}
                   label="Upload Layout Gudang"
                 />
-              </FormField>
+              </Field>
             )}
           />
         </div>
@@ -409,7 +413,7 @@ export function LocationsField<T extends FormWithLocations>({
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
+      <p className="rounded-lg border border-[#b7cdf0] bg-[#eaf1fc] p-3 text-xs text-[#2f5fa8]">
         Tambahkan semua lokasi fasilitas perusahaan yang terkait dengan
         kegiatan usaha — termasuk kantor pusat, gudang, dan pabrik. Setiap
         lokasi diinput sebagai satu entri terpisah.
@@ -428,19 +432,18 @@ export function LocationsField<T extends FormWithLocations>({
       ))}
 
       {locationsError?.message && (
-        <p className="text-xs text-destructive">{locationsError.message}</p>
+        <p className="text-xs text-[#c1361f]">{locationsError.message}</p>
       )}
 
-      <Button
+      <button
         type="button"
-        variant="outline"
-        className="border-dashed"
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onClick={() => append(createEmptyLocation() as any)}
+        className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-[#e1bfb3] bg-white py-2.5 text-[13px] font-semibold text-[#e0662e]"
       >
         <Plus className="size-4" />
         Add Location
-      </Button>
+      </button>
     </div>
   );
 }

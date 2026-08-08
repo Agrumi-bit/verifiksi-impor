@@ -1,28 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { createEmptyLocation } from "@/modules/shared/schema";
 import {
   companyWizardSchema,
+  createEmptyContact,
+  createEmptyTaxProofs,
   COMPANY_STEP_FIELD_NAMES,
   type CompanyWizardValues,
 } from "../schema";
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 6;
 
 export function useCompanyWizard() {
   const [currentStep, setCurrentStep] = useState(1);
 
   const form = useForm<CompanyWizardValues>({
-    resolver: zodResolver(companyWizardSchema),
+    resolver: zodResolver(companyWizardSchema) as Resolver<CompanyWizardValues>,
     mode: "onBlur",
     defaultValues: {
-      companyType: "",
       companyWebsite: "",
+      contacts: [createEmptyContact()],
       kbliEntries: [],
+      hasAmendment: false,
+      taxProofs: createEmptyTaxProofs(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       locations: [createEmptyLocation() as any],
     },

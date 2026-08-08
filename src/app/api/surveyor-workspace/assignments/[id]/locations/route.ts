@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
+import { composeLocationAddress } from "@/modules/shared/schema";
 
 type PayloadLocation = {
   locationType: string;
   address: string;
+  addressDesa?: string;
+  addressKecamatan?: string;
   city?: string;
 };
 
@@ -46,14 +49,15 @@ export async function GET(
 
   const visits = [];
   for (const loc of payloadLocations) {
-    const key = `${loc.locationType}::${loc.address}`;
+    const fullAddress = composeLocationAddress(loc);
+    const key = `${loc.locationType}::${fullAddress}`;
     let visit = existingByKey.get(key);
     if (!visit) {
       visit = await db.locationVisit.create({
         data: {
           assignmentId: assignment.id,
           locationType: loc.locationType,
-          address: loc.address,
+          address: fullAddress,
           city: loc.city ?? null,
         },
       });

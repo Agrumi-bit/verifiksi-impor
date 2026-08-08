@@ -2,24 +2,7 @@
 
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { FormField } from "@/components/form/form-field";
+import { SearchSelectInput } from "@/components/form/search-select-input";
 import type { MasterDataField, MasterDataRow } from "../types";
 
 type Props = {
@@ -39,23 +22,38 @@ export function MasterDataFormDialog({
   initialValues,
   onSubmit,
 }: Props) {
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        {open && (
-          <MasterDataForm
-            fields={fields}
-            initialValues={initialValues}
-            onSubmit={onSubmit}
-            onCancel={() => onOpenChange(false)}
-            onDone={() => onOpenChange(false)}
-          />
-        )}
-      </DialogContent>
-    </Dialog>
+    <div
+      onClick={() => onOpenChange(false)}
+      style={{ background: "rgba(43,36,32,.45)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    >
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="w-[460px] max-w-[92vw] rounded-2xl bg-white p-7"
+      >
+        <div className="mb-4.5 flex items-center justify-between">
+          <div className="text-[16px] font-extrabold text-[#2b2420]">{title}</div>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="text-[20px] text-[#a68f80]"
+            aria-label="Tutup"
+          >
+            ✕
+          </button>
+        </div>
+        <MasterDataForm
+          fields={fields}
+          initialValues={initialValues}
+          onSubmit={onSubmit}
+          onCancel={() => onOpenChange(false)}
+          onDone={() => onOpenChange(false)}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -79,13 +77,11 @@ function buildInitialValues(
   return next;
 }
 
-function MasterDataForm({
-  fields,
-  initialValues,
-  onSubmit,
-  onCancel,
-  onDone,
-}: FormProps) {
+const inputClass =
+  "w-full rounded-lg border-none bg-[#f2f0ee] px-3 py-2.5 text-[13px] text-[#261813] outline-none";
+const labelClass = "mb-1.5 block text-[12px] font-semibold text-[#594138]";
+
+function MasterDataForm({ fields, initialValues, onSubmit, onCancel, onDone }: FormProps) {
   const [values, setValues] = useState<Record<string, string>>(() =>
     buildInitialValues(fields, initialValues),
   );
@@ -117,58 +113,89 @@ function MasterDataForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
       {fields.map((field) => (
-        <FormField
-          key={field.key}
-          label={field.label}
-          required={field.required}
-          error={errors[field.key]}
-        >
-          {field.type === "textarea" ? (
-            <Textarea
-              value={values[field.key] ?? ""}
-              placeholder={field.placeholder}
-              onChange={(event) => updateField(field.key, event.target.value)}
-            />
-          ) : field.type === "select" ? (
-            <Select
-              value={values[field.key] ?? ""}
-              onValueChange={(value) => updateField(field.key, value ?? "")}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue>
-                  {(value: string | null) =>
-                    field.options?.find((option) => option.value === value)
-                      ?.label ?? field.placeholder ?? "Pilih..."
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {field.options?.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div key={field.key}>
+          {field.type === "checkbox" ? (
+            <label className="flex items-center gap-2 text-[12.5px] text-[#4a4038]">
+              <input
+                type="checkbox"
+                checked={values[field.key] === "true"}
+                onChange={(event) => updateField(field.key, event.target.checked ? "true" : "false")}
+              />
+              {field.placeholder}
+            </label>
           ) : (
-            <Input
-              value={values[field.key] ?? ""}
-              placeholder={field.placeholder}
-              onChange={(event) => updateField(field.key, event.target.value)}
-            />
+            <>
+              {field.label && (
+                <label className={labelClass}>
+                  {field.label}
+                  {field.required && <span className="text-[#ba1a1a]"> *</span>}
+                </label>
+              )}
+              {field.type === "textarea" ? (
+                <textarea
+                  value={values[field.key] ?? ""}
+                  placeholder={field.placeholder}
+                  onChange={(event) => updateField(field.key, event.target.value)}
+                  className={`${inputClass} min-h-20 resize-y`}
+                />
+              ) : field.type === "select" ? (
+                <select
+                  value={values[field.key] ?? ""}
+                  onChange={(event) => updateField(field.key, event.target.value)}
+                  className={inputClass}
+                >
+                  <option value="" disabled>
+                    {field.placeholder ?? "Pilih..."}
+                  </option>
+                  {field.options?.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              ) : field.type === "searchselect" ? (
+                <SearchSelectInput
+                  value={values[field.key] ?? ""}
+                  onChange={(next) => updateField(field.key, next)}
+                  options={field.options ?? []}
+                  placeholder={field.placeholder ?? "Cari..."}
+                  allowFreeText={false}
+                />
+              ) : (
+                <input
+                  type="text"
+                  value={values[field.key] ?? ""}
+                  placeholder={field.placeholder}
+                  onChange={(event) => updateField(field.key, event.target.value)}
+                  className={inputClass}
+                />
+              )}
+            </>
           )}
-        </FormField>
+          {errors[field.key] && (
+            <p className="mt-1 text-[11px] text-[#ba1a1a]">{errors[field.key]}</p>
+          )}
+        </div>
       ))}
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+      <div className="mt-2 flex justify-end gap-2.5">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isSubmitting}
+          className="rounded-lg border border-[#e1bfb3] bg-white px-4.5 py-2.5 text-[13px] font-semibold text-[#261813] disabled:opacity-60"
+        >
           Batal
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
+        </button>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="rounded-lg bg-[#e0662e] px-4.5 py-2.5 text-[13px] font-bold text-white disabled:opacity-60"
+        >
           {isSubmitting ? "Menyimpan..." : "Simpan"}
-        </Button>
-      </DialogFooter>
+        </button>
+      </div>
     </form>
   );
 }

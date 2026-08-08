@@ -33,8 +33,8 @@ import { SECTION4_QUESTIONS, SECTION6_QUESTIONS } from "./schema";
 
 type PayloadLocation = {
   buildingStatus?: "MILIK_SENDIRI" | "SEWA" | null;
-  ownershipDocumentPath?: string | null;
-  leaseDocumentPath?: string | null;
+  ownershipDocuments?: { type: string; documentPath?: string | null }[] | null;
+  leaseDocuments?: { type: string; documentPath?: string | null }[] | null;
   leaseOriginalOwnerName?: string | null;
   leaseStartDate?: string | null;
   leaseEndDate?: string | null;
@@ -69,8 +69,8 @@ function buildDefaultSection1Docs(company: LocationDetail["company"], payloadLoc
   if (company.nibDocumentPath) docs.push({ key: "nib", name: "NIB", status: "pending", addressText: "" });
   if (company.notarialDocumentPath) docs.push({ key: "akta", name: "Akta Notaris", status: "pending", addressText: "" });
   const isSewa = payloadLocation?.buildingStatus === "SEWA";
-  const ownershipDocPath = isSewa ? payloadLocation?.leaseDocumentPath : payloadLocation?.ownershipDocumentPath;
-  if (ownershipDocPath) {
+  const hasOwnershipDoc = ((isSewa ? payloadLocation?.leaseDocuments : payloadLocation?.ownershipDocuments) ?? []).length > 0;
+  if (hasOwnershipDoc) {
     docs.push({ key: "kepemilikan", name: isSewa ? "Dokumen Sewa Lokasi" : "Dokumen Kepemilikan Lokasi", status: "pending", addressText: "" });
   }
   return docs;

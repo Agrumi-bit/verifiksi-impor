@@ -1,37 +1,14 @@
 "use client";
 
 import { Controller, useFieldArray, type UseFormReturn } from "react-hook-form";
-import { useQuery } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/form/form-field";
 import { SearchSelectInput } from "@/components/form/search-select-input";
+import { useHsCodeOptions } from "../../hooks/use-hs-code-options";
 import { createEmptyProduct, type ApplicationWizardValues } from "../../schema";
-
-type HsCodeMasterDataRow = {
-  id: string;
-  hsCode: string;
-  description: string;
-  status: "ACTIVE" | "INACTIVE";
-};
-
-function useHsCodeOptions() {
-  const { data } = useQuery({
-    queryKey: ["master-data-hs-code", "options"],
-    queryFn: async () => {
-      const response = await fetch("/api/master-data/hs-code");
-      if (!response.ok) throw new Error("Gagal memuat data HS Code");
-      const json = (await response.json()) as { data: HsCodeMasterDataRow[] };
-      return json.data;
-    },
-  });
-
-  return (data ?? [])
-    .filter((row) => row.status === "ACTIVE")
-    .map((row) => ({ value: row.hsCode, label: row.hsCode, hint: row.description }));
-}
 
 type Step6Props = {
   form: UseFormReturn<ApplicationWizardValues>;
@@ -47,7 +24,7 @@ export function Step6ProductInformation({ form }: Step6Props) {
     <div className="flex flex-col gap-4">
       <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
         Rincian produk/material yang akan diimpor. Data ini terkait dengan
-        Jenis Impor di Step 1 dan kesesuaian HS Code di Step 3.
+        Jenis Impor di Step 2 dan kesesuaian HS Code di Step 3.
       </p>
 
       {fields.map((field, index) => {

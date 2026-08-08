@@ -17,28 +17,26 @@ import { FormField } from "@/components/form/form-field";
 import { FileUploadField } from "@/components/form/file-upload-field";
 import { createEmptySupportDocument, type ApplicationWizardValues } from "../../schema";
 
-type MitraIndustriOption = {
+type PartnerIndustriOption = {
   id: string;
   name: string;
-  lhvkiNumber: string;
   nibNumber: string;
 };
 
-function useMitraIndustriOptions() {
+function usePartnerIndustriOptions() {
   return useQuery({
-    queryKey: ["mitra", "INDUSTRI"],
+    queryKey: ["partners", "INDUSTRI"],
     queryFn: async () => {
-      const response = await fetch("/api/mitra?type=INDUSTRI");
-      if (!response.ok) throw new Error("Gagal memuat data mitra industri");
+      const response = await fetch("/api/partners?type=INDUSTRI");
+      if (!response.ok) throw new Error("Gagal memuat data partner industri");
       const json = (await response.json()) as {
-        data: { id: string; name: string; lhvkiNumber: string | null; nibNumber: string }[];
+        data: { id: string; company: { companyName: string; nibNumber: string } }[];
       };
       return json.data.map(
-        (mitra): MitraIndustriOption => ({
-          id: mitra.id,
-          name: mitra.name,
-          lhvkiNumber: mitra.lhvkiNumber ?? "",
-          nibNumber: mitra.nibNumber,
+        (partner): PartnerIndustriOption => ({
+          id: partner.id,
+          name: partner.company.companyName,
+          nibNumber: partner.company.nibNumber,
         }),
       );
     },
@@ -123,12 +121,12 @@ function DocumentListSection({
 export function Step5SupportDocument({ form }: Step5Props) {
   const { control, register, formState } = form;
   const importTypes = useWatch({ control, name: "importTypes" }) ?? [];
-  const mitraIndustriId = useWatch({ control, name: "mitraIndustriId" });
+  const partnerIndustriId = useWatch({ control, name: "partnerIndustriId" });
   const {
-    data: mitraOptions,
-    isLoading: isMitraLoading,
-    isError: isMitraError,
-  } = useMitraIndustriOptions();
+    data: partnerOptions,
+    isLoading: isPartnerLoading,
+    isError: isPartnerError,
+  } = usePartnerIndustriOptions();
 
   const hasIndustri = importTypes.includes("BAHAN_BAKU_INDUSTRI");
   const hasNonIndustri = importTypes.includes("BAHAN_BAKU_NON_INDUSTRI");
@@ -137,7 +135,7 @@ export function Step5SupportDocument({ form }: Step5Props) {
   if (!hasIndustri && !hasNonIndustri && !hasKonsumsi) {
     return (
       <p className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-        Tidak ada Jenis Impor yang dipilih di Step 1, sehingga tidak ada
+        Tidak ada Jenis Impor yang dipilih di Step 2, sehingga tidak ada
         dokumen pendukung yang perlu ditambahkan di step ini.
       </p>
     );
@@ -147,7 +145,7 @@ export function Step5SupportDocument({ form }: Step5Props) {
     <div className="flex flex-col gap-8">
       <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
         Dokumen pendukung yang perlu diunggah disesuaikan dengan Jenis Impor
-        yang Anda pilih di Step 1.
+        yang Anda pilih di Step 2.
       </p>
 
       {hasIndustri && (
@@ -156,48 +154,47 @@ export function Step5SupportDocument({ form }: Step5Props) {
             Impor Bahan Baku – Perusahaan Industri (API-U)
           </h2>
           <FormField
-            label="Mitra Industri Tujuan"
+            label="Partner Industri Tujuan"
             required
             error={
-              formState.errors.mitraIndustriId?.message ??
-              (isMitraError
-                ? "Gagal memuat data Mitra Industri. Pastikan database sudah terhubung."
+              formState.errors.partnerIndustriId?.message ??
+              (isPartnerError
+                ? "Gagal memuat data Partner Industri. Pastikan database sudah terhubung."
                 : undefined)
             }
             hint={
-              !isMitraError && mitraOptions?.length === 0
-                ? "Belum ada Mitra Industri terdaftar. Tambahkan di modul Mitra Management terlebih dahulu."
+              !isPartnerError && partnerOptions?.length === 0
+                ? "Belum ada Partner Industri terdaftar. Tambahkan di modul Partner Management terlebih dahulu."
                 : undefined
             }
           >
             <Controller
               control={control}
-              name="mitraIndustriId"
+              name="partnerIndustriId"
               render={({ field }) => (
                 <Select
                   value={field.value ?? ""}
-                  disabled={isMitraLoading || isMitraError}
+                  disabled={isPartnerLoading || isPartnerError}
                   onValueChange={(value) => {
                     field.onChange(value);
-                    const mitra = mitraOptions?.find(
+                    const partner = partnerOptions?.find(
                       (option) => option.id === value,
                     );
-                    form.setValue("mitraIndustriLhvki", mitra?.lhvkiNumber ?? "");
-                    form.setValue("mitraIndustriNib", mitra?.nibNumber ?? "");
+                    form.setValue("partnerIndustriNib", partner?.nibNumber ?? "");
                   }}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue>
                       {(value: string | null) =>
-                        mitraOptions?.find((option) => option.id === value)?.name ??
-                        (isMitraLoading
-                          ? "Memuat data mitra..."
-                          : "Pilih mitra industri...")
+                        partnerOptions?.find((option) => option.id === value)?.name ??
+                        (isPartnerLoading
+                          ? "Memuat data partner..."
+                          : "Pilih partner industri...")
                       }
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {mitraOptions?.map((option) => (
+                    {partnerOptions?.map((option) => (
                       <SelectItem key={option.id} value={option.id}>
                         {option.name}
                       </SelectItem>
@@ -208,13 +205,13 @@ export function Step5SupportDocument({ form }: Step5Props) {
             />
           </FormField>
 
-          {mitraIndustriId && (
+          {partnerIndustriId && (
             <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="LHVKI Perusahaan Industri" hint="Terisi otomatis, terintegrasi dengan Mitra Industri.">
-                <Input readOnly {...register("mitraIndustriLhvki")} />
+              <FormField label="LHVKI Perusahaan Industri" hint="Isi manual nomor LHVKI perusahaan industri terkait.">
+                <Input {...register("partnerIndustriLhvki")} />
               </FormField>
-              <FormField label="Nomor NIB Mitra Industri" hint="Terisi otomatis, terintegrasi dengan Mitra Industri.">
-                <Input readOnly {...register("mitraIndustriNib")} />
+              <FormField label="Nomor NIB Partner Industri" hint="Terisi otomatis, terintegrasi dengan Partner Industri.">
+                <Input readOnly {...register("partnerIndustriNib")} />
               </FormField>
             </div>
           )}

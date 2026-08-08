@@ -7,6 +7,10 @@ import { getServerSession } from "@/lib/get-session";
 const decisionSchema = z.object({
   decision: z.enum(["COMPLETED", "RETURNED"]),
   notes: z.string().trim().min(1, "Catatan keputusan wajib diisi"),
+  // Only set by the Draft Report tab's signed-submission flow — Approve/Return
+  // from the Decision Panel never sends these, so they stay optional here.
+  signaturePath: z.string().trim().optional(),
+  signatureDate: z.string().trim().optional(),
 });
 
 export async function POST(
@@ -42,6 +46,8 @@ export async function POST(
       status: parsed.data.decision,
       validationNotes: parsed.data.notes,
       validatedAt: new Date(),
+      ...(parsed.data.signaturePath ? { signaturePath: parsed.data.signaturePath } : {}),
+      ...(parsed.data.signatureDate ? { signatureDate: new Date(parsed.data.signatureDate) } : {}),
     },
   });
 

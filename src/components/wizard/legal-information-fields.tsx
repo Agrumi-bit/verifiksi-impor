@@ -178,36 +178,65 @@ export function LegalInformationFields<T extends FieldValues & LegalInformationV
             </div>
           </FormField>
 
-          {fields.length > 0 && (
-            <ul className="flex flex-col gap-2">
-              {fields.map((item, index) => (
+          <div className="flex flex-col gap-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              KBLI Utama
+            </h3>
+            {fields[0] ? (
+              <ul className="flex flex-col gap-2">
                 <li
-                  key={item.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-sm"
+                  key={fields[0].id}
+                  className="flex min-w-0 flex-1 gap-3 rounded-lg border border-border px-3 py-2 text-sm"
                 >
-                  <div className="flex min-w-0 flex-1 gap-3">
-                    <Input
-                      className="w-24"
-                      placeholder="Kode"
-                      {...register(`kbliEntries.${index}.code` as Path<T>)}
-                    />
-                    <Input
-                      placeholder="Deskripsi"
-                      {...register(`kbliEntries.${index}.description` as Path<T>)}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => remove(index)}
-                    className="shrink-0 text-muted-foreground hover:text-foreground"
-                    aria-label="Hapus KBLI"
-                  >
-                    <X className="size-4" />
-                  </button>
+                  <Input className="w-24" placeholder="Kode" {...register(`kbliEntries.0.code` as Path<T>)} />
+                  <Input placeholder="Deskripsi" {...register(`kbliEntries.0.description` as Path<T>)} />
                 </li>
-              ))}
-            </ul>
-          )}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground">Belum ada KBLI Utama — cari atau tambahkan kode di atas.</p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              KBLI Pendukung
+            </h3>
+            {fields.length > 1 ? (
+              <ul className="flex flex-col gap-2">
+                {fields.slice(1).map((item, i) => {
+                  const index = i + 1;
+                  return (
+                    <li
+                      key={item.id}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-sm"
+                    >
+                      <div className="flex min-w-0 flex-1 gap-3">
+                        <Input
+                          className="w-24"
+                          placeholder="Kode"
+                          {...register(`kbliEntries.${index}.code` as Path<T>)}
+                        />
+                        <Input
+                          placeholder="Deskripsi"
+                          {...register(`kbliEntries.${index}.description` as Path<T>)}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => remove(index)}
+                        className="shrink-0 text-muted-foreground hover:text-foreground"
+                        aria-label="Hapus KBLI"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground">Belum ada KBLI Pendukung.</p>
+            )}
+          </div>
           {errors.kbliEntries?.message && (
             <p className="text-xs text-destructive">
               {errors.kbliEntries.message as string}

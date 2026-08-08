@@ -1,25 +1,39 @@
 services:
   app:
-    build: .
+    image: ghcr.io/agrumi-bit/verifiksi-impor:latest
     restart: unless-stopped
-    env_file: .env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/verifikasi_impor?schema=public
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/verifikasi_impor?schema=public
       STORAGE_ROOT: /app/storage
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
     volumes:
       - app_storage:/app/storage
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     expose:
       - "3000"
+
+  migrate:
+    image: ghcr.io/agrumi-bit/verifiksi-impor:latest
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/verifikasi_impor?schema=public
+    command: ["npx", "--yes", "prisma@7.8.0", "migrate", "deploy"]
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: verifikasi_impor
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -30,12 +44,10 @@ services:
       retries: 10
 
   nginx:
-    image: nginx:alpine
+    image: ghcr.io/agrumi-bit/verifiksi-impor-nginx:latest
     restart: unless-stopped
     ports:
       - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - app
 
