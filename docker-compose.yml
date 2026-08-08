@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/agrumi-bit/verifiksi-impor:latest
+    image: ghcr.io/agrumi-bit/verifiksi-impor:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/verifikasi_impor?schema=public
@@ -19,7 +19,7 @@ services:
       - "3000"
 
   migrate:
-    image: ghcr.io/agrumi-bit/verifiksi-impor-migrate:latest
+    image: ghcr.io/agrumi-bit/verifiksi-impor-migrate:${IMAGE_TAG:-latest}
     restart: "no"
     environment:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/verifikasi_impor?schema=public
@@ -43,7 +43,7 @@ services:
       retries: 10
 
   caddy:
-    image: ghcr.io/agrumi-bit/verifiksi-impor-caddy:latest
+    image: ghcr.io/agrumi-bit/verifiksi-impor-caddy:${IMAGE_TAG:-latest}
     restart: unless-stopped
     ports:
       - "80:80"

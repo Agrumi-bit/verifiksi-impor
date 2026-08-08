@@ -1,4 +1,4 @@
-name: Build and publish Docker images
+name: Build, publish, and deploy
 
 on:
   push:
@@ -59,3 +59,23 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}-caddy:latest,${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}-caddy:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Hostinger VPS
+        uses: hostinger/deploy-on-vps@v2
+        with:
+          api-key: ${{ secrets.HOSTINGER_API_KEY }}
+          virtual-machine: ${{ vars.HOSTINGER_VM_ID }}
+          project-name: verifikasi_impor
+          docker-compose-path: docker-compose.yml
+          environment-variables: |
+            IMAGE_TAG=${{ github.sha }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET }}
+            BETTER_AUTH_URL=https://verifikasiimpor.online
+            NEXT_PUBLIC_APP_URL=https://verifikasiimpor.online
