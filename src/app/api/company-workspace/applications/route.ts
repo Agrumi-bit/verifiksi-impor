@@ -102,7 +102,8 @@ export async function POST(request: Request) {
 
   if (applicationId) {
     const existing = await db.application.findUnique({ where: { id: applicationId } });
-    if (existing && existing.companyId === companyId && existing.status === "DRAFT") {
+    const isEditable = existing?.status === "DRAFT" || existing?.status === "RETURNED";
+    if (existing && existing.companyId === companyId && isEditable) {
       const updated = await db.application.update({
         where: { id: applicationId },
         data: { verificationType, applicationCategory, payload: payload as object },

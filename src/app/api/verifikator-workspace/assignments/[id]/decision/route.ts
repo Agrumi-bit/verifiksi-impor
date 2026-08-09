@@ -51,5 +51,22 @@ export async function POST(
     },
   });
 
+  // The document-verification assignment is where a verifikator finds "tidak sesuai" problems —
+  // returning it here is the one real signal the company should see as "this application needs
+  // revision". Application.status has no other writer for RETURNED today, so this is additive.
+  if (parsed.data.decision === "RETURNED") {
+    await db.application.update({
+      where: { id: assignment.applicationId },
+      data: { status: "RETURNED" },
+    });
+    await db.applicationMessage.create({
+      data: {
+        applicationId: assignment.applicationId,
+        direction: "SYSTEM",
+        text: `Permohonan dikembalikan oleh verifikator untuk direvisi — alasan: ${parsed.data.notes}`,
+      },
+    });
+  }
+
   return NextResponse.json({ data: updated });
 }

@@ -110,13 +110,13 @@ export function ApplicationWizard({
       const { data } = (await response.json()) as {
         data: { status: string; payload: ApplicationWizardValues };
       };
-      if (data.status !== "DRAFT") {
-        toast.error("Permohonan ini sudah tidak berstatus draft.");
+      if (data.status !== "DRAFT" && data.status !== "RETURNED") {
+        toast.error("Permohonan ini tidak dapat diedit lagi.");
         return;
       }
       form.reset(data.payload);
       setCompanyDraftApplicationId(resumeDraftId);
-      toast.info("Melanjutkan draft tersimpan.");
+      toast.info(data.status === "RETURNED" ? "Memuat permohonan untuk direvisi." : "Melanjutkan draft tersimpan.");
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resumeDraftId]);

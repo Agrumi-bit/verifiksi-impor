@@ -74,7 +74,9 @@ export async function POST(request: Request) {
   // second, orphaned Application — same applicationNumber carries over.
   if (typeof draftApplicationId === "string") {
     const existing = await db.application.findUnique({ where: { id: draftApplicationId } });
-    if (existing && existing.status === "DRAFT" && existing.companyId === values.companyId) {
+    const isEditable = existing?.status === "DRAFT" || existing?.status === "RETURNED";
+    if (existing && isEditable && existing.companyId === values.companyId) {
+      const wasRevision = existing.status === "RETURNED";
       const promoted = await db.application.update({
         where: { id: draftApplicationId },
         data: {
@@ -88,7 +90,9 @@ export async function POST(request: Request) {
         data: {
           applicationId: promoted.id,
           direction: "SYSTEM",
-          text: `Permohonan ${promoted.applicationNumber} berhasil diajukan.`,
+          text: wasRevision
+            ? `Revisi permohonan ${promoted.applicationNumber} berhasil dikirim ulang.`
+            : `Permohonan ${promoted.applicationNumber} berhasil diajukan.`,
         },
       });
       if (values.companyId) {

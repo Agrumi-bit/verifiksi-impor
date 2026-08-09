@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
+  AlertTriangle,
   ArrowDownToLine,
   ArrowLeft,
   ArrowUpFromLine,
@@ -846,6 +847,26 @@ export function CompanyApplicationDetail({ id }: Props) {
         <span className="font-semibold text-[#20180f]">{data.applicationNumber}</span>
       </div>
 
+      {data.status === "RETURNED" && (
+        <div className="flex items-start gap-3 rounded-xl border border-[#f0c78a] bg-[#fdf0d5] p-4">
+          <AlertTriangle className="mt-0.5 size-5 shrink-0 text-[#a3690a]" />
+          <div className="flex-1">
+            <div className="text-[13.5px] font-bold text-[#7a4a10]">Permohonan Dikembalikan untuk Revisi</div>
+            <p className="mt-0.5 text-[12.5px] text-[#8a6224]">
+              Verifikator mengembalikan permohonan ini untuk diperbaiki. Lihat tab History untuk alasan lengkap, lalu klik
+              &quot;Revisi Permohonan&quot; untuk membuka kembali formulir dan mengirim ulang.
+            </p>
+          </div>
+          <Link
+            href={`/company-workspace/applications/new?draftId=${id}`}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[#a3690a] px-3.5 py-2 text-[12.5px] font-bold text-white"
+          >
+            <PenLine className="size-3.5" />
+            Revisi Permohonan
+          </Link>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2.5">
@@ -871,6 +892,12 @@ export function CompanyApplicationDetail({ id }: Props) {
             <Link href={`/company-workspace/applications/new?draftId=${id}`} className="flex items-center gap-1.5 rounded-lg bg-[#e0662e] px-4 py-2.25 text-[12.5px] font-bold text-white">
               <PenLine className="size-3.5" />
               Continue Editing
+            </Link>
+          )}
+          {data.status === "RETURNED" && (
+            <Link href={`/company-workspace/applications/new?draftId=${id}`} className="flex items-center gap-1.5 rounded-lg bg-[#a3690a] px-4 py-2.25 text-[12.5px] font-bold text-white">
+              <PenLine className="size-3.5" />
+              Revisi Permohonan
             </Link>
           )}
           <button
