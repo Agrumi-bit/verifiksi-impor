@@ -30,9 +30,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 
-USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-CMD ["node", "server.js"]
+# Starts as root so it can chown the mounted app_storage volume (Docker
+# creates named volumes as root:root on first mount, before nextjs's uid
+# ever touches it), then drops to the unprivileged nextjs user to run.
+CMD ["sh", "-c", "mkdir -p /app/storage && chown -R nextjs:nodejs /app/storage && exec su -s /bin/sh -c 'exec node server.js' nextjs"]
