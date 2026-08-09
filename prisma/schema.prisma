@@ -399,17 +399,36 @@ model UnitOfMeasurement {
   @@map("unit_of_measurement")
 }
 
-model CommodityGroup {
-  id          String              @id @default(cuid())
-  status      MasterDataStatus    @default(ACTIVE)
-  name        String
-  code        String
-  description String?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  subGroups   CommoditySubGroup[]
-  hsCodes     HsCodeMasterData[]
+// Top of the hierarchy: Kelompok Industri > CommodityGroup > CommoditySubGroup. Nullable on
+// CommodityGroup since existing rows predate this level — new rows are expected to set it (enforced
+// in the create form/schema, not the DB), so legacy ungrouped rows aren't broken by a hard migration.
+model IndustryGroup {
+  id              String           @id @default(cuid())
+  status          MasterDataStatus @default(ACTIVE)
+  name            String
+  code            String
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  commodityGroups CommodityGroup[]
 
+  @@map("industry_group")
+}
+
+model CommodityGroup {
+  id              String              @id @default(cuid())
+  status          MasterDataStatus    @default(ACTIVE)
+  name            String
+  code            String
+  description     String?
+  industryGroupId String?
+  industryGroup   IndustryGroup?      @relation(fields: [industryGroupId], references: [id])
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  subGroups       CommoditySubGroup[]
+  hsCodes         HsCodeMasterData[]
+
+  @@index([industryGroupId])
   @@map("commodity_group")
 }
 

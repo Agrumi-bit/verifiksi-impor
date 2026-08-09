@@ -107,6 +107,9 @@ function MasterDataForm({ fields, initialValues, onSubmit, onCancel, onDone }: F
     try {
       await onSubmit(values);
       onDone();
+    } catch {
+      // onSubmit already surfaced a toast with the real reason — swallow here so the
+      // dialog stays open for the user to fix instead of crashing to an error overlay.
     } finally {
       setIsSubmitting(false);
     }

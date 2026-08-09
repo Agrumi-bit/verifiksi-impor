@@ -1,8 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 import { MasterDataPage } from "./master-data-page";
+import { downloadHsCodeExcelTemplate, parseHsCodeExcelFile } from "../hs-code-excel";
 
 type NamedOption = { id: string; name: string };
 
@@ -19,6 +23,7 @@ function useOptions(path: string, key: string) {
 }
 
 export function HsCodeMasterDataPage() {
+  const queryClient = useQueryClient();
   const { data: groups } = useOptions(
     "/api/master-data/commodity-group",
     "master-data-commodity-group",
@@ -39,12 +44,89 @@ export function HsCodeMasterDataPage() {
     },
   });
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
+
+  async function handleImportFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setIsImporting(true);
+    try {
+      const { rows, skippedRows, unmatchedReferenceRows } = await parseHsCodeExcelFile(
+        file,
+        groups ?? [],
+        subGroups ?? [],
+        units ?? [],
+      );
+      if (rows.length === 0) {
+        toast.error(
+          unmatchedReferenceRows.length > 0
+            ? `Tidak ada baris valid. ${unmatchedReferenceRows.length} baris punya Kelompok/Sub Kelompok/Satuan yang tidak dikenali.`
+            : "Tidak ada baris valid ditemukan. Pastikan kolom \"Pos Tarif / HS Code\" dan \"Uraian Barang\" terisi.",
+        );
+        return;
+      }
+
+      const response = await fetch("/api/master-data/hs-code/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        toast.error(body?.error ?? "Gagal mengimpor data");
+        return;
+      }
+      const { data } = (await response.json()) as { data: { created: number; duplicates: string[] } };
+
+      queryClient.invalidateQueries({ queryKey: ["master-data-hs-code"] });
+
+      const notes: string[] = [];
+      if (data.duplicates.length > 0) notes.push(`${data.duplicates.length} duplikat dilewati (${data.duplicates.slice(0, 5).join(", ")}${data.duplicates.length > 5 ? ", ..." : ""})`);
+      if (skippedRows > 0) notes.push(`${skippedRows} baris kosong dilewati`);
+      if (unmatchedReferenceRows.length > 0) notes.push(`${unmatchedReferenceRows.length} baris Kelompok/Sub Kelompok/Satuan tidak dikenali dilewati`);
+
+      if (data.created > 0) {
+        toast.success(`${data.created} HS Code berhasil diimpor.${notes.length > 0 ? " " + notes.join("; ") + "." : ""}`);
+      } else {
+        toast.error(`Tidak ada HS Code baru — semua baris duplikat.${notes.length > 0 ? " " + notes.join("; ") + "." : ""}`);
+      }
+    } catch {
+      toast.error("Gagal membaca file Excel. Pastikan format file sesuai template.");
+    } finally {
+      setIsImporting(false);
+    }
+  }
+
   return (
     <MasterDataPage
       title="HS Code Master Data"
       description="Database referensi HS Code untuk sektor Tekstil dan Produk Tekstil (TPT) sesuai Lampiran I Permenperin No. 27 Tahun 2025."
       apiPath="/api/master-data/hs-code"
       queryKey="master-data-hs-code"
+      headerActions={
+        <>
+          <button
+            type="button"
+            onClick={downloadHsCodeExcelTemplate}
+            className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-4 py-2.5 text-[13px] font-semibold text-[#261813]"
+          >
+            <Download className="size-3.5" />
+            Unduh Template Excel
+          </button>
+          <button
+            type="button"
+            disabled={isImporting}
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-4 py-2.5 text-[13px] font-semibold text-[#261813] disabled:opacity-60"
+          >
+            <Upload className="size-3.5" />
+            {isImporting ? "Mengimpor..." : "Impor dari Excel"}
+          </button>
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportFile} />
+        </>
+      }
       columns={[
         { key: "hsCode", label: "Pos Tarif / HS Code" },
         { key: "description", label: "Uraian Barang" },

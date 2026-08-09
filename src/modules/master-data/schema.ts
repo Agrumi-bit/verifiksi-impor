@@ -16,9 +16,16 @@ export const unitOfMeasurementSchema = z.object({
   description: z.string().trim().optional(),
 });
 
+export const industryGroupSchema = z.object({
+  name: requiredString("Nama kelompok industri wajib diisi"),
+  code: requiredString("Kode kelompok industri wajib diisi"),
+  description: z.string().trim().optional(),
+});
+
 export const commodityGroupSchema = z.object({
   name: requiredString("Nama kelompok komoditas wajib diisi"),
   code: requiredString("Kode kelompok wajib diisi"),
+  industryGroupId: requiredString("Kelompok industri wajib dipilih"),
   description: z.string().trim().optional(),
 });
 
@@ -60,6 +67,8 @@ export const lartasImporUpdateSchema = lartasImporSchema.extend(statusSchema.sha
 
 export const unitOfMeasurementUpdateSchema =
   unitOfMeasurementSchema.extend(statusSchema.shape);
+export const industryGroupUpdateSchema =
+  industryGroupSchema.extend(statusSchema.shape);
 export const commodityGroupUpdateSchema =
   commodityGroupSchema.extend(statusSchema.shape);
 export const commoditySubGroupUpdateSchema =

@@ -1,9 +1,8 @@
 import { db } from "@/lib/db";
 import { createMasterDataListRoute } from "@/lib/master-data-routes";
-import { commodityGroupSchema } from "@/modules/master-data/schema";
+import { industryGroupSchema } from "@/modules/master-data/schema";
 
 export const { GET, POST } = createMasterDataListRoute(
-  db.commodityGroup,
-  commodityGroupSchema,
-  { include: { industryGroup: true } },
+  db.industryGroup,
+  industryGroupSchema,
 );

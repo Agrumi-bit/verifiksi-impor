@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronsUpDown, ChevronUp } from "lucide-react";
@@ -20,6 +21,8 @@ type Props = {
   fields: MasterDataField[];
   addButtonLabel?: string;
   requireReasonOnDeactivate?: boolean;
+  /** Extra buttons rendered next to "+ Tambah" — e.g. Excel import/export, when a page needs it. */
+  headerActions?: ReactNode;
 };
 
 function cellValue(row: MasterDataRow, column: MasterDataColumn): string {
@@ -43,6 +46,7 @@ export function MasterDataPage({
   fields,
   addButtonLabel,
   requireReasonOnDeactivate,
+  headerActions,
 }: Props) {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -187,13 +191,16 @@ export function MasterDataPage({
             <p className="mt-1 max-w-[560px] text-[13px] text-[#8a7565]">{description}</p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={openAddDialog}
-          className="flex items-center gap-1.5 rounded-lg bg-[#e0662e] px-4 py-2.5 text-[13px] font-semibold text-white"
-        >
-          + {addButtonLabel ?? `Tambah ${title}`}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {headerActions}
+          <button
+            type="button"
+            onClick={openAddDialog}
+            className="flex items-center gap-1.5 rounded-lg bg-[#e0662e] px-4 py-2.5 text-[13px] font-semibold text-white"
+          >
+            + {addButtonLabel ?? `Tambah ${title}`}
+          </button>
+        </div>
       </div>
 
       <div className="mb-4 rounded-[10px] border border-[#f0ded0] bg-white p-3.5">
