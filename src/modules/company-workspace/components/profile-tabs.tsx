@@ -88,7 +88,7 @@ export type CompanyProfileData = {
 
 const QUERY_KEY = ["company-workspace", "profile"];
 
-function useCompanyProfileQuery() {
+export function useCompanyProfileQuery() {
   return useQuery({
     queryKey: QUERY_KEY,
     queryFn: async () => {

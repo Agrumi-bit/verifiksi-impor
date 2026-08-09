@@ -1,10 +1,5 @@
-import { ComingSoon } from "@/components/layout/coming-soon";
+import { MediaLibraryPage } from "@/modules/company-workspace/components/media-library-page";
 
-export default function MediaLibraryPage() {
-  return (
-    <ComingSoon
-      title="Media Library"
-      description="Pustaka foto dan media pendukung milik perusahaan Anda."
-    />
-  );
+export default function Page() {
+  return <MediaLibraryPage />;
 }

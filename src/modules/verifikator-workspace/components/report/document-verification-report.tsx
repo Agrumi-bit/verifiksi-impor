@@ -831,13 +831,15 @@ function ProductChapter({
 type Props = {
   assignmentId: string;
   backHref?: string;
+  /** Which workspace's API scope to read the report through — verifikator's own, or a company reading its own finished report. */
+  basePath?: string;
 };
 
-export function DocumentVerificationReport({ assignmentId, backHref }: Props) {
+export function DocumentVerificationReport({ assignmentId, backHref, basePath = "/api/verifikator-workspace" }: Props) {
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["verifikator-workspace", "assignments", assignmentId, "document-report"],
+    queryKey: [basePath, "assignments", assignmentId, "document-report"],
     queryFn: async () => {
-      const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/document-report`);
+      const response = await fetch(`${basePath}/assignments/${assignmentId}/document-report`);
       if (!response.ok) throw new Error("Laporan tidak ditemukan");
       const json = (await response.json()) as { data: ReportData };
       return json.data;

@@ -1,10 +1,5 @@
-import { ComingSoon } from "@/components/layout/coming-soon";
+import { SupportingDocumentsPage } from "@/modules/company-workspace/components/supporting-documents-page";
 
-export default function SupportingDocumentsPage() {
-  return (
-    <ComingSoon
-      title="Supporting Documents"
-      description="Unggah, pratinjau, dan kelola versi dokumen pendukung perusahaan."
-    />
-  );
+export default function Page() {
+  return <SupportingDocumentsPage />;
 }

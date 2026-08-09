@@ -33,6 +33,7 @@ import {
 import { avatarColor, fmtDate, initials, STATUS_LABEL, STATUS_STYLE } from "@/modules/company/utils";
 import { TAX_PROOF_TYPE_LABELS } from "@/modules/company/schema";
 import { documentFieldCode } from "@/modules/company/document-fields";
+import { OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS } from "@/modules/shared/schema";
 import { buildDisplayFileName } from "@/lib/document-filename";
 import type { CompanyProfileData } from "./profile-tabs";
 
@@ -838,7 +839,7 @@ function TaxTab({ data, onView }: { data: CompanyProfileData; onView: (doc: View
   );
 }
 
-function FacilitiesTab({ data }: { data: CompanyProfileData }) {
+function FacilitiesTab({ data, onView }: { data: CompanyProfileData; onView: (doc: ViewingDoc) => void }) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   function toggle(id: string) {
@@ -861,6 +862,18 @@ function FacilitiesTab({ data }: { data: CompanyProfileData }) {
           .join(", ");
         const FacilityIcon = LOCATION_TYPE_ICON[loc.locationType] ?? Building2;
         const isExpanded = expandedIds.has(loc.id);
+        const proofDocs =
+          loc.buildingStatus === "SEWA"
+            ? (loc.leaseDocuments ?? []).map((entry) => ({
+                key: `location:${loc.id}:lease:${entry.type}`,
+                label: LEASE_DOCUMENT_TYPE_LABELS[entry.type],
+                path: entry.documentPath,
+              }))
+            : (loc.ownershipDocuments ?? []).map((entry) => ({
+                key: `location:${loc.id}:ownership:${entry.type}`,
+                label: OWNERSHIP_DOCUMENT_TYPE_LABELS[entry.type],
+                path: entry.documentPath,
+              }));
         return (
           <div key={loc.id} className="overflow-hidden rounded-xl border-[1.5px] border-[#e0662e] bg-white">
             <div
@@ -899,8 +912,47 @@ function FacilitiesTab({ data }: { data: CompanyProfileData }) {
                   {BUILDING_STATUS_LABEL[loc.buildingStatus] ?? loc.buildingStatus}
                 </div>
               </div>
-              <div className="flex shrink-0 items-center self-center">
-                {isExpanded ? <ChevronUp className="size-5 text-[#8a7565]" /> : <ChevronDown className="size-5 text-[#8a7565]" />}
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                {proofDocs.length === 0 && (
+                  <span className="whitespace-nowrap rounded-full bg-[#fbe4de] px-3 py-1 text-[11px] font-bold text-[#c1361f]">
+                    Belum ada dokumen
+                  </span>
+                )}
+                {proofDocs.map((doc) => {
+                  const href = fileHref(doc.path);
+                  return (
+                    <button
+                      key={doc.key}
+                      type="button"
+                      disabled={!href}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (!href || !doc.path) return;
+                        onView({
+                          title: doc.label,
+                          path: doc.path,
+                          fieldKey: doc.key,
+                          category: "Fasilitas",
+                          version: 1,
+                          uploadedByName: null,
+                          uploadedAt: data.updatedAt,
+                          verificationStatus: "NOT_YET_VERIFIED",
+                          verifiedByName: null,
+                          verifiedAt: null,
+                          verifiedByRole: null,
+                          rejectionNote: null,
+                        });
+                      }}
+                      className="flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#e0662e] px-3.5 py-1.75 text-[11.5px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#f2ece5] disabled:text-[#a68f80]"
+                    >
+                      <Eye className="size-3.5" />
+                      {doc.label}
+                    </button>
+                  );
+                })}
+                <div className="pt-1">
+                  {isExpanded ? <ChevronUp className="size-5 text-[#8a7565]" /> : <ChevronDown className="size-5 text-[#8a7565]" />}
+                </div>
               </div>
             </div>
             {isExpanded && (
@@ -1007,7 +1059,7 @@ export function CompanyProfileView({ data, onEdit }: { data: CompanyProfileData;
       {activeTab === "contact" && <ContactTab data={data} />}
       {activeTab === "legal" && <LegalTab data={data} onView={setViewingDoc} />}
       {activeTab === "tax" && <TaxTab data={data} onView={setViewingDoc} />}
-      {activeTab === "facilities" && <FacilitiesTab data={data} />}
+      {activeTab === "facilities" && <FacilitiesTab data={data} onView={setViewingDoc} />}
 
       {viewingDoc && (
         <DocumentViewerModal
