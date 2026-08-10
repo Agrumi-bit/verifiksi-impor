@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -33,7 +33,7 @@ import {
 import { avatarColor, fmtDate, initials, STATUS_LABEL, STATUS_STYLE } from "@/modules/company/utils";
 import { TAX_PROOF_TYPE_LABELS } from "@/modules/company/schema";
 import { documentFieldCode } from "@/modules/company/document-fields";
-import { OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS } from "@/modules/shared/schema";
+import { OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS, splitKbliEntries } from "@/modules/shared/schema";
 import { buildDisplayFileName } from "@/lib/document-filename";
 import type { CompanyProfileData } from "./profile-tabs";
 
@@ -521,9 +521,27 @@ function AddressField({ label, value }: { label: string; value: string }) {
 
 type DocField = { label: string; value: string };
 
+/** Multiple KBLI codes side by side on one line is unreadable — one row per entry instead. */
+function KbliEntryList({ entries }: { entries: { code: string; description: string }[] }) {
+  if (entries.length === 0) {
+    return <div className="text-[13px] text-[#9c8a79]">—</div>;
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {entries.map((entry, index) => (
+        <div key={`${entry.code}-${index}`} className="rounded-lg bg-[#faf7f4] px-3 py-2">
+          <div className="text-[13px] font-bold text-[#20180f]">{entry.code || "—"}</div>
+          <div className="mt-0.5 text-[12px] text-[#594138]">{entry.description || "—"}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function DocCard({
   title,
   fields,
+  extra,
   path,
   fieldKey,
   verificationStatus,
@@ -532,6 +550,8 @@ function DocCard({
 }: {
   title: string;
   fields: DocField[];
+  /** Rendered below `fields` — for content that doesn't fit the flat 2-column grid, e.g. a stacked list of multiple KBLI entries. */
+  extra?: ReactNode;
   path: string | null | undefined;
   fieldKey: string;
   verificationStatus: VerificationStatusValue;
@@ -552,14 +572,17 @@ function DocCard({
       </div>
       <div className="flex-1">
         <div className="text-[14.5px] font-extrabold text-[#20180f]">{title}</div>
-        <div className="mt-3 grid grid-cols-2 gap-3.5">
-          {fields.map((f) => (
-            <div key={f.label}>
-              <div className="text-[11px] text-[#9c8a79]">{f.label}</div>
-              <div className="mt-0.5 text-[13px] font-bold text-[#20180f]">{f.value || "—"}</div>
-            </div>
-          ))}
-        </div>
+        {fields.length > 0 && (
+          <div className="mt-3 grid grid-cols-2 gap-3.5">
+            {fields.map((f) => (
+              <div key={f.label}>
+                <div className="text-[11px] text-[#9c8a79]">{f.label}</div>
+                <div className="mt-0.5 text-[13px] font-bold text-[#20180f]">{f.value || "—"}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {extra && <div className="mt-3">{extra}</div>}
       </div>
       <div className="flex shrink-0 flex-col items-end gap-2.5">
         <span
@@ -697,6 +720,7 @@ function LegalTab({ data, onView }: { data: CompanyProfileData; onView: (doc: Vi
   const handleView = (doc: { title: string; path: string; fieldKey: string }) => {
     onView({ ...doc, category: "Legalitas Perusahaan", ...documentMetaFor(data, doc.fieldKey) });
   };
+  const { utama: kbliUtama, pendukung: kbliPendukung } = splitKbliEntries(data.kbliEntries);
   return (
     <div className="flex flex-col gap-3.5">
       <DocCard
@@ -712,20 +736,24 @@ function LegalTab({ data, onView }: { data: CompanyProfileData; onView: (doc: Vi
         ]}
       />
       <DocCard
-        title="KBLI"
+        title="KBLI Utama"
         path={data.kbliDocumentPath}
         fieldKey="kbliDocumentPath"
         onView={handleView}
         verificationStatus={documentMetaFor(data, "kbliDocumentPath").verificationStatus}
         verifiedByRole={documentMetaFor(data, "kbliDocumentPath").verifiedByRole}
-        fields={
-          data.kbliEntries.length > 0
-            ? [
-                { label: "Kode KBLI", value: data.kbliEntries.map((k) => k.code).join(", ") },
-                { label: "Uraian", value: data.kbliEntries.map((k) => k.description).join(", ") },
-              ]
-            : [{ label: "Kode KBLI", value: "" }]
-        }
+        fields={[]}
+        extra={<KbliEntryList entries={kbliUtama} />}
+      />
+      <DocCard
+        title="KBLI Pendukung"
+        path={data.kbliDocumentPath}
+        fieldKey="kbliDocumentPath"
+        onView={handleView}
+        verificationStatus={documentMetaFor(data, "kbliDocumentPath").verificationStatus}
+        verifiedByRole={documentMetaFor(data, "kbliDocumentPath").verifiedByRole}
+        fields={[]}
+        extra={<KbliEntryList entries={kbliPendukung} />}
       />
       {data.skNumber && (
         <DocCard
