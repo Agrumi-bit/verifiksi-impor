@@ -854,7 +854,8 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   }
 
   const company = data.companyName;
-  const ctx: NarrativeContext = { payload: data.payload, company, businessAddress: data.businessAddress, companySkt: data.companySkt };
+  const documentStatuses = Object.fromEntries(data.documents.map((d) => [d.key, d.status]));
+  const ctx: NarrativeContext = { payload: data.payload, company, businessAddress: data.businessAddress, companySkt: data.companySkt, documentStatuses };
 
   const verified = data.documents.filter((d) => d.status === "VALID").length;
   const needsRevision = data.documents.filter((d) => d.status === "NEED_REVISION").length;

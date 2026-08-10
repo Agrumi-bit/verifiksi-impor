@@ -13,7 +13,20 @@ export type NarrativeContext = {
    * same fallback pattern in `document-checklist-items.ts`'s `ChecklistContext`.
    */
   companySkt: { sktNumber: string | null; sktIssuer: string | null; sktDate: string | null; sktDocumentPath: string | null } | null;
+  /**
+   * Per-document checklist status (`data.documents[].status`, keyed by the
+   * same `DocDetail.key`) — "memenuhi" must reflect that the verifikator has
+   * actually reviewed and approved the document (VALID), not just that the
+   * applicant's data looks complete. A fully-filled-in NPWP the verifikator
+   * hasn't opened yet is not "Memenuhi".
+   */
+  documentStatuses: Record<string, string>;
 };
+
+/** True once the verifikator has actually marked this document VALID — see `NarrativeContext.documentStatuses`. */
+function isVerified(ctx: NarrativeContext, key: string): boolean {
+  return ctx.documentStatuses[key] === "VALID";
+}
 
 export type DocField = { label: string; value: string; ok: boolean };
 
@@ -62,10 +75,14 @@ export const LEGALITAS_DOCUMENTS: DocDetail[] = [
       `Berdasarkan hasil pemeriksaan dokumen, ${company} memiliki Nomor Induk Berusaha (NIB) ${payload.nibNumber || "—"}. NIB tersebut merupakan identitas resmi perusahaan dalam pelaksanaan kegiatan berusaha dan digunakan sebagai dasar legalitas perusahaan dalam menjalankan kegiatan industri sesuai dengan ketentuan peraturan perundang-undangan.`,
       "Hasil verifikasi menunjukkan bahwa data yang tercantum pada NIB meliputi nama perusahaan, alamat perusahaan, serta informasi kegiatan usaha telah sesuai dengan dokumen legal perusahaan yang diperiksa pada saat verifikasi. Selain itu, NIB tersebut masih berlaku dan digunakan sebagai Perizinan Berusaha perusahaan. Kepemilikan NIB tersebut telah memenuhi persyaratan administrasi sebagaimana dipersyaratkan dalam Pasal 30 ayat (2) huruf b angka 2 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025, yang mewajibkan Perusahaan Industri memiliki Perizinan Berusaha sebagai salah satu dokumen dalam pengajuan Verifikasi Kemampuan Industri (VKI).",
     ],
-    kesimpulan: ({ payload, company }) => ({
-      memenuhi: Boolean(payload.nibDocumentPath && payload.nibNumber),
-      text: `Berdasarkan hasil verifikasi dokumen dan observasi lapangan, ${company} memiliki Nomor Induk Berusaha (NIB) ${payload.nibNumber || "—"} yang masih berlaku dan sesuai dengan ketentuan Pasal 30 ayat (2) huruf b angka 2 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025. Dengan demikian, aspek kelengkapan dan keabsahan NIB dinyatakan <strong>${payload.nibDocumentPath && payload.nibNumber ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
-    }),
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
+      const memenuhi = Boolean(payload.nibDocumentPath && payload.nibNumber) && isVerified(ctx, "nib");
+      return {
+        memenuhi,
+        text: `Berdasarkan hasil verifikasi dokumen dan observasi lapangan, ${company} memiliki Nomor Induk Berusaha (NIB) ${payload.nibNumber || "—"} yang masih berlaku dan sesuai dengan ketentuan Pasal 30 ayat (2) huruf b angka 2 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025. Dengan demikian, aspek kelengkapan dan keabsahan NIB dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+      };
+    },
   },
   {
     key: "kbli-utama",
@@ -93,12 +110,14 @@ export const LEGALITAS_DOCUMENTS: DocDetail[] = [
         "Kesesuaian KBLI dengan aktivitas industri menunjukkan bahwa kegiatan usaha perusahaan telah sesuai dengan klasifikasi usaha yang tercantum dalam Perizinan Berusaha. Informasi mengenai KBLI dan bidang usaha merupakan bagian dari identitas perusahaan yang wajib dimuat dalam Laporan Hasil Verifikasi Kemampuan Industri (LHVKI) sesuai dengan ketentuan Pasal 32 ayat (3) Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.",
       ];
     },
-    kesimpulan: ({ payload, company }) => {
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
       const { utama } = splitKbliEntries(payload.kbliEntries ?? []);
       const list = utama.length > 0 ? utama.map((e) => `${e.code} – ${e.description}`).join(" dan ") : "—";
+      const memenuhi = utama.length > 0 && isVerified(ctx, "kbli-utama");
       return {
-        memenuhi: utama.length > 0,
-        text: `Berdasarkan hasil verifikasi dokumen dan observasi lapangan, ${company} memiliki KBLI Utama ${list} yang tercantum dalam Lampiran Nomor Induk Berusaha (NIB). Kegiatan usaha dan aktivitas produksi yang dilaksanakan perusahaan telah sesuai dengan klasifikasi usaha yang dimiliki. Dengan demikian, aspek kesesuaian KBLI Utama dinyatakan <strong>${utama.length > 0 ? "Memenuhi" : "Belum Memenuhi"}</strong> dan sesuai dengan ketentuan Pasal 32 ayat (3) Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.`,
+        memenuhi,
+        text: `Berdasarkan hasil verifikasi dokumen dan observasi lapangan, ${company} memiliki KBLI Utama ${list} yang tercantum dalam Lampiran Nomor Induk Berusaha (NIB). Kegiatan usaha dan aktivitas produksi yang dilaksanakan perusahaan telah sesuai dengan klasifikasi usaha yang dimiliki. Dengan demikian, aspek kesesuaian KBLI Utama dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong> dan sesuai dengan ketentuan Pasal 32 ayat (3) Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.`,
       };
     },
   },
@@ -131,15 +150,17 @@ export const LEGALITAS_DOCUMENTS: DocDetail[] = [
         "Informasi mengenai KBLI dan bidang usaha merupakan bagian dari identitas perusahaan yang wajib dimuat dalam Laporan Hasil Verifikasi Kemampuan Industri (LHVKI) sesuai dengan ketentuan Pasal 32 ayat (3) Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.",
       ];
     },
-    kesimpulan: ({ payload, company }) => {
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
       const { pendukung: rest } = splitKbliEntries(payload.kbliEntries ?? []);
       const list = rest.map((e) => `${e.code} – ${e.description}`).join(" dan ");
+      if (rest.length === 0) {
+        return { memenuhi: true, text: `${company} tidak memiliki KBLI pendukung tambahan di luar KBLI Utama. Aspek ini dinyatakan <strong>Tidak Berlaku</strong>.` };
+      }
+      const memenuhi = isVerified(ctx, "kbli-pendukung");
       return {
-        memenuhi: rest.length > 0,
-        text:
-          rest.length > 0
-            ? `Berdasarkan hasil verifikasi dokumen dan observasi lapangan, ${company} memiliki KBLI Pendukung ${list} yang tercantum dalam Lampiran Nomor Induk Berusaha (NIB). Dengan demikian, aspek kesesuaian KBLI Pendukung dinyatakan <strong>Memenuhi</strong> sesuai dengan ketentuan Pasal 32 ayat (3) Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.`
-            : `${company} tidak memiliki KBLI pendukung tambahan di luar KBLI Utama. Aspek ini dinyatakan <strong>Tidak Berlaku</strong>.`,
+        memenuhi,
+        text: `Berdasarkan hasil verifikasi dokumen dan observasi lapangan, ${company} memiliki KBLI Pendukung ${list} yang tercantum dalam Lampiran Nomor Induk Berusaha (NIB). Dengan demikian, aspek kesesuaian KBLI Pendukung dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong> sesuai dengan ketentuan Pasal 32 ayat (3) Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.`,
       };
     },
   },
@@ -162,10 +183,14 @@ export const LEGALITAS_DOCUMENTS: DocDetail[] = [
       "Hasil verifikasi menunjukkan bahwa identitas badan usaha yang tercantum dalam Surat Keputusan Kementerian Hukum dan HAM telah sesuai dengan data pada Perizinan Berusaha (NIB), meliputi nama perusahaan serta status pendirian perusahaan. Pemeriksaan juga menunjukkan tidak terdapat perbedaan identitas antara Surat Keputusan Kementerian Hukum dan HAM dengan dokumen legal perusahaan lainnya yang digunakan dalam proses verifikasi.",
       "Meskipun Surat Keputusan Kementerian Hukum dan HAM tidak termasuk dokumen yang secara eksplisit dipersyaratkan dalam Pasal 30 ayat (2), dokumen ini digunakan sebagai bukti pendukung untuk memverifikasi keabsahan identitas badan usaha yang menjadi dasar penerbitan Perizinan Berusaha (NIB), yang merupakan salah satu persyaratan dokumen dalam pengajuan VKI.",
     ],
-    kesimpulan: ({ payload, company }) => ({
-      memenuhi: Boolean(payload.skDocumentPath && payload.skNumber),
-      text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki Surat Keputusan Menteri Hukum dan Hak Asasi Manusia Republik Indonesia Nomor ${payload.skNumber || "—"} yang menunjukkan pengesahan pendirian perusahaan. Data yang tercantum konsisten dengan Perizinan Berusaha (NIB) dan dokumen legal perusahaan lainnya. Dengan demikian, dokumen ini dinyatakan <strong>${payload.skDocumentPath && payload.skNumber ? "Memenuhi" : "Belum Memenuhi"}</strong> sebagai bukti pendukung legalitas perusahaan.`,
-    }),
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
+      const memenuhi = Boolean(payload.skDocumentPath && payload.skNumber) && isVerified(ctx, "sk");
+      return {
+        memenuhi,
+        text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki Surat Keputusan Menteri Hukum dan Hak Asasi Manusia Republik Indonesia Nomor ${payload.skNumber || "—"} yang menunjukkan pengesahan pendirian perusahaan. Data yang tercantum konsisten dengan Perizinan Berusaha (NIB) dan dokumen legal perusahaan lainnya. Dengan demikian, dokumen ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong> sebagai bukti pendukung legalitas perusahaan.`,
+      };
+    },
   },
   {
     key: "notarial",
@@ -186,10 +211,14 @@ export const LEGALITAS_DOCUMENTS: DocDetail[] = [
       "Hasil verifikasi menunjukkan bahwa informasi yang tercantum dalam Akta Pendirian, meliputi nama perusahaan, bentuk badan usaha, tanggal pendirian, serta identitas pendiri, telah sesuai dengan data yang tercantum pada Surat Keputusan Kementerian Hukum dan Hak Asasi Manusia Republik Indonesia, Perizinan Berusaha (NIB), serta dokumen legal perusahaan lainnya.",
       "Meskipun Akta Pendirian tidak termasuk dokumen yang secara eksplisit dipersyaratkan dalam Pasal 30 ayat (2) Peraturan Menteri Perindustrian Nomor 27 Tahun 2025, dokumen ini digunakan sebagai bukti pendukung untuk memverifikasi keabsahan identitas perusahaan serta memastikan konsistensi data pada Perizinan Berusaha (NIB), yang merupakan salah satu persyaratan dalam pengajuan Verifikasi Kemampuan Industri (VKI).",
     ],
-    kesimpulan: ({ payload, company }) => ({
-      memenuhi: Boolean(payload.notarialDocumentPath && payload.notarialDeedNumber),
-      text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki Akta Pendirian Nomor ${payload.notarialDeedNumber || "—"} yang dibuat oleh ${payload.notarialIssuingAuthority || "—"}, Notaris, pada ${fmtDate(payload.notarialDeedIssueDate)}. Data yang tercantum konsisten dengan Surat Keputusan Kementerian Hukum dan HAM dan dokumen legal perusahaan lainnya. Dengan demikian, dokumen ini dinyatakan <strong>${payload.notarialDocumentPath && payload.notarialDeedNumber ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
-    }),
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
+      const memenuhi = Boolean(payload.notarialDocumentPath && payload.notarialDeedNumber) && isVerified(ctx, "notarial");
+      return {
+        memenuhi,
+        text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki Akta Pendirian Nomor ${payload.notarialDeedNumber || "—"} yang dibuat oleh ${payload.notarialIssuingAuthority || "—"}, Notaris, pada ${fmtDate(payload.notarialDeedIssueDate)}. Data yang tercantum konsisten dengan Surat Keputusan Kementerian Hukum dan HAM dan dokumen legal perusahaan lainnya. Dengan demikian, dokumen ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+      };
+    },
   },
   {
     key: "notarial-amendment",
@@ -215,13 +244,15 @@ export const LEGALITAS_DOCUMENTS: DocDetail[] = [
         "Sesuai dengan ketentuan Pasal 33 ayat (4) Peraturan Menteri Perindustrian Nomor 27 Tahun 2025, dalam hal terjadi perubahan identitas perusahaan, perusahaan wajib menyampaikan akta perubahan beserta dokumen persetujuan yang diterbitkan oleh kementerian yang menyelenggarakan urusan pemerintahan di bidang hukum sebagai bagian dari perubahan LHVKI.",
       ];
     },
-    kesimpulan: ({ payload, company }) => {
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
       if (!payload.notarialAmendmentDocPath) {
         return { memenuhi: true, text: `${company} tidak memiliki perubahan akta, sehingga aspek ini dinyatakan <strong>Tidak Berlaku</strong>.` };
       }
+      const memenuhi = Boolean(payload.notarialAmendmentNumber) && isVerified(ctx, "notarial-amendment");
       return {
-        memenuhi: Boolean(payload.notarialAmendmentNumber),
-        text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki Akta Perubahan Nomor ${payload.notarialAmendmentNumber || "—"} tanggal ${fmtDate(payload.notarialAmendmentDate)}, yang dibuat oleh ${payload.notarialAmendmentAuthority || "—"}, Notaris. Dengan demikian, aspek verifikasi Akta Perubahan dinyatakan <strong>Memenuhi</strong>.`,
+        memenuhi,
+        text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki Akta Perubahan Nomor ${payload.notarialAmendmentNumber || "—"} tanggal ${fmtDate(payload.notarialAmendmentDate)}, yang dibuat oleh ${payload.notarialAmendmentAuthority || "—"}, Notaris. Dengan demikian, aspek verifikasi Akta Perubahan dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
       };
     },
   },
@@ -276,10 +307,14 @@ export const PERPAJAKAN_DOCUMENTS: DocDetail[] = [
       `Berdasarkan hasil pemeriksaan dokumen, ${company} memiliki Nomor Pokok Wajib Pajak (NPWP) ${payload.npwpNumber || "—"} yang terdaftar atas nama perusahaan.`,
       "Hasil verifikasi menunjukkan bahwa nama wajib pajak dan alamat yang tercantum pada NPWP telah sesuai dengan data perusahaan pada dokumen legalitas lainnya, serta NPWP masih berstatus aktif dan dapat digunakan dalam memenuhi kewajiban perpajakan perusahaan.",
     ],
-    kesimpulan: ({ payload, company }) => ({
-      memenuhi: Boolean(payload.npwpDocumentPath && payload.npwpNumber),
-      text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki NPWP ${payload.npwpNumber || "—"} yang sah dan aktif. Dengan demikian, aspek kelengkapan identitas perpajakan dinyatakan <strong>${payload.npwpDocumentPath && payload.npwpNumber ? "Memenuhi" : "Belum Memenuhi"}</strong> sesuai dengan ketentuan Pasal 30 ayat (2) huruf b angka 1 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.`,
-    }),
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
+      const memenuhi = Boolean(payload.npwpDocumentPath && payload.npwpNumber) && isVerified(ctx, "npwp");
+      return {
+        memenuhi,
+        text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki NPWP ${payload.npwpNumber || "—"} yang sah dan aktif. Dengan demikian, aspek kelengkapan identitas perpajakan dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong> sesuai dengan ketentuan Pasal 30 ayat (2) huruf b angka 1 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.`,
+      };
+    },
   },
   {
     key: "tax-proof-summary",
@@ -295,10 +330,14 @@ export const PERPAJAKAN_DOCUMENTS: DocDetail[] = [
     findings: ({ company }) => [
       `Berdasarkan hasil pemeriksaan dokumen, ${company} telah menyampaikan bukti pembayaran pajak untuk 3 (tiga) tahun terakhir sebagai bagian dari pemenuhan kewajiban perpajakan perusahaan dalam pengajuan Verifikasi Kemampuan Industri (VKI).`,
     ],
-    kesimpulan: ({ payload, company }) => ({
-      memenuhi: Boolean(payload.taxProofSummaryDocumentPath),
-      text: `Berdasarkan hasil verifikasi dokumen, ${company} ${payload.taxProofSummaryDocumentPath ? "telah menyampaikan" : "belum menyampaikan"} bukti pembayaran pajak 3 (tiga) tahun terakhir. Dengan demikian, aspek ini dinyatakan <strong>${payload.taxProofSummaryDocumentPath ? "Memenuhi" : "Belum Memenuhi"}</strong> sesuai dengan ketentuan Pasal 30 ayat (2) huruf b angka 7 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.`,
-    }),
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
+      const memenuhi = Boolean(payload.taxProofSummaryDocumentPath) && isVerified(ctx, "tax-proof-summary");
+      return {
+        memenuhi,
+        text: `Berdasarkan hasil verifikasi dokumen, ${company} ${payload.taxProofSummaryDocumentPath ? "telah menyampaikan" : "belum menyampaikan"} bukti pembayaran pajak 3 (tiga) tahun terakhir. Dengan demikian, aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong> sesuai dengan ketentuan Pasal 30 ayat (2) huruf b angka 7 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.`,
+      };
+    },
   },
   {
     key: "skt",
@@ -332,11 +371,12 @@ export const PERPAJAKAN_DOCUMENTS: DocDetail[] = [
         "Hasil verifikasi menunjukkan bahwa data wajib pajak yang tercantum dalam SKT, meliputi NPWP, nama wajib pajak, dan alamat wajib pajak, telah sesuai dengan data perusahaan pada dokumen legalitas lainnya, sehingga dapat digunakan sebagai pengganti Bukti Pembayaran Pajak 3 (tiga) Tahun Terakhir sesuai ketentuan yang berlaku bagi perusahaan dengan Perizinan Berusaha kurang dari 3 (tiga) tahun.",
       ];
     },
-    kesimpulan: ({ payload, company, companySkt }) => {
+    kesimpulan: (ctx) => {
+      const { payload, company, companySkt } = ctx;
       const sktNumber = payload.sktNumber || companySkt?.sktNumber;
       const sktIssuer = payload.sktIssuer || companySkt?.sktIssuer;
       const sktDocPath = payload.sktDocumentPath || companySkt?.sktDocumentPath;
-      const memenuhi = Boolean(sktDocPath && sktNumber);
+      const memenuhi = Boolean(sktDocPath && sktNumber) && isVerified(ctx, "skt");
       return {
         memenuhi,
         text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki SKT Nomor ${sktNumber || "—"} yang diterbitkan oleh ${sktIssuer || "—"}. Dengan demikian, aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong> sebagai pengganti Bukti Pembayaran Pajak 3 (tiga) Tahun Terakhir sesuai Pasal 30 ayat (2) huruf b angka 7 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.`,
@@ -357,10 +397,14 @@ export const PERPAJAKAN_DOCUMENTS: DocDetail[] = [
     findings: ({ company }) => [
       `Berdasarkan hasil pemeriksaan dokumen, ${company} telah menyampaikan Surat Pemberitahuan (SPT) Tahunan Badan sebagai bukti kepatuhan pelaporan pajak tahunan perusahaan.`,
     ],
-    kesimpulan: ({ payload, company }) => ({
-      memenuhi: Boolean(payload.sptTahunanDocumentPath),
-      text: `${company} ${payload.sptTahunanDocumentPath ? "telah menyampaikan" : "belum menyampaikan"} SPT Tahunan Badan. Aspek ini dinyatakan <strong>${payload.sptTahunanDocumentPath ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
-    }),
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
+      const memenuhi = Boolean(payload.sptTahunanDocumentPath) && isVerified(ctx, "tax-support:spt-tahunan");
+      return {
+        memenuhi,
+        text: `${company} ${payload.sptTahunanDocumentPath ? "telah menyampaikan" : "belum menyampaikan"} SPT Tahunan Badan. Aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+      };
+    },
   },
   {
     key: "tax-support:bpe",
@@ -376,10 +420,14 @@ export const PERPAJAKAN_DOCUMENTS: DocDetail[] = [
     findings: ({ company }) => [
       `Berdasarkan hasil pemeriksaan dokumen, ${company} telah menyampaikan Bukti Penerimaan Elektronik (BPE) yang membuktikan SPT Tahunan telah diterima oleh Direktorat Jenderal Pajak.`,
     ],
-    kesimpulan: ({ payload, company }) => ({
-      memenuhi: Boolean(payload.bpeDocumentPath),
-      text: `${company} ${payload.bpeDocumentPath ? "telah menyampaikan" : "belum menyampaikan"} BPE SPT Tahunan. Aspek ini dinyatakan <strong>${payload.bpeDocumentPath ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
-    }),
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
+      const memenuhi = Boolean(payload.bpeDocumentPath) && isVerified(ctx, "tax-support:bpe");
+      return {
+        memenuhi,
+        text: `${company} ${payload.bpeDocumentPath ? "telah menyampaikan" : "belum menyampaikan"} BPE SPT Tahunan. Aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+      };
+    },
   },
   {
     key: "tax-support:skf",
@@ -393,12 +441,17 @@ export const PERPAJAKAN_DOCUMENTS: DocDetail[] = [
       { label: "Dokumen SKF", value: payload.skfDocumentPath ? "Tersedia" : "Tidak Diunggah", ok: Boolean(payload.skfDocumentPath) },
     ],
     findings: ({ company }) => [skfSupportNote(company)],
-    kesimpulan: ({ payload, company }) => ({
-      memenuhi: true,
-      text: payload.skfDocumentPath
-        ? `${company} telah menyampaikan Surat Keterangan Fiskal (SKF) sebagai bukti pendukung status kepatuhan perpajakan. Aspek ini dinyatakan <strong>Memenuhi</strong>.`
-        : `${company} tidak menyampaikan Surat Keterangan Fiskal (SKF) karena dokumen ini bersifat pendukung dan hanya diperiksa apabila tersedia. Aspek ini dinyatakan <strong>Tidak Berlaku</strong>.`,
-    }),
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
+      if (!payload.skfDocumentPath) {
+        return { memenuhi: true, text: `${company} tidak menyampaikan Surat Keterangan Fiskal (SKF) karena dokumen ini bersifat pendukung dan hanya diperiksa apabila tersedia. Aspek ini dinyatakan <strong>Tidak Berlaku</strong>.` };
+      }
+      const memenuhi = isVerified(ctx, "tax-support:skf");
+      return {
+        memenuhi,
+        text: `${company} telah menyampaikan Surat Keterangan Fiskal (SKF) sebagai bukti pendukung status kepatuhan perpajakan. Aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+      };
+    },
   },
   {
     key: "tax-support:ssp",
@@ -414,10 +467,14 @@ export const PERPAJAKAN_DOCUMENTS: DocDetail[] = [
     findings: ({ company }) => [
       `Berdasarkan hasil pemeriksaan dokumen, ${company} telah menyampaikan Surat Setoran Pajak (SSP) sebagai bukti penyetoran kewajiban perpajakan perusahaan.`,
     ],
-    kesimpulan: ({ payload, company }) => ({
-      memenuhi: Boolean(payload.sspDocumentPath),
-      text: `${company} ${payload.sspDocumentPath ? "telah menyampaikan" : "belum menyampaikan"} SSP. Aspek ini dinyatakan <strong>${payload.sspDocumentPath ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
-    }),
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
+      const memenuhi = Boolean(payload.sspDocumentPath) && isVerified(ctx, "tax-support:ssp");
+      return {
+        memenuhi,
+        text: `${company} ${payload.sspDocumentPath ? "telah menyampaikan" : "belum menyampaikan"} SSP. Aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+      };
+    },
   },
   {
     key: "tax-support:pph-badan",
@@ -433,10 +490,14 @@ export const PERPAJAKAN_DOCUMENTS: DocDetail[] = [
     findings: ({ company }) => [
       `Berdasarkan hasil pemeriksaan dokumen, ${company} telah menyampaikan bukti pembayaran Pajak Penghasilan (PPh) Badan sebagai bagian dari pemenuhan kewajiban perpajakan perusahaan.`,
     ],
-    kesimpulan: ({ payload, company }) => ({
-      memenuhi: Boolean(payload.pphBadanDocumentPath),
-      text: `${company} ${payload.pphBadanDocumentPath ? "telah menyampaikan" : "belum menyampaikan"} bukti pembayaran PPh Badan. Aspek ini dinyatakan <strong>${payload.pphBadanDocumentPath ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
-    }),
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
+      const memenuhi = Boolean(payload.pphBadanDocumentPath) && isVerified(ctx, "tax-support:pph-badan");
+      return {
+        memenuhi,
+        text: `${company} ${payload.pphBadanDocumentPath ? "telah menyampaikan" : "belum menyampaikan"} bukti pembayaran PPh Badan. Aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+      };
+    },
   },
   {
     key: "tax-support:ppn",
@@ -452,10 +513,14 @@ export const PERPAJAKAN_DOCUMENTS: DocDetail[] = [
     findings: ({ company }) => [
       `Berdasarkan hasil pemeriksaan dokumen, ${company} telah menyampaikan bukti pembayaran Pajak Pertambahan Nilai (PPN) sesuai dengan kegiatan usaha yang dijalankan.`,
     ],
-    kesimpulan: ({ payload, company }) => ({
-      memenuhi: Boolean(payload.ppnDocumentPath),
-      text: `${company} ${payload.ppnDocumentPath ? "telah menyampaikan" : "belum menyampaikan"} bukti pembayaran PPN. Aspek ini dinyatakan <strong>${payload.ppnDocumentPath ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
-    }),
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
+      const memenuhi = Boolean(payload.ppnDocumentPath) && isVerified(ctx, "tax-support:ppn");
+      return {
+        memenuhi,
+        text: `${company} ${payload.ppnDocumentPath ? "telah menyampaikan" : "belum menyampaikan"} bukti pembayaran PPN. Aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+      };
+    },
   },
   {
     key: "tax-support:e-billing",
@@ -471,10 +536,14 @@ export const PERPAJAKAN_DOCUMENTS: DocDetail[] = [
     findings: ({ company }) => [
       `Berdasarkan hasil pemeriksaan dokumen, ${company} telah menyampaikan bukti setor pajak melalui sistem e-Billing Direktorat Jenderal Pajak.`,
     ],
-    kesimpulan: ({ payload, company }) => ({
-      memenuhi: Boolean(payload.eBillingDocumentPath),
-      text: `${company} ${payload.eBillingDocumentPath ? "telah menyampaikan" : "belum menyampaikan"} bukti setor e-Billing. Aspek ini dinyatakan <strong>${payload.eBillingDocumentPath ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
-    }),
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
+      const memenuhi = Boolean(payload.eBillingDocumentPath) && isVerified(ctx, "tax-support:e-billing");
+      return {
+        memenuhi,
+        text: `${company} ${payload.eBillingDocumentPath ? "telah menyampaikan" : "belum menyampaikan"} bukti setor e-Billing. Aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+      };
+    },
   },
 ];
 
@@ -513,9 +582,10 @@ export const TENAGA_KERJA_DOCUMENTS: DocDetail[] = [
         "Hasil verifikasi menunjukkan bahwa jumlah dan kategori tenaga kerja yang dinyatakan perusahaan sesuai dengan skala kegiatan industri yang dijalankan dan tercantum dalam surat pernyataan yang ditandatangani oleh pihak berwenang perusahaan.",
       ];
     },
-    kesimpulan: ({ payload, company }) => {
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
       const entries = payload.tenagaKerjaEntries ?? [];
-      const memenuhi = Boolean(payload.tenagaKerjaDocumentPath && entries.length > 0);
+      const memenuhi = Boolean(payload.tenagaKerjaDocumentPath && entries.length > 0) && isVerified(ctx, "vki-support:tenaga-kerja");
       return {
         memenuhi,
         text: `Berdasarkan hasil verifikasi dokumen, ${company} ${memenuhi ? "telah menyampaikan" : "belum menyampaikan secara lengkap"} Surat Pernyataan Jumlah Tenaga Kerja. Dengan demikian, aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong> sesuai dengan ketentuan Pasal 30 ayat (2) huruf b angka 3 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.`,
@@ -549,9 +619,10 @@ function suratPernyataanNarrative(defKey: string, no: number, title: string, isi
         `Isi pernyataan menyatakan bahwa ${isiDeskripsi} Hasil verifikasi menunjukkan bahwa surat pernyataan telah dibuat sesuai format yang dipersyaratkan dan ditandatangani oleh pihak yang berwenang mewakili perusahaan.`,
       ];
     },
-    kesimpulan: ({ payload, company }) => {
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
       const entry = payload.vkiSupportDocs?.find((d) => d.key === defKey);
-      const memenuhi = Boolean(entry?.documentPath && entry?.nomorSurat && entry?.penandatangan);
+      const memenuhi = Boolean(entry?.documentPath && entry?.nomorSurat && entry?.penandatangan) && isVerified(ctx, `vki-support:${defKey}`);
       return {
         memenuhi,
         text: `Berdasarkan hasil verifikasi dokumen, ${company} ${memenuhi ? "telah menyampaikan" : "belum menyampaikan secara lengkap"} ${title}. Dengan demikian, aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong> sesuai dengan ketentuan Pasal 30 ayat (2) huruf b angka 6 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.`,
@@ -631,8 +702,9 @@ export function buildLocationDocuments(ctx: NarrativeContext): DocDetail[] {
           `Berdasarkan hasil pemeriksaan dokumen, ${company} menyampaikan ${typed.typeLabel} untuk lokasi ${label} yang beralamat di ${loc.address || "—"}, ${loc.city || "—"}, ${loc.province || "—"} dengan status bangunan ${isOwned ? "milik sendiri" : "sewa"}.`,
           `Hasil verifikasi menunjukkan bahwa ${typed.typeLabel} yang diunggah perusahaan menunjukkan hak penggunaan yang sah atas lokasi tersebut dan konsisten dengan alamat lokasi yang tercantum dalam data permohonan.`,
         ],
-        kesimpulan: ({ company }) => {
-          const memenuhi = Boolean(typed.documentPath && loc.address);
+        kesimpulan: (ctx) => {
+          const { company } = ctx;
+          const memenuhi = Boolean(typed.documentPath && loc.address) && isVerified(ctx, `location:${loc.id}:${typed.kind}:${typed.type}`);
           return {
             memenuhi,
             text: `Berdasarkan hasil verifikasi dokumen, ${company} ${memenuhi ? "memiliki" : "belum melengkapi"} ${typed.typeLabel} yang sah atas lokasi ${label}. Dengan demikian, aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
@@ -656,10 +728,14 @@ export function buildLocationDocuments(ctx: NarrativeContext): DocDetail[] {
         findings: ({ company }) => [
           `Berdasarkan hasil pemeriksaan dokumen, gudang milik ${company} yang beralamat di ${loc.address || "—"} ${loc.warehouseRegistrationDocumentPath ? "telah memiliki Tanda Daftar Gudang yang sah" : "belum dilengkapi dengan Tanda Daftar Gudang"}.`,
         ],
-        kesimpulan: ({ company }) => ({
-          memenuhi: Boolean(loc.warehouseRegistrationDocumentPath),
-          text: `${company} ${loc.warehouseRegistrationDocumentPath ? "telah melengkapi" : "belum melengkapi"} Tanda Daftar Gudang untuk lokasi ${label}. Aspek ini dinyatakan <strong>${loc.warehouseRegistrationDocumentPath ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
-        }),
+        kesimpulan: (ctx) => {
+          const { company } = ctx;
+          const memenuhi = Boolean(loc.warehouseRegistrationDocumentPath) && isVerified(ctx, `location:${loc.id}:warehouseRegistration`);
+          return {
+            memenuhi,
+            text: `${company} ${loc.warehouseRegistrationDocumentPath ? "telah melengkapi" : "belum melengkapi"} Tanda Daftar Gudang untuk lokasi ${label}. Aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+          };
+        },
       });
       docs.push({
         key: `location:${loc.id}:warehouseLayout`,
@@ -676,10 +752,14 @@ export function buildLocationDocuments(ctx: NarrativeContext): DocDetail[] {
         findings: ({ company }) => [
           `Berdasarkan hasil pemeriksaan dokumen, ${company} ${loc.warehouseLayoutDocumentPath ? "telah menyampaikan" : "belum menyampaikan"} layout gudang untuk lokasi ${label} yang menggambarkan tata letak ruang penyimpanan.`,
         ],
-        kesimpulan: ({ company }) => ({
-          memenuhi: Boolean(loc.warehouseLayoutDocumentPath),
-          text: `${company} ${loc.warehouseLayoutDocumentPath ? "telah melengkapi" : "belum melengkapi"} Layout Gudang untuk lokasi ${label}. Aspek ini dinyatakan <strong>${loc.warehouseLayoutDocumentPath ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
-        }),
+        kesimpulan: (ctx) => {
+          const { company } = ctx;
+          const memenuhi = Boolean(loc.warehouseLayoutDocumentPath) && isVerified(ctx, `location:${loc.id}:warehouseLayout`);
+          return {
+            memenuhi,
+            text: `${company} ${loc.warehouseLayoutDocumentPath ? "telah melengkapi" : "belum melengkapi"} Layout Gudang untuk lokasi ${label}. Aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+          };
+        },
       });
     }
   }
@@ -707,9 +787,10 @@ export function buildLocationDocuments(ctx: NarrativeContext): DocDetail[] {
         "Isi pernyataan menyatakan bahwa perusahaan memiliki atau menguasai secara sah fasilitas bangunan yang digunakan untuk menunjang kegiatan produksi. Hasil verifikasi menunjukkan bahwa status kepemilikan/penguasaan yang dinyatakan konsisten dengan data lokasi yang diajukan dalam permohonan.",
       ];
     },
-    kesimpulan: ({ payload, company }) => {
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
       const entry = payload.vkiSupportDocs?.find((d) => d.key === "memiliki-menguasai");
-      const memenuhi = Boolean(entry?.documentPath && entry?.nomorSurat && entry?.penandatangan);
+      const memenuhi = Boolean(entry?.documentPath && entry?.nomorSurat && entry?.penandatangan) && isVerified(ctx, "vki-support:memiliki-menguasai");
       return {
         memenuhi,
         text: `Berdasarkan hasil verifikasi dokumen, ${company} ${memenuhi ? "telah menyampaikan" : "belum menyampaikan secara lengkap"} Surat Pernyataan Memiliki atau Menguasai. Dengan demikian, aspek kepemilikan/penguasaan fasilitas bangunan dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong> sesuai dengan ketentuan Pasal 30 ayat (2) huruf b angka 6 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.`,
@@ -742,8 +823,9 @@ export function buildElectricityDocuments(ctx: NarrativeContext): DocDetail[] {
       `Berdasarkan hasil pemeriksaan dokumen, ${company} menyampaikan bukti pembayaran listrik untuk periode ${fmtBulanTahun(month.bulan)} dengan nominal pembayaran ${fmtRupiah(month.nominal)} dan pemakaian sebesar ${month.kwh || "—"} kWh.`,
       "Hasil verifikasi menunjukkan bahwa nominal dan pemakaian listrik yang tercantum pada dokumen wajar terhadap skala operasional dan kapasitas produksi yang diklaim perusahaan, serta tidak ditemukan indikasi ketidaksesuaian pada dokumen yang diperiksa.",
     ],
-    kesimpulan: ({ company }) => {
-      const memenuhi = Boolean(month.documentPath && month.nominal && month.kwh);
+    kesimpulan: (ctx) => {
+      const { company } = ctx;
+      const memenuhi = Boolean(month.documentPath && month.nominal && month.kwh) && isVerified(ctx, `vki-support:listrik:${month.id}`);
       return {
         memenuhi,
         text: `${company} ${memenuhi ? "telah melengkapi" : "belum melengkapi"} bukti pembayaran listrik periode ${fmtBulanTahun(month.bulan)}. Aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
