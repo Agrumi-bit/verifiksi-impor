@@ -208,7 +208,7 @@ type Props = {
   kind: FieldKind;
   assignmentId: string;
   locationId: string;
-  basePath?: "/api/surveyor-workspace" | "/api/verifikator-workspace" | "/api/company-workspace";
+  basePath?: "/api/surveyor-workspace" | "/api/verifikator-workspace" | "/api/company-workspace" | "/api/technical-analyst-workspace";
   backHref?: string;
 };
 

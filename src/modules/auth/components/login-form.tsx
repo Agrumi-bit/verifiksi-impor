@@ -53,7 +53,9 @@ export function LoginForm() {
             ? "/verifikator-workspace"
             : role === "CUSTOMER_RELATIONSHIP"
               ? "/customer-relation-workspace"
-              : "/";
+              : role === "TECHNICAL_ANALYST"
+                ? "/technical-analyst-workspace"
+                : "/";
 
     router.push(explicitRedirect ?? defaultRedirect);
     router.refresh();

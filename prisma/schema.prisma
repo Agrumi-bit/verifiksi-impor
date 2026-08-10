@@ -562,6 +562,10 @@ model Assignment {
   productVerifications       Json?
   machineVerifications       Json?
   productionQtyVerifications Json?
+  // Technical Analyst's own feasibility-analysis layer (Listrik/Kapasitas/Bahan
+  // Baku for VKI, Rencana/Penyimpanan/Modal for VIU) — same keyed-JSON-map
+  // convention as the verifikator decision fields above, keyed by module.
+  technicalAnalysisData      Json?
   validationNotes            String?
   validatedAt                DateTime?
 
