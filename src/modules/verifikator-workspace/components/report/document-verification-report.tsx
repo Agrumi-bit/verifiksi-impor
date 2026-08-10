@@ -444,20 +444,29 @@ function ComplianceTable({ rows }: { rows: { key: string; label: string }[] }) {
   );
 }
 
-/** One field row inside a document detail's green panel — pill label + white value box with a checkmark. */
-function FieldRow({ label, value, ok }: { label: string; value: string; ok: boolean }) {
+/**
+ * One field row inside a document detail's narrative panel — pill label +
+ * value box with a checkmark. `ok` is purely data-completeness (does the
+ * applicant's field have a value); it says nothing about whether the
+ * verifikator has actually reviewed the document. When `pending` is true
+ * the row shows a neutral "Belum Diperiksa" instead of claiming Sesuai.
+ */
+function FieldRow({ label, value, ok, pending }: { label: string; value: string; ok: boolean; pending?: boolean }) {
+  const color = pending ? "#5b6478" : ok ? GREEN : "#c1361f";
+  const bg = pending ? "#eef0f2" : ok ? "#fff" : "#ffe0dc";
+  const statusLabel = pending ? "Belum Diperiksa" : ok ? "Sesuai" : "Belum Diisi";
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: INK }}>{label}</div>
-        <Badge color="#fff" bg={ok ? GREEN : "#c1361f"}>
-          {ok ? "Sesuai" : "Belum Diisi"}
+        <Badge color="#fff" bg={color}>
+          {statusLabel}
         </Badge>
       </div>
       <div
         style={{
-          background: ok ? "#fff" : "#ffe0dc",
-          border: `1px solid ${ok ? GREEN : "#c1361f"}`,
+          background: bg,
+          border: `1px solid ${color}`,
           borderRadius: 14,
           padding: "8px 14px",
           fontSize: 11,
@@ -469,7 +478,7 @@ function FieldRow({ label, value, ok }: { label: string; value: string; ok: bool
         }}
       >
         <span>{value}</span>
-        <span style={{ color: ok ? GREEN : "#c1361f", flexShrink: 0 }}>{ok ? "✓" : "✕"}</span>
+        <span style={{ color, flexShrink: 0 }}>{pending ? "…" : ok ? "✓" : "✕"}</span>
       </div>
     </div>
   );
@@ -1431,7 +1440,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 200px", gap: 20 }}>
                             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                               {doc.fields(ctx).map((f) => (
-                                <FieldRow key={f.label} label={f.label} value={f.value} ok={f.ok} />
+                                <FieldRow key={f.label} label={f.label} value={f.value} ok={f.ok} pending={isPending} />
                               ))}
                             </div>
                             <DocImage path={doc.documentPath(ctx)} label={doc.title} aspectRatio={doc.imageAspectRatio} />
