@@ -1407,6 +1407,9 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                   {/* B. Per-document narrative pages */}
                   {narrativeDocs.map((doc, i) => {
                     const k = doc.kesimpulan(ctx);
+                    const isPending = ctx.documentStatuses[doc.key] === "PENDING";
+                    const boxBg = isPending ? "#e9ecef" : MINT;
+                    const textColor = isPending ? MUTED : MINT_INK;
                     return (
                       <PageShell key={doc.key} pageNo={startPage + 2 + i} totalPages={totalPages} companyName={company}>
                         <h1 style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.3, margin: "24px 0 12px", textTransform: "uppercase" }}>
@@ -1416,12 +1419,12 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                           Berdasarkan hasil pemeriksaan terhadap dokumen kategori {category.toLowerCase()} yang ditunjukkan oleh {company}, uraian
                           berikut memuat hasil pemeriksaan atas dokumen {doc.title.toLowerCase()}.
                         </p>
-                        <div style={{ background: MINT, borderRadius: 16, padding: "22px 24px", flex: 1, overflow: "hidden" }}>
+                        <div style={{ background: boxBg, borderRadius: 16, padding: "22px 24px", flex: 1, overflow: "hidden" }}>
                           <div style={{ fontSize: 16, fontWeight: 800, color: INK, marginBottom: 10 }}>
                             {doc.no}. {doc.title}
                           </div>
                           {doc.intro(ctx).map((p, pi) => (
-                            <p key={pi} style={{ fontSize: 10.5, lineHeight: 1.5, color: MINT_INK, margin: pi === doc.intro(ctx).length - 1 ? "0 0 14px" : "0 0 10px", maxWidth: 660 }}>
+                            <p key={pi} style={{ fontSize: 10.5, lineHeight: 1.5, color: textColor, margin: pi === doc.intro(ctx).length - 1 ? "0 0 14px" : "0 0 10px", maxWidth: 660 }}>
                               {p}
                             </p>
                           ))}
@@ -1434,7 +1437,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                             <DocImage path={doc.documentPath(ctx)} label={doc.title} aspectRatio={doc.imageAspectRatio} />
                           </div>
                           {doc.findings(ctx).map((p, pi) => (
-                            <p key={pi} style={{ fontSize: 10, lineHeight: 1.5, color: MINT_INK, margin: "14px 0 0" }}>
+                            <p key={pi} style={{ fontSize: 10, lineHeight: 1.5, color: textColor, margin: "14px 0 0" }}>
                               {p}
                             </p>
                           ))}
