@@ -545,6 +545,9 @@ export type RawMaterialUsageRow = {
   penggunaan: string;
   dataStock: string;
   rencanaKebutuhan: string;
+  rencanaKebutuhanDalamNegeri: string;
+  rencanaKebutuhanLuarNegeri: string;
+  rencanaKebutuhanNegaraAsal: string;
   satuan: string;
 };
 
@@ -582,6 +585,9 @@ export function buildRawMaterialUsageChecklist(payload: ApplicationWizardValues)
         penggunaan: u.penggunaan ?? "",
         dataStock: u.dataStock ?? "",
         rencanaKebutuhan: u.rencanaKebutuhan ?? "",
+        rencanaKebutuhanDalamNegeri: u.rencanaKebutuhanDalamNegeri ?? "",
+        rencanaKebutuhanLuarNegeri: u.rencanaKebutuhanLuarNegeri ?? "",
+        rencanaKebutuhanNegaraAsal: u.rencanaKebutuhanNegaraAsal ?? "",
         satuan: u.satuan ?? "",
       };
     });

@@ -233,7 +233,12 @@ export const rawMaterialUsageItemSchema = z.object({
   rawMaterialId: z.string(),
   penggunaan: z.string().trim().optional(),
   dataStock: z.string().trim().optional(),
+  /** Total rencana kebutuhan — auto-summed from dalamNegeri + luarNegeri whenever either changes, kept for report code that only needs the total. */
   rencanaKebutuhan: z.string().trim().optional(),
+  rencanaKebutuhanDalamNegeri: z.string().trim().optional(),
+  rencanaKebutuhanLuarNegeri: z.string().trim().optional(),
+  /** Only meaningful when rencanaKebutuhanLuarNegeri is filled — rencana negara asal impor. */
+  rencanaKebutuhanNegaraAsal: z.string().trim().optional(),
   satuan: z.string().trim().optional(),
 });
 export type RawMaterialUsageItemValues = z.infer<typeof rawMaterialUsageItemSchema>;

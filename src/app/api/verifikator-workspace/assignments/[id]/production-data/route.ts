@@ -8,7 +8,18 @@ import type { ApplicationWizardValues } from "@/modules/applications/schema";
 const SOURCE_CONFIG = {
   capacity: { idField: "productId", allowedFields: ["berdasarkanIzin", "kapasitasTerpasang", "satuan"] },
   productionQty: { idField: "productId", allowedFields: ["perTahunSebelumnya", "perTahunRencana", "satuan"] },
-  rawMaterialUsage: { idField: "rawMaterialId", allowedFields: ["penggunaan", "dataStock", "rencanaKebutuhan", "satuan"] },
+  rawMaterialUsage: {
+    idField: "rawMaterialId",
+    allowedFields: [
+      "penggunaan",
+      "dataStock",
+      "rencanaKebutuhan",
+      "rencanaKebutuhanDalamNegeri",
+      "rencanaKebutuhanLuarNegeri",
+      "rencanaKebutuhanNegaraAsal",
+      "satuan",
+    ],
+  },
   sales: { idField: "productId", allowedFields: ["dalamNegeri", "luarNegeri", "negaraTujuan", "satuan"] },
 } as const;
 
@@ -79,7 +90,15 @@ export async function PATCH(
     return NextResponse.json({ error: "Data tidak ditemukan" }, { status: 404 });
   }
 
-  const updatedList = list.map((item, i) => (i === index ? { ...item, ...filteredFields } : item));
+  const merged = { ...list[index], ...filteredFields };
+  // rencanaKebutuhan is kept as an auto-summed total (dalamNegeri + luarNegeri) — report code
+  // reads this single field, so keep it in sync whenever either half changes.
+  if (source === "rawMaterialUsage" && ("rencanaKebutuhanDalamNegeri" in filteredFields || "rencanaKebutuhanLuarNegeri" in filteredFields)) {
+    const dalamNegeri = Number(merged.rencanaKebutuhanDalamNegeri) || 0;
+    const luarNegeri = Number(merged.rencanaKebutuhanLuarNegeri) || 0;
+    merged.rencanaKebutuhan = String(dalamNegeri + luarNegeri);
+  }
+  const updatedList = list.map((item, i) => (i === index ? merged : item));
 
   await db.application.update({
     where: { id: assignment.applicationId },

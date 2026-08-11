@@ -42,6 +42,9 @@ type RawMaterialUsageRow = {
   penggunaan: string;
   dataStock: string;
   rencanaKebutuhan: string;
+  rencanaKebutuhanDalamNegeri: string;
+  rencanaKebutuhanLuarNegeri: string;
+  rencanaKebutuhanNegaraAsal: string;
   satuan: string;
   penggunaanStatus: ProductionQtyVerificationStatusValue;
   penggunaanKeterangan: string;
@@ -317,6 +320,15 @@ function SortableHeader({
 }
 
 /** Table for the Penggunaan/Stok raw-material sections — shared shape, one numeric column swapped per topic; value + satuan editable by verifikator, sortable by HS Code / Uraian Barang / Bahan Baku untuk Produk. */
+type RawMaterialUsageValueField =
+  | "penggunaan"
+  | "dataStock"
+  | "rencanaKebutuhan"
+  | "rencanaKebutuhanDalamNegeri"
+  | "rencanaKebutuhanLuarNegeri"
+  | "rencanaKebutuhanNegaraAsal"
+  | "satuan";
+
 function RawMaterialUsageTable({
   rows,
   valueField,
@@ -328,6 +340,7 @@ function RawMaterialUsageTable({
   onSaveKeterangan,
   onSaveValue,
   onNavigateToRawMaterial,
+  splitRencanaKebutuhan = false,
 }: {
   rows: RawMaterialUsageRow[];
   valueField: "penggunaan" | "dataStock" | "rencanaKebutuhan";
@@ -337,8 +350,10 @@ function RawMaterialUsageTable({
   savingKey: string | null;
   onToggleStatus: (row: RawMaterialUsageRow, topic: RawMaterialUsageTopic) => void;
   onSaveKeterangan: (row: RawMaterialUsageRow, topic: RawMaterialUsageTopic, keterangan: string) => void;
-  onSaveValue: (row: RawMaterialUsageRow, field: "penggunaan" | "dataStock" | "rencanaKebutuhan" | "satuan", value: string) => void;
+  onSaveValue: (row: RawMaterialUsageRow, field: RawMaterialUsageValueField, value: string) => void;
   onNavigateToRawMaterial: (row: RawMaterialUsageRow) => void;
+  /** Rencana Kebutuhan only — swaps the single value column for Dalam Negeri / Luar Negeri / Negara Asal (rencana impor). */
+  splitRencanaKebutuhan?: boolean;
 }) {
   const [sortField, setSortField] = useState<RawMaterialSortField | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -363,6 +378,8 @@ function RawMaterialUsageTable({
     return sortDirection === "asc" ? sorted : sorted.reverse();
   }, [rows, sortField, sortDirection]);
 
+  const columnCount = splitRencanaKebutuhan ? 10 : 8;
+
   return (
     <table className="w-full min-w-205 border-collapse text-[12px]">
       <thead>
@@ -370,7 +387,15 @@ function RawMaterialUsageTable({
           <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">No</th>
           <SortableHeader label="HS Code" field="hsCode" activeField={sortField} direction={sortDirection} onSort={handleSort} />
           <SortableHeader label="Uraian Barang" field="uraian" activeField={sortField} direction={sortDirection} onSort={handleSort} />
-          <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">{valueLabel}</th>
+          {splitRencanaKebutuhan ? (
+            <>
+              <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">Jumlah Dalam Negeri</th>
+              <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">Jumlah Luar Negeri</th>
+              <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">Negara Asal</th>
+            </>
+          ) : (
+            <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">{valueLabel}</th>
+          )}
           <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">Satuan</th>
           <SortableHeader
             label="Bahan Baku untuk Produk"
@@ -386,7 +411,7 @@ function RawMaterialUsageTable({
       <tbody>
         {rows.length === 0 && (
           <tr>
-            <td colSpan={8} className="px-3 py-3 text-center text-[#a68f80]">
+            <td colSpan={columnCount} className="px-3 py-3 text-center text-[#a68f80]">
               Tidak ada data.
             </td>
           </tr>
@@ -420,13 +445,50 @@ function RawMaterialUsageTable({
                   r.hsDesc || r.jenis || "—"
                 )}
               </td>
-              <td className="border border-[#efe2d4] px-3 py-2.25 font-bold text-[#20180f]">
-                {canEdit ? (
-                  <EditableValueInput value={r[valueField]} onSave={(value) => onSaveValue(r, valueField, value)} numeric />
-                ) : (
-                  fmtNum(r[valueField])
-                )}
-              </td>
+              {splitRencanaKebutuhan ? (
+                <>
+                  <td className="border border-[#efe2d4] px-3 py-2.25 font-bold text-[#20180f]">
+                    {canEdit ? (
+                      <EditableValueInput
+                        value={r.rencanaKebutuhanDalamNegeri}
+                        onSave={(value) => onSaveValue(r, "rencanaKebutuhanDalamNegeri", value)}
+                        numeric
+                      />
+                    ) : (
+                      fmtNum(r.rencanaKebutuhanDalamNegeri)
+                    )}
+                  </td>
+                  <td className="border border-[#efe2d4] px-3 py-2.25 font-bold text-[#20180f]">
+                    {canEdit ? (
+                      <EditableValueInput
+                        value={r.rencanaKebutuhanLuarNegeri}
+                        onSave={(value) => onSaveValue(r, "rencanaKebutuhanLuarNegeri", value)}
+                        numeric
+                      />
+                    ) : (
+                      fmtNum(r.rencanaKebutuhanLuarNegeri)
+                    )}
+                  </td>
+                  <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
+                    {canEdit ? (
+                      <EditableValueInput
+                        value={r.rencanaKebutuhanNegaraAsal}
+                        onSave={(value) => onSaveValue(r, "rencanaKebutuhanNegaraAsal", value)}
+                      />
+                    ) : (
+                      r.rencanaKebutuhanNegaraAsal || "—"
+                    )}
+                  </td>
+                </>
+              ) : (
+                <td className="border border-[#efe2d4] px-3 py-2.25 font-bold text-[#20180f]">
+                  {canEdit ? (
+                    <EditableValueInput value={r[valueField]} onSave={(value) => onSaveValue(r, valueField, value)} numeric />
+                  ) : (
+                    fmtNum(r[valueField])
+                  )}
+                </td>
+              )}
               <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
                 {canEdit ? (
                   <EditableValueInput value={r.satuan} onSave={(value) => onSaveValue(r, "satuan", value)} />
@@ -623,7 +685,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
     queryClient.invalidateQueries({ queryKey });
   }
 
-  function saveRawMaterialValue(row: RawMaterialUsageRow, field: "penggunaan" | "dataStock" | "rencanaKebutuhan" | "satuan", value: string) {
+  function saveRawMaterialValue(row: RawMaterialUsageRow, field: RawMaterialUsageValueField, value: string) {
     savePayloadField("rawMaterialUsage", row.rawMaterialId, field, value, `rawMaterialUsage:${row.rawMaterialId}:${field}`);
   }
 
@@ -1032,6 +1094,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
           onSaveKeterangan={saveRawMaterialKeterangan}
           onSaveValue={saveRawMaterialValue}
           onNavigateToRawMaterial={handleNavigateToRawMaterial}
+          splitRencanaKebutuhan
         />
         {rawMaterialUsage.length > 0 && (
           <ConclusionEditor
