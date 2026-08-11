@@ -32,7 +32,8 @@ export async function GET(request: Request) {
   let png: Buffer;
   try {
     png = await renderPdfFirstPageToPng(pdfBuffer);
-  } catch {
+  } catch (error) {
+    console.error(`Thumbnail generation failed for ${path}:`, error);
     return NextResponse.json({ error: "Gagal membuat thumbnail" }, { status: 422 });
   }
 
