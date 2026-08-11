@@ -18,5 +18,8 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!login|api/auth|_next/static|_next/image|favicon.ico).*)"],
+  // api/system-audit is a temporary, secret-header-gated diagnostic/backfill
+  // route family — excluded here only because it has no session to present.
+  // Remove this exclusion together with the route once it's done.
+  matcher: ["/((?!login|api/auth|api/system-audit|_next/static|_next/image|favicon.ico).*)"],
 };
