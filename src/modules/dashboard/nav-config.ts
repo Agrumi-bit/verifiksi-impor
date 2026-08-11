@@ -93,6 +93,10 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Satuan",
         href: "/system-configuration/unit-of-measurement",
       },
+      {
+        label: "Golongan Tarif Listrik",
+        href: "/system-configuration/electricity-tariff",
+      },
       { label: "Notification & Communication" },
       { label: "Application Setting" },
     ],

@@ -16,6 +16,14 @@ export const unitOfMeasurementSchema = z.object({
   description: z.string().trim().optional(),
 });
 
+export const electricityTariffMasterDataSchema = z.object({
+  kelompok: requiredString("Kelompok wajib diisi"),
+  golongan: requiredString("Golongan tarif wajib diisi"),
+  batasDaya: requiredString("Batas daya wajib diisi"),
+  tarifPerKwh: requiredString("Tarif per kWh wajib diisi"),
+  keterangan: z.string().trim().optional(),
+});
+
 export const industryGroupSchema = z.object({
   name: requiredString("Nama kelompok industri wajib diisi"),
   code: requiredString("Kode kelompok industri wajib diisi"),
@@ -67,6 +75,8 @@ export const lartasImporUpdateSchema = lartasImporSchema.extend(statusSchema.sha
 
 export const unitOfMeasurementUpdateSchema =
   unitOfMeasurementSchema.extend(statusSchema.shape);
+export const electricityTariffMasterDataUpdateSchema =
+  electricityTariffMasterDataSchema.extend(statusSchema.shape);
 export const industryGroupUpdateSchema =
   industryGroupSchema.extend(statusSchema.shape);
 export const commodityGroupUpdateSchema =

@@ -402,6 +402,24 @@ model UnitOfMeasurement {
 // Top of the hierarchy: Kelompok Industri > CommodityGroup > CommoditySubGroup. Nullable on
 // CommodityGroup since existing rows predate this level — new rows are expected to set it (enforced
 // in the create form/schema, not the DB), so legacy ungrouped rows aren't broken by a hard migration.
+// Reference table for PLN's official tariff groups — Permen ESDM No. 7 Tahun 2024
+// Lampiran I-VIII. tarifPerKwh stores the headline LWBP/flat Rp-per-kWh figure (block-tariff
+// and WBP/K-factor detail goes in keterangan) — matches this codebase's convention of storing
+// numeric wizard/reference fields as display strings rather than Decimal.
+model ElectricityTariffMasterData {
+  id          String           @id @default(cuid())
+  status      MasterDataStatus @default(ACTIVE)
+  kelompok    String
+  golongan    String
+  batasDaya   String
+  tarifPerKwh String
+  keterangan  String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("electricity_tariff_master_data")
+}
+
 model IndustryGroup {
   id              String           @id @default(cuid())
   status          MasterDataStatus @default(ACTIVE)
