@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
-import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import { MACHINE_KONDISI_VALUES, type ApplicationWizardValues } from "@/modules/applications/schema";
 import { MACHINE_VERIFICATION_STATUSES } from "@/modules/verifikator-workspace/status";
 import { buildMachineChecklist, machineVerificationsSchema } from "@/modules/verifikator-workspace/schema";
 
@@ -55,6 +55,28 @@ const patchSchema = z.object({
   status: z.enum(MACHINE_VERIFICATION_STATUSES).optional(),
   note: z.string().trim().optional(),
   photoPath: z.string().trim().optional(),
+  // Corrections to the applicant's own machine data — written back to
+  // Application.payload.machines (the source of truth every other workspace
+  // reads from via buildMachineChecklist), not to machineVerifications.
+  machineData: z
+    .object({
+      nama: z.string().trim().optional(),
+      proses: z.string().trim().optional(),
+      merk: z.string().trim().optional(),
+      model: z.string().trim().optional(),
+      tahun: z.string().trim().optional(),
+      jumlah: z.string().trim().optional(),
+      kapasitas: z.string().trim().optional(),
+      kapasitasSatuan: z.string().trim().optional(),
+      kapasitasJam: z.string().trim().optional(),
+      kapasitasJamSatuan: z.string().trim().optional(),
+      waktuBeroperasi: z.string().trim().optional(),
+      kondisi: z.enum(MACHINE_KONDISI_VALUES).optional(),
+      power: z.string().trim().optional(),
+      input: z.string().trim().optional(),
+      output: z.string().trim().optional(),
+    })
+    .optional(),
 });
 
 export async function PATCH(
@@ -88,6 +110,16 @@ export async function PATCH(
   const validIds = new Set(buildMachineChecklist(payload).map((item) => item.id));
   if (!validIds.has(parsed.data.id)) {
     return NextResponse.json({ error: "Mesin tidak dikenali" }, { status: 400 });
+  }
+
+  if (parsed.data.machineData) {
+    const machines = (payload.machines ?? []).map((m) =>
+      m.id === parsed.data.id ? { ...m, ...parsed.data.machineData } : m,
+    );
+    await db.application.update({
+      where: { id: assignment.applicationId },
+      data: { payload: { ...payload, machines } },
+    });
   }
 
   const decisions = machineVerificationsSchema.parse(assignment.machineVerifications ?? {});

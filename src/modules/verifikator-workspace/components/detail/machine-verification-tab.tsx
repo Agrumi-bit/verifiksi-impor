@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { MaterialIcon } from "../material-icon";
 import { MACHINE_VERIFICATION_STATUS_BADGE, MACHINE_VERIFICATION_STATUS_LABELS, type MachineVerificationStatusValue } from "../../status";
 import type { AssignmentStatusValue } from "../../status";
-import { MACHINE_KONDISI_LABELS, type MachineKondisiValue } from "@/modules/applications/schema";
+import { MACHINE_KONDISI_LABELS, MACHINE_KONDISI_VALUES, type MachineKondisiValue } from "@/modules/applications/schema";
 import { FileUploadField } from "@/components/form/file-upload-field";
 
 type MachineRow = {
@@ -44,6 +44,88 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
+type MachineDataDraft = {
+  nama?: string;
+  proses?: string;
+  merk?: string;
+  model?: string;
+  tahun?: string;
+  jumlah?: string;
+  kapasitas?: string;
+  kapasitasSatuan?: string;
+  kapasitasJam?: string;
+  kapasitasJamSatuan?: string;
+  waktuBeroperasi?: string;
+  kondisi?: MachineKondisiValue;
+  power?: string;
+  input?: string;
+  output?: string;
+};
+
+function EditableFieldUnit({
+  label,
+  value,
+  onValueChange,
+  unit,
+  onUnitChange,
+  disabled,
+}: {
+  label: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  unit: string;
+  onUnitChange: (value: string) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div>
+      <div className="mb-1.5 text-[12.5px] font-bold text-[#20180f]">{label}</div>
+      <div className="flex gap-1.5">
+        <input
+          type="text"
+          value={value}
+          disabled={disabled}
+          onChange={(e) => onValueChange(e.target.value)}
+          className="w-full min-w-0 rounded-lg border border-[#e8dccd] bg-white px-3 py-2.5 text-[12.5px] text-[#20180f] outline-none disabled:bg-[#f7f2ec] disabled:text-[#8a7565]"
+        />
+        <input
+          type="text"
+          value={unit}
+          disabled={disabled}
+          onChange={(e) => onUnitChange(e.target.value)}
+          placeholder="satuan"
+          className="w-20 shrink-0 rounded-lg border border-[#e8dccd] bg-white px-2 py-2.5 text-[12.5px] text-[#20180f] outline-none disabled:bg-[#f7f2ec] disabled:text-[#8a7565]"
+        />
+      </div>
+    </div>
+  );
+}
+
+function EditableField({
+  label,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div>
+      <div className="mb-1.5 text-[12.5px] font-bold text-[#20180f]">{label}</div>
+      <input
+        type="text"
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-[#e8dccd] bg-white px-3 py-2.5 text-[12.5px] text-[#20180f] outline-none disabled:bg-[#f7f2ec] disabled:text-[#8a7565]"
+      />
+    </div>
+  );
+}
+
 function fileHref(path: string): string {
   return `/api/files?path=${encodeURIComponent(path)}`;
 }
@@ -55,6 +137,7 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [draftNotes, setDraftNotes] = useState<Record<string, string>>({});
+  const [draftMachineData, setDraftMachineData] = useState<Record<string, MachineDataDraft>>({});
   const canEdit = assignmentStatus === "SUBMITTED";
 
   const queryKey = ["verifikator-workspace", "assignments", assignmentId, "machines"];
@@ -102,6 +185,34 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
       return;
     }
     toast.success(photoPath ? `Foto ${row.proses} diperbarui.` : `Foto ${row.proses} dikembalikan ke foto asli aplikasi.`);
+    queryClient.invalidateQueries({ queryKey });
+  }
+
+  function updateDraftMachineData(rowId: string, patch: MachineDataDraft) {
+    setDraftMachineData((prev) => ({ ...prev, [rowId]: { ...prev[rowId], ...patch } }));
+  }
+
+  async function handleSaveMachineData(row: MachineRow) {
+    const draft = draftMachineData[row.id];
+    if (!draft) return;
+    setSavingId(row.id);
+    const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/machines`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: row.id, machineData: draft }),
+    });
+    setSavingId(null);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal menyimpan data mesin");
+      return;
+    }
+    toast.success(`Data mesin ${row.proses} diperbarui — tersinkron ke data aplikasi.`);
+    setDraftMachineData((prev) => {
+      const next = { ...prev };
+      delete next[row.id];
+      return next;
+    });
     queryClient.invalidateQueries({ queryKey });
   }
 
@@ -160,21 +271,32 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                     </span>
                   </div>
                 </div>
-                {isExpanded && (
+                {isExpanded && (() => {
+                  const draft = draftMachineData[row.id];
+                  const value = (key: keyof MachineDataDraft, fallback: string): string => (draft?.[key] as string | undefined) ?? fallback;
+                  const set = (patch: MachineDataDraft) => updateDraftMachineData(row.id, patch);
+                  const hasDraft = Boolean(draft && Object.keys(draft).length > 0);
+                  return (
                   <div className="border-t border-[#f0ded0] bg-[#fbf8f4] p-5">
                     <div className="mb-3 flex items-center justify-between">
                       <div className="text-[11px] font-bold tracking-wide text-[#8a7565]">SPESIFIKASI PROSES</div>
                       <span className="flex items-center gap-1 rounded-full bg-[#e6effa] px-2.5 py-0.75 text-[10.5px] font-bold text-[#2f6fe0]">
-                        <MaterialIcon name="sync" className="text-[13px]" />
-                        Auto-filled dari VKI Application
+                        <MaterialIcon name="edit" className="text-[13px]" />
+                        Dapat dikoreksi verifikator — tersinkron ke data aplikasi
                       </span>
                     </div>
                     <div className="mb-3.5 grid grid-cols-1 gap-4 sm:grid-cols-[1fr_180px]">
                       <div className="flex flex-col gap-4">
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          <Field label="Nama Proses" value={row.proses} />
-                          <Field label="Jenis Mesin" value={row.nama} />
+                          <EditableField label="Nama Proses" value={value("proses", row.proses)} onChange={(v) => set({ proses: v })} disabled={!canEdit} />
+                          <EditableField label="Jenis Mesin" value={value("nama", row.nama)} onChange={(v) => set({ nama: v })} disabled={!canEdit} />
                         </div>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                          <EditableField label="Merk" value={value("merk", row.merk)} onChange={(v) => set({ merk: v })} disabled={!canEdit} />
+                          <EditableField label="Model" value={value("model", row.model)} onChange={(v) => set({ model: v })} disabled={!canEdit} />
+                          <EditableField label="Tahun" value={value("tahun", row.tahun)} onChange={(v) => set({ tahun: v })} disabled={!canEdit} />
+                        </div>
+                        <EditableField label="Quantity" value={value("jumlah", row.quantity)} onChange={(v) => set({ jumlah: v })} disabled={!canEdit} />
                       </div>
                       <div>
                         <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-bold text-[#20180f]">
@@ -208,19 +330,66 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                       </div>
                     </div>
                     <div className="mb-3.5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                      <Field label="Kapasitas Produksi" value={[row.kapasitas, row.kapasitasSatuan].filter(Boolean).join(" ")} />
-                      <Field label="Kapasitas Produksi per Jam" value={[row.kapasitasJam, row.kapasitasJamSatuan].filter(Boolean).join(" ")} />
-                      <Field label="Power Consumption" value={row.power} />
+                      <EditableFieldUnit
+                        label="Kapasitas Produksi"
+                        value={value("kapasitas", row.kapasitas)}
+                        onValueChange={(v) => set({ kapasitas: v })}
+                        unit={value("kapasitasSatuan", row.kapasitasSatuan)}
+                        onUnitChange={(v) => set({ kapasitasSatuan: v })}
+                        disabled={!canEdit}
+                      />
+                      <EditableFieldUnit
+                        label="Kapasitas Produksi per Jam"
+                        value={value("kapasitasJam", row.kapasitasJam)}
+                        onValueChange={(v) => set({ kapasitasJam: v })}
+                        unit={value("kapasitasJamSatuan", row.kapasitasJamSatuan)}
+                        onUnitChange={(v) => set({ kapasitasJamSatuan: v })}
+                        disabled={!canEdit}
+                      />
+                      <EditableField label="Power Consumption" value={value("power", row.power)} onChange={(v) => set({ power: v })} disabled={!canEdit} />
                     </div>
                     <div className="mb-3.5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                      <Field label="Waktu Beroperasi" value={row.waktuBeroperasi ? `${row.waktuBeroperasi} jam/hari` : ""} />
-                      <Field label="Kapasitas per Hari" value={[row.kapasitasPerHari, row.kapasitasJamSatuan].filter(Boolean).join(" ")} />
-                      <Field label="Kondisi" value={row.kondisi ? MACHINE_KONDISI_LABELS[row.kondisi] : ""} />
+                      <EditableField
+                        label="Waktu Beroperasi (jam/hari)"
+                        value={value("waktuBeroperasi", row.waktuBeroperasi)}
+                        onChange={(v) => set({ waktuBeroperasi: v })}
+                        disabled={!canEdit}
+                      />
+                      <Field label="Kapasitas per Hari (dihitung otomatis)" value={[row.kapasitasPerHari, row.kapasitasJamSatuan].filter(Boolean).join(" ")} />
+                      <div>
+                        <div className="mb-1.5 text-[12.5px] font-bold text-[#20180f]">Kondisi</div>
+                        <select
+                          value={value("kondisi", row.kondisi)}
+                          disabled={!canEdit}
+                          onChange={(e) => set({ kondisi: e.target.value as MachineKondisiValue })}
+                          className="w-full rounded-lg border border-[#e8dccd] bg-white px-3 py-2.5 text-[12.5px] text-[#20180f] outline-none disabled:bg-[#f7f2ec] disabled:text-[#8a7565]"
+                        >
+                          <option value="">—</option>
+                          {MACHINE_KONDISI_VALUES.map((k) => (
+                            <option key={k} value={k}>
+                              {MACHINE_KONDISI_LABELS[k]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                     <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <Field label="Input / Raw Material" value={row.input} />
-                      <Field label="Output / Produk" value={row.output} />
+                      <EditableField label="Input / Raw Material" value={value("input", row.input)} onChange={(v) => set({ input: v })} disabled={!canEdit} />
+                      <EditableField label="Output / Produk" value={value("output", row.output)} onChange={(v) => set({ output: v })} disabled={!canEdit} />
                     </div>
+                    {canEdit && (
+                      <div className="mb-4 flex justify-end">
+                        <button
+                          type="button"
+                          disabled={!hasDraft || savingId === row.id}
+                          onClick={() => handleSaveMachineData(row)}
+                          className="flex items-center gap-1.5 rounded-lg bg-[#2f6fe0] px-3.5 py-2 text-[12px] font-semibold text-white disabled:opacity-50"
+                        >
+                          <MaterialIcon name="sync" className="text-[15px]" />
+                          Simpan Data Mesin ke Aplikasi
+                        </button>
+                      </div>
+                    )}
 
                     <div className="border-t border-[#e8dccd] pt-3.5">
                       <div className="mb-1.5 text-[12.5px] font-bold text-[#20180f]">Uraian Observasi</div>
@@ -270,7 +439,8 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                       )}
                     </div>
                   </div>
-                )}
+                  );
+                })()}
               </div>
             );
           })}
