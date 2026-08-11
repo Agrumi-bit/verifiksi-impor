@@ -46,7 +46,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       machines: buildMachineChecklist(payload),
       electricityMonths: payload.electricityMonths ?? [],
       capacity: buildCapacityRows(payload),
-      productionQtyRencana: buildProductionQtyChecklist(payload).filter((item) => item.section === "rencana"),
+      productionQty: buildProductionQtyChecklist(payload),
       rawMaterialConversion: buildRawMaterialConversionRows(payload),
     },
   });

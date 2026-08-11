@@ -5,6 +5,7 @@ import type {
   RawMaterialConversionRow,
 } from "@/modules/verifikator-workspace/schema";
 import type { TechnicalAnalysisData } from "../../schema";
+import type { TechnicalModuleStatusValue } from "../../status";
 
 export type ElectricityMonth = {
   id: string;
@@ -21,16 +22,38 @@ export type AnalysisData = {
   machines: MachineChecklistItem[];
   electricityMonths: ElectricityMonth[];
   capacity: CapacityRow[];
-  productionQtyRencana: ProductionQtyChecklistItem[];
+  productionQty: ProductionQtyChecklistItem[];
   rawMaterialConversion: RawMaterialConversionRow[];
 };
 
-/** Extracts the first numeric token from a free-text field (e.g. "5.5 kW" -> 5.5). Returns null when nothing parses. */
+/** Props every per-module report component receives — computed data, manual inputs, and the trailing Kesimpulan Analis card's bound state. */
+export type ModuleProps = {
+  data: AnalysisData;
+  inputs: Record<string, string>;
+  onInputChange: (key: string, value: string) => void;
+  keterangan: string;
+  onKeteranganChange: (value: string) => void;
+  kesimpulan: string;
+  onKesimpulanChange: (value: string) => void;
+  status: TechnicalModuleStatusValue;
+  onMarkSesuai: () => void;
+  onMarkTidakSesuai: () => void;
+  onSubmit: () => void;
+  canEdit: boolean;
+  submitting: boolean;
+};
+
+/**
+ * Extracts the first numeric token from a free-text field written in Indonesian number
+ * format — "." is the thousands separator, "," is the decimal separator (e.g. "1.444,70
+ * kWh" -> 1444.7, "0,55 kW" -> 0.55). Returns null when nothing parses.
+ */
 export function parseNumeric(value: string | undefined | null): number | null {
   if (!value) return null;
-  const match = value.replace(",", ".").match(/-?\d+(\.\d+)?/);
+  const match = value.match(/-?[\d.,]+/);
   if (!match) return null;
-  const n = Number(match[0]);
+  const normalized = match[0].replace(/\./g, "").replace(",", ".");
+  const n = Number(normalized);
   return Number.isFinite(n) ? n : null;
 }
 
