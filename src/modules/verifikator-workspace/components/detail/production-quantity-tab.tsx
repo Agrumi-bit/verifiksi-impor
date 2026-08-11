@@ -239,7 +239,21 @@ function ConclusionEditor({
   );
 }
 
-/** Read-only table for the Penggunaan/Stok raw-material sections — shared shape, one numeric column swapped per topic. */
+/** Inline editable cell — plain input, saves onBlur (only when the value actually changed). Used for volume/jumlah figures verifikator can now correct directly on the source payload. */
+function EditableValueInput({ value, onSave }: { value: string; onSave: (value: string) => void }) {
+  return (
+    <input
+      type="text"
+      defaultValue={value}
+      onBlur={(event) => {
+        if (event.target.value !== value) onSave(event.target.value);
+      }}
+      className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1 text-[11.5px] text-[#20180f] outline-none focus:border-[#e0662e]"
+    />
+  );
+}
+
+/** Table for the Penggunaan/Stok raw-material sections — shared shape, one numeric column swapped per topic; value + satuan editable by verifikator. */
 function RawMaterialUsageTable({
   rows,
   valueField,
@@ -249,6 +263,7 @@ function RawMaterialUsageTable({
   savingKey,
   onToggleStatus,
   onSaveKeterangan,
+  onSaveValue,
 }: {
   rows: RawMaterialUsageRow[];
   valueField: "penggunaan" | "dataStock" | "rencanaKebutuhan";
@@ -258,6 +273,7 @@ function RawMaterialUsageTable({
   savingKey: string | null;
   onToggleStatus: (row: RawMaterialUsageRow, topic: RawMaterialUsageTopic) => void;
   onSaveKeterangan: (row: RawMaterialUsageRow, topic: RawMaterialUsageTopic, keterangan: string) => void;
+  onSaveValue: (row: RawMaterialUsageRow, field: "penggunaan" | "dataStock" | "rencanaKebutuhan" | "satuan", value: string) => void;
 }) {
   return (
     <table className="w-full min-w-205 border-collapse text-[12px]">
@@ -287,8 +303,20 @@ function RawMaterialUsageTable({
               <td className="border border-[#efe2d4] px-3 py-2.25 text-[#6b5b4c]">{index + 1}</td>
               <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{r.hsCode || "—"}</td>
               <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{r.hsDesc || r.jenis || "—"}</td>
-              <td className="border border-[#efe2d4] px-3 py-2.25 font-bold text-[#20180f]">{fmtNum(r[valueField])}</td>
-              <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{r.satuan || "—"}</td>
+              <td className="border border-[#efe2d4] px-3 py-2.25 font-bold text-[#20180f]">
+                {canEdit ? (
+                  <EditableValueInput value={r[valueField]} onSave={(value) => onSaveValue(r, valueField, value)} />
+                ) : (
+                  fmtNum(r[valueField])
+                )}
+              </td>
+              <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
+                {canEdit ? (
+                  <EditableValueInput value={r.satuan} onSave={(value) => onSaveValue(r, "satuan", value)} />
+                ) : (
+                  r.satuan || "—"
+                )}
+              </td>
               <td className="border border-[#efe2d4] px-3 py-2.25 font-bold text-[#20180f]">{r.productName || "—"}</td>
               <td className="border border-[#efe2d4] px-3 py-2.25">
                 <span
@@ -450,6 +478,34 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props)
     queryClient.invalidateQueries({ queryKey });
   }
 
+  /** Single write path for capacity/productionQty/rawMaterialUsage/sales source figures — see production-data route for the per-source field allowlist. */
+  async function savePayloadField(
+    source: "capacity" | "productionQty" | "rawMaterialUsage" | "sales",
+    itemId: string,
+    field: string,
+    value: string,
+    savingLabel: string,
+  ) {
+    if (!canEdit) return;
+    setSavingKey(savingLabel);
+    const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/production-data`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source, itemId, fields: { [field]: value } }),
+    });
+    setSavingKey(null);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal menyimpan data");
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey });
+  }
+
+  function saveRawMaterialValue(row: RawMaterialUsageRow, field: "penggunaan" | "dataStock" | "rencanaKebutuhan" | "satuan", value: string) {
+    savePayloadField("rawMaterialUsage", row.rawMaterialId, field, value, `rawMaterialUsage:${row.rawMaterialId}:${field}`);
+  }
+
   async function toggleRawMaterialStatus(row: RawMaterialUsageRow, topic: RawMaterialUsageTopic) {
     if (!canEdit) return;
     const currentStatus = rawMaterialTopicStatus(row, topic);
@@ -505,14 +561,33 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props)
   );
 
   function ProductionRow({ row, index }: { row: ProductionQtyRow; index: number }) {
+    const jumlahField = row.section === "sebelumnya" ? "perTahunSebelumnya" : "perTahunRencana";
     return (
       <tr>
         <td className="border border-[#efe2d4] px-3 py-2.25 text-[#6b5b4c]">{index + 1}</td>
         <td className="border border-[#efe2d4] px-3 py-2.25 font-bold text-[#20180f]">{row.jenisProduk || "—"}</td>
         <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{row.deskripsiProduk || "—"}</td>
         <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{row.hsCode || "—"}</td>
-        <td className="border border-[#efe2d4] px-3 py-2.25 font-bold text-[#20180f]">{fmtNum(row.jumlah)}</td>
-        <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{row.satuan || "—"}</td>
+        <td className="border border-[#efe2d4] px-3 py-2.25 font-bold text-[#20180f]">
+          {canEdit ? (
+            <EditableValueInput
+              value={row.jumlah}
+              onSave={(value) => savePayloadField("productionQty", row.productId, jumlahField, value, `productionQty:${row.key}`)}
+            />
+          ) : (
+            fmtNum(row.jumlah)
+          )}
+        </td>
+        <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
+          {canEdit ? (
+            <EditableValueInput
+              value={row.satuan}
+              onSave={(value) => savePayloadField("productionQty", row.productId, "satuan", value, `productionQty:${row.key}:satuan`)}
+            />
+          ) : (
+            row.satuan || "—"
+          )}
+        </td>
         <td className="border border-[#efe2d4] px-3 py-2.25">
           <span
             role="button"
@@ -572,9 +647,36 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props)
                   <div className="text-[12.5px] font-extrabold text-[#20180f]">{c.hsCode}</div>
                   <div className="mt-0.5 text-[11px] text-[#8a7565]">{c.jenisProduk}</div>
                 </td>
-                <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">{fmtNum(c.berdasarkanIzin)}</td>
-                <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">{fmtNum(c.kapasitasTerpasang)}</td>
-                <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">{c.satuan || "—"}</td>
+                <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">
+                  {canEdit ? (
+                    <EditableValueInput
+                      value={c.berdasarkanIzin}
+                      onSave={(value) => savePayloadField("capacity", c.productId, "berdasarkanIzin", value, `capacity:${c.productId}:berdasarkanIzin`)}
+                    />
+                  ) : (
+                    fmtNum(c.berdasarkanIzin)
+                  )}
+                </td>
+                <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">
+                  {canEdit ? (
+                    <EditableValueInput
+                      value={c.kapasitasTerpasang}
+                      onSave={(value) => savePayloadField("capacity", c.productId, "kapasitasTerpasang", value, `capacity:${c.productId}:kapasitasTerpasang`)}
+                    />
+                  ) : (
+                    fmtNum(c.kapasitasTerpasang)
+                  )}
+                </td>
+                <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">
+                  {canEdit ? (
+                    <EditableValueInput
+                      value={c.satuan}
+                      onSave={(value) => savePayloadField("capacity", c.productId, "satuan", value, `capacity:${c.productId}:satuan`)}
+                    />
+                  ) : (
+                    c.satuan || "—"
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -644,6 +746,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props)
           savingKey={savingKey}
           onToggleStatus={toggleRawMaterialStatus}
           onSaveKeterangan={saveRawMaterialKeterangan}
+          onSaveValue={saveRawMaterialValue}
         />
         {rawMaterialUsage.length > 0 && (
           <ConclusionEditor
@@ -672,6 +775,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props)
           savingKey={savingKey}
           onToggleStatus={toggleRawMaterialStatus}
           onSaveKeterangan={saveRawMaterialKeterangan}
+          onSaveValue={saveRawMaterialValue}
         />
         {rawMaterialUsage.length > 0 && (
           <ConclusionEditor
@@ -795,6 +899,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props)
           savingKey={savingKey}
           onToggleStatus={toggleRawMaterialStatus}
           onSaveKeterangan={saveRawMaterialKeterangan}
+          onSaveValue={saveRawMaterialValue}
         />
         {rawMaterialUsage.length > 0 && (
           <ConclusionEditor
@@ -841,10 +946,46 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props)
                 <td className="border border-[#efe2d4] px-3 py-2.25 font-bold text-[#20180f]">{row.productName || "—"}</td>
                 <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{row.hsCode || "—"}</td>
                 <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{row.deskripsi || "—"}</td>
-                <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{fmtNum(row.dalamNegeri)}</td>
-                <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{fmtNum(row.luarNegeri)}</td>
-                <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{row.negaraTujuan || "—"}</td>
-                <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{row.satuan || "—"}</td>
+                <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
+                  {canEdit ? (
+                    <EditableValueInput
+                      value={row.dalamNegeri}
+                      onSave={(value) => savePayloadField("sales", row.productId, "dalamNegeri", value, `sales:${row.productId}:dalamNegeri`)}
+                    />
+                  ) : (
+                    fmtNum(row.dalamNegeri)
+                  )}
+                </td>
+                <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
+                  {canEdit ? (
+                    <EditableValueInput
+                      value={row.luarNegeri}
+                      onSave={(value) => savePayloadField("sales", row.productId, "luarNegeri", value, `sales:${row.productId}:luarNegeri`)}
+                    />
+                  ) : (
+                    fmtNum(row.luarNegeri)
+                  )}
+                </td>
+                <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
+                  {canEdit ? (
+                    <EditableValueInput
+                      value={row.negaraTujuan}
+                      onSave={(value) => savePayloadField("sales", row.productId, "negaraTujuan", value, `sales:${row.productId}:negaraTujuan`)}
+                    />
+                  ) : (
+                    row.negaraTujuan || "—"
+                  )}
+                </td>
+                <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
+                  {canEdit ? (
+                    <EditableValueInput
+                      value={row.satuan}
+                      onSave={(value) => savePayloadField("sales", row.productId, "satuan", value, `sales:${row.productId}:satuan`)}
+                    />
+                  ) : (
+                    row.satuan || "—"
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
