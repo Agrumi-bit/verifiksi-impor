@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -335,13 +335,30 @@ function ProductForm({
   );
 }
 
-type Props = { assignmentId: string; assignmentStatus: AssignmentStatusValue; payload: ApplicationWizardValues };
+type Props = {
+  assignmentId: string;
+  assignmentStatus: AssignmentStatusValue;
+  payload: ApplicationWizardValues;
+  focusProductId?: string | null;
+  focusConversionId?: string | null;
+  onFocusHandled?: () => void;
+};
 
-export function ProductVerificationTab({ assignmentId, assignmentStatus, payload }: Props) {
+export function ProductVerificationTab({
+  assignmentId,
+  assignmentStatus,
+  payload,
+  focusProductId,
+  focusConversionId,
+  onFocusHandled,
+}: Props) {
   const queryClient = useQueryClient();
   const [savingId, setSavingId] = useState<string | null>(null);
   const [draftNotes, setDraftNotes] = useState<Record<string, string>>({});
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // This tab remounts fresh every time it's navigated to (parent renders it conditionally on
+  // activeTab), so seeding from focusProductId at init time — not an effect — expands the right
+  // product's Bahan Baku section on arrival from the "klik uraian barang" link.
+  const [expandedId, setExpandedId] = useState<string | null>(() => focusProductId ?? null);
   const [addingForProductId, setAddingForProductId] = useState<string | null>(null);
   const [newConversion, setNewConversion] = useState<ConversionDraft>(EMPTY_CONVERSION_DRAFT);
   const [editingConversionId, setEditingConversionId] = useState<string | null>(null);
@@ -372,6 +389,23 @@ export function ProductVerificationTab({ assignmentId, assignmentStatus, payload
   const rows = data ?? [];
   const rawMaterials = payload.rawMaterials ?? [];
   const rawMaterialConversions = payload.rawMaterialConversions ?? [];
+
+  // Scroll to + briefly ring-highlight the target conversion row once its product section has
+  // rendered (expandedId was already seeded above, so this only waits on the async product list).
+  // Highlight is done via direct DOM classList, not React state, since it's a fire-and-forget
+  // timed effect with nothing else in the render depending on it.
+  useEffect(() => {
+    if (!focusConversionId) return;
+    const el = document.getElementById(`raw-material-conversion-${focusConversionId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("ring-2", "ring-[#2f6fe0]", "border-[#2f6fe0]", "bg-[#f5f8fe]");
+    onFocusHandled?.();
+    const timeout = window.setTimeout(() => {
+      el.classList.remove("ring-2", "ring-[#2f6fe0]", "border-[#2f6fe0]", "bg-[#f5f8fe]");
+    }, 2500);
+    return () => window.clearTimeout(timeout);
+  }, [focusConversionId, data, onFocusHandled]);
 
   async function handleDecision(row: ProductRow, status: ProductVerificationStatusValue) {
     setSavingId(row.id);
@@ -699,7 +733,11 @@ export function ProductVerificationTab({ assignmentId, assignmentStatus, payload
                           saving={savingConversionId === m.id}
                         />
                       ) : (
-                      <div key={m.id} className="rounded-xl border border-[#e0662e] bg-white p-5.5">
+                      <div
+                        key={m.id}
+                        id={`raw-material-conversion-${m.id}`}
+                        className="rounded-xl border border-[#e0662e] bg-white p-5.5 transition-colors"
+                      >
                         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                         <div className="flex flex-1 flex-wrap gap-5">
                           {m.photoPath ? (

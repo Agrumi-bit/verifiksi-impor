@@ -36,7 +36,9 @@ type RawMaterialUsageRow = {
   jenis: string;
   hsCode: string;
   hsDesc: string;
+  productId: string | null;
   productName: string;
+  conversionId: string | null;
   penggunaan: string;
   dataStock: string;
   rencanaKebutuhan: string;
@@ -325,6 +327,7 @@ function RawMaterialUsageTable({
   onToggleStatus,
   onSaveKeterangan,
   onSaveValue,
+  onNavigateToRawMaterial,
 }: {
   rows: RawMaterialUsageRow[];
   valueField: "penggunaan" | "dataStock" | "rencanaKebutuhan";
@@ -335,6 +338,7 @@ function RawMaterialUsageTable({
   onToggleStatus: (row: RawMaterialUsageRow, topic: RawMaterialUsageTopic) => void;
   onSaveKeterangan: (row: RawMaterialUsageRow, topic: RawMaterialUsageTopic, keterangan: string) => void;
   onSaveValue: (row: RawMaterialUsageRow, field: "penggunaan" | "dataStock" | "rencanaKebutuhan" | "satuan", value: string) => void;
+  onNavigateToRawMaterial: (row: RawMaterialUsageRow) => void;
 }) {
   const [sortField, setSortField] = useState<RawMaterialSortField | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -395,7 +399,27 @@ function RawMaterialUsageTable({
             <tr key={r.id}>
               <td className="border border-[#efe2d4] px-3 py-2.25 text-[#6b5b4c]">{index + 1}</td>
               <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{r.hsCode || "—"}</td>
-              <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{r.hsDesc || r.jenis || "—"}</td>
+              <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
+                {r.conversionId ? (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onNavigateToRawMaterial(r)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onNavigateToRawMaterial(r);
+                      }
+                    }}
+                    title="Buka di Product Verification"
+                    className="cursor-pointer text-[#2f6fe0] underline decoration-dotted underline-offset-2 hover:text-[#1d4fb8]"
+                  >
+                    {r.hsDesc || r.jenis || "—"}
+                  </span>
+                ) : (
+                  r.hsDesc || r.jenis || "—"
+                )}
+              </td>
               <td className="border border-[#efe2d4] px-3 py-2.25 font-bold text-[#20180f]">
                 {canEdit ? (
                   <EditableValueInput value={r[valueField]} onSave={(value) => onSaveValue(r, valueField, value)} numeric />
@@ -442,9 +466,13 @@ function RawMaterialUsageTable({
   );
 }
 
-type Props = { assignmentId: string; assignmentStatus: AssignmentStatusValue };
+type Props = {
+  assignmentId: string;
+  assignmentStatus: AssignmentStatusValue;
+  onNavigateToRawMaterial?: (productId: string, conversionId: string) => void;
+};
 
-export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props) {
+export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNavigateToRawMaterial }: Props) {
   const queryClient = useQueryClient();
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const canEdit = assignmentStatus === "SUBMITTED";
@@ -597,6 +625,11 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props)
 
   function saveRawMaterialValue(row: RawMaterialUsageRow, field: "penggunaan" | "dataStock" | "rencanaKebutuhan" | "satuan", value: string) {
     savePayloadField("rawMaterialUsage", row.rawMaterialId, field, value, `rawMaterialUsage:${row.rawMaterialId}:${field}`);
+  }
+
+  function handleNavigateToRawMaterial(row: RawMaterialUsageRow) {
+    if (!row.productId || !row.conversionId) return;
+    onNavigateToRawMaterial?.(row.productId, row.conversionId);
   }
 
   async function toggleRawMaterialStatus(row: RawMaterialUsageRow, topic: RawMaterialUsageTopic) {
@@ -843,6 +876,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props)
           onToggleStatus={toggleRawMaterialStatus}
           onSaveKeterangan={saveRawMaterialKeterangan}
           onSaveValue={saveRawMaterialValue}
+          onNavigateToRawMaterial={handleNavigateToRawMaterial}
         />
         {rawMaterialUsage.length > 0 && (
           <ConclusionEditor
@@ -872,6 +906,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props)
           onToggleStatus={toggleRawMaterialStatus}
           onSaveKeterangan={saveRawMaterialKeterangan}
           onSaveValue={saveRawMaterialValue}
+          onNavigateToRawMaterial={handleNavigateToRawMaterial}
         />
         {rawMaterialUsage.length > 0 && (
           <ConclusionEditor
@@ -996,6 +1031,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props)
           onToggleStatus={toggleRawMaterialStatus}
           onSaveKeterangan={saveRawMaterialKeterangan}
           onSaveValue={saveRawMaterialValue}
+          onNavigateToRawMaterial={handleNavigateToRawMaterial}
         />
         {rawMaterialUsage.length > 0 && (
           <ConclusionEditor

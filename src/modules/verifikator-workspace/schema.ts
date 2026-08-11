@@ -539,7 +539,9 @@ export type RawMaterialUsageRow = {
   jenis: string;
   hsCode: string;
   hsDesc: string;
+  productId: string | null;
   productName: string;
+  conversionId: string | null;
   penggunaan: string;
   dataStock: string;
   rencanaKebutuhan: string;
@@ -567,13 +569,16 @@ export function buildRawMaterialUsageChecklist(payload: ApplicationWizardValues)
     const productIds = pairings.length > 0 ? pairings.map((c) => c.productId) : [undefined];
     return productIds.map((productId, j) => {
       const product = products.find((p) => p.id === productId);
+      const conversion = pairings.find((c) => c.productId === productId);
       return {
         id: `${u.rawMaterialId}:${i}:${j}`,
         rawMaterialId: u.rawMaterialId,
         jenis: rawMaterial?.jenis ?? "",
         hsCode: rawMaterial?.hsCode ?? "",
         hsDesc: rawMaterial?.hsDesc ?? "",
+        productId: productId ?? null,
         productName: product?.materialType ?? "",
+        conversionId: conversion?.id ?? null,
         penggunaan: u.penggunaan ?? "",
         dataStock: u.dataStock ?? "",
         rencanaKebutuhan: u.rencanaKebutuhan ?? "",

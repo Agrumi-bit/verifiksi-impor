@@ -136,6 +136,7 @@ type Props = { id: string };
 
 export function AssignmentDetail({ id }: Props) {
   const [activeTab, setActiveTab] = useState<TabName>("Overview");
+  const [rawMaterialFocus, setRawMaterialFocus] = useState<{ productId: string; conversionId: string } | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["verifikator-workspace", "assignments", "detail", id],
@@ -258,10 +259,24 @@ export function AssignmentDetail({ id }: Props) {
           <MachineVerificationTab assignmentId={id} assignmentStatus={data.status} />
         )}
         {activeTab === "Product Verification" && (
-          <ProductVerificationTab assignmentId={id} assignmentStatus={data.status} payload={data.application.payload} />
+          <ProductVerificationTab
+            assignmentId={id}
+            assignmentStatus={data.status}
+            payload={data.application.payload}
+            focusProductId={rawMaterialFocus?.productId ?? null}
+            focusConversionId={rawMaterialFocus?.conversionId ?? null}
+            onFocusHandled={() => setRawMaterialFocus(null)}
+          />
         )}
         {activeTab === "Verifikasi Jumlah Produksi" && (
-          <ProductionQuantityTab assignmentId={id} assignmentStatus={data.status} />
+          <ProductionQuantityTab
+            assignmentId={id}
+            assignmentStatus={data.status}
+            onNavigateToRawMaterial={(productId, conversionId) => {
+              setRawMaterialFocus({ productId, conversionId });
+              setActiveTab("Product Verification");
+            }}
+          />
         )}
         {activeTab === "Draft Report" && <DraftReportTab assignmentId={id} initialNotes={data.validationNotes} />}
         {activeTab === "Team" && (

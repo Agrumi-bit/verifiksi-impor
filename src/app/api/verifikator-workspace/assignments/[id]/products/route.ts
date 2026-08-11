@@ -115,6 +115,12 @@ export async function PATCH(
  * A product the surveyor found in the field but the applicant never listed — verifikator adds
  * it directly to Application.payload.products, same source array as PATCH decisions above,
  * starting blank so nothing is fabricated on the applicant's behalf.
+ *
+ * Verifikasi Jumlah Produksi's capacity/productionQty/sales sections are keyed off
+ * payload.capacity/productionQty/sales — separate arrays from payload.products, one row per
+ * product, created during the wizard. A product added here has no such rows yet, so it silently
+ * never showed up on that tab. Seed blank rows (VKI only, matching what buildCapacityRows /
+ * buildProductionQtyChecklist / buildSalesChecklist require) alongside the product itself.
  */
 export async function POST(
   request: Request,
@@ -147,9 +153,20 @@ export async function POST(
   const newProduct = { id: randomUUID(), ...parsed.data };
   const products = [...(payload.products ?? []), newProduct];
 
+  const isVki = payload.verificationType === "VKI";
+  const capacity = isVki
+    ? [...(payload.capacity ?? []), { productId: newProduct.id, berdasarkanIzin: "", kapasitasTerpasang: "", satuan: "" }]
+    : payload.capacity;
+  const productionQty = isVki
+    ? [...(payload.productionQty ?? []), { productId: newProduct.id, perTahunSebelumnya: "", perTahunRencana: "", satuan: "" }]
+    : payload.productionQty;
+  const sales = isVki
+    ? [...(payload.sales ?? []), { productId: newProduct.id, dalamNegeri: "", luarNegeri: "", negaraTujuan: "", satuan: "" }]
+    : payload.sales;
+
   await db.application.update({
     where: { id: assignment.applicationId },
-    data: { payload: { ...payload, products } },
+    data: { payload: { ...payload, products, capacity, productionQty, sales } },
   });
 
   return NextResponse.json({ data: newProduct }, { status: 201 });
