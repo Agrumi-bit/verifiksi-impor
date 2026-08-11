@@ -548,8 +548,8 @@ export type RawMaterialUsageRow = {
 
 /**
  * Real-data readout of `payload.rawMaterialUsage[]`, joined to the raw
- * material's own info and (via the raw material's `productId`) the product
- * it's used for. No verifikator review system exists for this data yet —
+ * material's own info and (via the conversion table) every product it's
+ * paired with. No verifikator review system exists for this data yet —
  * unlike products/machines/productionQty, there is no `Assignment` field or
  * status enum for it, so this never carries a `status`.
  */
@@ -558,23 +558,28 @@ export function buildRawMaterialUsageChecklist(payload: ApplicationWizardValues)
   const rawMaterials = payload.rawMaterials ?? [];
   const products = payload.products ?? [];
   const conversions = payload.rawMaterialConversions ?? [];
-  return (payload.rawMaterialUsage ?? []).map((u, i) => {
+  return (payload.rawMaterialUsage ?? []).flatMap((u, i) => {
     const rawMaterial = rawMaterials.find((rm) => rm.id === u.rawMaterialId);
-    // A raw material can be paired with several products via the conversion table — show the first pairing found.
-    const conversion = conversions.find((c) => c.rawMaterialId === u.rawMaterialId);
-    const product = products.find((p) => p.id === conversion?.productId);
-    return {
-      id: `${u.rawMaterialId}:${i}`,
-      rawMaterialId: u.rawMaterialId,
-      jenis: rawMaterial?.jenis ?? "",
-      hsCode: rawMaterial?.hsCode ?? "",
-      hsDesc: rawMaterial?.hsDesc ?? "",
-      productName: product?.materialType ?? "",
-      penggunaan: u.penggunaan ?? "",
-      dataStock: u.dataStock ?? "",
-      rencanaKebutuhan: u.rencanaKebutuhan ?? "",
-      satuan: u.satuan ?? "",
-    };
+    // A raw material can be paired with several products via the conversion table —
+    // emit one row per pairing so each product's usage is its own row, not merged
+    // into a single row that only shows the first product found.
+    const pairings = conversions.filter((c) => c.rawMaterialId === u.rawMaterialId);
+    const productIds = pairings.length > 0 ? pairings.map((c) => c.productId) : [undefined];
+    return productIds.map((productId, j) => {
+      const product = products.find((p) => p.id === productId);
+      return {
+        id: `${u.rawMaterialId}:${i}:${j}`,
+        rawMaterialId: u.rawMaterialId,
+        jenis: rawMaterial?.jenis ?? "",
+        hsCode: rawMaterial?.hsCode ?? "",
+        hsDesc: rawMaterial?.hsDesc ?? "",
+        productName: product?.materialType ?? "",
+        penggunaan: u.penggunaan ?? "",
+        dataStock: u.dataStock ?? "",
+        rencanaKebutuhan: u.rencanaKebutuhan ?? "",
+        satuan: u.satuan ?? "",
+      };
+    });
   });
 }
 

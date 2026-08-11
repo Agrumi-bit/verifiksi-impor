@@ -353,6 +353,10 @@ export function ProductVerificationTab({ assignmentId, assignmentStatus, payload
   const canEdit = assignmentStatus === "SUBMITTED";
   const hsCodeOptions = useHsCodeOptions();
   const unitForHsCode = (hsCode: string | undefined) => hsCodeOptions.find((o) => o.value === hsCode)?.unit ?? "";
+  // hsDesc on products/rawMaterials is a snapshot frozen at wizard submission time — if the HS
+  // Code wasn't registered in master data yet, it saved empty and stays empty forever. Fall back
+  // to a live master-data lookup so a description added later still shows up here.
+  const descForHsCode = (hsCode: string | undefined) => hsCodeOptions.find((o) => o.value === hsCode)?.hint ?? "";
 
   const queryKey = ["verifikator-workspace", "assignments", assignmentId, "products"];
   const { data, isLoading } = useQuery({
@@ -541,7 +545,7 @@ export function ProductVerificationTab({ assignmentId, assignmentStatus, payload
               rawMaterialId: c.rawMaterialId ?? "",
               jenis: rm?.jenis ?? "",
               hsCode: rm?.hsCode ?? "",
-              hsDesc: rm?.hsDesc ?? "",
+              hsDesc: rm?.hsDesc || descForHsCode(rm?.hsCode),
               deskripsi: rm?.deskripsi ?? "",
               photoPath: rm?.photoPath ?? "",
               kategori: c.kategori ?? "",
@@ -600,7 +604,7 @@ export function ProductVerificationTab({ assignmentId, assignmentStatus, payload
               <div>
                 <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Deskripsi HS Code</div>
                 <div className="min-h-16 rounded-lg border border-[#f0ded0] bg-[#fbf8f4] px-3 py-2.5 text-[12px] leading-relaxed text-[#4a4038]">
-                  {row.hsDesc || "—"}
+                  {row.hsDesc || descForHsCode(row.hsCode) || "—"}
                 </div>
               </div>
             </div>
