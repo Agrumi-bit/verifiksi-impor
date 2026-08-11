@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -268,12 +268,53 @@ function EditableValueInput({ value, onSave, numeric = false }: { value: string;
         if (numeric) setDisplay(formatNumericDisplay(raw));
         if (raw !== value) onSave(raw);
       }}
-      className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1 text-[11.5px] text-[#20180f] outline-none focus:border-[#e0662e]"
+      className={`w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1 text-[11.5px] text-[#20180f] outline-none focus:border-[#e0662e] ${numeric ? "min-w-[17ch] tabular-nums" : ""}`}
     />
   );
 }
 
-/** Table for the Penggunaan/Stok raw-material sections — shared shape, one numeric column swapped per topic; value + satuan editable by verifikator. */
+type RawMaterialSortField = "hsCode" | "uraian" | "productName";
+
+/** Sortable column header — click toggles asc/desc on that field, switching field resets to asc. */
+function SortableHeader({
+  label,
+  field,
+  activeField,
+  direction,
+  onSort,
+}: {
+  label: string;
+  field: RawMaterialSortField;
+  activeField: RawMaterialSortField | null;
+  direction: "asc" | "desc";
+  onSort: (field: RawMaterialSortField) => void;
+}) {
+  const active = activeField === field;
+  return (
+    <th
+      role="button"
+      tabIndex={0}
+      onClick={() => onSort(field)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSort(field);
+        }
+      }}
+      className="cursor-pointer select-none border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white hover:bg-[#c14a1f]"
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        <MaterialIcon
+          name={active ? (direction === "asc" ? "arrow_upward" : "arrow_downward") : "unfold_more"}
+          className={`text-[13px] ${active ? "opacity-100" : "opacity-60"}`}
+        />
+      </span>
+    </th>
+  );
+}
+
+/** Table for the Penggunaan/Stok raw-material sections — shared shape, one numeric column swapped per topic; value + satuan editable by verifikator, sortable by HS Code / Uraian Barang / Bahan Baku untuk Produk. */
 function RawMaterialUsageTable({
   rows,
   valueField,
@@ -295,15 +336,47 @@ function RawMaterialUsageTable({
   onSaveKeterangan: (row: RawMaterialUsageRow, topic: RawMaterialUsageTopic, keterangan: string) => void;
   onSaveValue: (row: RawMaterialUsageRow, field: "penggunaan" | "dataStock" | "rencanaKebutuhan" | "satuan", value: string) => void;
 }) {
+  const [sortField, setSortField] = useState<RawMaterialSortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  function handleSort(field: RawMaterialSortField) {
+    if (sortField === field) {
+      setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  }
+
+  const sortedRows = useMemo(() => {
+    if (!sortField) return rows;
+    const getValue = (r: RawMaterialUsageRow) => {
+      if (sortField === "hsCode") return r.hsCode || "";
+      if (sortField === "uraian") return r.hsDesc || r.jenis || "";
+      return r.productName || "";
+    };
+    const sorted = [...rows].sort((a, b) => getValue(a).localeCompare(getValue(b), "id-ID"));
+    return sortDirection === "asc" ? sorted : sorted.reverse();
+  }, [rows, sortField, sortDirection]);
+
   return (
     <table className="w-full min-w-205 border-collapse text-[12px]">
       <thead>
         <tr style={{ background: "#e0662e" }}>
-          {["No", "HS Code", "Uraian Barang", valueLabel, "Satuan", "Bahan Baku untuk Produk", "Status", "Keterangan"].map((h) => (
-            <th key={h} className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">
-              {h}
-            </th>
-          ))}
+          <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">No</th>
+          <SortableHeader label="HS Code" field="hsCode" activeField={sortField} direction={sortDirection} onSort={handleSort} />
+          <SortableHeader label="Uraian Barang" field="uraian" activeField={sortField} direction={sortDirection} onSort={handleSort} />
+          <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">{valueLabel}</th>
+          <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">Satuan</th>
+          <SortableHeader
+            label="Bahan Baku untuk Produk"
+            field="productName"
+            activeField={sortField}
+            direction={sortDirection}
+            onSort={handleSort}
+          />
+          <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">Status</th>
+          <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">Keterangan</th>
         </tr>
       </thead>
       <tbody>
@@ -314,7 +387,7 @@ function RawMaterialUsageTable({
             </td>
           </tr>
         )}
-        {rows.map((r, index) => {
+        {sortedRows.map((r, index) => {
           const status = rawMaterialTopicStatus(r, topic);
           const keterangan = rawMaterialTopicKeterangan(r, topic);
           const rowKey = rawMaterialUsageRowKey(topic, r.id);
