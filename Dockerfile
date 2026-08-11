@@ -29,6 +29,10 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
+# pdfjs-dist loads its worker file (pdf.worker.mjs) via a dynamic path Next's
+# standalone-output file tracer can't see statically, so it gets pruned from
+# .next/standalone/node_modules — overlay the untraced package to restore it.
+COPY --from=builder /app/node_modules/pdfjs-dist ./node_modules/pdfjs-dist
 
 EXPOSE 3000
 ENV PORT=3000
