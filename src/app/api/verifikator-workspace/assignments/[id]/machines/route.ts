@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -6,6 +8,24 @@ import { getServerSession } from "@/lib/get-session";
 import { MACHINE_KONDISI_VALUES, type ApplicationWizardValues } from "@/modules/applications/schema";
 import { MACHINE_VERIFICATION_STATUSES } from "@/modules/verifikator-workspace/status";
 import { buildMachineChecklist, machineVerificationsSchema } from "@/modules/verifikator-workspace/schema";
+
+const machineDataSchema = z.object({
+  nama: z.string().trim().optional(),
+  proses: z.string().trim().optional(),
+  merk: z.string().trim().optional(),
+  model: z.string().trim().optional(),
+  tahun: z.string().trim().optional(),
+  jumlah: z.string().trim().optional(),
+  kapasitas: z.string().trim().optional(),
+  kapasitasSatuan: z.string().trim().optional(),
+  kapasitasJam: z.string().trim().optional(),
+  kapasitasJamSatuan: z.string().trim().optional(),
+  waktuBeroperasi: z.string().trim().optional(),
+  kondisi: z.enum(MACHINE_KONDISI_VALUES).optional(),
+  power: z.string().trim().optional(),
+  input: z.string().trim().optional(),
+  output: z.string().trim().optional(),
+});
 
 async function findOwnedAssignment(assignmentNumber: string, verifikatorId: string) {
   const assignment = await db.assignment.findUnique({
@@ -58,25 +78,7 @@ const patchSchema = z.object({
   // Corrections to the applicant's own machine data — written back to
   // Application.payload.machines (the source of truth every other workspace
   // reads from via buildMachineChecklist), not to machineVerifications.
-  machineData: z
-    .object({
-      nama: z.string().trim().optional(),
-      proses: z.string().trim().optional(),
-      merk: z.string().trim().optional(),
-      model: z.string().trim().optional(),
-      tahun: z.string().trim().optional(),
-      jumlah: z.string().trim().optional(),
-      kapasitas: z.string().trim().optional(),
-      kapasitasSatuan: z.string().trim().optional(),
-      kapasitasJam: z.string().trim().optional(),
-      kapasitasJamSatuan: z.string().trim().optional(),
-      waktuBeroperasi: z.string().trim().optional(),
-      kondisi: z.enum(MACHINE_KONDISI_VALUES).optional(),
-      power: z.string().trim().optional(),
-      input: z.string().trim().optional(),
-      output: z.string().trim().optional(),
-    })
-    .optional(),
+  machineData: machineDataSchema.optional(),
 });
 
 export async function PATCH(
@@ -137,4 +139,48 @@ export async function PATCH(
   });
 
   return NextResponse.json({ data: updated.machineVerifications });
+}
+
+/**
+ * A machine the surveyor found in the field but the applicant never listed — verifikator
+ * adds it directly to Application.payload.machines (same source array as PATCH edits above),
+ * starting blank so nothing is fabricated on the applicant's behalf.
+ */
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await getServerSession();
+  const verifikatorId = session?.user.id;
+  if (!verifikatorId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const assignment = await findOwnedAssignment(id, verifikatorId);
+  if (!assignment) {
+    return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
+  }
+  if (assignment.status !== "SUBMITTED") {
+    return NextResponse.json(
+      { error: "Mesin hanya dapat ditambahkan saat assignment berstatus Submitted." },
+      { status: 400 },
+    );
+  }
+
+  const parsed = machineDataSchema.safeParse(await request.json().catch(() => ({})));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Data tidak valid" }, { status: 400 });
+  }
+
+  const payload = assignment.application.payload as ApplicationWizardValues;
+  const newMachine = { id: randomUUID(), ...parsed.data };
+  const machines = [...(payload.machines ?? []), newMachine];
+
+  await db.application.update({
+    where: { id: assignment.applicationId },
+    data: { payload: { ...payload, machines } },
+  });
+
+  return NextResponse.json({ data: newMachine }, { status: 201 });
 }

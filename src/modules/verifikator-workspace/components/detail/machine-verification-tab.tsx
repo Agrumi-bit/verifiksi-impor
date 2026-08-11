@@ -10,6 +10,20 @@ import type { AssignmentStatusValue } from "../../status";
 import { MACHINE_KONDISI_LABELS, MACHINE_KONDISI_VALUES, type MachineKondisiValue } from "@/modules/applications/schema";
 import { FileUploadField } from "@/components/form/file-upload-field";
 
+/** Indonesian number format: "." is the thousands separator, "," is the decimal separator. */
+function parseNum(value: string | undefined | null): number | null {
+  if (!value) return null;
+  const match = value.match(/-?[\d.,]+/);
+  if (!match) return null;
+  const n = Number(match[0].replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
+function fmtNum(value: number | null): string {
+  if (value === null) return "";
+  return value.toLocaleString("id-ID", { maximumFractionDigits: 2 });
+}
+
 type MachineRow = {
   id: string;
   nama: string;
@@ -138,6 +152,7 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
   const [savingId, setSavingId] = useState<string | null>(null);
   const [draftNotes, setDraftNotes] = useState<Record<string, string>>({});
   const [draftMachineData, setDraftMachineData] = useState<Record<string, MachineDataDraft>>({});
+  const [isAdding, setIsAdding] = useState(false);
   const canEdit = assignmentStatus === "SUBMITTED";
 
   const queryKey = ["verifikator-workspace", "assignments", assignmentId, "machines"];
@@ -196,10 +211,22 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
     const draft = draftMachineData[row.id];
     if (!draft) return;
     setSavingId(row.id);
+    // Kapasitas Produksi is derived, never hand-typed — always recompute from the
+    // effective (draft-or-saved) jumlah × kapasitas per jam × waktu beroperasi at save time.
+    const jumlah = parseNum(draft.jumlah ?? row.quantity);
+    const kapasitasJam = parseNum(draft.kapasitasJam ?? row.kapasitasJam);
+    const waktu = parseNum(draft.waktuBeroperasi ?? row.waktuBeroperasi);
+    const computedKapasitas = jumlah !== null && kapasitasJam !== null && waktu !== null ? jumlah * kapasitasJam * waktu : null;
+    const machineData: MachineDataDraft = {
+      ...draft,
+      ...(computedKapasitas !== null
+        ? { kapasitas: fmtNum(computedKapasitas), kapasitasSatuan: draft.kapasitasJamSatuan ?? row.kapasitasJamSatuan }
+        : {}),
+    };
     const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/machines`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: row.id, machineData: draft }),
+      body: JSON.stringify({ id: row.id, machineData }),
     });
     setSavingId(null);
     if (!response.ok) {
@@ -216,13 +243,45 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
     queryClient.invalidateQueries({ queryKey });
   }
 
+  async function handleAddMachine() {
+    setIsAdding(true);
+    const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/machines`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    setIsAdding(false);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal menambahkan mesin");
+      return;
+    }
+    const { data: newMachine } = (await response.json()) as { data: { id: string } };
+    toast.success("Mesin baru ditambahkan — lengkapi datanya di bawah.");
+    setExpandedId(newMachine.id);
+    queryClient.invalidateQueries({ queryKey });
+  }
+
   if (isLoading) {
     return <p className="text-[13px] text-[#8a7565]">Memuat daftar mesin...</p>;
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-[13px] text-[#8a7565]">Data mesin produksi sesuai lampiran aplikasi.</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[13px] text-[#8a7565]">Data mesin produksi sesuai lampiran aplikasi.</p>
+        {canEdit && (
+          <button
+            type="button"
+            disabled={isAdding}
+            onClick={handleAddMachine}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-3.5 py-2 text-[12px] font-semibold text-[#261813] disabled:opacity-50"
+          >
+            <MaterialIcon name="add" className="text-[15px]" />
+            {isAdding ? "Menambahkan..." : "Tambah Mesin"}
+          </button>
+        )}
+      </div>
 
       {rows.length === 0 && (
         <p className="rounded-[10px] border border-[#f0ded0] bg-white p-6 text-center text-[13px] text-[#8a7565]">
@@ -276,6 +335,12 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                   const value = (key: keyof MachineDataDraft, fallback: string): string => (draft?.[key] as string | undefined) ?? fallback;
                   const set = (patch: MachineDataDraft) => updateDraftMachineData(row.id, patch);
                   const hasDraft = Boolean(draft && Object.keys(draft).length > 0);
+                  // Kapasitas Produksi = jumlah mesin × kapasitas per hari (kapasitas/jam × jam operasi) — never hand-typed.
+                  const liveJumlah = parseNum(value("jumlah", row.quantity));
+                  const liveKapasitasJam = parseNum(value("kapasitasJam", row.kapasitasJam));
+                  const liveWaktu = parseNum(value("waktuBeroperasi", row.waktuBeroperasi));
+                  const liveKapasitas =
+                    liveJumlah !== null && liveKapasitasJam !== null && liveWaktu !== null ? liveJumlah * liveKapasitasJam * liveWaktu : null;
                   return (
                   <div className="border-t border-[#f0ded0] bg-[#fbf8f4] p-5">
                     <div className="mb-3 flex items-center justify-between">
@@ -330,13 +395,9 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                       </div>
                     </div>
                     <div className="mb-3.5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                      <EditableFieldUnit
-                        label="Kapasitas Produksi"
-                        value={value("kapasitas", row.kapasitas)}
-                        onValueChange={(v) => set({ kapasitas: v })}
-                        unit={value("kapasitasSatuan", row.kapasitasSatuan)}
-                        onUnitChange={(v) => set({ kapasitasSatuan: v })}
-                        disabled={!canEdit}
+                      <Field
+                        label="Kapasitas Produksi (jumlah × kapasitas/jam × jam operasi)"
+                        value={liveKapasitas !== null ? `${fmtNum(liveKapasitas)} ${value("kapasitasJamSatuan", row.kapasitasJamSatuan)}`.trim() : ""}
                       />
                       <EditableFieldUnit
                         label="Kapasitas Produksi per Jam"
