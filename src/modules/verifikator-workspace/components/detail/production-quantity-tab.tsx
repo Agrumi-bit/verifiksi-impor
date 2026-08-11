@@ -239,14 +239,34 @@ function ConclusionEditor({
   );
 }
 
-/** Inline editable cell — plain input, saves onBlur (only when the value actually changed). Used for volume/jumlah figures verifikator can now correct directly on the source payload. */
-function EditableValueInput({ value, onSave }: { value: string; onSave: (value: string) => void }) {
+/** Formats digits with Indonesian thousand separators for display; empty/non-numeric passes through unchanged (unlike fmtNum, never substitutes "—" — this feeds an input's value). */
+function formatNumericDisplay(value: string): string {
+  const n = Number(value);
+  if (!value || !Number.isFinite(n)) return value;
+  return n.toLocaleString("id-ID");
+}
+
+/**
+ * Inline editable cell, saves onBlur (only when the value actually changed). For numeric
+ * fields (`numeric`), shows "1.000.000" while idle/typing but strips separators back to a
+ * plain digit string ("1000000") before saving — DB keeps the raw number, display stays
+ * formatted. Text fields (satuan, negaraTujuan) pass the typed value through untouched.
+ */
+function EditableValueInput({ value, onSave, numeric = false }: { value: string; onSave: (value: string) => void; numeric?: boolean }) {
+  const [display, setDisplay] = useState(() => (numeric ? formatNumericDisplay(value) : value));
   return (
     <input
       type="text"
-      defaultValue={value}
-      onBlur={(event) => {
-        if (event.target.value !== value) onSave(event.target.value);
+      inputMode={numeric ? "numeric" : "text"}
+      value={display}
+      onFocus={() => {
+        if (numeric) setDisplay((current) => current.replace(/\D/g, ""));
+      }}
+      onChange={(event) => setDisplay(event.target.value)}
+      onBlur={() => {
+        const raw = numeric ? display.replace(/\D/g, "") : display;
+        if (numeric) setDisplay(formatNumericDisplay(raw));
+        if (raw !== value) onSave(raw);
       }}
       className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1 text-[11.5px] text-[#20180f] outline-none focus:border-[#e0662e]"
     />
@@ -305,7 +325,7 @@ function RawMaterialUsageTable({
               <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{r.hsDesc || r.jenis || "—"}</td>
               <td className="border border-[#efe2d4] px-3 py-2.25 font-bold text-[#20180f]">
                 {canEdit ? (
-                  <EditableValueInput value={r[valueField]} onSave={(value) => onSaveValue(r, valueField, value)} />
+                  <EditableValueInput value={r[valueField]} onSave={(value) => onSaveValue(r, valueField, value)} numeric />
                 ) : (
                   fmtNum(r[valueField])
                 )}
@@ -573,6 +593,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props)
             <EditableValueInput
               value={row.jumlah}
               onSave={(value) => savePayloadField("productionQty", row.productId, jumlahField, value, `productionQty:${row.key}`)}
+              numeric
             />
           ) : (
             fmtNum(row.jumlah)
@@ -652,6 +673,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props)
                     <EditableValueInput
                       value={c.berdasarkanIzin}
                       onSave={(value) => savePayloadField("capacity", c.productId, "berdasarkanIzin", value, `capacity:${c.productId}:berdasarkanIzin`)}
+                      numeric
                     />
                   ) : (
                     fmtNum(c.berdasarkanIzin)
@@ -662,6 +684,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props)
                     <EditableValueInput
                       value={c.kapasitasTerpasang}
                       onSave={(value) => savePayloadField("capacity", c.productId, "kapasitasTerpasang", value, `capacity:${c.productId}:kapasitasTerpasang`)}
+                      numeric
                     />
                   ) : (
                     fmtNum(c.kapasitasTerpasang)
@@ -951,6 +974,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props)
                     <EditableValueInput
                       value={row.dalamNegeri}
                       onSave={(value) => savePayloadField("sales", row.productId, "dalamNegeri", value, `sales:${row.productId}:dalamNegeri`)}
+                      numeric
                     />
                   ) : (
                     fmtNum(row.dalamNegeri)
@@ -961,6 +985,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus }: Props)
                     <EditableValueInput
                       value={row.luarNegeri}
                       onSave={(value) => savePayloadField("sales", row.productId, "luarNegeri", value, `sales:${row.productId}:luarNegeri`)}
+                      numeric
                     />
                   ) : (
                     fmtNum(row.luarNegeri)
