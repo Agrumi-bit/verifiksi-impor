@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ClipboardCheck, ExternalLink, FileText, MapPinned, X } from "lucide-react";
@@ -26,6 +26,43 @@ const TYPE_STYLE: Record<ReportEntry["type"], { band: string; icon: typeof FileT
   dokumen: { band: "#20304a", icon: ClipboardCheck, label: "Dokumen" },
 };
 
+// Both report pages render "rd-sheet" A4 pages at 210mm x 297mm (~96dpi px) — see
+// office-report-preview.css, shared by the surveyor and document-verification reports.
+const PAGE_DESIGN_WIDTH = 794;
+const PAGE_DESIGN_HEIGHT = 1123;
+
+/** Live-scaled iframe of the report's own first page — a real cover thumbnail instead of a generic icon mock. */
+function ReportThumbnail({ href, title }: { href: string; title: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const updateScale = () => setScale(el.clientWidth / PAGE_DESIGN_WIDTH);
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={containerRef} className="absolute inset-0 overflow-hidden bg-[#fbf7f4]">
+      {scale > 0 && (
+        <iframe
+          src={href}
+          title={title}
+          tabIndex={-1}
+          aria-hidden="true"
+          loading="lazy"
+          className="pointer-events-none origin-top-left border-0"
+          style={{ width: PAGE_DESIGN_WIDTH, height: PAGE_DESIGN_HEIGHT, transform: `scale(${scale})` }}
+        />
+      )}
+    </div>
+  );
+}
+
 function ReportCover({ report, onOpen }: { report: ReportEntry; onOpen: () => void }) {
   const style = TYPE_STYLE[report.type];
   const Icon = style.icon;
@@ -35,22 +72,16 @@ function ReportCover({ report, onOpen }: { report: ReportEntry; onOpen: () => vo
       onClick={onOpen}
       className="group flex flex-col overflow-hidden rounded-[10px] border border-[#efe2d4] bg-white text-left shadow-sm transition-shadow hover:shadow-md"
     >
-      <div className="relative aspect-[210/297] w-full overflow-hidden" style={{ background: "#fbf7f4" }}>
-        <div className="flex h-[30%] items-center justify-center" style={{ background: style.band }}>
-          <Icon className="size-9 text-white/90" />
+      <div className="relative aspect-[210/297] w-full overflow-hidden">
+        <ReportThumbnail href={report.href} title={report.title} />
+        <div
+          className="pointer-events-none absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full px-2 py-1 text-[9.5px] font-bold uppercase tracking-[0.06em] text-white shadow-sm"
+          style={{ background: style.band }}
+        >
+          <Icon className="size-3" />
+          {style.label}
         </div>
-        <div className="flex flex-col gap-2 p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.08em]" style={{ color: style.band }}>
-            {style.label} · {report.verificationType}
-          </div>
-          <div className="text-[13px] font-extrabold leading-snug text-[#20180f]">{report.title}</div>
-          <div className="mt-1 flex flex-col gap-1.5">
-            <div className="h-[3px] w-[75%] rounded-sm bg-[#e8d5c5]" />
-            <div className="h-[3px] w-[55%] rounded-sm bg-[#e8d5c5]" />
-            <div className="h-[3px] w-[65%] rounded-sm bg-[#e8d5c5]" />
-          </div>
-        </div>
-        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-white/90 px-4 py-2 text-[10.5px] text-[#8a7565] backdrop-blur">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-white/90 px-3 py-2 text-[10.5px] text-[#8a7565] backdrop-blur">
           <span className="truncate">{report.meta}</span>
         </div>
       </div>
