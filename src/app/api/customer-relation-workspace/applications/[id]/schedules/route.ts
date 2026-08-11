@@ -55,6 +55,11 @@ export async function POST(
         ? { verifikatorId: personId }
         : { technicalReviewerId: personId };
 
+  // "dokumen"/"technical" assignments have no field-visit phase the way "survey" does
+  // (LocationVisit completion is what flips a survey Assignment to SUBMITTED) — CR
+  // scheduling them IS the point at which review can start, so they must start
+  // SUBMITTED. Nothing else in the app ever promotes their status, so leaving the
+  // ASSIGNED default here would make document/technical review permanently uneditable.
   const assignment = await db.assignment.create({
     data: {
       assignmentNumber: generateAssignmentNumber(scheduleType),
@@ -62,6 +67,7 @@ export async function POST(
       scheduleType,
       location: facility || null,
       scheduledDate: new Date(date),
+      ...(scheduleType !== "survey" ? { status: "SUBMITTED" as const } : {}),
       ...roleField,
     },
   });
