@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -6,6 +8,15 @@ import { getServerSession } from "@/lib/get-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { PRODUCT_VERIFICATION_STATUSES } from "@/modules/verifikator-workspace/status";
 import { buildProductChecklist, productVerificationsSchema } from "@/modules/verifikator-workspace/schema";
+
+const productDataSchema = z.object({
+  kategori: z.string().trim().optional(),
+  materialType: z.string().trim().optional(),
+  hsCode: z.string().trim().optional(),
+  hsDesc: z.string().trim().optional(),
+  deskripsi: z.string().trim().optional(),
+  photoPath: z.string().trim().optional(),
+});
 
 async function findOwnedAssignment(assignmentNumber: string, verifikatorId: string) {
   const assignment = await db.assignment.findUnique({
@@ -98,4 +109,48 @@ export async function PATCH(
   });
 
   return NextResponse.json({ data: updated.productVerifications });
+}
+
+/**
+ * A product the surveyor found in the field but the applicant never listed — verifikator adds
+ * it directly to Application.payload.products, same source array as PATCH decisions above,
+ * starting blank so nothing is fabricated on the applicant's behalf.
+ */
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await getServerSession();
+  const verifikatorId = session?.user.id;
+  if (!verifikatorId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const assignment = await findOwnedAssignment(id, verifikatorId);
+  if (!assignment) {
+    return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
+  }
+  if (assignment.status !== "SUBMITTED") {
+    return NextResponse.json(
+      { error: "Produk hanya dapat ditambahkan saat assignment berstatus Submitted." },
+      { status: 400 },
+    );
+  }
+
+  const parsed = productDataSchema.safeParse(await request.json().catch(() => ({})));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Data tidak valid" }, { status: 400 });
+  }
+
+  const payload = assignment.application.payload as ApplicationWizardValues;
+  const newProduct = { id: randomUUID(), ...parsed.data };
+  const products = [...(payload.products ?? []), newProduct];
+
+  await db.application.update({
+    where: { id: assignment.applicationId },
+    data: { payload: { ...payload, products } },
+  });
+
+  return NextResponse.json({ data: newProduct }, { status: 201 });
 }
