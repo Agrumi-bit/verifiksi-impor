@@ -32,11 +32,15 @@ import {
   PRODUCTION_QTY_PENJUALAN_SUMMARY_KEY,
 } from "@/modules/verifikator-workspace/status";
 
+const REPORT_VISIBLE_STATUSES = new Set(["SUBMITTED", "RETURNED", "COMPLETED"]);
+
 /**
  * Company-facing mirror of `verifikator-workspace/assignments/[id]/document-report/route.ts` —
- * same read-only reshape, scoped to the requesting company instead of the verifikator, and only
- * once the verifikator has actually finished (`COMPLETED`) — a company should never see a report
- * that's still mid-review.
+ * same read-only reshape, scoped to the requesting company instead of the verifikator. Visible
+ * from SUBMITTED onward (not just COMPLETED) so the company can watch the report as the
+ * verifikator works on it — `document-verification-report.tsx` already renders a "Draf (belum
+ * disubmit)" treatment for anything short of COMPLETED/RETURNED, this just stops hiding it
+ * entirely pre-COMPLETED.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession();
@@ -53,7 +57,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!assignment || assignment.application.companyId !== companyId) {
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
   }
-  if (assignment.status !== "COMPLETED") {
+  if (!REPORT_VISIBLE_STATUSES.has(assignment.status)) {
     return NextResponse.json({ error: "Laporan belum tersedia" }, { status: 404 });
   }
 
