@@ -596,10 +596,15 @@ export function buildRawMaterialUsageChecklist(payload: ApplicationWizardValues)
 
 export type RawMaterialConversionRow = {
   id: string;
+  productId: string | null;
   productName: string;
   productHsCode: string;
+  rawMaterialId: string | null;
   jenis: string;
   hsCode: string;
+  hsDesc: string;
+  deskripsi: string;
+  photoPath: string | null;
   kategori: string;
   volumeProduksiJumlah: string;
   volumeProduksiSatuan: string;
@@ -619,10 +624,15 @@ export function buildRawMaterialConversionRows(payload: ApplicationWizardValues)
     const rawMaterial = rawMaterials.find((rm) => rm.id === c.rawMaterialId);
     return {
       id: c.id,
+      productId: c.productId ?? null,
       productName: product?.materialType ?? "",
       productHsCode: product?.hsCode ?? "",
+      rawMaterialId: c.rawMaterialId ?? null,
       jenis: rawMaterial?.jenis ?? "",
       hsCode: rawMaterial?.hsCode ?? "",
+      hsDesc: rawMaterial?.hsDesc ?? "",
+      deskripsi: rawMaterial?.deskripsi ?? "",
+      photoPath: rawMaterial?.photoPath || null,
       kategori: c.kategori ?? "",
       volumeProduksiJumlah: c.volumeProduksiJumlah ?? "",
       volumeProduksiSatuan: c.volumeProduksiSatuan ?? "",

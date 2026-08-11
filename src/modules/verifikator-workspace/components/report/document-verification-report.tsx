@@ -18,6 +18,7 @@ import {
   type DocDetail,
 } from "../../report-narrative";
 import type { ApplicationWizardValues, MachineKondisiValue } from "@/modules/applications/schema";
+import { useHsCodeOptions } from "@/modules/applications/hooks/use-hs-code-options";
 import { ProductionCapabilityChapter, PRODUCTION_CAPABILITY_CHAPTER_PAGE_COUNT } from "./production-capability-chapter";
 import "@/modules/surveyor-workspace/components/report/office-report-preview.css";
 
@@ -43,10 +44,6 @@ export const GREEN = "#1a9850";
 export const CARD_BORDER = "#e8ddcc";
 export const MUTED = "#4a4238";
 export const MUTED_2 = "#a89b85";
-// Landscape pages are shorter than portrait (210mm vs 297mm tall), so fewer
-// rows fit per page than the earlier portrait-tuned counts allowed.
-const PRODUCT_ROWS_PER_PAGE = 3;
-const RAW_MATERIAL_ROWS_PER_PAGE = 4;
 
 type DocumentRow = {
   key: string;
@@ -173,10 +170,15 @@ export type RawMaterialUsageRow = {
 
 export type RawMaterialConversionRow = {
   id: string;
+  productId: string | null;
   productName: string;
   productHsCode: string;
+  rawMaterialId: string | null;
   jenis: string;
   hsCode: string;
+  hsDesc: string;
+  deskripsi: string;
+  photoPath: string | null;
   kategori: string;
   volumeProduksiJumlah: string;
   volumeProduksiSatuan: string;
@@ -675,59 +677,67 @@ const PRODUCT_STATUS_META: Record<ProductRow["status"], { bg: string; color: str
   REJECTED: { bg: "#fbe4e4", color: "#c1352b", label: "Rejected" },
 };
 
-export function TableThumb({ path, label }: { path: string | null | undefined; label: string }) {
-  const url = fileUrl(path);
-  const isImage = path ? /\.(jpg|jpeg|png)$/i.test(path) : false;
-  const [thumbFailed, setThumbFailed] = useState(false);
-  if (!url) {
-    return <span style={{ fontSize: 9.5, color: MUTED_2 }}>Belum diunggah</span>;
-  }
-  const showPdfThumb = !isImage && !thumbFailed;
+const RAW_MATERIAL_CONVERSION_KATEGORI_LABELS: Record<string, string> = {
+  BAHAN_BAKU: "Bahan Baku",
+  BAHAN_PENOLONG: "Bahan Penolong",
+};
+
+/** One product's "Bahan Baku yang Digunakan" — same card shape verifikator sees live in Product Verification, ported to print styles. */
+function RawMaterialConversionCard({ m }: { m: RawMaterialConversionRow }) {
   return (
-    <div style={{ width: 50, height: 50, borderRadius: 6, overflow: "hidden", background: "#fff", border: `1px solid ${CARD_BORDER}` }}>
-      {isImage || showPdfThumb ? (
-        <a href={url} target="_blank" rel="noopener noreferrer" style={{ display: "block", width: "100%", height: "100%" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={isImage ? url : (thumbnailUrl(path) as string)}
-            alt={label}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            onError={isImage ? undefined : () => setThumbFailed(true)}
-          />
-        </a>
-      ) : (
-        // See DocImage — a PDF <iframe> drags in the browser's signature-verification infobar.
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#5a7a63" }}
-        >
-          <MaterialIcon name="picture_as_pdf" style={{ fontSize: 20 }} />
-        </a>
-      )}
+    <div style={{ border: `1px solid ${ORANGE_LIGHT}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10, background: "#fff" }}>
+      <div style={{ display: "flex", gap: 14 }}>
+        <DocImage path={m.photoPath} label={m.jenis || "Bahan baku"} aspectRatio="1" />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 8.5, letterSpacing: "0.05em", color: MUTED_2 }}>JENIS BAHAN BAKU</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: ORANGE_TEXT }}>{m.jenis || "—"}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 8.5, letterSpacing: "0.05em", color: MUTED_2 }}>HS CODE</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: INK }}>{m.hsCode || "—"}</div>
+            </div>
+          </div>
+          <div style={{ marginTop: 6, fontSize: 9.5, lineHeight: 1.5, color: MUTED }}>{m.hsDesc || "—"}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr 1fr", gap: 8, alignItems: "end", marginTop: 8 }}>
+            <MiniField label="JUMLAH BAHAN BAKU" value={m.volumeKebutuhanJumlah ? `${m.volumeKebutuhanJumlah} ${m.volumeKebutuhanSatuan}`.trim() : ""} />
+            <div style={{ fontSize: 15, color: MUTED_2, textAlign: "center" }}>→</div>
+            <MiniField label="MENGHASILKAN PRODUK" value={m.volumeProduksiJumlah ? `${m.volumeProduksiJumlah} ${m.volumeProduksiSatuan}`.trim() : ""} />
+            <MiniField label="RASIO KONVERSI" value={m.rasioKonversi} />
+          </div>
+          {m.kategori && (
+            <div style={{ marginTop: 6, fontSize: 9, color: MUTED_2 }}>
+              Kategori: <strong style={{ color: INK }}>{RAW_MATERIAL_CONVERSION_KATEGORI_LABELS[m.kategori] ?? m.kategori}</strong>
+            </div>
+          )}
+          {m.keterangan && (
+            <div style={{ marginTop: 4, fontSize: 9, lineHeight: 1.4, color: MUTED }}>
+              <strong>Keterangan:</strong> {m.keterangan}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
 function ProductChapter({
   products,
-  rawMaterials,
+  rawMaterialConversion,
   company,
   chapterIdx,
   startPage,
   totalPages,
 }: {
   products: ProductRow[];
-  rawMaterials: RawMaterialRow[];
+  rawMaterialConversion: RawMaterialConversionRow[];
   company: string;
   chapterIdx: number;
   startPage: number;
   totalPages: number;
 }) {
   const babLabel = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"][chapterIdx + 1] ?? String(chapterIdx + 1);
-  const productPages = chunk(products, PRODUCT_ROWS_PER_PAGE);
-  const rawMaterialPages = chunk(rawMaterials, RAW_MATERIAL_ROWS_PER_PAGE);
 
   return (
     <>
@@ -752,87 +762,61 @@ function ProductChapter({
         </div>
       </section>
 
-      {productPages.map((rows, pageIdx) => (
-        <PageShell key={`product-${pageIdx}`} pageNo={startPage + 1 + pageIdx} totalPages={totalPages} companyName={company} landscape>
-          <Eyebrow>DATA PRODUK</Eyebrow>
-          <div style={{ fontSize: 11, fontWeight: 700, color: INK, textAlign: "center", margin: "0 0 10px" }}>Tabel Produk yang Diproduksi</div>
-          <div style={{ borderRadius: 12, overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
-              <thead>
-                <tr style={{ background: ORANGE }}>
-                  <th style={{ textAlign: "left", fontWeight: 700, padding: "10px 12px", color: "#fff", width: "3%" }}>NO</th>
-                  <th style={{ textAlign: "left", fontWeight: 700, padding: "10px 12px", color: "#fff", width: "11%" }}>JENIS PRODUK</th>
-                  <th style={{ textAlign: "left", fontWeight: 700, padding: "10px 12px", color: "#fff", width: "16%" }}>DESKRIPSI PRODUK</th>
-                  <th style={{ textAlign: "left", fontWeight: 700, padding: "10px 12px", color: "#fff", width: "8%" }}>HS CODE</th>
-                  <th style={{ textAlign: "left", fontWeight: 700, padding: "10px 12px", color: "#fff", width: "29%" }}>DESKRIPSI HS CODE</th>
-                  <th style={{ textAlign: "left", fontWeight: 700, padding: "10px 12px", color: "#fff", width: "14%" }}>PHOTO PRODUK</th>
-                  <th style={{ textAlign: "left", fontWeight: 700, padding: "10px 12px", color: "#fff" }}>STATUS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((p, i) => {
-                  const meta = PRODUCT_STATUS_META[p.status];
-                  return (
-                    <tr key={p.id} style={{ background: "#fff", borderBottom: "1px solid #e2dccf" }}>
-                      <td style={{ padding: "12px", verticalAlign: "top", color: MUTED }}>{pageIdx * PRODUCT_ROWS_PER_PAGE + i + 1}</td>
-                      <td style={{ padding: "12px", verticalAlign: "top" }}>
-                        <div style={{ fontWeight: 700 }}>{p.materialType || "—"}</div>
-                        {p.kategori && <div style={{ fontSize: 9.5, color: MUTED_2, marginTop: 2 }}>{p.kategori}</div>}
-                      </td>
-                      <td style={{ padding: "12px", verticalAlign: "top", lineHeight: 1.5, color: MUTED }}>{p.deskripsi || "—"}</td>
-                      <td style={{ padding: "12px", verticalAlign: "top", color: MUTED }}>{p.hsCode || "—"}</td>
-                      <td style={{ padding: "12px", verticalAlign: "top", lineHeight: 1.5, color: MUTED }}>{p.hsDesc || "—"}</td>
-                      <td style={{ padding: "12px", verticalAlign: "top" }}>
-                        <TableThumb path={p.photoPath} label={p.materialType} />
-                      </td>
-                      <td style={{ padding: "12px", verticalAlign: "top" }}>
-                        <Badge color={meta.color} bg={meta.bg}>
-                          {meta.label}
-                        </Badge>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </PageShell>
-      ))}
+      {products.map((p, idx) => {
+        const meta = PRODUCT_STATUS_META[p.status];
+        const materials = rawMaterialConversion.filter((c) => c.productId === p.id);
+        return (
+          <PageShell key={p.id} pageNo={startPage + 1 + idx} totalPages={totalPages} companyName={company} landscape>
+            <Eyebrow>DATA PRODUK</Eyebrow>
+            <div style={{ fontSize: 11, fontWeight: 700, color: INK, textAlign: "center", margin: "0 0 12px" }}>
+              Produk {idx + 1} dari {products.length}
+            </div>
 
-      {rawMaterialPages.map((rows, pageIdx) => (
-        <PageShell key={`rawmat-${pageIdx}`} pageNo={startPage + 1 + productPages.length + pageIdx} totalPages={totalPages} companyName={company} landscape>
-          <Eyebrow>DATA PRODUK</Eyebrow>
-          <div style={{ fontSize: 11, fontWeight: 700, color: INK, textAlign: "center", margin: "0 0 10px" }}>Tabel Bahan Baku yang Digunakan</div>
-          <div style={{ borderRadius: 12, overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10.5 }}>
-              <thead>
-                <tr style={{ background: ORANGE }}>
-                  <th style={{ textAlign: "left", fontWeight: 700, padding: "9px 10px", color: "#fff", width: "4%" }}>NO</th>
-                  <th style={{ textAlign: "left", fontWeight: 700, padding: "9px 10px", color: "#fff", width: "16%" }}>JENIS BAHAN BAKU</th>
-                  <th style={{ textAlign: "left", fontWeight: 700, padding: "9px 10px", color: "#fff", width: "16%" }}>DESKRIPSI</th>
-                  <th style={{ textAlign: "left", fontWeight: 700, padding: "9px 10px", color: "#fff", width: "10%" }}>HS CODE</th>
-                  <th style={{ textAlign: "left", fontWeight: 700, padding: "9px 10px", color: "#fff", width: "38%" }}>DESKRIPSI HS CODE</th>
-                  <th style={{ textAlign: "left", fontWeight: 700, padding: "9px 10px", color: "#fff" }}>PHOTO</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((rm, i) => (
-                  <tr key={rm.id} style={{ background: "#fff", borderBottom: "1px solid #e2dccf" }}>
-                    <td style={{ padding: 10, verticalAlign: "top", color: MUTED }}>{pageIdx * RAW_MATERIAL_ROWS_PER_PAGE + i + 1}</td>
-                    <td style={{ padding: 10, verticalAlign: "top", fontWeight: 700 }}>{rm.jenis || "—"}</td>
-                    <td style={{ padding: 10, verticalAlign: "top", color: MUTED }}>{rm.deskripsi || "—"}</td>
-                    <td style={{ padding: 10, verticalAlign: "top", color: MUTED }}>{rm.hsCode || "—"}</td>
-                    <td style={{ padding: 10, verticalAlign: "top", lineHeight: 1.5, color: MUTED }}>{rm.hsDesc || "—"}</td>
-                    <td style={{ padding: 10, verticalAlign: "top" }}>
-                      <TableThumb path={rm.photoPath} label={rm.jenis} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </PageShell>
-      ))}
+            <div style={{ border: `1px solid ${ORANGE_LIGHT}`, borderRadius: 16, padding: "16px 18px", marginBottom: 14, background: "#fff" }}>
+              <div style={{ display: "flex", gap: 16 }}>
+                <DocImage path={p.photoPath} label={p.materialType} aspectRatio="1" />
+                <div style={{ flex: 1, minWidth: 0, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                      <div>
+                        {p.kategori && <div style={{ fontSize: 10.5, fontWeight: 700, color: INK, marginBottom: 4 }}>{p.kategori}</div>}
+                        <div style={{ fontSize: 9, letterSpacing: "0.05em", color: MUTED_2 }}>JENIS PRODUK</div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: ORANGE_TEXT }}>{p.materialType || "—"}</div>
+                      </div>
+                      <Badge color={meta.color} bg={meta.bg}>
+                        {meta.label}
+                      </Badge>
+                    </div>
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ fontSize: 8.5, letterSpacing: "0.05em", color: MUTED_2, marginBottom: 4 }}>DESKRIPSI PRODUK</div>
+                      <div style={{ background: CREAM, borderRadius: 8, padding: "9px 12px", fontSize: 10.5, lineHeight: 1.5, color: INK, minHeight: 40 }}>
+                        {p.deskripsi || "—"}
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 9, letterSpacing: "0.05em", color: MUTED_2 }}>HS CODE</div>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: INK }}>{p.hsCode || "—"}</div>
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ fontSize: 8.5, letterSpacing: "0.05em", color: MUTED_2, marginBottom: 4 }}>DESKRIPSI HS CODE</div>
+                      <div style={{ background: CREAM, borderRadius: 8, padding: "9px 12px", fontSize: 10.5, lineHeight: 1.5, color: INK, minHeight: 40 }}>
+                        {p.hsDesc || "—"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: INK, margin: "0 0 8px" }}>Bahan Baku yang Digunakan ({materials.length})</div>
+            {materials.length === 0 ? (
+              <p style={{ fontSize: 10.5, color: MUTED_2, margin: 0 }}>Belum ada bahan baku yang ditautkan ke produk ini.</p>
+            ) : (
+              materials.map((m) => <RawMaterialConversionCard key={m.id} m={m} />)
+            )}
+          </PageShell>
+        );
+      })}
     </>
   );
 }
@@ -854,6 +838,10 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
       return json.data;
     },
   });
+  // hsDesc on products/rawMaterials is a snapshot frozen at wizard submission time — same
+  // "empty because HS Code wasn't registered yet" gap Product Verification already patches
+  // with a live master-data lookup. Apply the same fallback here so the printed report matches.
+  const hsCodeOptions = useHsCodeOptions();
 
   if (isLoading) {
     return <p className="mx-auto max-w-4xl py-10 text-sm text-muted-foreground">Memuat laporan...</p>;
@@ -917,16 +905,15 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   const machineChapterStartPage = cursor;
   cursor += machineChapterPageCount;
 
-  // "Data Produk" — divider + a paginated "Produk yang Diproduksi" table
-  // (real verifikator status) + a paginated "Bahan Baku yang Digunakan" table
-  // (no status column — no verifikator review system exists for raw
-  // materials yet, so showing one would be fabricated).
-  const products = data.products;
-  const rawMaterials = data.rawMaterials;
-  const productPages = chunk(products, PRODUCT_ROWS_PER_PAGE);
-  const rawMaterialPages = chunk(rawMaterials, RAW_MATERIAL_ROWS_PER_PAGE);
-  const hasProductChapter = products.length > 0 || rawMaterials.length > 0;
-  const productChapterPageCount = hasProductChapter ? 1 + productPages.length + rawMaterialPages.length : 0;
+  // "Data Produk" — divider + one card page per product, each showing the
+  // product's own info plus every raw material linked to it via
+  // rawMaterialConversions (mirrors Product Verification's live card layout).
+  const descForHsCode = (hsCode: string | undefined) => hsCodeOptions.find((o) => o.value === hsCode)?.hint ?? "";
+  const products = data.products.map((p) => (p.hsDesc ? p : { ...p, hsDesc: descForHsCode(p.hsCode) }));
+  const rawMaterials = data.rawMaterials.map((rm) => (rm.hsDesc ? rm : { ...rm, hsDesc: descForHsCode(rm.hsCode) }));
+  const rawMaterialConversion = data.rawMaterialConversion.map((c) => (c.hsDesc ? c : { ...c, hsDesc: descForHsCode(c.hsCode) }));
+  const hasProductChapter = products.length > 0;
+  const productChapterPageCount = hasProductChapter ? 1 + products.length : 0;
   const productChapterStartPage = cursor;
   cursor += productChapterPageCount;
 
@@ -936,8 +923,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   // the Data Mesin table (no per-row pagination).
   const capacity = data.capacity;
   const productionQty = data.productionQty;
-  const rawMaterialUsage = data.rawMaterialUsage;
-  const rawMaterialConversion = data.rawMaterialConversion;
+  const rawMaterialUsage = data.rawMaterialUsage.map((r) => (r.hsDesc ? r : { ...r, hsDesc: descForHsCode(r.hsCode) }));
   const sales = data.sales;
   const hasProductionCapabilityChapter =
     capacity.length > 0 || machines.length > 0 || products.length > 0 || rawMaterials.length > 0 || productionQty.length > 0 || rawMaterialUsage.length > 0 || rawMaterialConversion.length > 0 || sales.length > 0;
@@ -1656,7 +1642,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
         {hasProductChapter && (
           <ProductChapter
             products={products}
-            rawMaterials={rawMaterials}
+            rawMaterialConversion={rawMaterialConversion}
             company={company}
             chapterIdx={categories.length + (machines.length > 0 ? 1 : 0)}
             startPage={productChapterStartPage}

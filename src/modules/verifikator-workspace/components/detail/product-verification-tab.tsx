@@ -310,7 +310,13 @@ function ProductForm({
       </div>
       <div className="mb-3.5">
         <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Foto Produk</div>
-        <FileUploadField namespace="photos" accept=".jpg,.jpeg,.png" label="Unggah Foto" onChange={(path) => onChange({ photoPath: path ?? "" })} />
+        <FileUploadField
+          namespace="photos"
+          accept=".jpg,.jpeg,.png"
+          label="Unggah Foto"
+          value={draft.photoPath}
+          onChange={(path) => onChange({ photoPath: path ?? "" })}
+        />
       </div>
       <div className="flex justify-end gap-2">
         <button
@@ -367,6 +373,9 @@ export function ProductVerificationTab({
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [newProduct, setNewProduct] = useState<ProductDraft>(EMPTY_PRODUCT_DRAFT);
   const [savingProduct, setSavingProduct] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editProduct, setEditProduct] = useState<ProductDraft>(EMPTY_PRODUCT_DRAFT);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const canEdit = assignmentStatus === "SUBMITTED";
   const hsCodeOptions = useHsCodeOptions();
   const unitForHsCode = (hsCode: string | undefined) => hsCodeOptions.find((o) => o.value === hsCode)?.unit ?? "";
@@ -443,6 +452,55 @@ export function ProductVerificationTab({
     toast.success("Produk baru ditambahkan.");
     setIsAddingProduct(false);
     setNewProduct(EMPTY_PRODUCT_DRAFT);
+    queryClient.invalidateQueries({ queryKey });
+    queryClient.invalidateQueries({ queryKey: ["verifikator-workspace", "assignments", "detail", assignmentId] });
+  }
+
+  function startEditProduct(row: ProductRow) {
+    setEditingProductId(row.id);
+    setEditProduct({
+      kategori: row.kategori,
+      materialType: row.materialType,
+      hsCode: row.hsCode,
+      hsDesc: row.hsDesc,
+      deskripsi: row.deskripsi,
+      photoPath: row.photoPath ?? "",
+    });
+  }
+
+  async function handleSaveEditProduct(productId: string) {
+    if (!editProduct.materialType.trim() || !editProduct.hsCode.trim()) return;
+    setSavingId(productId);
+    const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/products`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: productId, productData: editProduct }),
+    });
+    setSavingId(null);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal menyimpan produk");
+      return;
+    }
+    toast.success("Produk diperbarui.");
+    setEditingProductId(null);
+    queryClient.invalidateQueries({ queryKey });
+    queryClient.invalidateQueries({ queryKey: ["verifikator-workspace", "assignments", "detail", assignmentId] });
+  }
+
+  async function handleDeleteProduct(productId: string) {
+    setDeletingProductId(productId);
+    const response = await fetch(
+      `/api/verifikator-workspace/assignments/${assignmentId}/products?productId=${encodeURIComponent(productId)}`,
+      { method: "DELETE" },
+    );
+    setDeletingProductId(null);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal menghapus produk");
+      return;
+    }
+    toast.success("Produk dihapus.");
     queryClient.invalidateQueries({ queryKey });
     queryClient.invalidateQueries({ queryKey: ["verifikator-workspace", "assignments", "detail", assignmentId] });
   }
@@ -592,6 +650,18 @@ export function ProductVerificationTab({
             };
           });
         const isExpanded = expandedId === row.id;
+        if (editingProductId === row.id) {
+          return (
+            <ProductForm
+              key={row.id}
+              draft={editProduct}
+              onChange={(patch) => setEditProduct((prev) => ({ ...prev, ...patch }))}
+              onSave={() => handleSaveEditProduct(row.id)}
+              onCancel={() => setEditingProductId(null)}
+              saving={savingId === row.id}
+            />
+          );
+        }
         return (
           <div key={row.id} className="rounded-xl border border-[#e0662e] bg-white p-5.5">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -623,9 +693,32 @@ export function ProductVerificationTab({
                   </div>
                 </div>
               </div>
-              <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${PRODUCT_VERIFICATION_STATUS_BADGE[row.status]}`}>
-                {PRODUCT_VERIFICATION_STATUS_LABELS[row.status]}
-              </span>
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                <span className={`rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${PRODUCT_VERIFICATION_STATUS_BADGE[row.status]}`}>
+                  {PRODUCT_VERIFICATION_STATUS_LABELS[row.status]}
+                </span>
+                {canEdit && (
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => startEditProduct(row)}
+                      className="flex items-center gap-1 rounded-lg border border-[#e1bfb3] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#261813]"
+                    >
+                      <MaterialIcon name="edit" className="text-[13px]" />
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deletingProductId === row.id}
+                      onClick={() => handleDeleteProduct(row.id)}
+                      className="flex items-center gap-1 rounded-lg border border-[#dc2626] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#dc2626] disabled:opacity-50"
+                    >
+                      <MaterialIcon name="delete" className="text-[13px]" />
+                      Hapus
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="mb-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">

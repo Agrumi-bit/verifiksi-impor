@@ -59,8 +59,12 @@ export async function GET(
 
 const patchSchema = z.object({
   id: z.string().min(1),
-  status: z.enum(PRODUCT_VERIFICATION_STATUSES),
+  status: z.enum(PRODUCT_VERIFICATION_STATUSES).optional(),
   note: z.string().trim().optional(),
+  // Corrections to the applicant's own product data — written back to
+  // Application.payload.products (the source of truth every other workspace
+  // reads from via buildProductChecklist), not to productVerifications.
+  productData: productDataSchema.optional(),
 });
 
 export async function PATCH(
@@ -96,10 +100,21 @@ export async function PATCH(
     return NextResponse.json({ error: "Produk tidak dikenali" }, { status: 400 });
   }
 
+  if (parsed.data.productData) {
+    const products = (payload.products ?? []).map((p) =>
+      p.id === parsed.data.id ? { ...p, ...parsed.data.productData } : p,
+    );
+    await db.application.update({
+      where: { id: assignment.applicationId },
+      data: { payload: { ...payload, products } },
+    });
+  }
+
   const decisions = productVerificationsSchema.parse(assignment.productVerifications ?? {});
+  const existing = decisions[parsed.data.id];
   decisions[parsed.data.id] = {
-    status: parsed.data.status,
-    note: parsed.data.note,
+    status: parsed.data.status ?? existing?.status ?? "PENDING",
+    note: parsed.data.note ?? existing?.note,
     verifiedAt: new Date().toISOString(),
   };
 
@@ -170,4 +185,66 @@ export async function POST(
   });
 
   return NextResponse.json({ data: newProduct }, { status: 201 });
+}
+
+/**
+ * Removes a product verifikator added by mistake — cascades to every other array keyed by
+ * productId (capacity/productionQty/sales seeded on add, plus any rawMaterialConversions
+ * linking it to raw materials) so nothing orphaned lingers, and drops its productVerifications
+ * decision. Products originally submitted by the applicant can also be deleted here — same
+ * capability as the underlying array edit, no separate "own vs applicant's" distinction.
+ */
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await getServerSession();
+  const verifikatorId = session?.user.id;
+  if (!verifikatorId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const assignment = await findOwnedAssignment(id, verifikatorId);
+  if (!assignment) {
+    return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
+  }
+  if (assignment.status !== "SUBMITTED") {
+    return NextResponse.json(
+      { error: "Produk hanya dapat dihapus saat assignment berstatus Submitted." },
+      { status: 400 },
+    );
+  }
+
+  const { searchParams } = new URL(request.url);
+  const productId = searchParams.get("productId");
+  if (!productId) {
+    return NextResponse.json({ error: "productId wajib diisi" }, { status: 400 });
+  }
+
+  const payload = assignment.application.payload as ApplicationWizardValues;
+  const productExists = (payload.products ?? []).some((p) => p.id === productId);
+  if (!productExists) {
+    return NextResponse.json({ error: "Produk tidak ditemukan" }, { status: 404 });
+  }
+
+  const products = (payload.products ?? []).filter((p) => p.id !== productId);
+  const capacity = (payload.capacity ?? []).filter((c) => c.productId !== productId);
+  const productionQty = (payload.productionQty ?? []).filter((p) => p.productId !== productId);
+  const sales = (payload.sales ?? []).filter((s) => s.productId !== productId);
+  const rawMaterialConversions = (payload.rawMaterialConversions ?? []).filter((c) => c.productId !== productId);
+
+  await db.application.update({
+    where: { id: assignment.applicationId },
+    data: { payload: { ...payload, products, capacity, productionQty, sales, rawMaterialConversions } },
+  });
+
+  const decisions = productVerificationsSchema.parse(assignment.productVerifications ?? {});
+  delete decisions[productId];
+  await db.assignment.update({
+    where: { id: assignment.id },
+    data: { productVerifications: decisions },
+  });
+
+  return NextResponse.json({ data: { id: productId } });
 }
