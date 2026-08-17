@@ -101,6 +101,18 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Template Surat Tugas",
         href: "/system-configuration/surat-tugas-template",
       },
+      {
+        label: "Branding",
+        href: "/system-configuration/branding",
+      },
+      {
+        label: "Login Page Content",
+        href: "/system-configuration/login-page-content",
+      },
+      {
+        label: "SMTP Email",
+        href: "/system-configuration/smtp",
+      },
       { label: "Notification & Communication" },
       { label: "Application Setting" },
     ],

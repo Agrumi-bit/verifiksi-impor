@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { FormField } from "@/components/form/form-field";
 import { authClient } from "@/lib/auth-client";
 import { ROLE_HOME, WORKSPACE_ACCESS, ADMIN_ONLY_ROLES } from "@/modules/users/workspace-routes";
 import type { Role } from "@/modules/users/roles";
+import { useBranding, BRANDING_LOGO_URL } from "@/modules/branding/use-branding";
 import { loginSchema, type LoginValues } from "../schema";
 
 /** A logged-in-as role is only allowed to land where `src/proxy.ts` will actually let them stay — prevents an `?redirect=` param from sending a user somewhere proxy immediately bounces them back out of. */
@@ -27,6 +28,8 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const { data: branding } = useBranding();
 
   const {
     register,
@@ -62,14 +65,19 @@ export function LoginForm() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-col gap-6 py-16">
+    <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
       <div className="flex flex-col items-center gap-2 text-center">
-        <span className="flex size-10 items-center justify-center rounded-full bg-foreground text-background">
-          <ShieldCheck className="size-5" />
-        </span>
-        <h1 className="text-lg font-semibold">VKI &amp; VIU Platform</h1>
+        {branding?.logoPath ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={BRANDING_LOGO_URL} alt={branding.appName} className="size-10 rounded-full object-cover" />
+        ) : (
+          <span className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <ShieldCheck className="size-5" />
+          </span>
+        )}
+        <h1 className="text-lg font-semibold">{branding?.appName ?? "VKI & VIU Platform"}</h1>
         <p className="text-sm text-muted-foreground">
-          Sistem Verifikasi Kemampuan Industri &amp; Verifikasi Importir Umum
+          {branding?.appSubtitle ?? "Sistem Verifikasi Kemampuan Industri & Verifikasi Importir Umum"}
         </p>
       </div>
 
@@ -97,12 +105,23 @@ export function LoginForm() {
           required
           error={errors.password?.message}
         >
-          <Input
-            id="password"
-            type="password"
-            placeholder="Masukkan password"
-            {...register("password")}
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="Masukkan password"
+              className="pr-9"
+              {...register("password")}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+              className="absolute top-1/2 right-2.5 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
+          </div>
         </FormField>
 
         {serverError && (

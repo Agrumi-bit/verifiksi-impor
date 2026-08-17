@@ -765,3 +765,84 @@ model SuratTugasTemplate {
 
   @@map("surat_tugas_template")
 }
+
+// Single-row config — admin-editable app identity (name, logo, primary color) read by
+// the root layout (browser tab title) and the shared admin/login chrome. Always
+// read/written via the fixed id below (upsert-on-read if the row doesn't exist yet).
+// GET is intentionally public (no session check) — the login page itself needs this
+// before a user is authenticated.
+model BrandingSettings {
+  id String @id @default("branding")
+
+  appName              String  @default("VKI & VIU Platform")
+  appSubtitle          String  @default("Sistem Verifikasi Kemampuan Industri & Verifikasi Importir Umum")
+  sidebarBrandTitle    String  @default("VKI & VIU")
+  sidebarBrandSubtitle String  @default("Admin Portal")
+  logoPath             String?
+  primaryColor           String @default("#e0662e")
+  primaryColorForeground String @default("#ffffff")
+
+  updatedAt DateTime @updatedAt
+
+  @@map("branding_settings")
+}
+
+enum LoginSlideStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+}
+
+// Admin-managed promotional slides for the right-hand panel of the login page.
+// `status` is the admin's manual on/off switch; `startDate`/`endDate` are an
+// optional scheduling window on top of it — a slide only actually renders on
+// the login page when status is ACTIVE AND (no schedule, or now falls inside
+// it). That combined check is computed at read time in the login page's own
+// data-fetching code, never stored as a separate "is currently showing" flag.
+model LoginSlide {
+  id          String @id @default(cuid())
+  imagePath   String
+  label       String @default("")
+  title       String
+  description String @default("")
+  ctaLabel    String @default("")
+  ctaUrl      String @default("")
+  order       Int    @default(0)
+
+  status    LoginSlideStatus @default(DRAFT)
+  startDate DateTime?
+  endDate   DateTime?
+
+  // Denormalized snapshot (same convention as `reportVerification.verifiedByName`
+  // elsewhere in this schema) rather than a User relation — this is a lightweight
+  // "last touched by" label, not a queryable audit log.
+  updatedByName String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("login_slide")
+}
+
+// Single-row config — outbound SMTP credentials the app uses to send email (e.g. via
+// Hostinger's SMTP relay). Unlike `BrandingSettings`/`SuratTugasTemplate`, this holds a
+// real secret (`password`), so GET is admin-only (never public) and never echoes the
+// stored password back to the client — only whether one is currently set.
+model SmtpSettings {
+  id String @id @default("smtp")
+
+  host     String  @default("smtp.hostinger.com")
+  port     Int     @default(465)
+  secure   Boolean @default(true)
+  username String  @default("")
+  password String  @default("")
+
+  fromName  String @default("")
+  fromEmail String @default("")
+  replyTo   String @default("")
+
+  updatedByName String?
+  updatedAt     DateTime @updatedAt
+
+  @@map("smtp_settings")
+}

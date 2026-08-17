@@ -38,6 +38,7 @@ type Props = {
   variant: "admin" | "company" | "surveyor";
   brandTitle: string;
   brandSubtitle: string;
+  logoUrl?: string | null;
 };
 
 function sectionContainsPath(section: NavSection, pathname: string): boolean {
@@ -45,7 +46,7 @@ function sectionContainsPath(section: NavSection, pathname: string): boolean {
   return section.children?.some((child) => child.href === pathname) ?? false;
 }
 
-export function Sidebar({ variant, brandTitle, brandSubtitle }: Props) {
+export function Sidebar({ variant, brandTitle, brandSubtitle, logoUrl }: Props) {
   const sections = NAV_BY_VARIANT[variant];
   const pathname = usePathname();
   const isSidebarOpen = useUiStore((state) => state.isSidebarOpen);
@@ -68,9 +69,14 @@ export function Sidebar({ variant, brandTitle, brandSubtitle }: Props) {
   return (
     <aside className="flex h-full w-72 shrink-0 flex-col border-r border-border bg-background">
       <div className="flex items-center gap-2 border-b border-border px-4 py-4">
-        <span className="flex size-8 items-center justify-center rounded-lg bg-foreground text-background">
-          <ShieldCheck className="size-4" />
-        </span>
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUrl} alt={brandTitle} className="size-8 shrink-0 rounded-lg object-cover" />
+        ) : (
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <ShieldCheck className="size-4" />
+          </span>
+        )}
         <div>
           <p className="text-sm font-semibold leading-tight">{brandTitle}</p>
           <p className="text-xs text-muted-foreground leading-tight">

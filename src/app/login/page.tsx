@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { LoginForm } from "@/modules/auth/components/login-form";
+import { LoginScreen } from "@/modules/auth/components/login-screen";
+import { getBrandingSettings } from "@/lib/get-branding";
 
-export const metadata: Metadata = {
-  title: "Login — VKI & VIU Platform",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const branding = await getBrandingSettings();
+  return { title: `Login — ${branding.appName}` };
+}
 
 export default function LoginPage() {
   return (
     <Suspense>
-      <LoginForm />
+      <LoginScreen />
     </Suspense>
   );
 }

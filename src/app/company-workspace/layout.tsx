@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { useBranding, BRANDING_LOGO_URL } from "@/modules/branding/use-branding";
 
 export default function CompanyWorkspaceLayout({
   children,
@@ -11,6 +12,7 @@ export default function CompanyWorkspaceLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { data: branding } = useBranding();
   // Survey report preview is a standalone, print-styled full page (shared with
   // Surveyor/Verifikator Workspace via ReportRouter) — it doesn't sit inside the
   // persistent Sidebar/Topbar chrome used by the rest of Company Workspace.
@@ -24,8 +26,9 @@ export default function CompanyWorkspaceLayout({
     <div className="flex h-screen">
       <Sidebar
         variant="company"
-        brandTitle="VKI & VIU"
+        brandTitle={branding?.sidebarBrandTitle ?? "VKI & VIU"}
         brandSubtitle="Company Workspace"
+        logoUrl={branding?.logoPath ? BRANDING_LOGO_URL : null}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
