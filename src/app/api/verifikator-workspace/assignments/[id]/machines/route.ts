@@ -16,6 +16,7 @@ const machineDataSchema = z.object({
   model: z.string().trim().optional(),
   tahun: z.string().trim().optional(),
   jumlah: z.string().trim().optional(),
+  jumlahSatuan: z.string().trim().optional(),
   kapasitas: z.string().trim().optional(),
   kapasitasSatuan: z.string().trim().optional(),
   kapasitasJam: z.string().trim().optional(),
@@ -23,6 +24,7 @@ const machineDataSchema = z.object({
   waktuBeroperasi: z.string().trim().optional(),
   kondisi: z.enum(MACHINE_KONDISI_VALUES).optional(),
   power: z.string().trim().optional(),
+  powerSatuan: z.string().trim().optional(),
   input: z.string().trim().optional(),
   output: z.string().trim().optional(),
 });

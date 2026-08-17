@@ -97,6 +97,7 @@ export type PmApplicationDetail = {
     model: string;
     tahun: string;
     quantity: string;
+    quantitySatuan: string;
     kapasitas: string;
     kapasitasSatuan: string;
     kapasitasJam: string;
@@ -105,6 +106,7 @@ export type PmApplicationDetail = {
     kapasitasPerHari: string;
     kondisi: string;
     power: string;
+    powerSatuan: string;
     input: string;
     output: string;
     photoMesinPath: string | null;

@@ -115,7 +115,7 @@ function MesinSection({ data }: { data: PmApplicationDetail }) {
                   <div className="border-r border-[#f0ded0] px-3 py-2.5 text-[12.5px] text-[#4a4038]">{row.model || "—"}</div>
                   <div className="border-r border-[#f0ded0] px-3 py-2.5 text-[12.5px] text-[#4a4038]">{row.tahun || "—"}</div>
                   <div className="flex items-center justify-between gap-1.5 px-3 py-2.5">
-                    <span className="text-[12.5px] text-[#4a4038]">{row.quantity || "—"}</span>
+                    <span className="text-[12.5px] text-[#4a4038]">{row.quantity ? `${row.quantity} ${row.quantitySatuan}`.trim() : "—"}</span>
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${MACHINE_VERIFICATION_STATUS_BADGE[row.status as keyof typeof MACHINE_VERIFICATION_STATUS_BADGE] ?? MACHINE_VERIFICATION_STATUS_BADGE.PENDING}`}>
                       {MACHINE_VERIFICATION_STATUS_LABELS[row.status as keyof typeof MACHINE_VERIFICATION_STATUS_LABELS] ?? row.status}
                     </span>
@@ -135,7 +135,7 @@ function MesinSection({ data }: { data: PmApplicationDetail }) {
                           <ReadOnlyField label="Model" value={row.model} />
                           <ReadOnlyField label="Tahun" value={row.tahun} />
                         </div>
-                        <ReadOnlyField label="Quantity" value={row.quantity} />
+                        <ReadOnlyField label="Quantity" value={row.quantity ? `${row.quantity} ${row.quantitySatuan}`.trim() : ""} />
                       </div>
                       <div>
                         <div className="mb-1.5 text-[12.5px] font-bold text-[#20180f]">Foto Mesin</div>
@@ -157,15 +157,18 @@ function MesinSection({ data }: { data: PmApplicationDetail }) {
                     </div>
                     <div className="mb-3.5 grid grid-cols-1 gap-4 sm:grid-cols-3">
                       <ReadOnlyField
-                        label="Kapasitas Produksi (jumlah × kapasitas/jam × jam operasi)"
+                        label="Kapasitas Produksi (jumlah × kapasitas/jam)"
                         value={row.kapasitas ? `${row.kapasitas} ${row.kapasitasSatuan}`.trim() : ""}
                       />
                       <ReadOnlyField label="Kapasitas Produksi per Jam" value={row.kapasitasJam ? `${row.kapasitasJam} ${row.kapasitasJamSatuan}`.trim() : ""} />
-                      <ReadOnlyField label="Power Consumption" value={row.power} />
+                      <ReadOnlyField label="Power Consumption" value={row.power ? `${row.power} ${row.powerSatuan}`.trim() : ""} />
                     </div>
                     <div className="mb-3.5 grid grid-cols-1 gap-4 sm:grid-cols-3">
                       <ReadOnlyField label="Waktu Beroperasi (jam/hari)" value={row.waktuBeroperasi} />
-                      <ReadOnlyField label="Kapasitas per Hari" value={row.kapasitasPerHari ? `${row.kapasitasPerHari} ${row.kapasitasJamSatuan}`.trim() : ""} />
+                      <ReadOnlyField
+                        label="Kapasitas per Hari (waktu beroperasi × kapasitas produksi)"
+                        value={row.kapasitasPerHari ? `${row.kapasitasPerHari} ${row.kapasitasJamSatuan}`.trim() : ""}
+                      />
                       <ReadOnlyField label="Kondisi" value={row.kondisi ? (MACHINE_KONDISI_LABELS[row.kondisi as MachineKondisiValue] ?? row.kondisi) : ""} />
                     </div>
                     <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">

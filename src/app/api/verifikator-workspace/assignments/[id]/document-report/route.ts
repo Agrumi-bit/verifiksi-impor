@@ -92,6 +92,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     ...item,
     // Verifikator's own replacement photo takes precedence over the applicant's original.
     photoMesinPath: machineDecisions[item.id]?.photoPath || item.photoMesinPath,
+    // Extra photos the verifikator added — the applicant's original (`photoMesinPath` fallback
+    // above) is shown alongside these in the Lampiran Foto appendix, not repeated in here.
+    photoMesinPaths: machineDecisions[item.id]?.photoPaths ?? [],
     status: machineDecisions[item.id]?.status ?? "PENDING",
   }));
 

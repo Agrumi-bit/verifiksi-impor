@@ -410,15 +410,17 @@ export type MachineChecklistItem = {
   model: string;
   tahun: string;
   quantity: string;
+  quantitySatuan: string;
   kapasitas: string;
   kapasitasSatuan: string;
   kapasitasJam: string;
   kapasitasJamSatuan: string;
   waktuBeroperasi: string;
-  /** kapasitasJam × waktuBeroperasi — only computed when both parse as numbers, otherwise "" (never guessed). */
+  /** waktuBeroperasi × kapasitas (kapasitas = jumlah × kapasitasJam) — only computed when all three parse as numbers, otherwise "" (never guessed). */
   kapasitasPerHari: string;
   kondisi: MachineKondisiValue | "";
   power: string;
+  powerSatuan: string;
   input: string;
   output: string;
   photoMesinPath: string | null;
@@ -428,11 +430,18 @@ export type MachineChecklistItem = {
 export function buildMachineChecklist(payload: ApplicationWizardValues): MachineChecklistItem[] {
   if (payload.verificationType !== "VKI") return [];
   return (payload.machines ?? []).map((m) => {
+    const jumlahNum = Number(m.jumlah);
     const kapasitasJamNum = Number(m.kapasitasJam);
     const waktuBeroperasiNum = Number(m.waktuBeroperasi);
+    // Kapasitas per Hari = waktu beroperasi × Kapasitas Produksi, where Kapasitas Produksi = jumlah × kapasitas/jam.
     const kapasitasPerHari =
-      m.kapasitasJam && m.waktuBeroperasi && Number.isFinite(kapasitasJamNum) && Number.isFinite(waktuBeroperasiNum)
-        ? String(kapasitasJamNum * waktuBeroperasiNum)
+      m.jumlah &&
+      m.kapasitasJam &&
+      m.waktuBeroperasi &&
+      Number.isFinite(jumlahNum) &&
+      Number.isFinite(kapasitasJamNum) &&
+      Number.isFinite(waktuBeroperasiNum)
+        ? String(jumlahNum * kapasitasJamNum * waktuBeroperasiNum)
         : "";
     return {
       id: m.id,
@@ -442,6 +451,7 @@ export function buildMachineChecklist(payload: ApplicationWizardValues): Machine
       model: m.model ?? "",
       tahun: m.tahun ?? "",
       quantity: m.jumlah ?? "",
+      quantitySatuan: m.jumlahSatuan ?? "",
       kapasitas: m.kapasitas ?? "",
       kapasitasSatuan: m.kapasitasSatuan ?? "",
       kapasitasJam: m.kapasitasJam ?? "",
@@ -450,6 +460,7 @@ export function buildMachineChecklist(payload: ApplicationWizardValues): Machine
       kapasitasPerHari,
       kondisi: m.kondisi ?? "",
       power: m.power ?? "",
+      powerSatuan: m.powerSatuan ?? "",
       input: m.input ?? "",
       output: m.output ?? "",
       photoMesinPath: m.photoMesinPath || null,

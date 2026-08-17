@@ -31,6 +31,7 @@ type MachineRow = {
   model: string;
   tahun: string;
   quantity: string;
+  quantitySatuan: string;
   kapasitas: string;
   kapasitasSatuan: string;
   kapasitasJam: string;
@@ -39,6 +40,7 @@ type MachineRow = {
   kapasitasPerHari: string;
   kondisi: MachineKondisiValue | "";
   power: string;
+  powerSatuan: string;
   input: string;
   output: string;
   photoMesinPath: string | null;
@@ -168,6 +170,7 @@ type MachineDataDraft = {
   model?: string;
   tahun?: string;
   jumlah?: string;
+  jumlahSatuan?: string;
   kapasitas?: string;
   kapasitasSatuan?: string;
   kapasitasJam?: string;
@@ -175,6 +178,7 @@ type MachineDataDraft = {
   waktuBeroperasi?: string;
   kondisi?: MachineKondisiValue;
   power?: string;
+  powerSatuan?: string;
   input?: string;
   output?: string;
 };
@@ -340,11 +344,10 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
     if (!draft) return;
     setSavingId(row.id);
     // Kapasitas Produksi is derived, never hand-typed — always recompute from the
-    // effective (draft-or-saved) jumlah × kapasitas per jam × waktu beroperasi at save time.
+    // effective (draft-or-saved) jumlah × kapasitas per jam at save time.
     const jumlah = parseNum(draft.jumlah ?? row.quantity);
     const kapasitasJam = parseNum(draft.kapasitasJam ?? row.kapasitasJam);
-    const waktu = parseNum(draft.waktuBeroperasi ?? row.waktuBeroperasi);
-    const computedKapasitas = jumlah !== null && kapasitasJam !== null && waktu !== null ? jumlah * kapasitasJam * waktu : null;
+    const computedKapasitas = jumlah !== null && kapasitasJam !== null ? jumlah * kapasitasJam : null;
     const machineData: MachineDataDraft = {
       ...draft,
       ...(computedKapasitas !== null
@@ -470,7 +473,9 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                   <div className="border-r border-[#f0ded0] px-3 py-2.5 text-[12.5px] text-[#4a4038]">{row.model || "—"}</div>
                   <div className="border-r border-[#f0ded0] px-3 py-2.5 text-[12.5px] text-[#4a4038]">{row.tahun || "—"}</div>
                   <div className="flex items-center justify-between gap-1.5 px-3 py-2.5">
-                    <span className="text-[12.5px] text-[#4a4038]">{row.quantity || "—"}</span>
+                    <span className="text-[12.5px] text-[#4a4038]">
+                      {row.quantity ? `${row.quantity} ${row.quantitySatuan}`.trim() : "—"}
+                    </span>
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${MACHINE_VERIFICATION_STATUS_BADGE[row.status]}`}>
                       {MACHINE_VERIFICATION_STATUS_LABELS[row.status]}
                     </span>
@@ -481,12 +486,10 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                   const value = (key: keyof MachineDataDraft, fallback: string): string => (draft?.[key] as string | undefined) ?? fallback;
                   const set = (patch: MachineDataDraft) => updateDraftMachineData(row.id, patch);
                   const hasDraft = Boolean(draft && Object.keys(draft).length > 0);
-                  // Kapasitas Produksi = jumlah mesin × kapasitas per hari (kapasitas/jam × jam operasi) — never hand-typed.
+                  // Kapasitas Produksi = jumlah mesin × kapasitas/jam — never hand-typed.
                   const liveJumlah = parseNum(value("jumlah", row.quantity));
                   const liveKapasitasJam = parseNum(value("kapasitasJam", row.kapasitasJam));
-                  const liveWaktu = parseNum(value("waktuBeroperasi", row.waktuBeroperasi));
-                  const liveKapasitas =
-                    liveJumlah !== null && liveKapasitasJam !== null && liveWaktu !== null ? liveJumlah * liveKapasitasJam * liveWaktu : null;
+                  const liveKapasitas = liveJumlah !== null && liveKapasitasJam !== null ? liveJumlah * liveKapasitasJam : null;
                   return (
                   <div className="border-t border-[#f0ded0] bg-[#fbf8f4] p-5">
                     <div className="mb-3 flex items-center justify-between">
@@ -506,7 +509,14 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                         <EditableField label="Model" value={value("model", row.model)} onChange={(v) => set({ model: v })} disabled={!canEdit} />
                         <EditableField label="Tahun" value={value("tahun", row.tahun)} onChange={(v) => set({ tahun: v })} disabled={!canEdit} />
                       </div>
-                      <EditableField label="Quantity" value={value("jumlah", row.quantity)} onChange={(v) => set({ jumlah: v })} disabled={!canEdit} />
+                      <EditableFieldUnit
+                        label="Quantity"
+                        value={value("jumlah", row.quantity)}
+                        onValueChange={(v) => set({ jumlah: v })}
+                        unit={value("jumlahSatuan", row.quantitySatuan)}
+                        onUnitChange={(v) => set({ jumlahSatuan: v })}
+                        disabled={!canEdit}
+                      />
                     </div>
 
                     <div className="mb-3.5">
@@ -521,7 +531,7 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                     </div>
                     <div className="mb-3.5 grid grid-cols-1 gap-4 sm:grid-cols-3">
                       <Field
-                        label="Kapasitas Produksi (jumlah × kapasitas/jam × jam operasi)"
+                        label="Kapasitas Produksi (jumlah × kapasitas/jam)"
                         value={liveKapasitas !== null ? `${fmtNum(liveKapasitas)} ${value("kapasitasJamSatuan", row.kapasitasJamSatuan)}`.trim() : ""}
                       />
                       <EditableFieldUnit
@@ -532,7 +542,14 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                         onUnitChange={(v) => set({ kapasitasJamSatuan: v })}
                         disabled={!canEdit}
                       />
-                      <EditableField label="Power Consumption" value={value("power", row.power)} onChange={(v) => set({ power: v })} disabled={!canEdit} />
+                      <EditableFieldUnit
+                        label="Power Consumption"
+                        value={value("power", row.power)}
+                        onValueChange={(v) => set({ power: v })}
+                        unit={value("powerSatuan", row.powerSatuan)}
+                        onUnitChange={(v) => set({ powerSatuan: v })}
+                        disabled={!canEdit}
+                      />
                     </div>
                     <div className="mb-3.5 grid grid-cols-1 gap-4 sm:grid-cols-3">
                       <EditableField
@@ -541,7 +558,10 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                         onChange={(v) => set({ waktuBeroperasi: v })}
                         disabled={!canEdit}
                       />
-                      <Field label="Kapasitas per Hari (dihitung otomatis)" value={[row.kapasitasPerHari, row.kapasitasJamSatuan].filter(Boolean).join(" ")} />
+                      <Field
+                        label="Kapasitas per Hari (waktu beroperasi × kapasitas produksi)"
+                        value={[row.kapasitasPerHari, row.kapasitasJamSatuan].filter(Boolean).join(" ")}
+                      />
                       <div>
                         <div className="mb-1.5 text-[12.5px] font-bold text-[#20180f]">Kondisi</div>
                         <select

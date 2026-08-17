@@ -131,6 +131,7 @@ export type MachineRow = {
   input: string;
   output: string;
   photoMesinPath: string | null;
+  photoMesinPaths: string[];
   status: "PENDING" | "APPROVED" | "REJECTED";
 };
 
@@ -298,6 +299,103 @@ export function Badge({ children, color, bg }: { children: ReactNode; color: str
     <span style={{ background: bg, color, fontSize: 8.5, fontWeight: 700, padding: "2px 8px", borderRadius: 9, whiteSpace: "nowrap" }}>
       {children}
     </span>
+  );
+}
+
+export type BentoPhotoItem = { key: string; path: string; label: string; sub: string };
+
+/** One tile in the Lampiran Foto bento grid — the first tile of each page renders larger ("hero"). */
+function BentoPhotoTile({ item, hero }: { item: BentoPhotoItem; hero?: boolean }) {
+  const url = fileUrl(item.path);
+  return (
+    <div
+      style={{
+        position: "relative",
+        borderRadius: 12,
+        overflow: "hidden",
+        background: "#fff",
+        border: `1px solid ${CARD_BORDER}`,
+        gridColumn: hero ? "span 2" : undefined,
+        gridRow: hero ? "span 2" : undefined,
+      }}
+    >
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt={item.label} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+      ) : (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#5a7a63",
+            fontSize: 9.5,
+          }}
+        >
+          Belum ada foto
+        </div>
+      )}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          padding: hero ? "22px 12px 10px" : "16px 8px 6px",
+          background: "linear-gradient(transparent, rgba(0,0,0,.7))",
+        }}
+      >
+        <div style={{ fontSize: hero ? 12.5 : 9, fontWeight: 800, color: "#fff", lineHeight: 1.25 }}>{item.label}</div>
+        <div style={{ fontSize: hero ? 9.5 : 7.5, color: "rgba(255,255,255,.8)", marginTop: 1 }}>{item.sub}</div>
+      </div>
+    </div>
+  );
+}
+
+const BENTO_PHOTOS_PER_PAGE = 9;
+
+/** Photo attachment appendix — every real photo (machines, products, raw materials) as one bento mosaic, not scattered one-per-card like the body chapters. */
+function PhotoAttachmentChapter({
+  photos,
+  company,
+  startPage,
+  totalPages,
+}: {
+  photos: BentoPhotoItem[];
+  company: string;
+  startPage: number;
+  totalPages: number;
+}) {
+  const pages = chunk(photos, BENTO_PHOTOS_PER_PAGE);
+  return (
+    <>
+      {pages.map((page, pageIdx) => (
+        <PageShell key={pageIdx} pageNo={startPage + 1 + pageIdx} totalPages={totalPages} companyName={company}>
+          <Eyebrow>LAMPIRAN</Eyebrow>
+          <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 4px" }}>
+            C. Lampiran Foto{pages.length > 1 ? ` (${pageIdx + 1}/${pages.length})` : ""}
+          </h1>
+          <div style={{ fontSize: 11, color: MUTED_2, marginBottom: 16 }}>
+            Dokumentasi visual mesin, produk, dan bahan baku yang diverifikasi.
+          </div>
+          <div
+            style={{
+              flex: 1,
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gridAutoRows: "150px",
+              gap: 10,
+            }}
+          >
+            {page.map((item, i) => (
+              <BentoPhotoTile key={item.key} item={item} hero={i === 0} />
+            ))}
+          </div>
+        </PageShell>
+      ))}
+    </>
   );
 }
 
@@ -930,6 +1028,32 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   const productionCapabilityChapterPageCount = hasProductionCapabilityChapter ? PRODUCTION_CAPABILITY_CHAPTER_PAGE_COUNT : 0;
   const productionCapabilityChapterStartPage = cursor;
   cursor += productionCapabilityChapterPageCount;
+
+  // "Lampiran Foto" — every real photo (machine gallery + product + raw material) gathered
+  // into one bento mosaic appendix, distinct from the one-photo-per-card layout each body
+  // chapter already uses. Machine photos include the verifikator's added gallery, deduped
+  // against the cover so nothing repeats.
+  const bentoPhotos: BentoPhotoItem[] = [
+    ...machines.flatMap((m) => {
+      const gallery = [...new Set([m.photoMesinPath, ...m.photoMesinPaths].filter((p): p is string => Boolean(p)))];
+      const label = m.proses || m.nama || "Mesin";
+      return gallery.map((path, i) => ({
+        key: `machine:${m.id}:${i}`,
+        path,
+        label,
+        sub: gallery.length > 1 ? `Mesin — Foto ${i + 1}` : "Mesin",
+      }));
+    }),
+    ...products
+      .filter((p) => p.photoPath)
+      .map((p) => ({ key: `product:${p.id}`, path: p.photoPath as string, label: p.materialType || "Produk", sub: "Produk" })),
+    ...rawMaterials
+      .filter((r) => r.photoPath)
+      .map((r) => ({ key: `raw:${r.id}`, path: r.photoPath as string, label: r.jenis || "Bahan Baku", sub: "Bahan Baku" })),
+  ];
+  const photoAttachmentPageCount = bentoPhotos.length > 0 ? Math.ceil(bentoPhotos.length / BENTO_PHOTOS_PER_PAGE) : 0;
+  const photoAttachmentStartPage = cursor;
+  cursor += photoAttachmentPageCount;
 
   const lampiranPage = cursor;
   const totalPages = lampiranPage;
@@ -1673,6 +1797,10 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
             startPage={productionCapabilityChapterStartPage}
             totalPages={totalPages}
           />
+        )}
+
+        {bentoPhotos.length > 0 && (
+          <PhotoAttachmentChapter photos={bentoPhotos} company={company} startPage={photoAttachmentStartPage} totalPages={totalPages} />
         )}
 
         {/* LAMPIRAN */}
