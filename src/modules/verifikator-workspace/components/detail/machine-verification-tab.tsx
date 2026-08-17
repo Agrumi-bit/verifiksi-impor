@@ -8,7 +8,6 @@ import { MaterialIcon } from "../material-icon";
 import { MACHINE_VERIFICATION_STATUS_BADGE, MACHINE_VERIFICATION_STATUS_LABELS, type MachineVerificationStatusValue } from "../../status";
 import type { AssignmentStatusValue } from "../../status";
 import { MACHINE_KONDISI_LABELS, MACHINE_KONDISI_VALUES, type MachineKondisiValue } from "@/modules/applications/schema";
-import { FileUploadField } from "@/components/form/file-upload-field";
 
 /** Indonesian number format: "." is the thousands separator, "," is the decimal separator. */
 function parseNum(value: string | undefined | null): number | null {
@@ -44,6 +43,7 @@ type MachineRow = {
   output: string;
   photoMesinPath: string | null;
   originalPhotoMesinPath: string | null;
+  photoMesinPaths: string[];
   status: MachineVerificationStatusValue;
   note: string;
   verifiedAt: string | null;
@@ -54,6 +54,109 @@ function Field({ label, value }: { label: string; value: string }) {
     <div>
       <div className="mb-1.5 text-[12.5px] font-bold text-[#20180f]">{label}</div>
       <div className="rounded-lg border border-[#e8dccd] bg-white px-3 py-2.5 text-[12.5px] text-[#20180f]">{value || "—"}</div>
+    </div>
+  );
+}
+
+/** E-commerce-style product photo gallery: large cover image + clickable thumbnail strip. */
+function MachinePhotoGallery({
+  row,
+  canEdit,
+  onAddPhoto,
+  onSetCover,
+  onRemovePhoto,
+}: {
+  row: MachineRow;
+  canEdit: boolean;
+  onAddPhoto: (path: string) => void;
+  onSetCover: (path: string) => void;
+  onRemovePhoto: (path: string) => void;
+}) {
+  const [isUploading, setIsUploading] = useState(false);
+
+  // The applicant's original photo is always shown first and can never be removed —
+  // verifikator-added photos (`photoMesinPaths`) follow, deduped against it.
+  const gallery = [
+    ...(row.originalPhotoMesinPath ? [row.originalPhotoMesinPath] : []),
+    ...row.photoMesinPaths.filter((p) => p !== row.originalPhotoMesinPath),
+  ];
+  const cover = row.photoMesinPath || gallery[0] || null;
+
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("namespace", "photos");
+      const response = await fetch("/api/uploads", { method: "POST", body: formData });
+      if (!response.ok) throw new Error("Upload failed");
+      const uploaded = (await response.json()) as { path: string };
+      onAddPhoto(uploaded.path);
+    } catch {
+      toast.error("Gagal mengunggah foto, coba lagi.");
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  return (
+    <div>
+      {cover ? (
+        <a href={fileHref(cover)} target="_blank" rel="noopener noreferrer">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={fileHref(cover)} alt={row.proses} className="mb-2.5 aspect-[1.3] w-full rounded-lg border border-[#e8dccd] object-cover" />
+        </a>
+      ) : (
+        <div className="mb-2.5 flex aspect-[1.3] w-full items-center justify-center rounded-lg border border-dashed border-[#c8dbc9] text-center text-[10.5px] text-[#5a7a63]">
+          Belum ada foto
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        {gallery.map((path) => {
+          const isOriginal = path === row.originalPhotoMesinPath;
+          const isCover = path === cover;
+          return (
+            <div key={path} className="group relative">
+              <button
+                type="button"
+                onClick={() => onSetCover(path)}
+                className="block size-14 shrink-0 overflow-hidden rounded-lg border-2"
+                style={{ borderColor: isCover ? "#2f6fe0" : "#e8dccd" }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={fileHref(path)} alt="" className="size-full object-cover" />
+              </button>
+              {isOriginal && (
+                <span className="pointer-events-none absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-full bg-[#20180f] px-1.5 py-px text-[8px] font-bold text-white">
+                  Asli
+                </span>
+              )}
+              {canEdit && !isOriginal && (
+                <button
+                  type="button"
+                  onClick={() => onRemovePhoto(path)}
+                  aria-label="Hapus foto"
+                  className="absolute -right-1.5 -top-1.5 flex size-4.5 items-center justify-center rounded-full bg-[#dc2626] text-white opacity-0 group-hover:opacity-100"
+                >
+                  <MaterialIcon name="close" className="text-[11px]" />
+                </button>
+              )}
+            </div>
+          );
+        })}
+        {canEdit && (
+          <label
+            className={`flex size-14 shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-[#c8dbc9] text-[#5a7a63] ${isUploading ? "pointer-events-none opacity-60" : ""}`}
+          >
+            <MaterialIcon name={isUploading ? "hourglass_empty" : "add_a_photo"} className="text-[16px]" />
+            <input type="file" accept=".jpg,.jpeg,.png" className="hidden" onChange={handleFileChange} disabled={isUploading} />
+          </label>
+        )}
+      </div>
     </div>
   );
 }
@@ -187,21 +290,45 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
     queryClient.invalidateQueries({ queryKey });
   }
 
-  async function handlePhotoChange(row: MachineRow, photoPath: string | undefined) {
+  async function patchPhotos(row: MachineRow, patch: { photoPath?: string; photoPaths?: string[] }) {
     setSavingId(row.id);
     const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/machines`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: row.id, photoPath: photoPath ?? "" }),
+      body: JSON.stringify({ id: row.id, ...patch }),
     });
     setSavingId(null);
     if (!response.ok) {
       const body = await response.json().catch(() => null);
       toast.error(body?.error ?? "Gagal menyimpan foto mesin");
-      return;
+      return false;
     }
-    toast.success(photoPath ? `Foto ${row.proses} diperbarui.` : `Foto ${row.proses} dikembalikan ke foto asli aplikasi.`);
     queryClient.invalidateQueries({ queryKey });
+    return true;
+  }
+
+  /** New photo joins the gallery and immediately becomes the cover/thumbnail — most intuitive default after an upload. */
+  async function handleAddPhoto(row: MachineRow, path: string) {
+    const ok = await patchPhotos(row, { photoPaths: [...row.photoMesinPaths, path], photoPath: path });
+    if (ok) toast.success(`Foto ditambahkan untuk ${row.proses}.`);
+  }
+
+  async function handleSetCoverPhoto(row: MachineRow, path: string) {
+    if (path === row.photoMesinPath) return;
+    const ok = await patchPhotos(row, { photoPath: path });
+    if (ok) toast.success(`Foto sampul ${row.proses} diperbarui.`);
+  }
+
+  /** Only verifikator-added photos can be removed — the applicant's original stays in the gallery as a permanent record. */
+  async function handleRemovePhoto(row: MachineRow, path: string) {
+    const nextPaths = row.photoMesinPaths.filter((p) => p !== path);
+    const wasCover = row.photoMesinPath === path;
+    const ok = await patchPhotos(row, {
+      photoPaths: nextPaths,
+      // Falling back to "" makes the server re-derive the cover as the applicant's original photo.
+      ...(wasCover ? { photoPath: nextPaths[0] ?? "" } : {}),
+    });
+    if (ok) toast.success(`Foto dihapus dari ${row.proses}.`);
   }
 
   function updateDraftMachineData(rowId: string, patch: MachineDataDraft) {
@@ -369,49 +496,28 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                         Dapat dikoreksi verifikator — tersinkron ke data aplikasi
                       </span>
                     </div>
-                    <div className="mb-3.5 grid grid-cols-1 gap-4 sm:grid-cols-[1fr_180px]">
-                      <div className="flex flex-col gap-4">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          <EditableField label="Nama Proses" value={value("proses", row.proses)} onChange={(v) => set({ proses: v })} disabled={!canEdit} />
-                          <EditableField label="Jenis Mesin" value={value("nama", row.nama)} onChange={(v) => set({ nama: v })} disabled={!canEdit} />
-                        </div>
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                          <EditableField label="Merk" value={value("merk", row.merk)} onChange={(v) => set({ merk: v })} disabled={!canEdit} />
-                          <EditableField label="Model" value={value("model", row.model)} onChange={(v) => set({ model: v })} disabled={!canEdit} />
-                          <EditableField label="Tahun" value={value("tahun", row.tahun)} onChange={(v) => set({ tahun: v })} disabled={!canEdit} />
-                        </div>
-                        <EditableField label="Quantity" value={value("jumlah", row.quantity)} onChange={(v) => set({ jumlah: v })} disabled={!canEdit} />
+                    <div className="mb-3.5 flex flex-col gap-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <EditableField label="Nama Proses" value={value("proses", row.proses)} onChange={(v) => set({ proses: v })} disabled={!canEdit} />
+                        <EditableField label="Jenis Mesin" value={value("nama", row.nama)} onChange={(v) => set({ nama: v })} disabled={!canEdit} />
                       </div>
-                      <div>
-                        <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-bold text-[#20180f]">
-                          Foto Mesin
-                          {row.photoMesinPath && row.photoMesinPath !== row.originalPhotoMesinPath && (
-                            <span className="rounded-full bg-[#e6effa] px-2 py-0.5 text-[9.5px] font-bold text-[#2f6fe0]">Diganti Verifikator</span>
-                          )}
-                        </div>
-                        {row.photoMesinPath ? (
-                          <a href={fileHref(row.photoMesinPath)} target="_blank" rel="noopener noreferrer">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={fileHref(row.photoMesinPath)}
-                              alt={row.proses}
-                              className="mb-2 aspect-[0.77] w-full rounded-lg border border-[#e8dccd] object-cover"
-                            />
-                          </a>
-                        ) : (
-                          <div className="mb-2 flex aspect-[0.77] w-full items-center justify-center rounded-lg border border-dashed border-[#c8dbc9] text-center text-[10px] text-[#5a7a63]">
-                            Belum ada foto
-                          </div>
-                        )}
-                        {canEdit && (
-                          <FileUploadField
-                            namespace="photos"
-                            accept=".jpg,.jpeg,.png"
-                            label="Ganti Foto"
-                            onChange={(path) => handlePhotoChange(row, path)}
-                          />
-                        )}
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <EditableField label="Merk" value={value("merk", row.merk)} onChange={(v) => set({ merk: v })} disabled={!canEdit} />
+                        <EditableField label="Model" value={value("model", row.model)} onChange={(v) => set({ model: v })} disabled={!canEdit} />
+                        <EditableField label="Tahun" value={value("tahun", row.tahun)} onChange={(v) => set({ tahun: v })} disabled={!canEdit} />
                       </div>
+                      <EditableField label="Quantity" value={value("jumlah", row.quantity)} onChange={(v) => set({ jumlah: v })} disabled={!canEdit} />
+                    </div>
+
+                    <div className="mb-3.5">
+                      <div className="mb-1.5 text-[12.5px] font-bold text-[#20180f]">Foto Mesin</div>
+                      <MachinePhotoGallery
+                        row={row}
+                        canEdit={canEdit}
+                        onAddPhoto={(path) => handleAddPhoto(row, path)}
+                        onSetCover={(path) => handleSetCoverPhoto(row, path)}
+                        onRemovePhoto={(path) => handleRemovePhoto(row, path)}
+                      />
                     </div>
                     <div className="mb-3.5 grid grid-cols-1 gap-4 sm:grid-cols-3">
                       <Field

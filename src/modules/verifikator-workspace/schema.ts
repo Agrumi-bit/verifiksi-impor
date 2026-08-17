@@ -387,8 +387,10 @@ export function buildRawMaterialChecklist(payload: ApplicationWizardValues): Raw
 export const machineVerificationEntrySchema = z.object({
   status: z.enum(MACHINE_VERIFICATION_STATUSES).default("PENDING"),
   note: z.string().trim().optional(),
-  /** Verifikator's own replacement machine photo — overrides the applicant's `photoMesinPath` from the application payload when present. */
+  /** Currently selected cover/thumbnail photo — overrides the applicant's `photoMesinPath` from the application payload when present. Always one of `photoPaths` (or the applicant's original) once a gallery exists. */
   photoPath: z.string().trim().optional(),
+  /** Additional photos the verifikator has taken/uploaded for this machine — the applicant's original `photoMesinPath` is always shown alongside these, not duplicated in here. */
+  photoPaths: z.array(z.string().trim()).optional(),
   verifiedAt: z.string().trim().optional(),
 });
 export type MachineVerificationEntry = z.infer<typeof machineVerificationEntrySchema>;

@@ -63,6 +63,9 @@ export async function GET(
       // `originalPhotoMesinPath` is kept separately so the UI can show it was replaced.
       photoMesinPath: decisions[item.id]?.photoPath || item.photoMesinPath,
       originalPhotoMesinPath: item.photoMesinPath,
+      // Extra photos the verifikator has added for this machine — the applicant's original
+      // (`originalPhotoMesinPath`) is shown alongside these in the UI, not repeated in here.
+      photoMesinPaths: decisions[item.id]?.photoPaths ?? [],
       status: decisions[item.id]?.status ?? "PENDING",
       note: decisions[item.id]?.note ?? "",
       verifiedAt: decisions[item.id]?.verifiedAt ?? null,
@@ -75,6 +78,7 @@ const patchSchema = z.object({
   status: z.enum(MACHINE_VERIFICATION_STATUSES).optional(),
   note: z.string().trim().optional(),
   photoPath: z.string().trim().optional(),
+  photoPaths: z.array(z.string().trim()).optional(),
   // Corrections to the applicant's own machine data — written back to
   // Application.payload.machines (the source of truth every other workspace
   // reads from via buildMachineChecklist), not to machineVerifications.
@@ -130,6 +134,7 @@ export async function PATCH(
     status: parsed.data.status ?? existing?.status ?? "PENDING",
     note: parsed.data.note ?? existing?.note,
     photoPath: parsed.data.photoPath ?? existing?.photoPath,
+    photoPaths: parsed.data.photoPaths ?? existing?.photoPaths,
     verifiedAt: new Date().toISOString(),
   };
 
