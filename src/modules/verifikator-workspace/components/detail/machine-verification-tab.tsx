@@ -153,6 +153,7 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
   const [draftNotes, setDraftNotes] = useState<Record<string, string>>({});
   const [draftMachineData, setDraftMachineData] = useState<Record<string, MachineDataDraft>>({});
   const [isAdding, setIsAdding] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const canEdit = assignmentStatus === "SUBMITTED";
 
   const queryKey = ["verifikator-workspace", "assignments", assignmentId, "machines"];
@@ -259,6 +260,24 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
     const { data: newMachine } = (await response.json()) as { data: { id: string } };
     toast.success("Mesin baru ditambahkan — lengkapi datanya di bawah.");
     setExpandedId(newMachine.id);
+    queryClient.invalidateQueries({ queryKey });
+  }
+
+  async function handleDeleteMachine(row: MachineRow) {
+    if (!window.confirm(`Hapus mesin "${row.proses || row.nama}"? Tindakan ini tidak bisa dibatalkan.`)) return;
+    setDeletingId(row.id);
+    const response = await fetch(
+      `/api/verifikator-workspace/assignments/${assignmentId}/machines?machineId=${encodeURIComponent(row.id)}`,
+      { method: "DELETE" },
+    );
+    setDeletingId(null);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal menghapus mesin");
+      return;
+    }
+    toast.success(`Mesin "${row.proses || row.nama}" dihapus.`);
+    setExpandedId((prev) => (prev === row.id ? null : prev));
     queryClient.invalidateQueries({ queryKey });
   }
 
@@ -439,7 +458,16 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                       <EditableField label="Output / Produk" value={value("output", row.output)} onChange={(v) => set({ output: v })} disabled={!canEdit} />
                     </div>
                     {canEdit && (
-                      <div className="mb-4 flex justify-end">
+                      <div className="mb-4 flex justify-between gap-2">
+                        <button
+                          type="button"
+                          disabled={deletingId === row.id}
+                          onClick={() => handleDeleteMachine(row)}
+                          className="flex items-center gap-1.5 rounded-lg border border-[#dc2626] bg-white px-3.5 py-2 text-[12px] font-semibold text-[#dc2626] disabled:opacity-50"
+                        >
+                          <MaterialIcon name="delete" className="text-[15px]" />
+                          {deletingId === row.id ? "Menghapus..." : "Hapus Mesin"}
+                        </button>
                         <button
                           type="button"
                           disabled={!hasDraft || savingId === row.id}

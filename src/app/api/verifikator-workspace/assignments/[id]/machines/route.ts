@@ -184,3 +184,53 @@ export async function POST(
 
   return NextResponse.json({ data: newMachine }, { status: 201 });
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await getServerSession();
+  const verifikatorId = session?.user.id;
+  if (!verifikatorId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const assignment = await findOwnedAssignment(id, verifikatorId);
+  if (!assignment) {
+    return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
+  }
+  if (assignment.status !== "SUBMITTED") {
+    return NextResponse.json(
+      { error: "Mesin hanya dapat dihapus saat assignment berstatus Submitted." },
+      { status: 400 },
+    );
+  }
+
+  const { searchParams } = new URL(request.url);
+  const machineId = searchParams.get("machineId");
+  if (!machineId) {
+    return NextResponse.json({ error: "machineId wajib diisi" }, { status: 400 });
+  }
+
+  const payload = assignment.application.payload as ApplicationWizardValues;
+  const machineExists = (payload.machines ?? []).some((m) => m.id === machineId);
+  if (!machineExists) {
+    return NextResponse.json({ error: "Mesin tidak ditemukan" }, { status: 404 });
+  }
+
+  const machines = (payload.machines ?? []).filter((m) => m.id !== machineId);
+  await db.application.update({
+    where: { id: assignment.applicationId },
+    data: { payload: { ...payload, machines } },
+  });
+
+  const decisions = machineVerificationsSchema.parse(assignment.machineVerifications ?? {});
+  delete decisions[machineId];
+  await db.assignment.update({
+    where: { id: assignment.id },
+    data: { machineVerifications: decisions },
+  });
+
+  return NextResponse.json({ data: { id: machineId } });
+}
