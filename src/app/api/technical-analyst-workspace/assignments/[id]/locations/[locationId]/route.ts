@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
-import { getServerSession } from "@/lib/get-session";
+import { requireTechnicalAnalystSession } from "@/lib/require-technical-analyst-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { composeLocationAddress } from "@/modules/shared/schema";
 
@@ -17,11 +17,9 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string; locationId: string }> },
 ) {
-  const session = await getServerSession();
-  const technicalAnalystId = session?.user.id;
-  if (!technicalAnalystId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { session, error } = await requireTechnicalAnalystSession();
+  if (error) return error;
+  const technicalAnalystId = session.user.id;
 
   const { id, locationId } = await params;
   const visit = await db.locationVisit.findUnique({

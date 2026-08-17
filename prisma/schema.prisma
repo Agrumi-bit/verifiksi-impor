@@ -595,6 +595,21 @@ model Assignment {
   signaturePath String?
   signatureDate DateTime?
 
+  // Project Manager's review of this assignment's own report (Laporan Survey
+  // for scheduleType "survey", Laporan Verifikasi for "dokumen", Laporan
+  // Teknis for "technical") — separate from Surat Tugas (letterStatus) and
+  // from the role's own COMPLETED decision. Null until the underlying report
+  // is actually ready for PM review; readiness is computed at read time
+  // (project-manager-workspace), never a stored "ready" flag.
+  pmReviewStatus PmReviewStatus?
+  pmReviewNote   String?
+  pmReviewedAt   DateTime?
+
+  // Surat Tugas rejection reason — letterStatus itself has no REJECTED value
+  // (DRAFT/PENDING/APPROVED); a PM reject reverts letterStatus to DRAFT
+  // (kicks back to Customer Relation) and records why here.
+  letterReviewNote String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -612,6 +627,12 @@ enum AssignmentLetterStatus {
   DRAFT
   PENDING
   APPROVED
+}
+
+enum PmReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum LocationVisitStatus {
@@ -696,4 +717,51 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+// Single-row config — admin edits the copy of the printable Surat Tugas
+// (assignment letter) rendered by Customer Relation and Project Manager
+// Workspace, instead of it being hardcoded JSX. Always read/written via the
+// fixed id below (upsert-on-read if the row doesn't exist yet).
+model SuratTugasTemplate {
+  id String @id @default("surat-tugas")
+
+  // When set, the uploaded image replaces the org name/subtitle text block in the letterhead.
+  headerImagePath String?
+  orgName         String @default("PT Tribhakti Inspektama")
+  orgSubtitle     String @default("Laboratory & Integrated Services")
+  letterTitle     String @default("SURAT TUGAS")
+  nomorLabel      String @default("Nomor")
+  // Document-control box shown top-right of the letterhead (ISO/QHSE-style controlled
+  // document metadata) — all optional, box is hidden entirely when all four are empty.
+  docNumberLabel    String @default("No. Dokumen")
+  docNumber         String @default("")
+  docRevisionLabel  String @default("No. Terbitan")
+  docRevision       String @default("")
+  docAmendmentLabel String @default("No. Revisi")
+  docAmendment      String @default("")
+  docEffectiveLabel String @default("Berlaku Mulai")
+  docEffectiveDate  String @default("")
+  openingSentence String @default("Yang bertanda tangan di bawah ini, Customer Relation Workspace, dengan ini menugaskan:")
+  namaLabel       String @default("Nama")
+  peranLabel      String @default("Peran")
+  assignmentPrefix String @default("Untuk melaksanakan")
+  assignmentSuffix String @default("pada:")
+  perusahaanLabel String @default("Perusahaan")
+  idAplikasiLabel String @default("ID Aplikasi")
+  fasilitasLabel  String @default("Fasilitas")
+  tanggalLabel    String @default("Tanggal Pelaksanaan")
+  closingSentence String @default("Demikian surat tugas ini dibuat untuk dilaksanakan dengan penuh tanggung jawab.")
+  draftNoticeText String @default("Dokumen ini masih berupa draft dan menunggu persetujuan Project Manager sebelum berlaku resmi.")
+  signatureCity   String @default("Jakarta")
+  signerLabel     String @default("Customer Relation")
+  // When set, the uploaded image replaces the "city, date" + signer name text block.
+  footerImagePath String?
+  // Optional confidentiality/distribution notice printed above the signature block —
+  // supports multiple lines. Hidden entirely when empty.
+  confidentialityNotice String @default("")
+
+  updatedAt DateTime @updatedAt
+
+  @@map("surat_tugas_template")
 }

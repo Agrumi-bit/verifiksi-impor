@@ -10,7 +10,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/form/form-field";
 import { authClient } from "@/lib/auth-client";
+import { ROLE_HOME, WORKSPACE_ACCESS, ADMIN_ONLY_ROLES } from "@/modules/users/workspace-routes";
+import type { Role } from "@/modules/users/roles";
 import { loginSchema, type LoginValues } from "../schema";
+
+/** A logged-in-as role is only allowed to land where `src/proxy.ts` will actually let them stay — prevents an `?redirect=` param from sending a user somewhere proxy immediately bounces them back out of. */
+function isAllowedForRole(pathname: string, role: Role): boolean {
+  const workspace = WORKSPACE_ACCESS.find((w) => pathname === w.prefix || pathname.startsWith(`${w.prefix}/`));
+  if (workspace) return workspace.roles.includes(role);
+  if (pathname === "/login" || pathname === "/no-workspace") return true;
+  return ADMIN_ONLY_ROLES.includes(role);
+}
 
 export function LoginForm() {
   const router = useRouter();
@@ -42,22 +52,12 @@ export function LoginForm() {
       return;
     }
 
+    const role = (data?.user as { role?: string } | undefined)?.role as Role | undefined;
+    const defaultRedirect = role ? ROLE_HOME[role] : "/login";
     const explicitRedirect = searchParams.get("redirect");
-    const role = (data?.user as { role?: string } | undefined)?.role;
-    const defaultRedirect =
-      role === "PERUSAHAAN"
-        ? "/company-workspace"
-        : role === "SURVEYOR"
-          ? "/surveyor-workspace"
-          : role === "VERIFIKATOR"
-            ? "/verifikator-workspace"
-            : role === "CUSTOMER_RELATIONSHIP"
-              ? "/customer-relation-workspace"
-              : role === "TECHNICAL_ANALYST"
-                ? "/technical-analyst-workspace"
-                : "/";
+    const target = explicitRedirect && role && isAllowedForRole(explicitRedirect, role) ? explicitRedirect : defaultRedirect;
 
-    router.push(explicitRedirect ?? defaultRedirect);
+    router.push(target);
     router.refresh();
   }
 

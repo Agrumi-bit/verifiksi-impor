@@ -6,6 +6,11 @@ import { toast } from "sonner";
 import { X } from "lucide-react";
 
 import { SCHEDULE_TYPE_DEFS } from "../status";
+import { useSuratTugasTemplate } from "@/modules/surat-tugas-template/use-template";
+
+function fileHref(path: string): string {
+  return `/api/files?path=${encodeURIComponent(path)}`;
+}
 
 type Schedule = {
   id: string;
@@ -50,6 +55,7 @@ export function SuratTugasModal({ applicationId, schedule, onClose, onChanged }:
     },
   });
 
+  const { data: template } = useSuratTugasTemplate();
   const def = SCHEDULE_TYPE_DEFS[schedule.scheduleType];
   const letter = LETTER_STATUS_LABEL[schedule.letterStatus];
   const isDraft = schedule.letterStatus === "DRAFT";
@@ -119,65 +125,123 @@ export function SuratTugasModal({ applicationId, schedule, onClose, onChanged }:
                 DRAFT
               </div>
             )}
-            <div className="mb-5 text-center">
-              <div className="text-[13px] font-extrabold tracking-[0.03em]">LEMBAGA VERIFIKASI INDUSTRI</div>
-              <div className="text-[11px] text-[#8a7565]">Direktorat Verifikasi &amp; Kepatuhan</div>
-              <div className="mt-2 border-b-2 border-[#20180f]" />
+            <div className="mb-3.5 flex items-start justify-between gap-4 border-b-2 border-[#20180f] pb-3">
+              {template?.headerImagePath ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={fileHref(template.headerImagePath)} alt={template.orgName} className="max-h-16 object-contain" />
+              ) : (
+                <div>
+                  <div className="text-[13px] font-extrabold tracking-[0.03em]">{template?.orgName ?? "PT Tribhakti Inspektama"}</div>
+                  <div className="text-[10px] text-[#8a7565]">{template?.orgSubtitle ?? "Laboratory & Integrated Services"}</div>
+                </div>
+              )}
+              {template && (template.docNumber || template.docRevision || template.docAmendment || template.docEffectiveDate) && (
+                <table className="shrink-0 border-collapse text-[9.5px]">
+                  <tbody>
+                    {template.docNumber && (
+                      <tr>
+                        <td className="border border-[#e0662e] bg-[#e0662e] px-2 py-0.75 font-bold text-white">{template.docNumberLabel}</td>
+                        <td className="border border-[#e8dccd] px-2 py-0.75">{template.docNumber}</td>
+                      </tr>
+                    )}
+                    {template.docRevision && (
+                      <tr>
+                        <td className="border border-[#e0662e] bg-[#e0662e] px-2 py-0.75 font-bold text-white">{template.docRevisionLabel}</td>
+                        <td className="border border-[#e8dccd] px-2 py-0.75">{template.docRevision}</td>
+                      </tr>
+                    )}
+                    {template.docAmendment && (
+                      <tr>
+                        <td className="border border-[#e0662e] bg-[#e0662e] px-2 py-0.75 font-bold text-white">{template.docAmendmentLabel}</td>
+                        <td className="border border-[#e8dccd] px-2 py-0.75">{template.docAmendment}</td>
+                      </tr>
+                    )}
+                    {template.docEffectiveDate && (
+                      <tr>
+                        <td className="border border-[#e0662e] bg-[#e0662e] px-2 py-0.75 font-bold text-white">{template.docEffectiveLabel}</td>
+                        <td className="border border-[#e8dccd] px-2 py-0.75">{template.docEffectiveDate}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              )}
             </div>
-            <div className="mb-1 text-center text-[14px] font-extrabold underline">SURAT TUGAS</div>
-            <div className="mb-5 text-center text-[11.5px]">Nomor: {schedule.letterNumber ?? "—"}</div>
+            <div className="mb-4 bg-[#20180f] px-3 py-1.5 text-center text-[12px] font-extrabold uppercase text-white">
+              {template?.letterTitle ?? "SURAT TUGAS"}
+            </div>
+            <div className="mb-5 text-[11.5px]">
+              {template?.nomorLabel ?? "Nomor"}: {schedule.letterNumber ?? "—"}
+            </div>
             <div className="mb-3.5">
-              Yang bertanda tangan di bawah ini, Customer Relation Workspace, dengan ini menugaskan:
+              {template?.openingSentence ?? "Yang bertanda tangan di bawah ini, Customer Relation Workspace, dengan ini menugaskan:"}
             </div>
             <table className="mb-3.5 w-full border-collapse">
               <tbody>
                 <tr>
-                  <td className="w-32.5 py-0.5 align-top">Nama</td>
+                  <td className="w-32.5 py-0.5 align-top">{template?.namaLabel ?? "Nama"}</td>
                   <td className="align-top">: {schedule.person}</td>
                 </tr>
                 <tr>
-                  <td className="py-0.5 align-top">Peran</td>
+                  <td className="py-0.5 align-top">{template?.peranLabel ?? "Peran"}</td>
                   <td className="align-top">: {def.label}</td>
                 </tr>
               </tbody>
             </table>
             <div className="mb-3.5">
-              Untuk melaksanakan {def.label}
-              {schedule.facility ? ` (${schedule.facility})` : ""} pada:
+              {template?.assignmentPrefix ?? "Untuk melaksanakan"} {def.label}
+              {schedule.facility ? ` (${schedule.facility})` : ""} {template?.assignmentSuffix ?? "pada:"}
             </div>
             <table className="mb-3.5 w-full border-collapse">
               <tbody>
                 <tr>
-                  <td className="w-32.5 py-0.5 align-top">Perusahaan</td>
+                  <td className="w-32.5 py-0.5 align-top">{template?.perusahaanLabel ?? "Perusahaan"}</td>
                   <td className="align-top">: {application?.company ?? "—"}</td>
                 </tr>
                 <tr>
-                  <td className="py-0.5 align-top">ID Aplikasi</td>
+                  <td className="py-0.5 align-top">{template?.idAplikasiLabel ?? "ID Aplikasi"}</td>
                   <td className="align-top">: {application?.applicationNumber ?? "—"}</td>
                 </tr>
                 {schedule.facility && (
                   <tr>
-                    <td className="py-0.5 align-top">Fasilitas</td>
+                    <td className="py-0.5 align-top">{template?.fasilitasLabel ?? "Fasilitas"}</td>
                     <td className="align-top">: {schedule.facility}</td>
                   </tr>
                 )}
                 <tr>
-                  <td className="py-0.5 align-top">Tanggal Pelaksanaan</td>
+                  <td className="py-0.5 align-top">{template?.tanggalLabel ?? "Tanggal Pelaksanaan"}</td>
                   <td className="align-top">: {fmtDate(schedule.date)}</td>
                 </tr>
               </tbody>
             </table>
-            <div className="mb-3.5">Demikian surat tugas ini dibuat untuk dilaksanakan dengan penuh tanggung jawab.</div>
+            <div className="mb-3.5">
+              {template?.closingSentence ?? "Demikian surat tugas ini dibuat untuk dilaksanakan dengan penuh tanggung jawab."}
+            </div>
             {!isApproved && (
               <div className="mb-5 rounded-md border border-[#e8d29a] bg-[#fdf0d5] p-2.5 text-[11px] text-[#8a6a2f]">
-                Dokumen ini masih berupa draft dan menunggu persetujuan Project Manager sebelum berlaku resmi.
+                {template?.draftNoticeText ?? "Dokumen ini masih berupa draft dan menunggu persetujuan Project Manager sebelum berlaku resmi."}
               </div>
             )}
-            <div className="text-right">
-              <div>Jakarta, {new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</div>
-              <div className="h-12.5" />
-              <div className="font-bold">Customer Relation</div>
-            </div>
+            {template?.footerImagePath ? (
+              <div className="text-right">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={fileHref(template.footerImagePath)} alt={template.signerLabel} className="ml-auto max-h-24 object-contain" />
+              </div>
+            ) : (
+              <div className="text-right">
+                <div>
+                  {template?.signatureCity ?? "Jakarta"}, {new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                </div>
+                <div className="h-12.5" />
+                <div className="font-bold">{template?.signerLabel ?? "Customer Relation"}</div>
+              </div>
+            )}
+            {template?.confidentialityNotice && (
+              <div className="mt-6 border-t border-[#f0ded0] pt-2.5 text-center text-[9px] italic text-[#a68f80]">
+                {template.confidentialityNotice.split("\n").map((line, i) => (
+                  <div key={i}>{line}</div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

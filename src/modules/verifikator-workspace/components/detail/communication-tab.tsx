@@ -25,18 +25,18 @@ function fmtDateTime(value: string): string {
   return new Date(value).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-type Props = { assignmentId: string };
+type Props = { assignmentId: string; basePath?: string };
 
-export function CommunicationTab({ assignmentId }: Props) {
+export function CommunicationTab({ assignmentId, basePath = "/api/verifikator-workspace" }: Props) {
   const queryClient = useQueryClient();
   const [text, setText] = useState("");
   const [isSending, setIsSending] = useState(false);
 
-  const queryKey = ["verifikator-workspace", "assignments", assignmentId, "messages"];
+  const queryKey = [basePath, "assignments", assignmentId, "messages"];
   const { data, isLoading } = useQuery({
     queryKey,
     queryFn: async () => {
-      const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/messages`);
+      const response = await fetch(`${basePath}/assignments/${assignmentId}/messages`);
       if (!response.ok) throw new Error("Gagal memuat pesan");
       const json = (await response.json()) as { data: MessageData[] };
       return json.data;
@@ -48,7 +48,7 @@ export function CommunicationTab({ assignmentId }: Props) {
   async function send() {
     if (!text.trim()) return;
     setIsSending(true);
-    const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/messages`, {
+    const response = await fetch(`${basePath}/assignments/${assignmentId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),

@@ -97,6 +97,10 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Golongan Tarif Listrik",
         href: "/system-configuration/electricity-tariff",
       },
+      {
+        label: "Template Surat Tugas",
+        href: "/system-configuration/surat-tugas-template",
+      },
       { label: "Notification & Communication" },
       { label: "Application Setting" },
     ],

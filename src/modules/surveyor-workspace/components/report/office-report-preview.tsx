@@ -191,7 +191,12 @@ type Props = {
   assignmentId: string;
   locationId: string;
   /** API namespace this report is read from — lets other workspaces (e.g. Verifikator) reuse this same read-only template. */
-  basePath?: "/api/surveyor-workspace" | "/api/verifikator-workspace" | "/api/company-workspace" | "/api/technical-analyst-workspace";
+  basePath?:
+    | "/api/surveyor-workspace"
+    | "/api/verifikator-workspace"
+    | "/api/company-workspace"
+    | "/api/technical-analyst-workspace"
+    | "/api/project-manager-workspace";
   /** "Back to Assignment" destination — defaults to the Surveyor Workspace assignment page. */
   backHref?: string;
 };

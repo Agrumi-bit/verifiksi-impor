@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
-import { getServerSession } from "@/lib/get-session";
+import { requireTechnicalAnalystSession } from "@/lib/require-technical-analyst-session";
 import { overallTechnicalStatus, technicalAnalysisDataSchema } from "@/modules/technical-analyst-workspace/schema";
 
 export async function GET() {
-  const session = await getServerSession();
-  const technicalAnalystId = session?.user.id;
-  if (!technicalAnalystId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { session, error } = await requireTechnicalAnalystSession();
+  if (error) return error;
+  const technicalAnalystId = session.user.id;
 
   const assignments = await db.assignment.findMany({
     where: { technicalReviewerId: technicalAnalystId },

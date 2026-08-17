@@ -6,6 +6,7 @@ export const STORAGE_NAMESPACES = [
   "signatures",
   "photos",
   "qrcode",
+  "templates",
   "temporary",
 ] as const;
 

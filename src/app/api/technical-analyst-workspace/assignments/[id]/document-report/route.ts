@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
-import { getServerSession } from "@/lib/get-session";
+import { requireTechnicalAnalystSession } from "@/lib/require-technical-analyst-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
 import { getDocumentMeta } from "@/modules/company/document-versions";
@@ -40,11 +40,9 @@ import {
  * once the verifikator has finished (`COMPLETED`) — mid-review decisions aren't a finished report yet.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession();
-  const technicalAnalystId = session?.user.id;
-  if (!technicalAnalystId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { session, error } = await requireTechnicalAnalystSession();
+  if (error) return error;
+  const technicalAnalystId = session.user.id;
 
   const { id } = await params;
   const technicalAssignment = await db.assignment.findUnique({

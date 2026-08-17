@@ -28,6 +28,7 @@ Directory layout under `storage/` (mirrored under `STORAGE_NAMESPACES` in [types
   /signatures
   /photos
   /qrcode
+  /templates
   /temporary
 ```
 

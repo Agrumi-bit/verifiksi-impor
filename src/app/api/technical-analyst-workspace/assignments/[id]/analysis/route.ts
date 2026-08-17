@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
-import { getServerSession } from "@/lib/get-session";
+import { requireTechnicalAnalystSession } from "@/lib/require-technical-analyst-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import {
   buildCapacityRows,
@@ -23,11 +23,9 @@ async function findOwnedAssignment(assignmentNumber: string, technicalAnalystId:
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession();
-  const technicalAnalystId = session?.user.id;
-  if (!technicalAnalystId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { session, error } = await requireTechnicalAnalystSession();
+  if (error) return error;
+  const technicalAnalystId = session.user.id;
 
   const { id } = await params;
   const assignment = await findOwnedAssignment(id, technicalAnalystId);
@@ -61,11 +59,9 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession();
-  const technicalAnalystId = session?.user.id;
-  if (!technicalAnalystId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { session, error } = await requireTechnicalAnalystSession();
+  if (error) return error;
+  const technicalAnalystId = session.user.id;
 
   const { id } = await params;
   const assignment = await findOwnedAssignment(id, technicalAnalystId);
