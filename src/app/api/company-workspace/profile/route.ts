@@ -178,6 +178,7 @@ export async function PATCH(request: Request) {
       where: { id: companyId },
       data: {
         npwpNumber: v.npwpNumber,
+        npwpIssuer: v.npwpIssuer,
         npwpDocumentPath: v.npwpDocumentPath,
         companyAge: v.companyAge,
         taxProofs: v.companyAge === "OVER_3" ? v.taxProofs : [],

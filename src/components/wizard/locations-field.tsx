@@ -14,6 +14,7 @@ import { SelectableCard } from "@/components/form/selectable-card";
 import { FileUploadField } from "@/components/form/file-upload-field";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, TextInput } from "@/modules/company/components/wizard-ui";
+import { RegionCascadeFields } from "./region-cascade-fields";
 import {
   LOCATION_TYPES,
   WAREHOUSE_REGISTRATION_TYPES,
@@ -45,6 +46,16 @@ const WAREHOUSE_REGISTRATION_LABELS: Record<
 
 type FormWithLocations = FieldValues & { locations: LocationValues[] };
 
+/** Matches the location schema's own address field names 1:1, so it can be copied straight across with `form.setValue`. */
+export type CompanyAddressValues = {
+  address: string;
+  addressDesa: string;
+  addressKecamatan: string;
+  city: string;
+  province: string;
+  postalCode: string;
+};
+
 type LocationItemProps<T extends FormWithLocations> = {
   form: UseFormReturn<T>;
   index: number;
@@ -52,6 +63,7 @@ type LocationItemProps<T extends FormWithLocations> = {
   canRemove: boolean;
   availableTypes: readonly LocationType[];
   typeHint?: string;
+  companyAddress?: CompanyAddressValues;
 };
 
 export function LocationItemFields<T extends FormWithLocations>({
@@ -61,11 +73,23 @@ export function LocationItemFields<T extends FormWithLocations>({
   canRemove,
   availableTypes,
   typeHint,
+  companyAddress,
 }: LocationItemProps<T>) {
-  const { control, register, formState } = form;
+  const { control, register, formState, setValue } = form;
   const locationErrors = (formState.errors.locations as { message?: string }[] | undefined)?.[
     index
   ] as Record<string, { message?: string } | undefined> | undefined;
+
+  function applyCompanyAddress() {
+    if (!companyAddress) return;
+    const options = { shouldValidate: true, shouldDirty: true } as const;
+    setValue(`locations.${index}.address` as Path<T>, companyAddress.address as never, options);
+    setValue(`locations.${index}.addressDesa` as Path<T>, companyAddress.addressDesa as never, options);
+    setValue(`locations.${index}.addressKecamatan` as Path<T>, companyAddress.addressKecamatan as never, options);
+    setValue(`locations.${index}.city` as Path<T>, companyAddress.city as never, options);
+    setValue(`locations.${index}.province` as Path<T>, companyAddress.province as never, options);
+    setValue(`locations.${index}.postalCode` as Path<T>, companyAddress.postalCode as never, options);
+  }
 
   const locationType = useWatch({
     control,
@@ -122,9 +146,17 @@ export function LocationItemFields<T extends FormWithLocations>({
       </Field>
 
       <div className="flex flex-col gap-3">
-        <h3 className="text-[11px] font-bold uppercase tracking-wide text-[#a68f80]">
-          Address Information
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-[11px] font-bold uppercase tracking-wide text-[#a68f80]">
+            Address Information
+          </h3>
+          {companyAddress && (
+            <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-[#594138]">
+              <Checkbox onCheckedChange={(next) => next && applyCompanyAddress()} />
+              Sama dengan alamat perusahaan
+            </label>
+          )}
+        </div>
         <Field label="Jalan" required error={locationErrors?.address?.message}>
           <TextInput
             variant="white"
@@ -132,31 +164,21 @@ export function LocationItemFields<T extends FormWithLocations>({
             {...register(`locations.${index}.address` as Path<T>)}
           />
         </Field>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Desa / Kelurahan" required error={locationErrors?.addressDesa?.message}>
-            <TextInput variant="white" placeholder="e.g. Sukaluyu" {...register(`locations.${index}.addressDesa` as Path<T>)} />
-          </Field>
-          <Field label="Kecamatan" required error={locationErrors?.addressKecamatan?.message}>
-            <TextInput
-              variant="white"
-              placeholder="e.g. Cibeunying Kaler"
-              {...register(`locations.${index}.addressKecamatan` as Path<T>)}
-            />
-          </Field>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Kota / Kabupaten" required error={locationErrors?.city?.message}>
-            <TextInput variant="white" placeholder="e.g. Cimahi" {...register(`locations.${index}.city` as Path<T>)} />
-          </Field>
-          <Field label="Provinsi" required error={locationErrors?.province?.message}>
-            <TextInput variant="white" placeholder="e.g. Jawa Barat" {...register(`locations.${index}.province` as Path<T>)} />
-          </Field>
-        </div>
-        <div className="sm:w-1/2 sm:pr-1.5">
-          <Field label="Kode Pos" required error={locationErrors?.postalCode?.message}>
-            <TextInput variant="white" placeholder="e.g. 40535" {...register(`locations.${index}.postalCode` as Path<T>)} />
-          </Field>
-        </div>
+        <RegionCascadeFields
+          form={form}
+          provinceFieldName={`locations.${index}.province` as Path<T>}
+          cityFieldName={`locations.${index}.city` as Path<T>}
+          districtFieldName={`locations.${index}.addressKecamatan` as Path<T>}
+          subdistrictFieldName={`locations.${index}.addressDesa` as Path<T>}
+          postalCodeFieldName={`locations.${index}.postalCode` as Path<T>}
+          errors={{
+            province: locationErrors?.province?.message,
+            city: locationErrors?.city?.message,
+            district: locationErrors?.addressKecamatan?.message,
+            subdistrict: locationErrors?.addressDesa?.message,
+            postalCode: locationErrors?.postalCode?.message,
+          }}
+        />
       </div>
 
       <Field
@@ -396,12 +418,15 @@ type LocationsFieldProps<T extends FormWithLocations> = {
   form: UseFormReturn<T>;
   availableTypes?: readonly LocationType[];
   typeHint?: string;
+  /** When provided, each location card gets a "Sama dengan alamat perusahaan" checkbox that copies these values in. */
+  companyAddress?: CompanyAddressValues;
 };
 
 export function LocationsField<T extends FormWithLocations>({
   form,
   availableTypes = LOCATION_TYPES,
   typeHint,
+  companyAddress,
 }: LocationsFieldProps<T>) {
   const { control, formState } = form;
   const { fields, append, remove } = useFieldArray({
@@ -428,6 +453,7 @@ export function LocationsField<T extends FormWithLocations>({
           canRemove={fields.length > 1}
           availableTypes={availableTypes}
           typeHint={typeHint}
+          companyAddress={companyAddress}
         />
       ))}
 

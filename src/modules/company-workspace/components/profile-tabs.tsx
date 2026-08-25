@@ -63,6 +63,7 @@ export type CompanyProfileData = {
   skDate: string | null;
   skDocumentPath: string | null;
   npwpNumber: string | null;
+  npwpIssuer: string | null;
   npwpDocumentPath: string | null;
   companyAge: "OVER_3" | "UNDER_3" | null;
   taxProofs: TaxProofEntryValues[];
@@ -153,6 +154,7 @@ function toDefaultValues(data: CompanyProfileData): CompanyWizardValues {
     skDate: data.skDate?.slice(0, 10) ?? "",
     skDocumentPath: data.skDocumentPath ?? "",
     npwpNumber: data.npwpNumber ?? "",
+    npwpIssuer: data.npwpIssuer ?? "",
     npwpDocumentPath: data.npwpDocumentPath ?? "",
     companyAge: (data.companyAge ?? "OVER_3") as CompanyWizardValues["companyAge"],
     taxProofs: data.taxProofs.length > 0 ? data.taxProofs : createEmptyTaxProofs(),

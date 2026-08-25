@@ -20,8 +20,9 @@ export function Step4Pajak({ form }: { form: UseFormReturn<CompanyWizardValues> 
   const [sktOpen, setSktOpen] = useState(true);
 
   const npwpNumber = watch("npwpNumber");
+  const npwpIssuer = watch("npwpIssuer");
   const npwpDocumentPath = watch("npwpDocumentPath");
-  const npwpSaved = Boolean(npwpNumber && npwpDocumentPath);
+  const npwpSaved = Boolean(npwpNumber && npwpIssuer && npwpDocumentPath);
 
   const companyAge = watch("companyAge");
   const { fields: taxFields } = useFieldArray({ control, name: "taxProofs" });
@@ -46,6 +47,11 @@ export function Step4Pajak({ form }: { form: UseFormReturn<CompanyWizardValues> 
         <Field label="NPWP Number" required error={errors.npwpNumber?.message} hint="15-16 digit nomor NPWP perusahaan.">
           <TextInput variant="white" placeholder="e.g. 01.234.567.8-901.000" {...register("npwpNumber")} />
         </Field>
+        <div className="mt-3.5">
+          <Field label="Lembaga Penerbit" required error={errors.npwpIssuer?.message} hint="Kantor Pelayanan Pajak (KPP) penerbit NPWP.">
+            <TextInput variant="white" placeholder="e.g. KPP Pratama Jakarta Barat" {...register("npwpIssuer")} />
+          </Field>
+        </div>
         <div className="mt-3.5">
           <Field label="Upload Document" required error={errors.npwpDocumentPath?.message}>
             <Controller

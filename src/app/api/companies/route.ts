@@ -71,6 +71,7 @@ export async function POST(request: Request) {
       skDate: new Date(values.skDate),
       skDocumentPath: values.skDocumentPath,
       npwpNumber: values.npwpNumber,
+      npwpIssuer: values.npwpIssuer,
       npwpDocumentPath: values.npwpDocumentPath,
       companyAge: values.companyAge,
       taxProofs: values.companyAge === "OVER_3" ? values.taxProofs : [],

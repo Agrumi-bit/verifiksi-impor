@@ -225,6 +225,7 @@ model Company {
   skDocumentPath String?
 
   npwpNumber       String?
+  npwpIssuer       String?
   npwpDocumentPath String?
 
   companyAge      String?
@@ -845,4 +846,33 @@ model SmtpSettings {
   updatedAt     DateTime @updatedAt
 
   @@map("smtp_settings")
+}
+
+// Indonesian administrative region reference data (province -> city/regency -> district
+// -> subdistrict/village), one row per subdistrict + its postal code. Seeded once from
+// https://github.com/teguh02/Wilayah-Indonesia-Beserta-Kode-Pos (see scripts/seed-regions.mjs)
+// — this is read-only reference data, not admin-editable master data, so it has no
+// MasterDataStatus/active-inactive toggle like the other master-data models. Flat and
+// denormalized (not four linked tables) because every real consumer is a cascading-select
+// UI that only ever filters by the parent id at each level, never joins across levels.
+model IndonesiaRegion {
+  id              String @id @default(cuid())
+  provinceId      Int
+  provinceName    String
+  cityId          Int
+  cityName        String
+  districtId      Int
+  districtName    String
+  // Not unique — a small number of subdistricts (~160 in the source data) legitimately
+  // have more than one postal code, so this is one row per (subdistrict, postal code) pair,
+  // matching the source `full.csv` exactly.
+  subdistrictId   Int
+  subdistrictName String
+  postalCode      String
+
+  @@index([provinceId])
+  @@index([cityId])
+  @@index([districtId])
+  @@index([subdistrictId])
+  @@map("indonesia_region")
 }

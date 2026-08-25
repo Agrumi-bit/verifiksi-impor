@@ -55,6 +55,7 @@ type CompanyDetailData = {
   skNumber: string | null;
   skDate: string | null;
   npwpNumber: string | null;
+  npwpIssuer: string | null;
   companyAge: string | null;
   taxProofs: TaxProofEntryValues[];
   sktNumber: string | null;
@@ -353,6 +354,7 @@ export function CompanyDetail({ id }: Props) {
             label="NPWP"
             fields={[
               { label: "Nomor NPWP", value: data.npwpNumber || "-" },
+              { label: "Lembaga Penerbit", value: data.npwpIssuer || "-" },
               { label: "Usia Perusahaan", value: data.companyAge ? AGE_LABEL[data.companyAge] : "-" },
             ]}
           />

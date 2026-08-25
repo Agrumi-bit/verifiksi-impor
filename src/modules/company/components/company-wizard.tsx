@@ -159,7 +159,19 @@ export function CompanyWizard() {
               {currentStep === 2 && <Step2Pic form={form} />}
               {currentStep === 3 && <Step3Legal form={form} />}
               {currentStep === 4 && <Step4Pajak form={form} />}
-              {currentStep === 5 && <LocationsField form={form} />}
+              {currentStep === 5 && (
+                <LocationsField
+                  form={form}
+                  companyAddress={{
+                    address: form.watch("addressJalan"),
+                    addressDesa: form.watch("addressDesa"),
+                    addressKecamatan: form.watch("addressKecamatan"),
+                    city: form.watch("addressKota"),
+                    province: form.watch("addressProvinsi"),
+                    postalCode: form.watch("addressKodePos"),
+                  }}
+                />
+              )}
               {currentStep === 6 && <Step6Review form={form} onEditStep={goToStep} />}
             </div>
 

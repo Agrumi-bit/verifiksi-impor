@@ -113,6 +113,7 @@ export type TaxProofEntryValues = z.infer<typeof taxProofEntrySchema>;
 
 export const companyTaxSchema = z.object({
   npwpNumber: requiredString("Nomor NPWP wajib diisi"),
+  npwpIssuer: requiredString("Lembaga penerbit NPWP wajib diisi"),
   npwpDocumentPath: requiredString("Dokumen NPWP wajib diunggah"),
   companyAge: z.enum(COMPANY_AGES, { message: "Pilih usia perusahaan" }),
   taxProofs: z.array(taxProofEntrySchema).default([]),
@@ -162,7 +163,7 @@ export const COMPANY_STEP_FIELD_NAMES: Record<number, (keyof CompanyWizardValues
     "skDate",
     "skDocumentPath",
   ],
-  4: ["npwpNumber", "npwpDocumentPath", "companyAge"],
+  4: ["npwpNumber", "npwpIssuer", "npwpDocumentPath", "companyAge"],
   5: ["locations"],
   6: [],
 };

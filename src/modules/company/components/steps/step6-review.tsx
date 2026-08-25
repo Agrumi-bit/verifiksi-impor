@@ -96,6 +96,7 @@ export function Step6Review({
 
       <ReviewCard title="Pajak" onEdit={() => onEditStep(4)}>
         <Row label="NPWP" value={values.npwpNumber} />
+        <Row label="Lembaga Penerbit NPWP" value={values.npwpIssuer} />
         <Row label="Usia Perusahaan" value={values.companyAge === "OVER_3" ? "Lebih dari 3 Tahun" : "Kurang dari 3 Tahun"} />
         {values.companyAge === "OVER_3" &&
           (values.taxProofs ?? []).map((tp, i) => (
