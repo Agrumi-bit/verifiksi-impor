@@ -113,6 +113,10 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "SMTP Email",
         href: "/system-configuration/smtp",
       },
+      {
+        label: "Data Wilayah",
+        href: "/system-configuration/regions",
+      },
       { label: "Notification & Communication" },
       { label: "Application Setting" },
     ],

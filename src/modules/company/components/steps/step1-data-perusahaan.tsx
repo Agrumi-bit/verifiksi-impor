@@ -4,6 +4,7 @@ import { Controller, type UseFormReturn } from "react-hook-form";
 
 import { Field, TextInput, OptionCard, SimpleOptionCard } from "../wizard-ui";
 import { API_TYPES, COMPANY_LEGAL_TYPES, INVESTMENT_STATUSES, type CompanyWizardValues } from "../../schema";
+import { RegionCascadeFields } from "@/components/wizard/region-cascade-fields";
 
 const API_TYPE_DESC: Record<(typeof API_TYPES)[number], string> = {
   "API-P": "Angka Pengenal Impor Produsen",
@@ -106,29 +107,21 @@ export function Step1DataPerusahaan({ form }: { form: UseFormReturn<CompanyWizar
         <TextInput placeholder="Nama jalan, nomor, RT/RW" {...register("addressJalan")} />
       </Field>
 
-      <div className="grid grid-cols-2 gap-3.5">
-        <Field label="Desa / Kelurahan" required error={formState.errors.addressDesa?.message}>
-          <TextInput placeholder="Contoh: Sukaluyu" {...register("addressDesa")} />
-        </Field>
-        <Field label="Kecamatan" required error={formState.errors.addressKecamatan?.message}>
-          <TextInput placeholder="Contoh: Cibeunying Kaler" {...register("addressKecamatan")} />
-        </Field>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3.5">
-        <Field label="Kota / Kabupaten" required error={formState.errors.addressKota?.message}>
-          <TextInput placeholder="Contoh: Bandung" {...register("addressKota")} />
-        </Field>
-        <Field label="Provinsi" required error={formState.errors.addressProvinsi?.message}>
-          <TextInput placeholder="Contoh: Jawa Barat" {...register("addressProvinsi")} />
-        </Field>
-      </div>
-
-      <div className="w-1/2 pr-1.75">
-        <Field label="Kode Pos" required error={formState.errors.addressKodePos?.message}>
-          <TextInput placeholder="Contoh: 40122" {...register("addressKodePos")} />
-        </Field>
-      </div>
+      <RegionCascadeFields
+        form={form}
+        provinceFieldName="addressProvinsi"
+        cityFieldName="addressKota"
+        districtFieldName="addressKecamatan"
+        subdistrictFieldName="addressDesa"
+        postalCodeFieldName="addressKodePos"
+        errors={{
+          province: formState.errors.addressProvinsi?.message,
+          city: formState.errors.addressKota?.message,
+          district: formState.errors.addressKecamatan?.message,
+          subdistrict: formState.errors.addressDesa?.message,
+          postalCode: formState.errors.addressKodePos?.message,
+        }}
+      />
 
       <div className="grid grid-cols-2 gap-3.5">
         <Field label="Nomor Perusahaan (Telepon)" required error={formState.errors.companyPhone?.message}>

@@ -248,7 +248,17 @@ function FacilitiesTab({ data }: { data: CompanyProfileData }) {
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
-      <LocationsField form={form} />
+      <LocationsField
+        form={form}
+        companyAddress={{
+          address: data.addressJalan ?? "",
+          addressDesa: data.addressDesa ?? "",
+          addressKecamatan: data.addressKecamatan ?? "",
+          city: data.addressKota ?? "",
+          province: data.addressProvinsi ?? "",
+          postalCode: data.addressKodePos ?? "",
+        }}
+      />
       <div className="flex justify-end border-t border-[#f0ded0] pt-4">
         <Button type="submit" disabled={form.formState.isSubmitting} className="bg-[#e0662e] text-white hover:bg-[#c1361f]">
           {form.formState.isSubmitting ? "Menyimpan..." : "Save Changes"}

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { FieldErrors } from "react-hook-form";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CheckCircle2 } from "lucide-react";
 
@@ -11,7 +12,7 @@ import { CompanyProfileFields } from "@/components/wizard/company-profile-fields
 import { CompanyPickerField } from "./company-picker-field";
 import { LockedCompanyField } from "./locked-company-field";
 import { LegalInformationFields } from "@/components/wizard/legal-information-fields";
-import { LocationsField } from "@/components/wizard/locations-field";
+import { LocationsField, type CompanyAddressValues } from "@/components/wizard/locations-field";
 import { LOCATION_TYPES } from "@/modules/shared/schema";
 import { Step1ApplicationInformation } from "./steps/step1-application-information";
 import { Step5SupportDocument } from "./steps/step5-support-document";
@@ -127,6 +128,38 @@ export function ApplicationWizard({
     verificationType === "VIU"
       ? LOCATION_TYPES.filter((type) => type !== "PABRIK")
       : LOCATION_TYPES;
+
+  // Selected company's own address — not part of the wizard's own form fields, so it's
+  // fetched directly for the "Sama dengan alamat perusahaan" checkbox on the Locations step.
+  const { data: selectedCompany } = useQuery({
+    queryKey: ["companies", companyId, "address"],
+    queryFn: async () => {
+      const response = await fetch(`/api/companies/${companyId}`);
+      if (!response.ok) throw new Error("Gagal memuat alamat perusahaan");
+      const json = (await response.json()) as {
+        data: {
+          addressJalan: string | null;
+          addressDesa: string | null;
+          addressKecamatan: string | null;
+          addressKota: string | null;
+          addressProvinsi: string | null;
+          addressKodePos: string | null;
+        };
+      };
+      return json.data;
+    },
+    enabled: Boolean(companyId),
+  });
+  const companyAddress: CompanyAddressValues | undefined = selectedCompany
+    ? {
+        address: selectedCompany.addressJalan ?? "",
+        addressDesa: selectedCompany.addressDesa ?? "",
+        addressKecamatan: selectedCompany.addressKecamatan ?? "",
+        city: selectedCompany.addressKota ?? "",
+        province: selectedCompany.addressProvinsi ?? "",
+        postalCode: selectedCompany.addressKodePos ?? "",
+      }
+    : undefined;
 
   async function handleSubmitApplication(values: ApplicationWizardValues) {
     setIsSubmitting(true);
@@ -325,6 +358,7 @@ export function ApplicationWizard({
                       ? "VIU hanya memerlukan informasi Kantor dan Gudang"
                       : undefined
                   }
+                  companyAddress={companyAddress}
                 />
               )}
               {!isVki && currentStep === 5 && <Step5SupportDocument form={form} />}
@@ -334,7 +368,7 @@ export function ApplicationWizard({
 
               {isVki && currentStep === 3 && <VkiStep3Legal form={form} />}
               {isVki && currentStep === 4 && <VkiStep4Tax form={form} />}
-              {isVki && currentStep === 5 && <VkiStep5Locations form={form} />}
+              {isVki && currentStep === 5 && <VkiStep5Locations form={form} companyAddress={companyAddress} />}
               {isVki && currentStep === 6 && <VkiStep6SupportDocument form={form} />}
               {isVki && currentStep === 7 && <VkiStep7DataMesin form={form} />}
               {isVki && currentStep === 8 && <VkiStep8Product form={form} />}

@@ -850,11 +850,13 @@ model SmtpSettings {
 
 // Indonesian administrative region reference data (province -> city/regency -> district
 // -> subdistrict/village), one row per subdistrict + its postal code. Seeded once from
-// https://github.com/teguh02/Wilayah-Indonesia-Beserta-Kode-Pos (see scripts/seed-regions.mjs)
-// — this is read-only reference data, not admin-editable master data, so it has no
-// MasterDataStatus/active-inactive toggle like the other master-data models. Flat and
-// denormalized (not four linked tables) because every real consumer is a cascading-select
-// UI that only ever filters by the parent id at each level, never joins across levels.
+// https://github.com/teguh02/Wilayah-Indonesia-Beserta-Kode-Pos (see scripts/seed-regions.mjs),
+// then admin-editable from System Configuration > Data Wilayah (add/edit rows) — no
+// MasterDataStatus/active-inactive toggle like the other master-data models since there's no
+// notion of "inactive" region data. Flat and denormalized (not four linked tables) because
+// every real consumer is a cascading-select UI that only ever filters by the parent id at
+// each level, never joins across levels; admin edits to a province/city/district/subdistrict
+// name cascade to every row sharing that id (see PATCH /api/system-configuration/regions/[id]).
 model IndonesiaRegion {
   id              String @id @default(cuid())
   provinceId      Int
