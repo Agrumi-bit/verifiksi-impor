@@ -17,7 +17,11 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
-CMD ["npx", "prisma", "migrate", "deploy"]
+COPY scripts ./scripts
+RUN npx prisma generate
+# The region seed script skips itself once the table has rows, so it's safe to run on
+# every deploy — see scripts/seed-regions.mjs.
+CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx scripts/seed-regions.mjs"]
 
 FROM base AS runner
 WORKDIR /app

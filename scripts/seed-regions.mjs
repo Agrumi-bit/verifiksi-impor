@@ -1,9 +1,13 @@
-// One-time (re-runnable) seed for the IndonesiaRegion reference table.
+// One-time seed for the IndonesiaRegion reference table, safe to run on every deploy
+// since it skips entirely once the table has rows — region data becomes admin-editable
+// after that (see /system-configuration/regions), so this must never wipe/reseed a
+// populated table or it would clobber those edits.
 // Source: prisma/seed-data/indonesia-regions.csv, a copy of full.csv from
 // https://github.com/teguh02/Wilayah-Indonesia-Beserta-Kode-Pos (province -> city/regency ->
 // district -> subdistrict/village, one row per subdistrict + postal code).
 //
-// Run with: npx tsx --env-file=.env scripts/seed-regions.mjs
+// Run locally with: npx tsx --env-file=.env scripts/seed-regions.mjs
+// Runs automatically in production as part of the migrate container's start command.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -45,8 +49,9 @@ async function main() {
 
   const existing = await db.indonesiaRegion.count();
   if (existing > 0) {
-    console.log(`Clearing ${existing} existing rows before reseeding...`);
-    await db.indonesiaRegion.deleteMany({});
+    console.log(`Table already has ${existing} rows — skipping seed.`);
+    await db.$disconnect();
+    return;
   }
 
   const BATCH_SIZE = 5000;
