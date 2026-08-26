@@ -26,11 +26,13 @@ export async function GET(request: Request) {
   const provinceId = Number(url.searchParams.get("provinceId")) || undefined;
   const cityId = Number(url.searchParams.get("cityId")) || undefined;
   const districtId = Number(url.searchParams.get("districtId")) || undefined;
+  const subdistrictId = Number(url.searchParams.get("subdistrictId")) || undefined;
 
   const where = {
     ...(provinceId ? { provinceId } : {}),
     ...(cityId ? { cityId } : {}),
     ...(districtId ? { districtId } : {}),
+    ...(subdistrictId ? { subdistrictId } : {}),
     ...(search
       ? {
           OR: [
