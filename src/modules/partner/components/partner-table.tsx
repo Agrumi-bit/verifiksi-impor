@@ -23,10 +23,10 @@ type PartnerListItem = {
   contractStartDate: string;
   contractEndDate: string;
   company: { companyName: string; companyType: string };
-  relatedCompanies: string[];
+  relatedCompanies: { id: string; companyName: string }[];
 };
 
-const TABLE_COLUMNS = "1.5fr 1.7fr 0.8fr 1.1fr 0.9fr 0.8fr 0.6fr";
+const TABLE_COLUMNS = "1.5fr 1.7fr 0.8fr 1.1fr 0.9fr 0.8fr 0.9fr";
 
 const TYPE_BADGE: Record<PartnerType, { bg: string; color: string }> = {
   INDUSTRI: { bg: "#e6e9fb", color: "#4a4fb0" },
@@ -231,10 +231,10 @@ export function PartnerTable() {
             <div className="text-[13px] font-bold text-[#2b2420]">{partner.company.companyName}</div>
             <div
               className="text-[12.5px] text-[#4a4038]"
-              title={partner.relatedCompanies.join(", ") || undefined}
+              title={partner.relatedCompanies.map((c) => c.companyName).join(", ") || undefined}
             >
               {partner.relatedCompanies.length > 0 ? (
-                partner.relatedCompanies.join(", ")
+                partner.relatedCompanies.map((c) => c.companyName).join(", ")
               ) : (
                 <span className="text-[#a68f80]">Belum ada relasi</span>
               )}
@@ -262,6 +262,9 @@ export function PartnerTable() {
             <div className="flex items-center gap-2.5">
               <Link href={`/partners/${partner.id}`} className="text-[12.5px] font-semibold text-[#c14a1f]">
                 Detail
+              </Link>
+              <Link href={`/partners/${partner.id}/edit`} className="text-[12.5px] font-semibold text-[#594138]">
+                Edit
               </Link>
               <button
                 type="button"

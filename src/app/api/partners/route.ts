@@ -11,6 +11,7 @@ const createPartnerSchema = z.object({
   contractStartDate: z.string().trim().min(1),
   contractEndDate: z.string().trim().min(1),
   contractDocumentPath: z.string().trim().optional(),
+  relatedCompanyIds: z.array(z.string().trim().min(1)).optional(),
 });
 
 export async function GET(request: Request) {
@@ -23,45 +24,26 @@ export async function GET(request: Request) {
   // Partner Management table, which intentionally still lists everything.
   const ownerCompanyId = searchParams.get("ownerCompanyId");
 
-  const [partners, applications] = await Promise.all([
-    db.partner.findMany({
-      where: {
-        type: type && PARTNER_TYPES.includes(type as (typeof PARTNER_TYPES)[number])
-          ? (type as (typeof PARTNER_TYPES)[number])
-          : undefined,
-        status: status && PARTNER_STATUSES.includes(status as (typeof PARTNER_STATUSES)[number])
-          ? (status as (typeof PARTNER_STATUSES)[number])
-          : undefined,
-        ownerCompanyId: ownerCompanyId || undefined,
-      },
-      include: { company: true },
-      orderBy: { createdAt: "desc" },
-    }),
-    db.application.findMany({
-      where: { companyId: { not: null } },
-      select: { payload: true, company: { select: { companyName: true } } },
-    }),
-  ]);
+  const partners = await db.partner.findMany({
+    where: {
+      type: type && PARTNER_TYPES.includes(type as (typeof PARTNER_TYPES)[number])
+        ? (type as (typeof PARTNER_TYPES)[number])
+        : undefined,
+      status: status && PARTNER_STATUSES.includes(status as (typeof PARTNER_STATUSES)[number])
+        ? (status as (typeof PARTNER_STATUSES)[number])
+        : undefined,
+      ownerCompanyId: ownerCompanyId || undefined,
+    },
+    include: {
+      company: true,
+      // Admin-curated "PERUSAHAAN API-U TERKAIT" — which API-U companies use/relate to this
+      // partner, set explicitly at create time (see POST below), not derived from application data.
+      relatedCompanies: { select: { id: true, companyName: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
 
-  const relatedCompaniesByPartnerId = new Map<string, Set<string>>();
-  for (const application of applications) {
-    const payload = application.payload as { partnerIndustriEntries?: { partnerId?: string; enabled?: boolean }[] } | null;
-    const companyName = application.company?.companyName;
-    if (!companyName) continue;
-    for (const entry of payload?.partnerIndustriEntries ?? []) {
-      if (!entry.enabled || !entry.partnerId) continue;
-      const set = relatedCompaniesByPartnerId.get(entry.partnerId) ?? new Set<string>();
-      set.add(companyName);
-      relatedCompaniesByPartnerId.set(entry.partnerId, set);
-    }
-  }
-
-  const data = partners.map((partner) => ({
-    ...partner,
-    relatedCompanies: Array.from(relatedCompaniesByPartnerId.get(partner.id) ?? []),
-  }));
-
-  return NextResponse.json({ data });
+  return NextResponse.json({ data: partners });
 }
 
 export async function POST(request: Request) {
@@ -90,8 +72,11 @@ export async function POST(request: Request) {
       contractStartDate: new Date(values.contractStartDate),
       contractEndDate: new Date(values.contractEndDate),
       contractDocumentPath: values.contractDocumentPath || null,
+      relatedCompanies: values.relatedCompanyIds?.length
+        ? { connect: values.relatedCompanyIds.map((id) => ({ id })) }
+        : undefined,
     },
-    include: { company: true },
+    include: { company: true, relatedCompanies: { select: { id: true, companyName: true } } },
   });
 
   return NextResponse.json({ data: partner }, { status: 201 });

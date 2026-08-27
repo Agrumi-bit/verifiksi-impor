@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-import { PartnerWizard } from "@/modules/partner/components/partner-wizard";
+import { PartnerForm } from "@/modules/partner/components/partner-form";
 
 export const metadata: Metadata = {
   title: "Tambah Partner — Verifikasi Impor",
 };
 
 export default function NewPartnerPage() {
-  return <PartnerWizard />;
+  return <PartnerForm />;
 }

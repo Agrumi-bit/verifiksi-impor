@@ -95,9 +95,23 @@ export function Step1CompanySync({ form }: Props) {
           </Button>
 
           {notFound && (
-            <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-3.5 text-sm text-destructive">
-              Data kredensial tidak sesuai atau perusahaan belum terdaftar di Directory Perusahaan.
-            </p>
+            <div className="flex flex-col gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 p-3.5">
+              <p className="text-sm text-destructive">
+                Data kredensial tidak sesuai atau perusahaan belum terdaftar di Directory Perusahaan.
+              </p>
+              <a
+                href="/company/new"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="self-start text-sm font-semibold text-destructive underline"
+              >
+                + Tambah Perusahaan
+              </a>
+              <p className="text-xs text-muted-foreground">
+                Belum terdaftar? Daftarkan perusahaan partner ini — form terbuka di tab baru, isian di sini tetap
+                tersimpan. Setelah tersimpan, coba sinkronisasi lagi.
+              </p>
+            </div>
           )}
         </>
       )}

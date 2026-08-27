@@ -174,6 +174,14 @@ model Partner {
   ownerCompanyId String?
   ownerCompany   Company? @relation("PartnerOwner", fields: [ownerCompanyId], references: [id])
 
+  // API-U companies admin has flagged as related to / using this mitra — set explicitly by
+  // admin when creating the Partner (many-to-many: one partner can serve several API-U
+  // companies, and one company can relate to several partners). Distinct from `ownerCompanyId`
+  // (who registered this specific Partner row from Company Workspace) and from the
+  // `partnerIndustriEntries` a company toggles on per-application — this is admin's own
+  // curated "PERUSAHAAN API-U TERKAIT" list, not derived from application data.
+  relatedCompanies Company[] @relation("PartnerRelatedCompanies")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -213,7 +221,7 @@ model Company {
   addressProvinsi  String?
   addressKodePos   String?
 
-  nibNumber                String
+  nibNumber                String    @unique
   nibIssueDate             DateTime
   nibDocumentPath          String
   kbliEntries              Json
@@ -254,6 +262,7 @@ model Company {
   merks            Merk[]
   partners         Partner[]
   ownedPartners    Partner[]                 @relation("PartnerOwner")
+  relatedToPartners Partner[]                @relation("PartnerRelatedCompanies")
   documentVersions CompanyDocumentVersion[]
 
   @@map("company")

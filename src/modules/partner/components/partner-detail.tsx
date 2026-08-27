@@ -21,6 +21,7 @@ type PartnerDetailData = {
     npwpNumber: string;
     skNumber: string;
   };
+  relatedCompanies: { id: string; companyName: string }[];
 };
 
 const STATUS_BADGE: Record<PartnerStatus, { bg: string; color: string }> = {
@@ -88,13 +89,22 @@ export function PartnerDetail({ id }: Props) {
               <div className="text-[20px] font-extrabold text-[#2b2420]">{data.company.companyName}</div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => router.push("/partners")}
-            className="rounded-lg border border-[#e1bfb3] bg-white px-4.5 py-2.5 text-[13px] font-semibold text-[#261813]"
-          >
-            Kembali ke Daftar
-          </button>
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => router.push(`/partners/${id}/edit`)}
+              className="rounded-lg bg-[#e0662e] px-4.5 py-2.5 text-[13px] font-bold text-white"
+            >
+              Edit Partner
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/partners")}
+              className="rounded-lg border border-[#e1bfb3] bg-white px-4.5 py-2.5 text-[13px] font-semibold text-[#261813]"
+            >
+              Kembali ke Daftar
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-4">
@@ -125,6 +135,21 @@ export function PartnerDetail({ id }: Props) {
               <DetailItem label="Tanggal Berakhir" value={new Date(data.contractEndDate).toLocaleDateString("id-ID")} />
               <DetailItem label="Bukti Kontrak" value={data.contractDocumentPath ? "Terunggah" : "Belum diunggah"} />
             </div>
+          </section>
+
+          <section className="rounded-[14px] border border-[#f0ded0] bg-white p-6">
+            <h2 className="mb-4 text-[15px] font-extrabold text-[#20180f]">Perusahaan API-U Terkait</h2>
+            {data.relatedCompanies.length === 0 ? (
+              <p className="text-[13px] text-[#8a7565]">Belum ada perusahaan API-U yang dikaitkan.</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {data.relatedCompanies.map((company) => (
+                  <li key={company.id} className="rounded-lg border border-[#efe2d4] px-3.5 py-2 text-[13px] font-semibold text-[#20180f]">
+                    {company.companyName}
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         </div>
       </div>
