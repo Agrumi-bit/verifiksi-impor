@@ -908,7 +908,16 @@ export function OfficeReportPreview({
               return (
                 <div className="rd-photo-card" key={dt.key}>
                   <div className={`rd-photo-thumb ${item?.filePath ? "rd-photo-filled" : ""}`}>
-                    <MaterialIcon name={item?.filePath ? "image" : "hide_image"} className="text-2xl" />
+                    {item?.filePath ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={`/api/files?path=${encodeURIComponent(item.filePath)}`}
+                        alt={dt.label}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }}
+                      />
+                    ) : (
+                      <MaterialIcon name="hide_image" className="text-2xl" />
+                    )}
                   </div>
                   <div className="rd-photo-name">{dt.label}</div>
                   <div className="rd-photo-caption">{item?.filePath ? item.caption || "Terunggah" : "Belum diunggah"}</div>
