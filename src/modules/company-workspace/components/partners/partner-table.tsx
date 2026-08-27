@@ -24,6 +24,9 @@ type PartnerListItem = {
   contractNumber: string;
   contractEndDate: string;
   company: { companyName: string; apiType: string | null };
+  /** True when this company registered the partner itself; false when admin related this
+   * company to a partner it created — those show up here but can only be removed by admin. */
+  isOwner: boolean;
 };
 
 export function CompanyPartnerTable() {
@@ -115,14 +118,20 @@ export function CompanyPartnerTable() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(partner.id, partner.company.companyName)}
-                    className="text-muted-foreground hover:text-destructive"
-                    aria-label="Hapus partner"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
+                  {partner.isOwner ? (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(partner.id, partner.company.companyName)}
+                      className="text-muted-foreground hover:text-destructive"
+                      aria-label="Hapus partner"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground" title="Didaftarkan oleh admin">
+                      Dari Admin
+                    </span>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

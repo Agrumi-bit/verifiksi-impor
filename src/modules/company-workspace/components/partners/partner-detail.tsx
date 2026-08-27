@@ -24,6 +24,7 @@ type PartnerDetailData = {
     npwpNumber: string | null;
     skNumber: string | null;
   };
+  isOwner: boolean;
 };
 
 function DetailItem({ label, value }: { label: string; value?: string | null }) {
@@ -72,7 +73,7 @@ export function CompanyPartnerDetail({ id }: Props) {
           </Link>
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {PARTNER_TYPE_LABELS[data.type]}
+              {PARTNER_TYPE_LABELS[data.type]} · {data.isOwner ? "Didaftarkan sendiri" : "Ditambahkan oleh admin"}
             </p>
             <h1 className="text-lg font-semibold">{data.company.companyName}</h1>
           </div>

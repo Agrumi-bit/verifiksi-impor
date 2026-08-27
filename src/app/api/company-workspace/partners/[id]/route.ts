@@ -11,14 +11,23 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 
   const { id } = await params;
-  const partner = await db.partner.findUnique({ where: { id }, include: { company: true } });
-  if (!partner || partner.ownerCompanyId !== companyId) {
+  const partner = await db.partner.findUnique({
+    where: { id },
+    include: { company: true, relatedCompanies: { select: { id: true, companyName: true } } },
+  });
+  const isOwner = partner?.ownerCompanyId === companyId;
+  const isRelated = partner?.relatedCompanies.some((c) => c.id === companyId) ?? false;
+  if (!partner || (!isOwner && !isRelated)) {
     return NextResponse.json({ error: "Partner tidak ditemukan" }, { status: 404 });
   }
 
-  return NextResponse.json({ data: partner });
+  return NextResponse.json({ data: { ...partner, isOwner } });
 }
 
+/** Only the company that registered this Partner itself (`ownerCompanyId`) can delete it — a
+ * company admin merely *related* to a partner (via the admin "PERUSAHAAN API-U TERKAIT" picker)
+ * can see it in their list but doesn't own the record, since other companies may share that
+ * same relation. */
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession();
   const companyId = session?.user.companyId;
@@ -28,8 +37,14 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
   const { id } = await params;
   const partner = await db.partner.findUnique({ where: { id } });
-  if (!partner || partner.ownerCompanyId !== companyId) {
+  if (!partner) {
     return NextResponse.json({ error: "Partner tidak ditemukan" }, { status: 404 });
+  }
+  if (partner.ownerCompanyId !== companyId) {
+    return NextResponse.json(
+      { error: "Partner ini didaftarkan oleh admin, bukan oleh perusahaan Anda — tidak bisa dihapus dari sini." },
+      { status: 403 },
+    );
   }
 
   await db.partner.delete({ where: { id } });

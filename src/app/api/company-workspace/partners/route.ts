@@ -6,10 +6,13 @@ import { getServerSession } from "@/lib/get-session";
 import { partnerWizardSchema } from "@/modules/partner/schema";
 
 /**
- * Company Workspace's own "Partner Companies" list — scoped to `ownerCompanyId`, distinct
- * from the admin Partner Management module (`/api/partners`) which lists every Partner row
- * in the system regardless of who registered it. See the Prisma model comment on
- * `Partner.ownerCompanyId` for why this second field exists alongside `companyId`.
+ * Company Workspace's own "Partner Companies" list, distinct from the admin Partner Management
+ * module (`/api/partners`) which lists every Partner row in the system regardless of who
+ * registered it. Shows a partner here if EITHER:
+ *  - this company registered it itself (`ownerCompanyId`, via this workspace's own wizard), or
+ *  - admin explicitly related this company to it ("PERUSAHAAN API-U TERKAIT" on the admin
+ *    Partner form) — otherwise a partner admin adds and flags as related to this company would
+ *    never show up here, which is exactly the sync gap this OR was added to close.
  */
 export async function GET() {
   const session = await getServerSession();
@@ -19,11 +22,12 @@ export async function GET() {
   }
 
   const partners = await db.partner.findMany({
-    where: { ownerCompanyId: companyId },
+    where: { OR: [{ ownerCompanyId: companyId }, { relatedCompanies: { some: { id: companyId } } }] },
     include: { company: true },
     orderBy: { createdAt: "desc" },
   });
-  return NextResponse.json({ data: partners });
+  const data = partners.map((partner) => ({ ...partner, isOwner: partner.ownerCompanyId === companyId }));
+  return NextResponse.json({ data });
 }
 
 export async function POST(request: Request) {
