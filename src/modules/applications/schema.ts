@@ -120,11 +120,104 @@ export const supportDocumentSchema = z.object({
   documentPath: requiredString("Dokumen wajib diunggah"),
 });
 
+/** One card per Partner Industri — `enabled` is the on/off toggle, supports multiple partners per application. */
+export const partnerIndustriEntrySchema = z.object({
+  partnerId: requiredString("Partner wajib dipilih"),
+  enabled: z.boolean(),
+  lhvki: z.string().trim().optional(),
+  lhvkiDocumentPath: z.string().trim().optional(),
+});
+export type PartnerIndustriEntryValues = z.infer<typeof partnerIndustriEntrySchema>;
+
+export type NonIndustriDocPriority = "UTAMA" | "PENDUKUNG";
+
+export type NonIndustriSupportDocDef = {
+  key: string;
+  title: string;
+  /** What the document proves — shown as the field's hint. */
+  desc: string;
+  priority: NonIndustriDocPriority;
+};
+
+/**
+ * Fixed checklist for "Impor Bahan Baku – Perusahaan Non Industri (API-U)" — proof of financial
+ * capability ("modal") to fund the import. UTAMA docs are required before submit; PENDUKUNG are
+ * supplementary evidence (e.g. shareholder loans "jika memang ada dan sah") and stay optional.
+ */
+export const NON_INDUSTRI_SUPPORT_DOC_DEFS: NonIndustriSupportDocDef[] = [
+  {
+    key: "rekening-koran",
+    title: "Rekening Koran Perusahaan (3–6 Bulan Terakhir)",
+    desc: "Saldo, arus kas, dan aktivitas keuangan aktual perusahaan.",
+    priority: "UTAMA",
+  },
+  {
+    key: "surat-referensi-bank",
+    title: "Surat Referensi Bank",
+    desc: "Hubungan perbankan dan keberadaan rekening perusahaan.",
+    priority: "UTAMA",
+  },
+  {
+    key: "laporan-keuangan",
+    title: "Laporan Keuangan Terakhir",
+    desc: "Kas, aset lancar, kewajiban lancar, modal dan kondisi keuangan.",
+    priority: "UTAMA",
+  },
+  {
+    key: "fasilitas-kredit",
+    title: "Bukti Fasilitas Kredit / Credit Line dari Bank",
+    desc: "Kemampuan memperoleh pembiayaan untuk transaksi impor.",
+    priority: "UTAMA",
+  },
+  {
+    key: "keterangan-saldo",
+    title: "Surat Keterangan Saldo / Bank Statement",
+    desc: "Posisi dana pada tanggal tertentu.",
+    priority: "PENDUKUNG",
+  },
+  {
+    key: "deposito",
+    title: "Bukti Deposito atau Instrumen Likuid Perusahaan",
+    desc: "Tambahan sumber dana yang dapat digunakan.",
+    priority: "PENDUKUNG",
+  },
+  {
+    key: "pinjaman-afiliasi",
+    title: "Perjanjian Pinjaman Pemegang Saham/Afiliasi",
+    desc: "Sumber pembiayaan tambahan, jika memang ada dan sah.",
+    priority: "PENDUKUNG",
+  },
+  {
+    key: "kontrak-po",
+    title: "Kontrak/PO dengan Perusahaan Industri",
+    desc: "Dasar komersial kebutuhan pembelian/importasi.",
+    priority: "PENDUKUNG",
+  },
+  {
+    key: "proforma-invoice",
+    title: "Proforma Invoice/Quotation Supplier Luar Negeri",
+    desc: "Estimasi nilai pembelian barang yang akan dibiayai.",
+    priority: "PENDUKUNG",
+  },
+];
+
+/** `enabled` is a per-document on/off toggle — not every applicant has every one of these
+ * (e.g. a shareholder loan only "jika memang ada dan sah"), so the upload field only appears
+ * once its toggle is switched on, mirroring the Partner Industri card pattern. */
+export const nonIndustriDocumentSchema = z.object({
+  key: z.string(),
+  enabled: z.boolean(),
+  documentPath: z.string().trim().optional(),
+});
+export type NonIndustriDocumentValues = z.infer<typeof nonIndustriDocumentSchema>;
+
+export function createEmptyNonIndustriDocuments(): NonIndustriDocumentValues[] {
+  return NON_INDUSTRI_SUPPORT_DOC_DEFS.map((def) => ({ key: def.key, enabled: false }));
+}
+
 export const step5Schema = z.object({
-  partnerIndustriId: z.string().trim().optional(),
-  partnerIndustriLhvki: z.string().trim().optional(),
-  partnerIndustriNib: z.string().trim().optional(),
-  nonIndustriDocuments: z.array(supportDocumentSchema),
+  partnerIndustriEntries: z.array(partnerIndustriEntrySchema).default([]),
+  nonIndustriDocuments: z.array(nonIndustriDocumentSchema).default([]),
   konsumsiDocuments: z.array(supportDocumentSchema),
 });
 
@@ -139,6 +232,10 @@ export const productItemSchema = z.object({
   intendedUse: z.string().trim().optional(),
   deskripsi: z.string().trim().optional(),
   photoPath: z.string().trim().optional(),
+  /** Links this product to the Partner Industri supplying it — one of the ids in
+   * `partnerIndustriEntries` (enabled entries only). Only meaningful when Jenis Impor
+   * includes BAHAN_BAKU_INDUSTRI; left empty otherwise. */
+  partnerIndustriId: z.string().trim().optional(),
 });
 
 export const step6Schema = z.object({
@@ -319,23 +416,28 @@ export const applicationWizardSchema = step1Schema
     }
     if (
       data.importTypes.includes("BAHAN_BAKU_INDUSTRI") &&
-      !data.partnerIndustriId
+      !data.partnerIndustriEntries.some((entry) => entry.enabled)
     ) {
       ctx.addIssue({
         code: "custom",
-        path: ["partnerIndustriId"],
-        message: "Pilih Partner Industri tujuan",
+        path: ["partnerIndustriEntries"],
+        message: "Aktifkan minimal satu Partner Industri tujuan",
       });
     }
     if (
-      data.importTypes.includes("BAHAN_BAKU_NON_INDUSTRI") &&
-      data.nonIndustriDocuments.length < 1
+      data.importTypes.includes("BAHAN_BAKU_INDUSTRI") ||
+      data.importTypes.includes("BAHAN_BAKU_NON_INDUSTRI")
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["nonIndustriDocuments"],
-        message: "Tambahkan minimal satu dokumen pendukung",
-      });
+      // Not every document applies to every applicant (toggled on/off per case) — just require
+      // at least one enabled document to actually have a file uploaded, not every def.
+      const hasUploadedDoc = data.nonIndustriDocuments.some((doc) => doc.enabled && doc.documentPath);
+      if (!hasUploadedDoc) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["nonIndustriDocuments"],
+          message: "Aktifkan dan unggah minimal satu Dokumen Modal",
+        });
+      }
     }
     if (
       data.importTypes.includes("BARANG_KONSUMSI") &&
@@ -450,8 +552,9 @@ export const VKI_SUPPORT_DOC_DEFS: VkiSupportDocDef[] = [
 ];
 
 /**
- * VIU keeps the original 8-step flow untouched — same field lists as before this
- * change, just renamed to make the dual-path split explicit.
+ * VIU's Legal/Tax/Location steps (3-5) now mirror VKI's format: read-only displays pulled
+ * from the selected Company (via `applyCompanyToForm`), same as VKI — nothing to validate
+ * there, the data is always already present once a company is picked.
  */
 export const VIU_STEP_FIELD_NAMES: Record<number, (keyof ApplicationWizardValues)[]> = {
   1: [
@@ -468,23 +571,14 @@ export const VIU_STEP_FIELD_NAMES: Record<number, (keyof ApplicationWizardValues
     "contactPhone",
   ],
   2: ["verificationType", "applicationCategory", "importTypes"],
-  3: [
-    "nibNumber",
-    "nibIssueDate",
-    "nibDocumentPath",
-    "kbliEntries",
-    "kbliDocumentPath",
-    "notarialDeedNumber",
-    "notarialDeedIssueDate",
-    "notarialIssuingAuthority",
-    "notarialAmendmentInfo",
-    "notarialDocumentPath",
-  ],
-  4: ["locations"],
-  5: ["partnerIndustriId", "nonIndustriDocuments", "konsumsiDocuments"],
-  6: ["products"],
-  7: [],
-  8: ["declarationAccepted"],
+  3: [],
+  4: [],
+  5: [],
+  6: ["partnerIndustriEntries"],
+  7: ["nonIndustriDocuments", "konsumsiDocuments"],
+  8: ["products"],
+  9: [],
+  10: ["declarationAccepted"],
 };
 
 /**

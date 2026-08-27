@@ -119,17 +119,22 @@ export function applyChecklistDocumentPath(
     };
   }
 
+  const nonIndustriMatch = key.match(/^nonindustri-support:(.+)$/);
+  if (nonIndustriMatch) {
+    const [, defKey] = nonIndustriMatch;
+    const existing = payload.nonIndustriDocuments ?? [];
+    const found = existing.some((entry) => entry.key === defKey);
+    return {
+      ...payload,
+      nonIndustriDocuments: found
+        ? existing.map((entry) => (entry.key === defKey ? { ...entry, documentPath: newPath } : entry))
+        : [...existing, { key: defKey, enabled: true, documentPath: newPath }],
+    };
+  }
+
   const supportDocMatch = key.match(/^support:(.+)$/);
   if (supportDocMatch) {
     const [, docId] = supportDocMatch;
-    if ((payload.nonIndustriDocuments ?? []).some((doc) => doc.id === docId)) {
-      return {
-        ...payload,
-        nonIndustriDocuments: (payload.nonIndustriDocuments ?? []).map((doc) =>
-          doc.id === docId ? { ...doc, documentPath: newPath } : doc,
-        ),
-      };
-    }
     return {
       ...payload,
       konsumsiDocuments: (payload.konsumsiDocuments ?? []).map((doc) =>

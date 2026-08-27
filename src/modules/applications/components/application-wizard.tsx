@@ -11,10 +11,10 @@ import { useApplicationWizard } from "../hooks/use-application-wizard";
 import { CompanyProfileFields } from "@/components/wizard/company-profile-fields";
 import { CompanyPickerField } from "./company-picker-field";
 import { LockedCompanyField } from "./locked-company-field";
-import { LegalInformationFields } from "@/components/wizard/legal-information-fields";
-import { LocationsField, type CompanyAddressValues } from "@/components/wizard/locations-field";
+import type { CompanyAddressValues } from "@/components/wizard/locations-field";
 import { LOCATION_TYPES } from "@/modules/shared/schema";
 import { Step1ApplicationInformation } from "./steps/step1-application-information";
+import { StepPartnerIndustri } from "./steps/step-partner-industri";
 import { Step5SupportDocument } from "./steps/step5-support-document";
 import { Step6ProductInformation } from "./steps/step6-product-information";
 import { Step7Preview } from "./steps/step7-preview";
@@ -348,23 +348,21 @@ export function ApplicationWizard({
               )}
               {currentStep === 2 && <Step1ApplicationInformation form={form} />}
 
-              {!isVki && currentStep === 3 && <LegalInformationFields form={form} />}
-              {!isVki && currentStep === 4 && (
-                <LocationsField
+              {!isVki && currentStep === 3 && <VkiStep3Legal form={form} />}
+              {!isVki && currentStep === 4 && <VkiStep4Tax form={form} />}
+              {!isVki && currentStep === 5 && (
+                <VkiStep5Locations
                   form={form}
                   availableTypes={locationAvailableTypes}
-                  typeHint={
-                    verificationType === "VIU"
-                      ? "VIU hanya memerlukan informasi Kantor dan Gudang"
-                      : undefined
-                  }
+                  typeHint="VIU hanya memerlukan informasi Kantor dan Gudang"
                   companyAddress={companyAddress}
                 />
               )}
-              {!isVki && currentStep === 5 && <Step5SupportDocument form={form} />}
-              {!isVki && currentStep === 6 && <Step6ProductInformation form={form} />}
-              {!isVki && currentStep === 7 && <Step7Preview form={form} onEditStep={goToStep} />}
-              {!isVki && currentStep === 8 && <Step8Submit form={form} />}
+              {!isVki && currentStep === 6 && <StepPartnerIndustri form={form} />}
+              {!isVki && currentStep === 7 && <Step5SupportDocument form={form} />}
+              {!isVki && currentStep === 8 && <Step6ProductInformation form={form} />}
+              {!isVki && currentStep === 9 && <Step7Preview form={form} onEditStep={goToStep} />}
+              {!isVki && currentStep === 10 && <Step8Submit form={form} />}
 
               {isVki && currentStep === 3 && <VkiStep3Legal form={form} />}
               {isVki && currentStep === 4 && <VkiStep4Tax form={form} />}

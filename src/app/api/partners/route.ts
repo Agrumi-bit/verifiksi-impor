@@ -39,13 +39,15 @@ export async function GET(request: Request) {
 
   const relatedCompaniesByPartnerId = new Map<string, Set<string>>();
   for (const application of applications) {
-    const payload = application.payload as { partnerIndustriId?: string } | null;
-    const partnerId = payload?.partnerIndustriId;
+    const payload = application.payload as { partnerIndustriEntries?: { partnerId?: string; enabled?: boolean }[] } | null;
     const companyName = application.company?.companyName;
-    if (!partnerId || !companyName) continue;
-    const set = relatedCompaniesByPartnerId.get(partnerId) ?? new Set<string>();
-    set.add(companyName);
-    relatedCompaniesByPartnerId.set(partnerId, set);
+    if (!companyName) continue;
+    for (const entry of payload?.partnerIndustriEntries ?? []) {
+      if (!entry.enabled || !entry.partnerId) continue;
+      const set = relatedCompaniesByPartnerId.get(entry.partnerId) ?? new Set<string>();
+      set.add(companyName);
+      relatedCompaniesByPartnerId.set(entry.partnerId, set);
+    }
   }
 
   const data = partners.map((partner) => ({

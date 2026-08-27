@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-import { VKI_SUPPORT_DOC_DEFS, type ApplicationWizardValues, type MachineKondisiValue } from "@/modules/applications/schema";
+import {
+  NON_INDUSTRI_SUPPORT_DOC_DEFS,
+  VKI_SUPPORT_DOC_DEFS,
+  type ApplicationWizardValues,
+  type MachineKondisiValue,
+} from "@/modules/applications/schema";
 import { documentFieldCode, type DocumentFieldKey } from "@/modules/company/document-fields";
 import { slugify } from "@/lib/document-filename";
 import { OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS } from "@/modules/shared/schema";
@@ -310,12 +315,13 @@ export function buildDocumentChecklist(
       });
     }
   } else {
-    for (const doc of payload.nonIndustriDocuments ?? []) {
+    for (const def of NON_INDUSTRI_SUPPORT_DOC_DEFS) {
+      const entry = (payload.nonIndustriDocuments ?? []).find((d) => d.key === def.key);
       items.push({
-        key: `support:${doc.id}`,
-        label: doc.label,
+        key: `nonindustri-support:${def.key}`,
+        label: `${def.title} (${def.priority === "UTAMA" ? "Utama" : "Pendukung"})`,
         category: "Dokumen Pendukung",
-        documentPath: doc.documentPath || null,
+        documentPath: entry?.documentPath || null,
       });
     }
     for (const doc of payload.konsumsiDocuments ?? []) {

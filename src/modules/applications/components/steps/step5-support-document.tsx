@@ -1,47 +1,18 @@
 "use client";
 
 import { Controller, useFieldArray, useWatch, type UseFormReturn } from "react-hook-form";
-import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { FormField } from "@/components/form/form-field";
+import { Switch } from "@/components/ui/switch";
 import { FileUploadField } from "@/components/form/file-upload-field";
-import { createEmptySupportDocument, type ApplicationWizardValues } from "../../schema";
-
-type PartnerIndustriOption = {
-  id: string;
-  name: string;
-  nibNumber: string;
-};
-
-function usePartnerIndustriOptions() {
-  return useQuery({
-    queryKey: ["partners", "INDUSTRI"],
-    queryFn: async () => {
-      const response = await fetch("/api/partners?type=INDUSTRI");
-      if (!response.ok) throw new Error("Gagal memuat data partner industri");
-      const json = (await response.json()) as {
-        data: { id: string; company: { companyName: string; nibNumber: string } }[];
-      };
-      return json.data.map(
-        (partner): PartnerIndustriOption => ({
-          id: partner.id,
-          name: partner.company.companyName,
-          nibNumber: partner.company.nibNumber,
-        }),
-      );
-    },
-  });
-}
+import {
+  createEmptySupportDocument,
+  NON_INDUSTRI_SUPPORT_DOC_DEFS,
+  type ApplicationWizardValues,
+  type NonIndustriDocumentValues,
+} from "../../schema";
 
 type Step5Props = {
   form: UseFormReturn<ApplicationWizardValues>;
@@ -54,7 +25,7 @@ function DocumentListSection({
   docCountHint,
 }: {
   form: UseFormReturn<ApplicationWizardValues>;
-  fieldName: "nonIndustriDocuments" | "konsumsiDocuments";
+  fieldName: "konsumsiDocuments";
   namespace: "documents";
   docCountHint: string;
 }) {
@@ -118,21 +89,110 @@ function DocumentListSection({
   );
 }
 
+const PRIORITY_LABEL = { UTAMA: "Utama", PENDUKUNG: "Pendukung" } as const;
+const PRIORITY_BADGE = {
+  UTAMA: "bg-primary/10 text-primary",
+  PENDUKUNG: "bg-muted text-muted-foreground",
+} as const;
+
+/**
+ * Fixed checklist proving financial capability ("modal") to fund the import. Not every
+ * applicant has every document (e.g. a shareholder loan only "jika memang ada dan sah"), so
+ * each one is toggled on/off — the upload field only appears once its switch is on. Bound to
+ * `nonIndustriDocuments` by `key`, not array index, since resumed drafts may have a
+ * differently-ordered array.
+ */
+function NonIndustriChecklist({ form }: { form: UseFormReturn<ApplicationWizardValues> }) {
+  const { control, formState } = form;
+  const arrayError = formState.errors.nonIndustriDocuments;
+
+  return (
+    <Controller
+      control={control}
+      name="nonIndustriDocuments"
+      render={({ field }) => {
+        const entries = (field.value as NonIndustriDocumentValues[] | undefined) ?? [];
+
+        function entryFor(key: string) {
+          return entries.find((entry) => entry.key === key);
+        }
+
+        function handleToggle(key: string, checked: boolean) {
+          const index = entries.findIndex((entry) => entry.key === key);
+          if (index === -1) {
+            field.onChange([...entries, { key, enabled: checked, documentPath: "" }]);
+            return;
+          }
+          field.onChange(entries.map((entry, i) => (i === index ? { ...entry, enabled: checked } : entry)));
+        }
+
+        function updateEntry(key: string, patch: Partial<NonIndustriDocumentValues>) {
+          field.onChange(entries.map((entry) => (entry.key === key ? { ...entry, ...patch } : entry)));
+        }
+
+        return (
+          <div className="flex flex-col gap-3">
+            <p className="text-xs text-muted-foreground">
+              Dokumen bukti kemampuan modal untuk pembiayaan impor. Aktifkan toggle pada dokumen yang relevan, lalu
+              unggah filenya.
+            </p>
+            {NON_INDUSTRI_SUPPORT_DOC_DEFS.map((def) => {
+              const entry = entryFor(def.key);
+              const enabled = entry?.enabled ?? false;
+              return (
+                <div key={def.key} className="rounded-xl border border-border p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold">{def.title}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${PRIORITY_BADGE[def.priority]}`}>
+                          {PRIORITY_LABEL[def.priority]}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{def.desc}</p>
+                    </div>
+                    <Switch
+                      checked={enabled}
+                      onCheckedChange={(checked) => handleToggle(def.key, checked)}
+                      aria-label={`Aktifkan dokumen ${def.title}`}
+                    />
+                  </div>
+                  {enabled && (
+                    <div className="mt-3 border-t border-border pt-3">
+                      <FileUploadField
+                        namespace="documents"
+                        value={entry?.documentPath}
+                        onChange={(path) => updateEntry(def.key, { documentPath: path ?? "" })}
+                        label="Upload dokumen"
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {arrayError?.message && typeof arrayError.message === "string" && (
+              <p className="text-xs text-destructive">{arrayError.message}</p>
+            )}
+          </div>
+        );
+      }}
+    />
+  );
+}
+
 export function Step5SupportDocument({ form }: Step5Props) {
-  const { control, register, formState } = form;
+  const { control } = form;
   const importTypes = useWatch({ control, name: "importTypes" }) ?? [];
-  const partnerIndustriId = useWatch({ control, name: "partnerIndustriId" });
-  const {
-    data: partnerOptions,
-    isLoading: isPartnerLoading,
-    isError: isPartnerError,
-  } = usePartnerIndustriOptions();
 
   const hasIndustri = importTypes.includes("BAHAN_BAKU_INDUSTRI");
   const hasNonIndustri = importTypes.includes("BAHAN_BAKU_NON_INDUSTRI");
   const hasKonsumsi = importTypes.includes("BARANG_KONSUMSI");
+  // Bukti kemampuan finansial ("modal") applies to both Bahan Baku Industri and Non Industri —
+  // both are importing goods on credit/trade financing and need to prove they can fund it, so
+  // they share the same checklist instead of duplicating it under two headings.
+  const needsModalDocs = hasIndustri || hasNonIndustri;
 
-  if (!hasIndustri && !hasNonIndustri && !hasKonsumsi) {
+  if (!needsModalDocs && !hasKonsumsi) {
     return (
       <p className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
         Tidak ada Jenis Impor yang dipilih di Step 2, sehingga tidak ada
@@ -148,87 +208,12 @@ export function Step5SupportDocument({ form }: Step5Props) {
         yang Anda pilih di Step 2.
       </p>
 
-      {hasIndustri && (
+      {needsModalDocs && (
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Impor Bahan Baku – Perusahaan Industri (API-U)
+            Dokumen Modal — Bukti Kemampuan Finansial
           </h2>
-          <FormField
-            label="Partner Industri Tujuan"
-            required
-            error={
-              formState.errors.partnerIndustriId?.message ??
-              (isPartnerError
-                ? "Gagal memuat data Partner Industri. Pastikan database sudah terhubung."
-                : undefined)
-            }
-            hint={
-              !isPartnerError && partnerOptions?.length === 0
-                ? "Belum ada Partner Industri terdaftar. Tambahkan di modul Partner Management terlebih dahulu."
-                : undefined
-            }
-          >
-            <Controller
-              control={control}
-              name="partnerIndustriId"
-              render={({ field }) => (
-                <Select
-                  value={field.value ?? ""}
-                  disabled={isPartnerLoading || isPartnerError}
-                  onValueChange={(value) => {
-                    field.onChange(value);
-                    const partner = partnerOptions?.find(
-                      (option) => option.id === value,
-                    );
-                    form.setValue("partnerIndustriNib", partner?.nibNumber ?? "");
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue>
-                      {(value: string | null) =>
-                        partnerOptions?.find((option) => option.id === value)?.name ??
-                        (isPartnerLoading
-                          ? "Memuat data partner..."
-                          : "Pilih partner industri...")
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {partnerOptions?.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </FormField>
-
-          {partnerIndustriId && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="LHVKI Perusahaan Industri" hint="Isi manual nomor LHVKI perusahaan industri terkait.">
-                <Input {...register("partnerIndustriLhvki")} />
-              </FormField>
-              <FormField label="Nomor NIB Partner Industri" hint="Terisi otomatis, terintegrasi dengan Partner Industri.">
-                <Input readOnly {...register("partnerIndustriNib")} />
-              </FormField>
-            </div>
-          )}
-        </section>
-      )}
-
-      {hasNonIndustri && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Impor Bahan Baku – Perusahaan Non Industri (API-U)
-          </h2>
-          <DocumentListSection
-            form={form}
-            fieldName="nonIndustriDocuments"
-            namespace="documents"
-            docCountHint="4 dokumen"
-          />
+          <NonIndustriChecklist form={form} />
         </section>
       )}
 

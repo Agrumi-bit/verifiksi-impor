@@ -1,5 +1,5 @@
 import { MaterialIcon } from "../material-icon";
-import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import { NON_INDUSTRI_SUPPORT_DOC_DEFS, type ApplicationWizardValues } from "@/modules/applications/schema";
 
 type Props = { payload: ApplicationWizardValues };
 
@@ -8,10 +8,10 @@ export function DocumentsTab({ payload }: Props) {
     { name: "NIB", kategori: "Legalitas Perusahaan", path: payload.nibDocumentPath },
     { name: "Daftar KBLI", kategori: "Legalitas Perusahaan", path: payload.kbliDocumentPath },
     { name: "Akta Notaris", kategori: "Legalitas Perusahaan", path: payload.notarialDocumentPath },
-    ...(payload.nonIndustriDocuments ?? []).map((d) => ({
-      name: d.label,
+    ...NON_INDUSTRI_SUPPORT_DOC_DEFS.map((def) => ({
+      name: def.title,
       kategori: "Supporting Document",
-      path: d.documentPath,
+      path: (payload.nonIndustriDocuments ?? []).find((d) => d.key === def.key)?.documentPath,
     })),
     ...(payload.konsumsiDocuments ?? []).map((d) => ({
       name: d.label,

@@ -6,7 +6,7 @@ import { MapPin, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { LocationItemFields, type CompanyAddressValues } from "@/components/wizard/locations-field";
-import { LOCATION_TYPES, createEmptyLocation } from "@/modules/shared/schema";
+import { LOCATION_TYPES, createEmptyLocation, type LocationType } from "@/modules/shared/schema";
 import type { ApplicationWizardValues } from "../../schema";
 
 const OWNERSHIP_LABEL: Record<string, string> = {
@@ -14,9 +14,14 @@ const OWNERSHIP_LABEL: Record<string, string> = {
   SEWA: "Sewa",
 };
 
-type Props = { form: UseFormReturn<ApplicationWizardValues>; companyAddress?: CompanyAddressValues };
+type Props = {
+  form: UseFormReturn<ApplicationWizardValues>;
+  companyAddress?: CompanyAddressValues;
+  availableTypes?: readonly LocationType[];
+  typeHint?: string;
+};
 
-export function VkiStep5Locations({ form, companyAddress }: Props) {
+export function VkiStep5Locations({ form, companyAddress, availableTypes = LOCATION_TYPES, typeHint }: Props) {
   const { control } = form;
   // react-hook-form's default keyName is "id", which would clobber the real
   // location id (locationSchema also has its own `id` field) — use a distinct
@@ -50,7 +55,8 @@ export function VkiStep5Locations({ form, companyAddress }: Props) {
             index={index}
             onRemove={() => remove(index)}
             canRemove
-            availableTypes={LOCATION_TYPES}
+            availableTypes={availableTypes}
+            typeHint={typeHint}
             companyAddress={companyAddress}
           />
         ),

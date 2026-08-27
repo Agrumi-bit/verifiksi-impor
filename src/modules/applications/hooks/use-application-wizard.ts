@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import {
   applicationWizardSchema,
   createEmptyLocation,
+  createEmptyNonIndustriDocuments,
   createEmptyProduct,
   VIU_STEP_FIELD_NAMES,
   VKI_STEP_FIELD_NAMES,
@@ -33,7 +34,8 @@ export function useApplicationWizard() {
       companyWebsite: "",
       kbliEntries: [],
       locations: [createEmptyLocation()],
-      nonIndustriDocuments: [],
+      partnerIndustriEntries: [],
+      nonIndustriDocuments: createEmptyNonIndustriDocuments(),
       konsumsiDocuments: [],
       products: [createEmptyProduct()],
       vkiSupportDocs: VKI_SUPPORT_DOC_DEFS.map((def) => ({ key: def.key })),
@@ -49,7 +51,7 @@ export function useApplicationWizard() {
     },
   });
 
-  const verificationType = form.watch("verificationType");
+  const verificationType = useWatch({ control: form.control, name: "verificationType" });
   const isVki = verificationType === "VKI";
   const activeSteps = isVki ? VKI_WIZARD_STEPS : VIU_WIZARD_STEPS;
   const activeFieldNames = isVki ? VKI_STEP_FIELD_NAMES : VIU_STEP_FIELD_NAMES;

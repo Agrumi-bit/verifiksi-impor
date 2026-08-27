@@ -6,6 +6,7 @@ import {
   FileStack,
   FileText,
   Gauge,
+  Handshake,
   Hash,
   MapPin,
   Package,
@@ -24,7 +25,11 @@ export type WizardStepMeta = {
   implemented: boolean;
 };
 
-/** VIU keeps the original 8-step flow, untouched. */
+/** VIU now mirrors VKI's Legal/Tax/Location step format (read-only company-data display,
+ * followed by the locked+add-new location editor), plus its own dedicated Partner Industri
+ * step (split out of Support Document — see StepPartnerIndustri) for the
+ * "Bahan Baku dan/atau Penolong — Perusahaan Industri" import type — 10 steps instead of
+ * the original 8. */
 export const VIU_WIZARD_STEPS: WizardStepMeta[] = [
   {
     step: 1,
@@ -49,34 +54,48 @@ export const VIU_WIZARD_STEPS: WizardStepMeta[] = [
   },
   {
     step: 4,
+    title: "Tax Information",
+    subtitle: "NPWP",
+    icon: Banknote,
+    implemented: true,
+  },
+  {
+    step: 5,
     title: "Location Information",
     subtitle: "Factory & GPS address",
     icon: MapPin,
     implemented: true,
   },
   {
-    step: 5,
+    step: 6,
+    title: "Partner Industri",
+    subtitle: "Impor bahan baku — perusahaan industri",
+    icon: Handshake,
+    implemented: true,
+  },
+  {
+    step: 7,
     title: "Support Document",
     subtitle: "Upload dokumen pendukung",
     icon: FileStack,
     implemented: true,
   },
   {
-    step: 6,
+    step: 8,
     title: "Product Information",
     subtitle: "Detail produk & material",
     icon: Package,
     implemented: true,
   },
   {
-    step: 7,
+    step: 9,
     title: "Preview",
     subtitle: "Tinjau sebelum submit",
     icon: Eye,
     implemented: true,
   },
   {
-    step: 8,
+    step: 10,
     title: "Submit",
     subtitle: "Kirim permohonan",
     icon: Send,

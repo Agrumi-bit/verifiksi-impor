@@ -1,13 +1,21 @@
 "use client";
 
-import { Controller, useFieldArray, type UseFormReturn } from "react-hook-form";
+import { Controller, useFieldArray, useWatch, type UseFormReturn } from "react-hook-form";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { FormField } from "@/components/form/form-field";
 import { SearchSelectInput } from "@/components/form/search-select-input";
 import { useHsCodeOptions } from "../../hooks/use-hs-code-options";
+import { usePartnerIndustriOptions } from "../../hooks/use-partner-industri-options";
 import { createEmptyProduct, type ApplicationWizardValues } from "../../schema";
 
 type Step6Props = {
@@ -20,11 +28,20 @@ export function Step6ProductInformation({ form }: Step6Props) {
   const errors = formState.errors.products;
   const hsCodeOptions = useHsCodeOptions();
 
+  const partnerIndustriEntries = useWatch({ control, name: "partnerIndustriEntries" }) ?? [];
+  const { data: partnerOptions } = usePartnerIndustriOptions();
+  const enabledPartnerIds = new Set(
+    partnerIndustriEntries.filter((entry) => entry?.enabled).map((entry) => entry?.partnerId),
+  );
+  const enabledPartners = (partnerOptions ?? []).filter((option) => enabledPartnerIds.has(option.id));
+
   return (
     <div className="flex flex-col gap-4">
       <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
         Rincian produk/material yang akan diimpor. Data ini terkait dengan
         Jenis Impor di Step 2 dan kesesuaian HS Code di Step 3.
+        {enabledPartners.length > 0 &&
+          " Setiap produk juga bisa dihubungkan ke Partner Industri yang diaktifkan di Step 6."}
       </p>
 
       {fields.map((field, index) => {
@@ -60,6 +77,37 @@ export function Step6ProductInformation({ form }: Step6Props) {
                 {...register(`products.${index}.materialType` as const)}
               />
             </FormField>
+
+            {enabledPartners.length > 0 && (
+              <Controller
+                control={control}
+                name={`products.${index}.partnerIndustriId` as const}
+                render={({ field }) => (
+                  <FormField
+                    label="Partner Industri (Disuplai Oleh)"
+                    error={itemErrors?.partnerIndustriId?.message}
+                    hint="Partner Industri yang diaktifkan di Step 6 — hubungkan produk ini ke partner yang menyuplainya."
+                  >
+                    <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue>
+                          {(value: string) =>
+                            enabledPartners.find((option) => option.id === value)?.name ?? "Pilih partner industri..."
+                          }
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {enabledPartners.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                )}
+              />
+            )}
 
             <Controller
               control={control}

@@ -94,7 +94,11 @@ export function Step7Preview({ form, onEditStep }: Step7Props) {
         />
       </SummarySection>
 
-      <SummarySection title="Location Information" step={4} onEditStep={onEditStep}>
+      <SummarySection title="Tax Information" step={4} onEditStep={onEditStep}>
+        <SummaryItem label="NPWP Number" value={values.npwpNumber} />
+      </SummarySection>
+
+      <SummarySection title="Location Information" step={5} onEditStep={onEditStep}>
         <SummaryItem
           label="Jumlah Lokasi"
           value={values.locations?.length?.toString()}
@@ -108,10 +112,17 @@ export function Step7Preview({ form, onEditStep }: Step7Props) {
         />
       </SummarySection>
 
-      <SummarySection title="Support Document" step={5} onEditStep={onEditStep}>
+      <SummarySection title="Partner Industri" step={6} onEditStep={onEditStep}>
         <SummaryItem
-          label="Dokumen Non Industri"
-          value={values.nonIndustriDocuments?.length?.toString()}
+          label="Partner Industri Aktif"
+          value={values.partnerIndustriEntries?.filter((entry) => entry?.enabled).length?.toString()}
+        />
+      </SummarySection>
+
+      <SummarySection title="Support Document" step={7} onEditStep={onEditStep}>
+        <SummaryItem
+          label="Dokumen Non Industri Terunggah"
+          value={values.nonIndustriDocuments?.filter((doc) => doc?.documentPath).length?.toString()}
         />
         <SummaryItem
           label="Dokumen Konsumsi"
@@ -119,7 +130,7 @@ export function Step7Preview({ form, onEditStep }: Step7Props) {
         />
       </SummarySection>
 
-      <SummarySection title="Product Information" step={6} onEditStep={onEditStep}>
+      <SummarySection title="Product Information" step={8} onEditStep={onEditStep}>
         <SummaryItem
           label="Jumlah Produk"
           value={values.products?.length?.toString()}
