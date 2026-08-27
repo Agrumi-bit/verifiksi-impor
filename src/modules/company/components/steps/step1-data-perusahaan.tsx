@@ -42,7 +42,7 @@ export function Step1DataPerusahaan({ form }: { form: UseFormReturn<CompanyWizar
               {field.value ? "✓ Logo" : "Logo"}
               <input
                 type="file"
-                accept=".jpg,.jpeg,.png"
+                accept=".jpg,.jpeg,.png,image/jpeg,image/png"
                 className="hidden"
                 onChange={async (event) => {
                   const file = event.target.files?.[0];

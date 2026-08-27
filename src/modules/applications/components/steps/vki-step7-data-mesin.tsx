@@ -171,21 +171,21 @@ export function VkiStep7DataMesin({ form }: Props) {
                 control={control}
                 name={`machines.${index}.photoMesinPath`}
                 render={({ field: f }) => (
-                  <FileUploadField value={f.value} onChange={f.onChange} label="Photo Mesin" hint="Format: JPG/PNG" namespace="temporary" accept=".jpg,.jpeg,.png" />
+                  <FileUploadField value={f.value} onChange={f.onChange} label="Photo Mesin" hint="Format: JPG/PNG" namespace="temporary" accept=".jpg,.jpeg,.png,image/jpeg,image/png" />
                 )}
               />
               <Controller
                 control={control}
                 name={`machines.${index}.photoInputPath`}
                 render={({ field: f }) => (
-                  <FileUploadField value={f.value} onChange={f.onChange} label="Photo Input / Raw Material" hint="Format: JPG/PNG" namespace="temporary" accept=".jpg,.jpeg,.png" />
+                  <FileUploadField value={f.value} onChange={f.onChange} label="Photo Input / Raw Material" hint="Format: JPG/PNG" namespace="temporary" accept=".jpg,.jpeg,.png,image/jpeg,image/png" />
                 )}
               />
               <Controller
                 control={control}
                 name={`machines.${index}.photoOutputPath`}
                 render={({ field: f }) => (
-                  <FileUploadField value={f.value} onChange={f.onChange} label="Photo Output / Produk" hint="Format: JPG/PNG" namespace="temporary" accept=".jpg,.jpeg,.png" />
+                  <FileUploadField value={f.value} onChange={f.onChange} label="Photo Output / Produk" hint="Format: JPG/PNG" namespace="temporary" accept=".jpg,.jpeg,.png,image/jpeg,image/png" />
                 )}
               />
             </div>

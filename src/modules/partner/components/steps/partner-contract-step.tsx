@@ -112,7 +112,7 @@ export function PartnerContractStep({ form }: Props) {
               value={field.value}
               onChange={field.onChange}
               label="Upload Bukti Kontrak"
-              accept=".pdf"
+              accept=".pdf,application/pdf"
             />
           )}
         />

@@ -79,7 +79,7 @@ function BrandingFormBody({ branding }: { branding: BrandingData }) {
         ) : (
           <FileUploadField
             namespace="templates"
-            accept=".jpg,.jpeg,.png"
+            accept=".jpg,.jpeg,.png,image/jpeg,image/png"
             label="Unggah Logo"
             onChange={(path) => setDraft((prev) => ({ ...prev, logoPath: path ?? null }))}
           />

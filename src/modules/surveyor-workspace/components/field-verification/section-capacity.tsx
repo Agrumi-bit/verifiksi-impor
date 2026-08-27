@@ -178,7 +178,7 @@ export function SectionCapacity({
         </span>
         <input
           type="file"
-          accept=".pdf,.jpg,.jpeg,.png"
+          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
           className="hidden"
           onChange={(e) => {
             handleUpload(e.target.files?.[0]);

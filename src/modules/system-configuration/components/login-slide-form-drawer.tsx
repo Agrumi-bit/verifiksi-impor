@@ -132,7 +132,7 @@ export function LoginSlideFormDrawer({ slide, onClose }: Props) {
                   </button>
                 </div>
               ) : (
-                <FileUploadField namespace="templates" accept=".jpg,.jpeg,.png,.webp" label="Unggah Gambar" onChange={(path) => set({ imagePath: path ?? "" })} />
+                <FileUploadField namespace="templates" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" label="Unggah Gambar" onChange={(path) => set({ imagePath: path ?? "" })} />
               )}
             </Field>
 

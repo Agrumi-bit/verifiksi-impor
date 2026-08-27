@@ -155,7 +155,7 @@ function MachinePhotoGallery({
             className={`flex size-14 shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-[#c8dbc9] text-[#5a7a63] ${isUploading ? "pointer-events-none opacity-60" : ""}`}
           >
             <MaterialIcon name={isUploading ? "hourglass_empty" : "add_a_photo"} className="text-[16px]" />
-            <input type="file" accept=".jpg,.jpeg,.png" className="hidden" onChange={handleFileChange} disabled={isUploading} />
+            <input type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" className="hidden" onChange={handleFileChange} disabled={isUploading} />
           </label>
         )}
       </div>

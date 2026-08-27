@@ -21,7 +21,7 @@ export function FileUploadField({
   label,
   hint,
   namespace,
-  accept = ".pdf,.jpg,.jpeg,.png",
+  accept = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png",
 }: FileUploadFieldProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);

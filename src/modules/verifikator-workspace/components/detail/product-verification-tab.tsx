@@ -312,7 +312,7 @@ function ProductForm({
         <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Foto Produk</div>
         <FileUploadField
           namespace="photos"
-          accept=".jpg,.jpeg,.png"
+          accept=".jpg,.jpeg,.png,image/jpeg,image/png"
           label="Unggah Foto"
           value={draft.photoPath}
           onChange={(path) => onChange({ photoPath: path ?? "" })}

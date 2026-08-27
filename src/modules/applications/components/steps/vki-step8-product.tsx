@@ -207,7 +207,7 @@ export function VkiStep8Product({ form }: Props) {
                 control={control}
                 name={`products.${index}.photoPath`}
                 render={({ field: f }) => (
-                  <FileUploadField value={f.value} onChange={f.onChange} label="Photo Produk" hint="Format: JPG/PNG" namespace="temporary" accept=".jpg,.jpeg,.png" />
+                  <FileUploadField value={f.value} onChange={f.onChange} label="Photo Produk" hint="Format: JPG/PNG" namespace="temporary" accept=".jpg,.jpeg,.png,image/jpeg,image/png" />
                 )}
               />
             </div>
@@ -292,7 +292,7 @@ export function VkiStep8Product({ form }: Props) {
                 control={control}
                 name={`rawMaterials.${index}.photoPath`}
                 render={({ field: f }) => (
-                  <FileUploadField value={f.value} onChange={f.onChange} label="Photo Bahan Baku" hint="Format: JPG/PNG" namespace="temporary" accept=".jpg,.jpeg,.png" />
+                  <FileUploadField value={f.value} onChange={f.onChange} label="Photo Bahan Baku" hint="Format: JPG/PNG" namespace="temporary" accept=".jpg,.jpeg,.png,image/jpeg,image/png" />
                 )}
               />
             </div>

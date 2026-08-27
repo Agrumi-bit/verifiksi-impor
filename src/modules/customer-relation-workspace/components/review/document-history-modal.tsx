@@ -113,7 +113,7 @@ export function DocumentHistoryModal({ applicationId, docKey, docTitle, entityNa
             <UploadCloud className="size-5 text-[#c14a1f]" />
             <span className="text-[12.5px] font-bold text-[#c14a1f]">{isUploading ? "Mengunggah..." : "Upload Dokumen Perbaikan"}</span>
             <span className="text-[11px] text-[#c88a68]">Klik untuk memilih file PDF/JPG/PNG</span>
-            <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" disabled={isUploading} onChange={handleUpload} />
+            <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" disabled={isUploading} onChange={handleUpload} />
           </label>
         </div>
 

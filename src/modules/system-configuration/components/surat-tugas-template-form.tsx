@@ -137,7 +137,7 @@ function SuratTugasTemplateFormBody({ template }: { template: Template }) {
               ) : (
                 <FileUploadField
                   namespace="templates"
-                  accept=".jpg,.jpeg,.png"
+                  accept=".jpg,.jpeg,.png,image/jpeg,image/png"
                   label="Unggah Gambar Kop Surat"
                   onChange={(path) => setDraft((prev) => ({ ...prev, headerImagePath: path ?? null }))}
                 />
@@ -166,7 +166,7 @@ function SuratTugasTemplateFormBody({ template }: { template: Template }) {
               ) : (
                 <FileUploadField
                   namespace="templates"
-                  accept=".jpg,.jpeg,.png"
+                  accept=".jpg,.jpeg,.png,image/jpeg,image/png"
                   label="Unggah Gambar Footer"
                   onChange={(path) => setDraft((prev) => ({ ...prev, footerImagePath: path ?? null }))}
                 />

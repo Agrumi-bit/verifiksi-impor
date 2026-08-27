@@ -241,7 +241,7 @@ function VersionHistoryModal({
             <UploadCloud className="size-5 text-[#2f6fe0]" />
             <span className="text-[12.5px] font-bold text-[#2f6fe0]">{isUploading ? "Mengunggah..." : "Upload New Document"}</span>
             <span className="text-[11px] text-[#6b8bc4]">Klik untuk memilih file PDF/JPG/PNG</span>
-            <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" disabled={isUploading} onChange={handleUpload} />
+            <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" disabled={isUploading} onChange={handleUpload} />
           </label>
         </div>
         <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5.5 pb-3">

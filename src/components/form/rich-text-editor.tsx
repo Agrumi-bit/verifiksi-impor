@@ -134,7 +134,7 @@ export function RichTextEditor({ value, onChange, placeholder, disabled, imageNa
           <ToolbarButton title="Sisipkan Gambar" disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
             {isUploading ? <Loader2 className="size-3.5 animate-spin" /> : <ImageIcon className="size-3.5" />}
           </ToolbarButton>
-          <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png" className="hidden" onChange={handleImageChange} />
+          <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" className="hidden" onChange={handleImageChange} />
           <div className="mx-1 h-4 w-px bg-[#e8dccd]" />
           <ToolbarButton title="Undo" disabled={!editor.can().undo()} onClick={() => editor.chain().focus().undo().run()}>
             <Undo2 className="size-3.5" />

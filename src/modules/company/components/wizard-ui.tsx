@@ -154,7 +154,7 @@ export function UploadBox({
         {value ? value.split("/").pop() : label}
       </div>
       {hint && <div className="mt-0.5 text-[11.5px] text-[#a68f80]">{hint}</div>}
-      <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={handleChange} />
+      <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={handleChange} />
     </label>
   );
 }
