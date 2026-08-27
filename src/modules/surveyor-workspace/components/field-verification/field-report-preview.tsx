@@ -30,16 +30,6 @@ import { REPORT_CHECKLIST_SECTIONS, reportResultLabels, type ReportChecklistCont
 import type { ReportVerificationState } from "@/modules/verifikator-workspace/report-verification";
 import "../report/office-report-preview.css";
 
-const FONT_LINKS = (
-  <>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700;8..60,800&family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-  </>
-);
-
 type PayloadLocation = {
   buildingStatus?: "MILIK_SENDIRI" | "SEWA" | null;
   ownershipDocuments?: { type: string; documentPath?: string | null }[] | null;
@@ -321,7 +311,6 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
 
   return (
     <div className="report-doc">
-      {FONT_LINKS}
       <div className="rd-topbar">
         <Link href={backHref ?? `/surveyor-workspace/assignments/${assignmentId}`} className="rd-back">
           <MaterialIcon name="arrow_back" className="text-base" />
@@ -633,7 +622,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
               <span className="rd-approval-badge" style={{ color: "var(--gold-soft-ink)", background: "var(--gold-soft)" }}>
                 TEMUAN
               </span>
-              <div style={{ fontFamily: "'Source Serif 4',serif", fontWeight: 800, fontSize: 20, color: "oklch(0.35 0.03 60)" }}>
+              <div style={{ fontFamily: "var(--font-source-serif-4), serif", fontWeight: 800, fontSize: 20, color: "oklch(0.35 0.03 60)" }}>
                 {findings.length} {findings.length === 1 ? "Minor" : "Temuan"}
               </div>
             </div>

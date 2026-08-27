@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -93,7 +93,7 @@ export function UserDetail({ id }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
-  const selectedRole = profileForm.watch("role");
+  const selectedRole = useWatch({ control: profileForm.control, name: "role" });
 
   async function handleSaveProfile(values: UpdateUserProfileValues) {
     const response = await fetch(`/api/users/${id}`, {

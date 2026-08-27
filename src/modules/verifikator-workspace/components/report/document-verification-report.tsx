@@ -22,16 +22,6 @@ import { useHsCodeOptions } from "@/modules/applications/hooks/use-hs-code-optio
 import { ProductionCapabilityChapter, PRODUCTION_CAPABILITY_CHAPTER_PAGE_COUNT } from "./production-capability-chapter";
 import "@/modules/surveyor-workspace/components/report/office-report-preview.css";
 
-const FONT_LINKS = (
-  <>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-  </>
-);
-
 export const INK = "#1a1a1a";
 export const CREAM = "#f9f3eb";
 export const NAVY = "#04101f";
@@ -1059,8 +1049,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   const totalPages = lampiranPage;
 
   return (
-    <div className="report-doc" style={{ fontFamily: "'Archivo', sans-serif" }}>
-      {FONT_LINKS}
+    <div className="report-doc" style={{ fontFamily: "var(--font-archivo), sans-serif" }}>
       <div className="rd-topbar">
         <Link href={backHref ?? `/verifikator-workspace/assignments/${assignmentId}`} className="rd-back">
           <MaterialIcon name="arrow_back" className="text-base" />

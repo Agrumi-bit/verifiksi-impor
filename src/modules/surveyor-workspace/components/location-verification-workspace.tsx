@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -63,6 +63,10 @@ export function LocationVerificationWorkspace({ assignmentId, locationId }: Prop
     resolver: zodResolver(surveyReportDraftSchema),
     defaultValues: { checklist: [], evidence: [], findings: [], notes: "" },
   });
+  const checklist = useWatch({ control: form.control, name: "checklist" });
+  const evidence = useWatch({ control: form.control, name: "evidence" });
+  const findings = useWatch({ control: form.control, name: "findings" });
+  const notes = useWatch({ control: form.control, name: "notes" });
 
   useEffect(() => {
     if (!data) return;
@@ -151,10 +155,6 @@ export function LocationVerificationWorkspace({ assignmentId, locationId }: Prop
     );
   }
 
-  const checklist = form.watch("checklist");
-  const evidence = form.watch("evidence");
-  const findings = form.watch("findings");
-  const notes = form.watch("notes");
   const label = LOCATION_TYPE_LABELS[data.locationType] ?? data.locationType;
 
   return (
