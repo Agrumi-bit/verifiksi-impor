@@ -13,7 +13,12 @@ import { DocumentPreview } from "../document-preview";
 import { usePartnerIndustriOptions } from "../../hooks/use-partner-industri-options";
 import type { ApplicationWizardValues, PartnerIndustriEntryValues } from "../../schema";
 
-type Props = { form: UseFormReturn<ApplicationWizardValues> };
+type Props = {
+  form: UseFormReturn<ApplicationWizardValues>;
+  /** Where "+ Tambah Partner" opens — the applicant's own Company Workspace Partner Companies
+   * form when applying from there, or admin's Partner Management otherwise. */
+  partnerManagementHref: string;
+};
 
 /**
  * Only relevant for "Impor Bahan Baku dan/atau Penolong — Perusahaan Industri" (importTypes
@@ -23,14 +28,15 @@ type Props = { form: UseFormReturn<ApplicationWizardValues> };
  * Step5SupportDocument into its own step, mirroring how VKI's Legal/Tax/Location each get a
  * dedicated step rather than one combined page.
  */
-export function StepPartnerIndustri({ form }: Props) {
+export function StepPartnerIndustri({ form, partnerManagementHref }: Props) {
   const { control, formState } = form;
   const importTypes = useWatch({ control, name: "importTypes" }) ?? [];
+  const companyId = useWatch({ control, name: "companyId" });
   const {
     data: partnerOptions,
     isLoading: isPartnerLoading,
     isError: isPartnerError,
-  } = usePartnerIndustriOptions();
+  } = usePartnerIndustriOptions(companyId);
 
   const hasIndustri = importTypes.includes("BAHAN_BAKU_INDUSTRI");
 
@@ -53,7 +59,7 @@ export function StepPartnerIndustri({ form }: Props) {
       </p>
 
       <a
-        href="/partners/new"
+        href={partnerManagementHref}
         target="_blank"
         rel="noopener noreferrer"
         className={cn(buttonVariants({ variant: "outline" }), "self-start")}

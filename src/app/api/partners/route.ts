@@ -17,6 +17,11 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
   const status = searchParams.get("status");
+  // Application wizard's Partner Industri step passes this when the applying company is known,
+  // so it only offers partners that company itself registered (Company Workspace's own "Partner
+  // Companies" list) instead of every partner in the system. Omitted entirely by the admin
+  // Partner Management table, which intentionally still lists everything.
+  const ownerCompanyId = searchParams.get("ownerCompanyId");
 
   const [partners, applications] = await Promise.all([
     db.partner.findMany({
@@ -27,6 +32,7 @@ export async function GET(request: Request) {
         status: status && PARTNER_STATUSES.includes(status as (typeof PARTNER_STATUSES)[number])
           ? (status as (typeof PARTNER_STATUSES)[number])
           : undefined,
+        ownerCompanyId: ownerCompanyId || undefined,
       },
       include: { company: true },
       orderBy: { createdAt: "desc" },

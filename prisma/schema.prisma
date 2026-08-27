@@ -166,11 +166,20 @@ model Partner {
   contractEndDate      DateTime
   contractDocumentPath String?
 
+  // The API-U company that registered this mitra relationship (Company Workspace's own
+  // "Partner Companies" list) — distinct from `companyId` above, which is the mitra's own
+  // identity. Nullable because Partner rows created via the admin Partner Management module
+  // have no owner (they're the pre-existing global registry every company's application
+  // wizard can already pick from via /api/partners?type=INDUSTRI).
+  ownerCompanyId String?
+  ownerCompany   Company? @relation("PartnerOwner", fields: [ownerCompanyId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([companyId])
   @@index([type])
+  @@index([ownerCompanyId])
   @@map("partner")
 }
 
@@ -244,6 +253,7 @@ model Company {
   applications     Application[]
   merks            Merk[]
   partners         Partner[]
+  ownedPartners    Partner[]                 @relation("PartnerOwner")
   documentVersions CompanyDocumentVersion[]
 
   @@map("company")

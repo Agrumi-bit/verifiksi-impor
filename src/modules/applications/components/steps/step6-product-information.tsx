@@ -29,7 +29,8 @@ export function Step6ProductInformation({ form }: Step6Props) {
   const hsCodeOptions = useHsCodeOptions();
 
   const partnerIndustriEntries = useWatch({ control, name: "partnerIndustriEntries" }) ?? [];
-  const { data: partnerOptions } = usePartnerIndustriOptions();
+  const companyId = useWatch({ control, name: "companyId" });
+  const { data: partnerOptions } = usePartnerIndustriOptions(companyId);
   const enabledPartnerIds = new Set(
     partnerIndustriEntries.filter((entry) => entry?.enabled).map((entry) => entry?.partnerId),
   );

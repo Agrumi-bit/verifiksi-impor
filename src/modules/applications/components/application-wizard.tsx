@@ -358,7 +358,14 @@ export function ApplicationWizard({
                   companyAddress={companyAddress}
                 />
               )}
-              {!isVki && currentStep === 6 && <StepPartnerIndustri form={form} />}
+              {!isVki && currentStep === 6 && (
+                <StepPartnerIndustri
+                  form={form}
+                  partnerManagementHref={
+                    hideCompanyPicker ? "/company-workspace/supporting/partners/new" : "/partners/new"
+                  }
+                />
+              )}
               {!isVki && currentStep === 7 && <Step5SupportDocument form={form} />}
               {!isVki && currentStep === 8 && <Step6ProductInformation form={form} />}
               {!isVki && currentStep === 9 && <Step7Preview form={form} onEditStep={goToStep} />}
