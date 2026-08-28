@@ -26,6 +26,7 @@ type LocationVisitItem = {
   officeVerification: OfficeVerificationValues | null;
   warehouseVerification: FieldVerificationValues | null;
   factoryVerification: FieldVerificationValues | null;
+  reportVerification: { decision: "VERIFIED" | "REJECTED" | "REVISION" | null; decisionNote: string | null } | null;
 };
 
 type Props = { assignmentId: string };
@@ -150,7 +151,8 @@ export function OnSiteTab({ assignmentId }: Props) {
             : isField
               ? computeFieldFindings(fieldKind!, fieldVerification!)
               : [];
-          const needsRevision = isCompleted && findings.length > 0;
+          const verifikatorRequestedRevision = loc.reportVerification?.decision === "REVISION";
+          const needsRevision = isCompleted && (findings.length > 0 || verifikatorRequestedRevision);
           const meta = needsRevision ? CARD_META.COMPLETED_REVISION : CARD_META[loc.status];
 
           return (
@@ -196,6 +198,13 @@ export function OnSiteTab({ assignmentId }: Props) {
                       {loc.progress}% of checklist items verified
                     </div>
                   </>
+                )}
+
+                {verifikatorRequestedRevision && (
+                  <div className="mb-3 rounded-[8px] bg-[#fbe2e0] px-3 py-2 text-[11.5px] leading-relaxed text-[#8a2c25]">
+                    <span className="font-bold">Diminta revisi oleh verifikator.</span>
+                    {loc.reportVerification?.decisionNote ? ` ${loc.reportVerification.decisionNote}` : ""}
+                  </div>
                 )}
 
                 <div className="mt-auto flex gap-2">

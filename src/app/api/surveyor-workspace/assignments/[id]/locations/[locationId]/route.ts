@@ -109,9 +109,20 @@ export async function PATCH(
     );
   }
 
+  // Reopening a revision clears the verifikator's prior decision (keeping their per-item notes
+  // as reference) so the "needs revision" badge doesn't keep showing once the surveyor resubmits.
+  const priorReportVerification = visit.reportVerification as { items?: unknown; decision?: string | null } | null;
+  const clearedReportVerification =
+    parsed.data.action === "revise" && priorReportVerification
+      ? { items: priorReportVerification.items ?? {}, decision: null, decisionNote: null, verifiedByName: null, verifiedAt: null }
+      : undefined;
+
   const updated = await db.locationVisit.update({
     where: { id: locationId },
-    data: { status: "IN_PROGRESS" },
+    data: {
+      status: "IN_PROGRESS",
+      ...(clearedReportVerification ? { reportVerification: clearedReportVerification } : {}),
+    },
   });
 
   await db.assignment.update({

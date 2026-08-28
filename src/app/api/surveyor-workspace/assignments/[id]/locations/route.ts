@@ -82,6 +82,7 @@ export async function GET(
     officeVerification: visit.officeVerification,
     warehouseVerification: visit.warehouseVerification,
     factoryVerification: visit.factoryVerification,
+    reportVerification: visit.reportVerification,
   }));
 
   return NextResponse.json({ data });
