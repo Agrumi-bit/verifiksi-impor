@@ -8,6 +8,7 @@ import { getDocumentMeta } from "@/modules/company/document-versions";
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS } from "@/modules/verifikator-workspace/schema";
+import { computeDisplayStatus } from "@/modules/company-workspace/workflow-stage";
 
 /**
  * `id` may be either the internal cuid (used by this workspace's own links)
@@ -71,10 +72,12 @@ export async function GET(
   );
 
   const latestAssignment = application.assignments[0] ?? null;
+  const displayStatus = computeDisplayStatus(application, application.assignments);
 
   return NextResponse.json({
     data: {
       ...application,
+      displayStatus,
       assignedSurveyorName: latestAssignment?.surveyor?.name ?? null,
       surveyDate: latestAssignment?.scheduledDate ?? null,
       documentStatuses,

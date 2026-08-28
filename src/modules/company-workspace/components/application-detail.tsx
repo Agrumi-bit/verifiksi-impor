@@ -126,6 +126,7 @@ type ApplicationDetailData = {
   verificationType: string;
   applicationCategory: string;
   status: ApplicationStatusValue;
+  displayStatus: ApplicationStatusValue;
   createdAt: string;
   updatedAt: string;
   payload: ApplicationWizardValues;
@@ -834,7 +835,7 @@ export function CompanyApplicationDetail({ id }: Props) {
 
   const { payload, company } = data;
   const isTerminal = TERMINAL_STATUSES.includes(data.status);
-  const display = getApplicationStatusDisplay(data.status);
+  const display = getApplicationStatusDisplay(data.displayStatus);
   const documents = buildDocumentEntries(payload, data.documentStatuses);
 
   return (

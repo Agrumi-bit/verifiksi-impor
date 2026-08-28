@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import type { ApplicationStatusValue } from "@/modules/company-workspace/status";
 import { APPLICATION_STATUSES } from "@/modules/company-workspace/status";
+import { computeDisplayStatus } from "@/modules/company-workspace/workflow-stage";
 
 export async function GET(request: Request) {
   const session = await getServerSession();
@@ -30,6 +31,11 @@ export async function GET(request: Request) {
     where: {
       companyId,
       ...(status ? { status } : {}),
+    },
+    include: {
+      assignments: {
+        select: { scheduleType: true, status: true, verifikatorId: true, technicalReviewerId: true },
+      },
     },
     orderBy: { createdAt: sort },
   });
@@ -58,6 +64,7 @@ export async function GET(request: Request) {
       applicationCategory: application.applicationCategory,
       companyName: payload?.companyName ?? "—",
       status: application.status,
+      displayStatus: computeDisplayStatus(application, application.assignments),
       createdAt: application.createdAt,
       updatedAt: application.updatedAt,
     };

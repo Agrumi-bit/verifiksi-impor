@@ -20,6 +20,7 @@ type ApplicationListItem = {
   applicationCategory: string;
   companyName: string;
   status: ApplicationStatusValue;
+  displayStatus: ApplicationStatusValue;
   createdAt: string;
 };
 
@@ -151,7 +152,7 @@ export function CompanyApplicationTable() {
         )}
 
         {data?.data.map((application) => {
-          const display = getApplicationStatusDisplay(application.status);
+          const display = getApplicationStatusDisplay(application.displayStatus);
           return (
             <div
               key={application.id}
