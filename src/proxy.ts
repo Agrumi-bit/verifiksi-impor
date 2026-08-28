@@ -28,8 +28,8 @@ export default async function proxy(request: NextRequest) {
   const role = (session?.user as { role?: string } | undefined)?.role;
 
   if (isPublicPath(pathname)) {
-    // Logged-in users don't need the login form again — send them home instead of showing it.
-    if (pathname === "/login" && role) {
+    // Logged-in users don't need the login/signup form again — send them home instead of showing it.
+    if ((pathname === "/login" || pathname === "/signup") && role) {
       return NextResponse.redirect(new URL(roleHome(role), request.url));
     }
     return NextResponse.next();
@@ -45,6 +45,20 @@ export default async function proxy(request: NextRequest) {
   if (workspace) {
     if (!workspace.roles.includes(role as Role)) {
       return NextResponse.redirect(new URL(roleHome(role), request.url));
+    }
+    // A self-registered ("Sign Up") company account starts with no companyId — Better Auth
+    // never lets the client set it (src/lib/auth.ts). Force it through onboarding first so it
+    // can't sit on an empty Company Workspace forever; ADMIN/SUPER_ADMIN browsing in for
+    // support are never PERUSAHAAN, so they're unaffected.
+    if (workspace.prefix === "/company-workspace" && role === "PERUSAHAAN") {
+      const companyId = (session.user as { companyId?: string | null }).companyId;
+      const isOnboardingPath = pathname === "/company-workspace/onboarding";
+      if (!companyId && !isOnboardingPath) {
+        return NextResponse.redirect(new URL("/company-workspace/onboarding", request.url));
+      }
+      if (companyId && isOnboardingPath) {
+        return NextResponse.redirect(new URL("/company-workspace", request.url));
+      }
     }
     return NextResponse.next();
   }

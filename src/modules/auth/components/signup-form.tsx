@@ -3,29 +3,18 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/form/form-field";
 import { authClient } from "@/lib/auth-client";
-import { ROLE_HOME, WORKSPACE_ACCESS, ADMIN_ONLY_ROLES } from "@/modules/users/workspace-routes";
-import type { Role } from "@/modules/users/roles";
 import { useBranding, BRANDING_LOGO_URL } from "@/modules/branding/use-branding";
-import { loginSchema, type LoginValues } from "../schema";
+import { signupSchema, type SignupValues } from "../schema";
 
-/** A logged-in-as role is only allowed to land where `src/proxy.ts` will actually let them stay — prevents an `?redirect=` param from sending a user somewhere proxy immediately bounces them back out of. */
-function isAllowedForRole(pathname: string, role: Role): boolean {
-  const workspace = WORKSPACE_ACCESS.find((w) => pathname === w.prefix || pathname.startsWith(`${w.prefix}/`));
-  if (workspace) return workspace.roles.includes(role);
-  if (pathname === "/login" || pathname === "/no-workspace") return true;
-  return ADMIN_ONLY_ROLES.includes(role);
-}
-
-export function LoginForm() {
+export function SignupForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -35,32 +24,49 @@ export function LoginForm() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<SignupValues>({
+    resolver: zodResolver(signupSchema),
   });
 
-  async function onSubmit(values: LoginValues) {
+  async function onSubmit(values: SignupValues) {
     setIsSubmitting(true);
     setServerError(null);
-    const { data, error } = await authClient.signIn.email({
+
+    const signupResponse = await fetch("/api/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: values.name,
+        email: values.email,
+        password: values.password,
+        confirmPassword: values.confirmPassword,
+      }),
+    });
+
+    if (!signupResponse.ok) {
+      const body = await signupResponse.json().catch(() => null);
+      setServerError(body?.error ?? "Gagal membuat akun. Coba lagi.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Account created but not yet signed in — sign in with the same credentials to
+    // establish a session, same as the login form, then land on the onboarding step
+    // that links this account to the company's record (proxy.ts sends PERUSAHAAN
+    // accounts without a companyId there automatically).
+    const { error } = await authClient.signIn.email({
       email: values.email,
       password: values.password,
     });
     setIsSubmitting(false);
 
     if (error) {
-      setServerError(
-        error.message ?? "Email atau password salah. Silakan coba lagi.",
-      );
+      setServerError("Akun berhasil dibuat, tapi login otomatis gagal. Silakan login manual.");
+      router.push("/login");
       return;
     }
 
-    const role = (data?.user as { role?: string } | undefined)?.role as Role | undefined;
-    const defaultRedirect = role ? ROLE_HOME[role] : "/login";
-    const explicitRedirect = searchParams.get("redirect");
-    const target = explicitRedirect && role && isAllowedForRole(explicitRedirect, role) ? explicitRedirect : defaultRedirect;
-
-    router.push(target);
+    router.push("/company-workspace/onboarding");
     router.refresh();
   }
 
@@ -76,19 +82,22 @@ export function LoginForm() {
           </span>
         )}
         <h1 className="text-lg font-semibold">{branding?.appName ?? "VKI & VIU Platform"}</h1>
-        <p className="text-sm text-muted-foreground">
-          {branding?.appSubtitle ?? "Sistem Verifikasi Kemampuan Industri & Verifikasi Importir Umum"}
-        </p>
+        <p className="text-sm text-muted-foreground">Daftar sebagai Perusahaan</p>
       </div>
 
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="flex flex-col gap-4 rounded-xl border border-border p-6"
       >
-        <h2 className="text-sm font-semibold">Login</h2>
+        <h2 className="text-sm font-semibold">Sign Up</h2>
         <p className="text-xs text-muted-foreground">
-          Masukkan email dan password Anda untuk mengakses akun.
+          Buat akun untuk mengajukan permohonan VKI/VIU perusahaan Anda. Setelah akun dibuat, Anda
+          akan diminta menghubungkan akun ini ke data perusahaan.
         </p>
+
+        <FormField label="Nama" htmlFor="name" required error={errors.name?.message}>
+          <Input id="name" placeholder="Nama lengkap" {...register("name")} />
+        </FormField>
 
         <FormField label="Email" htmlFor="email" required error={errors.email?.message}>
           <Input
@@ -99,17 +108,12 @@ export function LoginForm() {
           />
         </FormField>
 
-        <FormField
-          label="Password"
-          htmlFor="password"
-          required
-          error={errors.password?.message}
-        >
+        <FormField label="Password" htmlFor="password" required error={errors.password?.message}>
           <div className="relative">
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="Masukkan password"
+              placeholder="Minimal 8 karakter"
               className="pr-9"
               {...register("password")}
             />
@@ -124,6 +128,20 @@ export function LoginForm() {
           </div>
         </FormField>
 
+        <FormField
+          label="Konfirmasi Password"
+          htmlFor="confirmPassword"
+          required
+          error={errors.confirmPassword?.message}
+        >
+          <Input
+            id="confirmPassword"
+            type={showPassword ? "text" : "password"}
+            placeholder="Ulangi password"
+            {...register("confirmPassword")}
+          />
+        </FormField>
+
         {serverError && (
           <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
             {serverError}
@@ -131,13 +149,13 @@ export function LoginForm() {
         )}
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? "Memproses..." : "Login"}
+          {isSubmitting ? "Memproses..." : "Sign Up"}
         </Button>
 
         <p className="text-center text-xs text-muted-foreground">
-          Perusahaan belum punya akun?{" "}
-          <a href="/signup" className="font-semibold text-foreground hover:underline">
-            Sign Up
+          Sudah punya akun?{" "}
+          <a href="/login" className="font-semibold text-foreground hover:underline">
+            Login
           </a>
         </p>
       </form>

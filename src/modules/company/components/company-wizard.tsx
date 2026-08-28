@@ -15,7 +15,29 @@ import type { CompanyWizardValues } from "../schema";
 
 const STEP_LABELS = ["Data Perusahaan", "PIC", "Legal", "Pajak", "Lokasi", "Review"];
 
-export function CompanyWizard() {
+type Props = {
+  /** Page title shown above the step tracker. Defaults to the admin "Tambah Perusahaan" flow's title. */
+  title?: string;
+  /** Where the back arrow goes. Defaults to the admin company list. */
+  backHref?: string;
+  /** URL this same wizard lives at, used to stamp `?draftId=` into the address bar after the
+   * first "Save as Draft" so a refresh resumes the same draft. Defaults to the admin route. */
+  newPath?: string;
+  /**
+   * Overrides what happens right after `POST /api/companies` succeeds. Defaults to the admin
+   * flow's `router.push`/toast — passed in by callers (like onboarding) that need to do
+   * something else with the newly created company (e.g. link it to the current user) before
+   * navigating away.
+   */
+  onCreated?: (company: { id: string; companyName: string }) => Promise<void> | void;
+};
+
+export function CompanyWizard({
+  title = "Tambah Perusahaan",
+  backHref = "/company",
+  newPath = "/company/new",
+  onCreated,
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialDraftId = searchParams.get("draftId");
@@ -60,7 +82,11 @@ export function CompanyWizard() {
       const { data } = await response.json();
       if (draftId) await fetch(`/api/companies/drafts/${draftId}`, { method: "DELETE" });
       toast.success(`Perusahaan "${data.companyName}" berhasil ditambahkan.`);
-      router.push(`/company/${data.id}`);
+      if (onCreated) {
+        await onCreated({ id: data.id, companyName: data.companyName });
+      } else {
+        router.push(`/company/${data.id}`);
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal menyimpan perusahaan");
     } finally {
@@ -85,7 +111,7 @@ export function CompanyWizard() {
       if (!draftId) {
         const { data } = (await response.json()) as { data: { id: string } };
         setDraftId(data.id);
-        router.replace(`/company/new?draftId=${data.id}`);
+        router.replace(`${newPath}?draftId=${data.id}`);
       }
       toast.success("Draft berhasil disimpan.");
     } catch (error) {
@@ -108,10 +134,10 @@ export function CompanyWizard() {
     <div className="min-h-full bg-[#fbeee5] p-7">
       <div className="mx-auto max-w-[920px]">
         <div className="mb-5 flex items-center gap-2.5">
-          <button type="button" onClick={() => router.push("/company")} className="text-[20px] text-[#a68f80]">
+          <button type="button" onClick={() => router.push(backHref)} className="text-[20px] text-[#a68f80]">
             ←
           </button>
-          <div className="text-[20px] font-extrabold text-[#2b2420]">Tambah Perusahaan</div>
+          <div className="text-[20px] font-extrabold text-[#2b2420]">{title}</div>
         </div>
 
         <div className="flex flex-col rounded-[14px] border border-[#f0ded0] bg-white">

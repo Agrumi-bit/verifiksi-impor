@@ -36,4 +36,4 @@ export const WORKSPACE_ACCESS: { prefix: string; roles: Role[] }[] = [
 export const ADMIN_ONLY_ROLES: Role[] = ["ADMIN", "SUPER_ADMIN"];
 
 /** Reachable by any authenticated role, no workspace match required. */
-export const PUBLIC_PATHS = ["/login", "/no-workspace"];
+export const PUBLIC_PATHS = ["/login", "/signup", "/no-workspace"];
