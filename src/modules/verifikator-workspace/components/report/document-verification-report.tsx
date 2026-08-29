@@ -12,12 +12,16 @@ import {
   PERPAJAKAN_DOCUMENTS,
   TENAGA_KERJA_DOCUMENTS,
   SURAT_PERNYATAAN_DOCUMENTS,
+  MODAL_FINANSIAL_DOCUMENTS,
   buildLocationDocuments,
   buildElectricityDocuments,
+  buildPartnerIndustriDocuments,
   type NarrativeContext,
   type DocDetail,
 } from "../../report-narrative";
 import type { ApplicationWizardValues, MachineKondisiValue } from "@/modules/applications/schema";
+import type { CompanyLegalContext } from "../../company-context";
+import type { ChecklistPartnerContext } from "../../schema";
 import { useHsCodeOptions } from "@/modules/applications/hooks/use-hs-code-options";
 import { ProductionCapabilityChapter, PRODUCTION_CAPABILITY_CHAPTER_PAGE_COUNT } from "./production-capability-chapter";
 import "@/modules/surveyor-workspace/components/report/office-report-preview.css";
@@ -76,7 +80,8 @@ export type ReportData = {
   rencanaKebutuhanConclusion: { status: string; keterangan: string; kesimpulan: string };
   penjualanConclusion: { status: string; keterangan: string; kesimpulan: string };
   payload: ApplicationWizardValues;
-  companySkt: { sktNumber: string | null; sktIssuer: string | null; sktDate: string | null; sktDocumentPath: string | null } | null;
+  companyLegal: CompanyLegalContext;
+  partners: ChecklistPartnerContext[];
 };
 
 export type ProductRow = {
@@ -817,6 +822,7 @@ function ProductChapter({
   chapterIdx,
   startPage,
   totalPages,
+  verificationType,
 }: {
   products: ProductRow[];
   rawMaterialConversion: RawMaterialConversionRow[];
@@ -824,8 +830,14 @@ function ProductChapter({
   chapterIdx: number;
   startPage: number;
   totalPages: number;
+  verificationType: string;
 }) {
   const babLabel = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"][chapterIdx + 1] ?? String(chapterIdx + 1);
+  const isViu = verificationType === "VIU";
+  const chapterTitle = isViu ? "Produk Bahan Baku/Penolong yang Akan Diimpor" : "Data Produk";
+  const chapterDesc = isViu
+    ? `Klasifikasi bahan baku dan/atau bahan penolong yang akan diimpor oleh ${company}, beserta deskripsi produk dan pos tarif/Harmonized System (HS Code) yang berlaku.`
+    : `Klasifikasi produk yang diproduksi ${company} beserta deskripsi produk dan pos tarif/Harmonized System (HS Code) yang berlaku, serta bahan baku yang digunakan dalam proses produksi.`;
 
   return (
     <>
@@ -842,11 +854,8 @@ function ProductChapter({
             <div style={{ width: 22, height: 2, background: ORANGE_LIGHT }} />
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "#f28951" }}>BAB {babLabel}</div>
           </div>
-          <h1 style={{ fontSize: 34, fontWeight: 800, lineHeight: 1.25, margin: "0 0 18px" }}>Data Produk</h1>
-          <p style={{ fontSize: 13, lineHeight: 1.7, color: "#b8c0cc", margin: 0 }}>
-            Klasifikasi produk yang diproduksi {company} beserta deskripsi produk dan pos tarif/Harmonized System (HS Code) yang berlaku, serta
-            bahan baku yang digunakan dalam proses produksi.
-          </p>
+          <h1 style={{ fontSize: 34, fontWeight: 800, lineHeight: 1.25, margin: "0 0 18px" }}>{chapterTitle}</h1>
+          <p style={{ fontSize: 13, lineHeight: 1.7, color: "#b8c0cc", margin: 0 }}>{chapterDesc}</p>
         </div>
       </section>
 
@@ -940,7 +949,14 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
 
   const company = data.companyName;
   const documentStatuses = Object.fromEntries(data.documents.map((d) => [d.key, d.status]));
-  const ctx: NarrativeContext = { payload: data.payload, company, businessAddress: data.businessAddress, companySkt: data.companySkt, documentStatuses };
+  const ctx: NarrativeContext = {
+    payload: data.payload,
+    company,
+    businessAddress: data.businessAddress,
+    companyLegal: data.companyLegal,
+    partners: data.partners,
+    documentStatuses,
+  };
 
   const verified = data.documents.filter((d) => d.status === "VALID").length;
   const needsRevision = data.documents.filter((d) => d.status === "NEED_REVISION").length;
@@ -956,8 +972,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   // Every category gets the full narrative-page treatment (divider + compliance/
   // list page + one page per document + kesimpulan/rekap + visual summary) when
   // real narrative content exists for it; categories with no narrative content
-  // yet (e.g. VIU's "Dokumen Pendukung") fall back to the compact compliance
-  // table + flat document list treatment.
+  // fall back to the compact compliance table + flat document list treatment.
   const categoryDocsMap: Record<string, DocDetail[]> = {};
   for (const category of categories) {
     const realKeys = new Set(data.documents.filter((d) => d.category === category).map((d) => d.key));
@@ -967,6 +982,10 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
     else if (category === "Tenaga Kerja") categoryDocsMap[category] = TENAGA_KERJA_DOCUMENTS.filter((d) => realKeys.has(d.key));
     else if (category === "Dokumen Lokasi") categoryDocsMap[category] = buildLocationDocuments(ctx);
     else if (category === "Dokumen Pendukung VKI") categoryDocsMap[category] = buildElectricityDocuments(ctx);
+    // VIU's "Bukti Kemampuan Finansial" checklist (shared between Bahan Baku Industri and
+    // Bahan Baku Non Industri) and VIU-industri's "Partner Industri" checklist.
+    else if (category === "Dokumen Pendukung") categoryDocsMap[category] = MODAL_FINANSIAL_DOCUMENTS.filter((d) => realKeys.has(d.key));
+    else if (category === "Dokumen Partner Industri") categoryDocsMap[category] = buildPartnerIndustriDocuments(ctx);
     else categoryDocsMap[category] = [];
   }
 
@@ -1013,8 +1032,15 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   const productionQty = data.productionQty;
   const rawMaterialUsage = data.rawMaterialUsage.map((r) => (r.hsDesc ? r : { ...r, hsDesc: descForHsCode(r.hsCode) }));
   const sales = data.sales;
+  // VKI-only (Data Mesin, Jumlah Produksi, Bahan Baku Digunakan, Konversi, Penjualan are wizard
+  // steps that don't exist for VIU at all — see the "VKI-only steps" comment in
+  // src/modules/applications/schema.ts). `products` is deliberately excluded from this check —
+  // VIU's own "Data Produk"/"Produk Bahan Baku..." chapter already handles it independently
+  // (hasProductChapter below), and including it here used to make this VKI-only chapter appear
+  // for VIU applications too, since both verification types populate `payload.products`.
   const hasProductionCapabilityChapter =
-    capacity.length > 0 || machines.length > 0 || products.length > 0 || rawMaterials.length > 0 || productionQty.length > 0 || rawMaterialUsage.length > 0 || rawMaterialConversion.length > 0 || sales.length > 0;
+    data.verificationType === "VKI" &&
+    (capacity.length > 0 || machines.length > 0 || rawMaterials.length > 0 || productionQty.length > 0 || rawMaterialUsage.length > 0 || rawMaterialConversion.length > 0 || sales.length > 0);
   const productionCapabilityChapterPageCount = hasProductionCapabilityChapter ? PRODUCTION_CAPABILITY_CHAPTER_PAGE_COUNT : 0;
   const productionCapabilityChapterStartPage = cursor;
   cursor += productionCapabilityChapterPageCount;
@@ -1237,7 +1263,9 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                 <div style={{ width: 24, height: 24, borderRadius: "50%", background: ORANGE, color: "#fff", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   {categories.length + (machines.length > 0 ? 2 : 1)}
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#1a3a6b", flex: 1 }}>Data Produk</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1a3a6b", flex: 1 }}>
+                  {data.verificationType === "VIU" ? "Produk Bahan Baku/Penolong yang Akan Diimpor" : "Data Produk"}
+                </div>
                 <div style={{ fontSize: 12, color: MUTED_2 }}>{String(productChapterStartPage).padStart(2, "0")}</div>
               </a>
             )}
@@ -1760,6 +1788,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
             chapterIdx={categories.length + (machines.length > 0 ? 1 : 0)}
             startPage={productChapterStartPage}
             totalPages={totalPages}
+            verificationType={data.verificationType}
           />
         )}
 

@@ -164,6 +164,71 @@ export const DOCUMENT_COMPLIANCE_DEFS: Record<string, DocumentComplianceDef> = {
     referensi: "Pasal 31 ayat (2) huruf a Permenperin Nomor 27 Tahun 2025",
     keterangan: "Dokumen lain yang sah yang dapat menunjukkan hak penguasaan atas fasilitas produksi dan/atau gudang.",
   },
+  "nonindustri-support:rekening-koran": {
+    persyaratan: "Wajib",
+    referensi: "Persyaratan Bukti Kemampuan Finansial — Verifikasi Importir Umum (VIU)",
+    keterangan: "Menunjukkan saldo, arus kas, dan aktivitas keuangan aktual perusahaan.",
+  },
+  "nonindustri-support:surat-referensi-bank": {
+    persyaratan: "Wajib",
+    referensi: "Persyaratan Bukti Kemampuan Finansial — Verifikasi Importir Umum (VIU)",
+    keterangan: "Menunjukkan hubungan perbankan dan keberadaan rekening perusahaan.",
+  },
+  "nonindustri-support:laporan-keuangan": {
+    persyaratan: "Wajib",
+    referensi: "Persyaratan Bukti Kemampuan Finansial — Verifikasi Importir Umum (VIU)",
+    keterangan: "Menunjukkan kas, aset lancar, kewajiban lancar, modal, dan kondisi keuangan perusahaan.",
+  },
+  "nonindustri-support:fasilitas-kredit": {
+    persyaratan: "Wajib",
+    referensi: "Persyaratan Bukti Kemampuan Finansial — Verifikasi Importir Umum (VIU)",
+    keterangan: "Menunjukkan kemampuan perusahaan memperoleh pembiayaan untuk transaksi impor.",
+  },
+  "nonindustri-support:keterangan-saldo": {
+    persyaratan: "Pendukung (Jika Tersedia)",
+    referensi: "Persyaratan Bukti Kemampuan Finansial — Verifikasi Importir Umum (VIU)",
+    keterangan: "Menunjukkan posisi dana perusahaan pada tanggal tertentu, apabila tersedia.",
+  },
+  "nonindustri-support:deposito": {
+    persyaratan: "Pendukung (Jika Tersedia)",
+    referensi: "Persyaratan Bukti Kemampuan Finansial — Verifikasi Importir Umum (VIU)",
+    keterangan: "Menunjukkan tambahan sumber dana likuid yang dapat digunakan perusahaan, apabila tersedia.",
+  },
+  "nonindustri-support:pinjaman-afiliasi": {
+    persyaratan: "Pendukung (Jika Tersedia)",
+    referensi: "Persyaratan Bukti Kemampuan Finansial — Verifikasi Importir Umum (VIU)",
+    keterangan: "Menunjukkan sumber pembiayaan tambahan dari pemegang saham/afiliasi, apabila memang ada dan sah.",
+  },
+  "nonindustri-support:kontrak-po": {
+    persyaratan: "Pendukung (Jika Tersedia)",
+    referensi: "Persyaratan Bukti Kemampuan Finansial — Verifikasi Importir Umum (VIU)",
+    keterangan: "Menunjukkan dasar komersial kebutuhan pembelian/importasi, apabila tersedia.",
+  },
+  "nonindustri-support:proforma-invoice": {
+    persyaratan: "Pendukung (Jika Tersedia)",
+    referensi: "Persyaratan Bukti Kemampuan Finansial — Verifikasi Importir Umum (VIU)",
+    keterangan: "Menunjukkan estimasi nilai pembelian barang yang akan dibiayai, apabila tersedia.",
+  },
+  "partner:nib": {
+    persyaratan: "Wajib",
+    referensi: "Persyaratan Mitra Industri — Verifikasi Importir Umum (VIU)",
+    keterangan: "Diverifikasi untuk memastikan legalitas usaha mitra industri yang memasok bahan baku dan/atau bahan penolong.",
+  },
+  "partner:npwp": {
+    persyaratan: "Wajib",
+    referensi: "Persyaratan Mitra Industri — Verifikasi Importir Umum (VIU)",
+    keterangan: "Diverifikasi untuk memastikan identitas perpajakan mitra industri yang sah.",
+  },
+  "partner:sk": {
+    persyaratan: "Pendukung",
+    referensi: "Persyaratan Mitra Industri — Verifikasi Importir Umum (VIU)",
+    keterangan: "Digunakan sebagai bukti pendukung keabsahan badan usaha mitra industri.",
+  },
+  "partner:lhvki": {
+    persyaratan: "Wajib",
+    referensi: "Persyaratan Mitra Industri — Verifikasi Importir Umum (VIU)",
+    keterangan: "Membuktikan bahwa mitra industri telah dinyatakan memiliki kemampuan industri yang terverifikasi.",
+  },
 };
 
 /**
@@ -175,7 +240,11 @@ export const DOCUMENT_COMPLIANCE_DEFS: Record<string, DocumentComplianceDef> = {
 export function getComplianceDef(key: string): DocumentComplianceDef | undefined {
   if (DOCUMENT_COMPLIANCE_DEFS[key]) return DOCUMENT_COMPLIANCE_DEFS[key];
   const locationMatch = key.match(/^location:[^:]+:(ownership|lease):([A-Z_]+)$/);
-  return locationMatch ? DOCUMENT_COMPLIANCE_DEFS[`location:${locationMatch[1]}:${locationMatch[2]}`] : undefined;
+  if (locationMatch) return DOCUMENT_COMPLIANCE_DEFS[`location:${locationMatch[1]}:${locationMatch[2]}`];
+  // Partner Industri keys are dynamic per partnerId (`partner:{partnerId}:nib`) — same
+  // suffix-match idea as the per-location lookup above.
+  const partnerMatch = key.match(/^partner:[^:]+:(nib|npwp|sk|lhvki)$/);
+  return partnerMatch ? DOCUMENT_COMPLIANCE_DEFS[`partner:${partnerMatch[1]}`] : undefined;
 }
 
 export const COMPLIANCE_SECTION_DEFS = [
@@ -225,6 +294,26 @@ export const COMPLIANCE_SECTION_DEFS = [
       "Pemeriksaan administratif kepemilikan/penguasaan bangunan dilakukan untuk memastikan bahwa perusahaan memiliki atau menguasai fasilitas bangunan yang digunakan dalam pelaksanaan kegiatan industri, meliputi area produksi, gudang bahan baku, gudang bahan penolong, dan/atau gudang hasil produksi. Pemeriksaan ini bertujuan untuk memberikan keyakinan bahwa kegiatan produksi dilaksanakan pada fasilitas yang berada dalam penguasaan perusahaan dan mendukung operasional industri sesuai dengan ruang lingkup usaha yang diajukan dalam permohonan Verifikasi Kemampuan Industri (VKI).",
       "Pemeriksaan dilakukan melalui penelaahan terhadap Surat Pernyataan memiliki/menguasai gudang bahan baku dan/atau bahan penolong dan/atau gudang hasil produksi sebagai persyaratan administratif sesuai Pasal 30 ayat (2) huruf b angka 6 Permenperin Nomor 27 Tahun 2025. Selain itu, apabila tersedia, dilakukan pemeriksaan terhadap dokumen pendukung yang menunjukkan status kepemilikan atau penguasaan fasilitas bangunan, seperti Sertifikat Hak Milik (SHM), Sertifikat Hak Guna Bangunan (HGB), Akta Jual Beli (AJB), Perjanjian Sewa Menyewa, Perjanjian Pinjam Pakai, Perjanjian Kerja Sama, atau dokumen lain yang sah.",
       "Selanjutnya, kesesuaian antara dokumen administratif dengan kondisi aktual di lapangan diverifikasi melalui observasi lokasi industri sesuai ketentuan Pasal 31 Permenperin Nomor 27 Tahun 2025, untuk memastikan bahwa fasilitas bangunan yang digunakan perusahaan benar-benar tersedia, digunakan untuk kegiatan produksi, dan sesuai dengan informasi yang tercantum dalam dokumen permohonan VKI.",
+    ],
+    vkiOnly: false,
+  },
+  {
+    category: "Dokumen Pendukung",
+    title: "Pemeriksaan Administratif Bukti Kemampuan Finansial",
+    desc: "Dasar hukum dan klasifikasi dokumen bukti kemampuan finansial yang diperiksa",
+    intro: [
+      "Pemeriksaan administratif bukti kemampuan finansial dilaksanakan untuk memastikan bahwa perusahaan memiliki kemampuan keuangan yang memadai dalam membiayai kegiatan importasi bahan baku dan/atau bahan penolong, sebagai bagian dari persyaratan pengajuan Verifikasi Importir Umum (VIU) bagi perusahaan non industri (API-U).",
+      "Pemeriksaan dilakukan melalui verifikasi terhadap dokumen keuangan wajib (rekening koran, surat referensi bank, laporan keuangan, dan bukti fasilitas kredit) serta dokumen pendukung tambahan yang diserahkan perusahaan apabila tersedia.",
+    ],
+    vkiOnly: false,
+  },
+  {
+    category: "Dokumen Partner Industri",
+    title: "Pemeriksaan Administratif Mitra Industri",
+    desc: "Dasar hukum dan klasifikasi dokumen mitra industri yang diperiksa",
+    intro: [
+      "Pemeriksaan administratif mitra industri dilaksanakan untuk memastikan bahwa mitra industri (pemasok bahan baku dan/atau bahan penolong) yang dicantumkan perusahaan dalam permohonan Verifikasi Importir Umum (VIU) memiliki legalitas usaha yang sah dan telah dinyatakan memiliki kemampuan industri yang terverifikasi.",
+      "Pemeriksaan dilakukan melalui verifikasi terhadap Nomor Induk Berusaha (NIB), Nomor Pokok Wajib Pajak (NPWP), dan Surat Keputusan Kementerian Hukum dan Hak Asasi Manusia mitra industri, serta Laporan Hasil Verifikasi Kemampuan Industri (LHVKI) sebagai bukti kemampuan industri mitra yang bersangkutan.",
     ],
     vkiOnly: false,
   },

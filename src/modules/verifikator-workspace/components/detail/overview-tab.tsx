@@ -38,7 +38,7 @@ export function OverviewTab({ data }: { data: AssignmentDetailData }) {
         <Section title="Company Information" icon="domain" iconColor="#2f6fe0">
           <div className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
             <Field label="Nama Perusahaan" value={company.companyName} />
-            <Field label="NIB" value={company.nibNumber} />
+            <Field label="NIB" value={company.companyLegal?.nibNumber || payload.nibNumber} />
             <div className="sm:col-span-2">
               <Field label="Alamat" value={company.businessAddress} />
             </div>

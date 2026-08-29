@@ -1,18 +1,26 @@
-import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import { NON_INDUSTRI_SUPPORT_DOC_DEFS, type ApplicationWizardValues, type NonIndustriSupportDocDef } from "@/modules/applications/schema";
 import { OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS, splitKbliEntries } from "@/modules/shared/schema";
+import type { CompanyLegalContext } from "./company-context";
+import type { ChecklistPartnerContext } from "./schema";
 
 export type NarrativeContext = {
   payload: ApplicationWizardValues;
   company: string;
   businessAddress: string | null;
+  /** Resolved `Partner.company` NIB/NPWP/SK for every enabled VIU-industri "Partner Industri"
+   * entry — see `buildPartnerIndustriDocuments` below. Defaults to `[]` when a caller doesn't
+   * resolve partners (non-VIU-industri applications never have any enabled entries anyway). */
+  partners?: ChecklistPartnerContext[];
   /**
-   * Live Company fallback for SKT fields — `payload.sktXxx` only exists for
-   * applications submitted after these fields were added to the wizard
-   * schema, so older applications' frozen payload snapshot never captured
-   * them even though the company's own record has real data. Mirrors the
-   * same fallback pattern in `document-checklist-items.ts`'s `ChecklistContext`.
+   * Live Company fields for NIB/SK/Notarial/NPWP/SKT — `payload.Xxx` is a
+   * snapshot frozen at submission time; once the company edits and
+   * re-uploads via Company Workspace's profile editor, only the `Company`
+   * row changes, so every narrative field/documentPath below must prefer
+   * this live value or the printed report shows stale data next to a
+   * document that no longer matches it. Mirrors the same pattern in
+   * `document-checklist-items.ts`'s `ChecklistContext`.
    */
-  companySkt: { sktNumber: string | null; sktIssuer: string | null; sktDate: string | null; sktDocumentPath: string | null } | null;
+  companyLegal: CompanyLegalContext;
   /**
    * Per-document checklist status (`data.documents[].status`, keyed by the
    * same `DocDetail.key`) — "memenuhi" must reflect that the verifikator has
@@ -60,27 +68,32 @@ export const LEGALITAS_DOCUMENTS: DocDetail[] = [
     key: "nib",
     no: 1,
     title: "Nomor Induk Berusaha (NIB)",
-    documentPath: ({ payload }) => payload.nibDocumentPath,
+    documentPath: ({ payload, companyLegal }) => companyLegal?.nibDocumentPath || payload.nibDocumentPath,
     intro: () => [
       "Verifikasi terhadap Nomor Induk Berusaha (NIB) dilakukan melalui pemeriksaan dokumen Perizinan Berusaha yang diterbitkan melalui sistem Online Single Submission (OSS). Pemeriksaan dilakukan untuk memastikan keabsahan identitas perusahaan, kesesuaian data perusahaan, serta keberlakuan Perizinan Berusaha sebagai salah satu persyaratan administrasi dalam pengajuan Verifikasi Kemampuan Industri (VKI).",
     ],
-    fields: ({ payload }) => [
-      { label: "Nomor Induk Berusaha (NIB)", value: payload.nibNumber || "—", ok: Boolean(payload.nibNumber) },
-      { label: "Nama Perusahaan", value: payload.companyName || "—", ok: Boolean(payload.companyName) },
-      { label: "Tanggal Terbit NIB", value: fmtDate(payload.nibIssueDate), ok: Boolean(payload.nibIssueDate) },
-      { label: "Bentuk Badan Usaha", value: payload.companyType || "—", ok: Boolean(payload.companyType) },
-      { label: "Status NIB", value: "NIB Berstatus Aktif", ok: Boolean(payload.nibDocumentPath) },
-    ],
-    findings: ({ payload, company }) => [
-      `Berdasarkan hasil pemeriksaan dokumen, ${company} memiliki Nomor Induk Berusaha (NIB) ${payload.nibNumber || "—"}. NIB tersebut merupakan identitas resmi perusahaan dalam pelaksanaan kegiatan berusaha dan digunakan sebagai dasar legalitas perusahaan dalam menjalankan kegiatan industri sesuai dengan ketentuan peraturan perundang-undangan.`,
+    fields: ({ payload, companyLegal }) => {
+      const nibNumber = companyLegal?.nibNumber || payload.nibNumber;
+      const nibIssueDate = companyLegal?.nibIssueDate || payload.nibIssueDate;
+      return [
+        { label: "Nomor Induk Berusaha (NIB)", value: nibNumber || "—", ok: Boolean(nibNumber) },
+        { label: "Nama Perusahaan", value: payload.companyName || "—", ok: Boolean(payload.companyName) },
+        { label: "Tanggal Terbit NIB", value: fmtDate(nibIssueDate), ok: Boolean(nibIssueDate) },
+        { label: "Bentuk Badan Usaha", value: payload.companyType || "—", ok: Boolean(payload.companyType) },
+        { label: "Status NIB", value: "NIB Berstatus Aktif", ok: Boolean(companyLegal?.nibDocumentPath || payload.nibDocumentPath) },
+      ];
+    },
+    findings: ({ payload, company, companyLegal }) => [
+      `Berdasarkan hasil pemeriksaan dokumen, ${company} memiliki Nomor Induk Berusaha (NIB) ${companyLegal?.nibNumber || payload.nibNumber || "—"}. NIB tersebut merupakan identitas resmi perusahaan dalam pelaksanaan kegiatan berusaha dan digunakan sebagai dasar legalitas perusahaan dalam menjalankan kegiatan industri sesuai dengan ketentuan peraturan perundang-undangan.`,
       "Hasil verifikasi menunjukkan bahwa data yang tercantum pada NIB meliputi nama perusahaan, alamat perusahaan, serta informasi kegiatan usaha telah sesuai dengan dokumen legal perusahaan yang diperiksa pada saat verifikasi. Selain itu, NIB tersebut masih berlaku dan digunakan sebagai Perizinan Berusaha perusahaan. Kepemilikan NIB tersebut telah memenuhi persyaratan administrasi sebagaimana dipersyaratkan dalam Pasal 30 ayat (2) huruf b angka 2 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025, yang mewajibkan Perusahaan Industri memiliki Perizinan Berusaha sebagai salah satu dokumen dalam pengajuan Verifikasi Kemampuan Industri (VKI).",
     ],
     kesimpulan: (ctx) => {
-      const { payload, company } = ctx;
-      const memenuhi = Boolean(payload.nibDocumentPath && payload.nibNumber) && isVerified(ctx, "nib");
+      const { payload, company, companyLegal } = ctx;
+      const nibNumber = companyLegal?.nibNumber || payload.nibNumber;
+      const memenuhi = Boolean((companyLegal?.nibDocumentPath || payload.nibDocumentPath) && nibNumber) && isVerified(ctx, "nib");
       return {
         memenuhi,
-        text: `Berdasarkan hasil verifikasi dokumen dan observasi lapangan, ${company} memiliki Nomor Induk Berusaha (NIB) ${payload.nibNumber || "—"} yang masih berlaku dan sesuai dengan ketentuan Pasal 30 ayat (2) huruf b angka 2 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025. Dengan demikian, aspek kelengkapan dan keabsahan NIB dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+        text: `Berdasarkan hasil verifikasi dokumen dan observasi lapangan, ${company} memiliki Nomor Induk Berusaha (NIB) ${nibNumber || "—"} yang masih berlaku dan sesuai dengan ketentuan Pasal 30 ayat (2) huruf b angka 2 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025. Dengan demikian, aspek kelengkapan dan keabsahan NIB dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
       };
     },
   },
@@ -168,27 +181,32 @@ export const LEGALITAS_DOCUMENTS: DocDetail[] = [
     key: "sk",
     no: 4,
     title: "Surat Keputusan Kementerian Hukum dan Hak Asasi Manusia",
-    documentPath: ({ payload }) => payload.skDocumentPath,
+    documentPath: ({ payload, companyLegal }) => companyLegal?.skDocumentPath || payload.skDocumentPath,
     intro: () => [
       "Verifikasi terhadap Surat Keputusan Menteri Hukum dan Hak Asasi Manusia Republik Indonesia dilakukan sebagai dokumen pendukung untuk memastikan keabsahan dan konsistensi identitas badan usaha yang tercantum dalam Perizinan Berusaha (Nomor Induk Berusaha/NIB). Pemeriksaan dilakukan sebagai bagian dari verifikasi kesesuaian data dan dokumen yang diajukan dalam proses Verifikasi Kemampuan Industri (VKI) sesuai dengan ketentuan Pasal 31 ayat (1) huruf a Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.",
     ],
-    fields: ({ payload }) => [
-      { label: "Nomor SK Kemenkumham", value: payload.skNumber || "—", ok: Boolean(payload.skNumber) },
-      { label: "Tanggal SK Kemenkumham", value: fmtDate(payload.skDate), ok: Boolean(payload.skDate) },
-      { label: "Nama Perusahaan", value: payload.companyName || "—", ok: Boolean(payload.companyName) },
-      { label: "Status Pengesahan", value: `Pengesahan Pendirian ${payload.companyName || "—"}`, ok: Boolean(payload.skDocumentPath) },
-    ],
-    findings: ({ payload, company }) => [
-      `Berdasarkan hasil pemeriksaan dokumen, ${company} memiliki Surat Keputusan Menteri Hukum dan Hak Asasi Manusia Republik Indonesia Nomor ${payload.skNumber || "—"} tentang Pengesahan Pendirian ${company}.`,
+    fields: ({ payload, companyLegal }) => {
+      const skNumber = companyLegal?.skNumber || payload.skNumber;
+      const skDate = companyLegal?.skDate || payload.skDate;
+      return [
+        { label: "Nomor SK Kemenkumham", value: skNumber || "—", ok: Boolean(skNumber) },
+        { label: "Tanggal SK Kemenkumham", value: fmtDate(skDate), ok: Boolean(skDate) },
+        { label: "Nama Perusahaan", value: payload.companyName || "—", ok: Boolean(payload.companyName) },
+        { label: "Status Pengesahan", value: `Pengesahan Pendirian ${payload.companyName || "—"}`, ok: Boolean(companyLegal?.skDocumentPath || payload.skDocumentPath) },
+      ];
+    },
+    findings: ({ payload, company, companyLegal }) => [
+      `Berdasarkan hasil pemeriksaan dokumen, ${company} memiliki Surat Keputusan Menteri Hukum dan Hak Asasi Manusia Republik Indonesia Nomor ${companyLegal?.skNumber || payload.skNumber || "—"} tentang Pengesahan Pendirian ${company}.`,
       "Hasil verifikasi menunjukkan bahwa identitas badan usaha yang tercantum dalam Surat Keputusan Kementerian Hukum dan HAM telah sesuai dengan data pada Perizinan Berusaha (NIB), meliputi nama perusahaan serta status pendirian perusahaan. Pemeriksaan juga menunjukkan tidak terdapat perbedaan identitas antara Surat Keputusan Kementerian Hukum dan HAM dengan dokumen legal perusahaan lainnya yang digunakan dalam proses verifikasi.",
       "Meskipun Surat Keputusan Kementerian Hukum dan HAM tidak termasuk dokumen yang secara eksplisit dipersyaratkan dalam Pasal 30 ayat (2), dokumen ini digunakan sebagai bukti pendukung untuk memverifikasi keabsahan identitas badan usaha yang menjadi dasar penerbitan Perizinan Berusaha (NIB), yang merupakan salah satu persyaratan dokumen dalam pengajuan VKI.",
     ],
     kesimpulan: (ctx) => {
-      const { payload, company } = ctx;
-      const memenuhi = Boolean(payload.skDocumentPath && payload.skNumber) && isVerified(ctx, "sk");
+      const { payload, company, companyLegal } = ctx;
+      const skNumber = companyLegal?.skNumber || payload.skNumber;
+      const memenuhi = Boolean((companyLegal?.skDocumentPath || payload.skDocumentPath) && skNumber) && isVerified(ctx, "sk");
       return {
         memenuhi,
-        text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki Surat Keputusan Menteri Hukum dan Hak Asasi Manusia Republik Indonesia Nomor ${payload.skNumber || "—"} yang menunjukkan pengesahan pendirian perusahaan. Data yang tercantum konsisten dengan Perizinan Berusaha (NIB) dan dokumen legal perusahaan lainnya. Dengan demikian, dokumen ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong> sebagai bukti pendukung legalitas perusahaan.`,
+        text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki Surat Keputusan Menteri Hukum dan Hak Asasi Manusia Republik Indonesia Nomor ${skNumber || "—"} yang menunjukkan pengesahan pendirian perusahaan. Data yang tercantum konsisten dengan Perizinan Berusaha (NIB) dan dokumen legal perusahaan lainnya. Dengan demikian, dokumen ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong> sebagai bukti pendukung legalitas perusahaan.`,
       };
     },
   },
@@ -196,27 +214,40 @@ export const LEGALITAS_DOCUMENTS: DocDetail[] = [
     key: "notarial",
     no: 5,
     title: "Akta Pendirian",
-    documentPath: ({ payload }) => payload.notarialDocumentPath,
+    documentPath: ({ payload, companyLegal }) => companyLegal?.notarialDocumentPath || payload.notarialDocumentPath,
     intro: () => [
       "Verifikasi terhadap Akta Pendirian perusahaan dilakukan sebagai dokumen pendukung untuk memastikan keabsahan identitas badan usaha yang tercantum dalam Perizinan Berusaha (Nomor Induk Berusaha/NIB). Pemeriksaan dilakukan sebagai bagian dari verifikasi kesesuaian data dan dokumen yang diajukan dalam proses Verifikasi Kemampuan Industri (VKI) sesuai dengan ketentuan Pasal 31 ayat (1) huruf a Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.",
     ],
-    fields: ({ payload }) => [
-      { label: "Nomor Akta Pendirian", value: payload.notarialDeedNumber || "—", ok: Boolean(payload.notarialDeedNumber) },
-      { label: "Tanggal Akta Pendirian", value: fmtDate(payload.notarialDeedIssueDate), ok: Boolean(payload.notarialDeedIssueDate) },
-      { label: "Nama Notaris", value: payload.notarialIssuingAuthority || "—", ok: Boolean(payload.notarialIssuingAuthority) },
-      { label: "Nama Perusahaan", value: payload.companyName || "—", ok: Boolean(payload.companyName) },
-    ],
-    findings: ({ payload, company }) => [
-      `Berdasarkan hasil pemeriksaan dokumen, ${company} memiliki Akta Pendirian Nomor ${payload.notarialDeedNumber || "—"}, yang dibuat oleh ${payload.notarialIssuingAuthority || "—"}, Notaris, pada tanggal ${fmtDate(payload.notarialDeedIssueDate)}.`,
-      "Hasil verifikasi menunjukkan bahwa informasi yang tercantum dalam Akta Pendirian, meliputi nama perusahaan, bentuk badan usaha, tanggal pendirian, serta identitas pendiri, telah sesuai dengan data yang tercantum pada Surat Keputusan Kementerian Hukum dan Hak Asasi Manusia Republik Indonesia, Perizinan Berusaha (NIB), serta dokumen legal perusahaan lainnya.",
-      "Meskipun Akta Pendirian tidak termasuk dokumen yang secara eksplisit dipersyaratkan dalam Pasal 30 ayat (2) Peraturan Menteri Perindustrian Nomor 27 Tahun 2025, dokumen ini digunakan sebagai bukti pendukung untuk memverifikasi keabsahan identitas perusahaan serta memastikan konsistensi data pada Perizinan Berusaha (NIB), yang merupakan salah satu persyaratan dalam pengajuan Verifikasi Kemampuan Industri (VKI).",
-    ],
+    fields: ({ payload, companyLegal }) => {
+      const notarialDeedNumber = companyLegal?.notarialDeedNumber || payload.notarialDeedNumber;
+      const notarialDeedIssueDate = companyLegal?.notarialDeedIssueDate || payload.notarialDeedIssueDate;
+      const notarialIssuingAuthority = companyLegal?.notarialIssuingAuthority || payload.notarialIssuingAuthority;
+      return [
+        { label: "Nomor Akta Pendirian", value: notarialDeedNumber || "—", ok: Boolean(notarialDeedNumber) },
+        { label: "Tanggal Akta Pendirian", value: fmtDate(notarialDeedIssueDate), ok: Boolean(notarialDeedIssueDate) },
+        { label: "Nama Notaris", value: notarialIssuingAuthority || "—", ok: Boolean(notarialIssuingAuthority) },
+        { label: "Nama Perusahaan", value: payload.companyName || "—", ok: Boolean(payload.companyName) },
+      ];
+    },
+    findings: ({ payload, company, companyLegal }) => {
+      const notarialDeedNumber = companyLegal?.notarialDeedNumber || payload.notarialDeedNumber;
+      const notarialIssuingAuthority = companyLegal?.notarialIssuingAuthority || payload.notarialIssuingAuthority;
+      const notarialDeedIssueDate = companyLegal?.notarialDeedIssueDate || payload.notarialDeedIssueDate;
+      return [
+        `Berdasarkan hasil pemeriksaan dokumen, ${company} memiliki Akta Pendirian Nomor ${notarialDeedNumber || "—"}, yang dibuat oleh ${notarialIssuingAuthority || "—"}, Notaris, pada tanggal ${fmtDate(notarialDeedIssueDate)}.`,
+        "Hasil verifikasi menunjukkan bahwa informasi yang tercantum dalam Akta Pendirian, meliputi nama perusahaan, bentuk badan usaha, tanggal pendirian, serta identitas pendiri, telah sesuai dengan data yang tercantum pada Surat Keputusan Kementerian Hukum dan Hak Asasi Manusia Republik Indonesia, Perizinan Berusaha (NIB), serta dokumen legal perusahaan lainnya.",
+        "Meskipun Akta Pendirian tidak termasuk dokumen yang secara eksplisit dipersyaratkan dalam Pasal 30 ayat (2) Peraturan Menteri Perindustrian Nomor 27 Tahun 2025, dokumen ini digunakan sebagai bukti pendukung untuk memverifikasi keabsahan identitas perusahaan serta memastikan konsistensi data pada Perizinan Berusaha (NIB), yang merupakan salah satu persyaratan dalam pengajuan Verifikasi Kemampuan Industri (VKI).",
+      ];
+    },
     kesimpulan: (ctx) => {
-      const { payload, company } = ctx;
-      const memenuhi = Boolean(payload.notarialDocumentPath && payload.notarialDeedNumber) && isVerified(ctx, "notarial");
+      const { payload, company, companyLegal } = ctx;
+      const notarialDeedNumber = companyLegal?.notarialDeedNumber || payload.notarialDeedNumber;
+      const notarialIssuingAuthority = companyLegal?.notarialIssuingAuthority || payload.notarialIssuingAuthority;
+      const notarialDeedIssueDate = companyLegal?.notarialDeedIssueDate || payload.notarialDeedIssueDate;
+      const memenuhi = Boolean((companyLegal?.notarialDocumentPath || payload.notarialDocumentPath) && notarialDeedNumber) && isVerified(ctx, "notarial");
       return {
         memenuhi,
-        text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki Akta Pendirian Nomor ${payload.notarialDeedNumber || "—"} yang dibuat oleh ${payload.notarialIssuingAuthority || "—"}, Notaris, pada ${fmtDate(payload.notarialDeedIssueDate)}. Data yang tercantum konsisten dengan Surat Keputusan Kementerian Hukum dan HAM dan dokumen legal perusahaan lainnya. Dengan demikian, dokumen ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+        text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki Akta Pendirian Nomor ${notarialDeedNumber || "—"} yang dibuat oleh ${notarialIssuingAuthority || "—"}, Notaris, pada ${fmtDate(notarialDeedIssueDate)}. Data yang tercantum konsisten dengan Surat Keputusan Kementerian Hukum dan HAM dan dokumen legal perusahaan lainnya. Dengan demikian, dokumen ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
       };
     },
   },
@@ -224,35 +255,48 @@ export const LEGALITAS_DOCUMENTS: DocDetail[] = [
     key: "notarial-amendment",
     no: 6,
     title: "Akta Perubahan",
-    documentPath: ({ payload }) => payload.notarialAmendmentDocPath,
+    documentPath: ({ payload, companyLegal }) => companyLegal?.notarialAmendmentDocPath || payload.notarialAmendmentDocPath,
     intro: () => [
       "Verifikasi terhadap Akta Perubahan dilakukan sebagai dokumen pendukung untuk memastikan bahwa perubahan data perusahaan telah dituangkan dalam akta notaris dan selaras dengan dokumen legal perusahaan lainnya. Pemeriksaan dilakukan sebagai bagian dari verifikasi kesesuaian data dan dokumen yang diajukan dalam proses Verifikasi Kemampuan Industri (VKI) sesuai dengan ketentuan Pasal 31 ayat (1) huruf a Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.",
     ],
-    fields: ({ payload }) => [
-      { label: "Nomor Akta Perubahan", value: payload.notarialAmendmentNumber || "—", ok: Boolean(payload.notarialAmendmentNumber) },
-      { label: "Tanggal Akta Perubahan", value: fmtDate(payload.notarialAmendmentDate), ok: Boolean(payload.notarialAmendmentDate) },
-      { label: "Nama Notaris", value: payload.notarialAmendmentAuthority || "—", ok: Boolean(payload.notarialAmendmentAuthority) },
-      { label: "Nama Perusahaan", value: payload.companyName || "—", ok: Boolean(payload.companyName) },
-    ],
-    findings: ({ payload, company }) => {
-      if (!payload.notarialAmendmentDocPath) {
+    fields: ({ payload, companyLegal }) => {
+      const notarialAmendmentNumber = companyLegal?.notarialAmendmentNumber || payload.notarialAmendmentNumber;
+      const notarialAmendmentDate = companyLegal?.notarialAmendmentDate || payload.notarialAmendmentDate;
+      const notarialAmendmentAuthority = companyLegal?.notarialAmendmentAuthority || payload.notarialAmendmentAuthority;
+      return [
+        { label: "Nomor Akta Perubahan", value: notarialAmendmentNumber || "—", ok: Boolean(notarialAmendmentNumber) },
+        { label: "Tanggal Akta Perubahan", value: fmtDate(notarialAmendmentDate), ok: Boolean(notarialAmendmentDate) },
+        { label: "Nama Notaris", value: notarialAmendmentAuthority || "—", ok: Boolean(notarialAmendmentAuthority) },
+        { label: "Nama Perusahaan", value: payload.companyName || "—", ok: Boolean(payload.companyName) },
+      ];
+    },
+    findings: ({ payload, company, companyLegal }) => {
+      const docPath = companyLegal?.notarialAmendmentDocPath || payload.notarialAmendmentDocPath;
+      if (!docPath) {
         return [`Berdasarkan hasil pemeriksaan, ${company} belum pernah melakukan perubahan akta pendirian, sehingga tidak terdapat Akta Perubahan yang perlu diverifikasi pada permohonan ini.`];
       }
+      const notarialAmendmentNumber = companyLegal?.notarialAmendmentNumber || payload.notarialAmendmentNumber;
+      const notarialAmendmentAuthority = companyLegal?.notarialAmendmentAuthority || payload.notarialAmendmentAuthority;
+      const notarialAmendmentDate = companyLegal?.notarialAmendmentDate || payload.notarialAmendmentDate;
       return [
-        `Berdasarkan hasil pemeriksaan dokumen, ${company} memiliki Akta Perubahan Nomor ${payload.notarialAmendmentNumber || "—"}, yang dibuat oleh ${payload.notarialAmendmentAuthority || "—"}, Notaris, pada tanggal ${fmtDate(payload.notarialAmendmentDate)}.`,
+        `Berdasarkan hasil pemeriksaan dokumen, ${company} memiliki Akta Perubahan Nomor ${notarialAmendmentNumber || "—"}, yang dibuat oleh ${notarialAmendmentAuthority || "—"}, Notaris, pada tanggal ${fmtDate(notarialAmendmentDate)}.`,
         "Hasil verifikasi menunjukkan bahwa perubahan yang tercantum dalam Akta Perubahan telah terdokumentasi secara resmi dan konsisten dengan dokumen legal perusahaan lainnya, termasuk Surat Keputusan Kementerian Hukum dan Hak Asasi Manusia Republik Indonesia serta Perizinan Berusaha (NIB) yang digunakan dalam proses Verifikasi Kemampuan Industri (VKI).",
         "Sesuai dengan ketentuan Pasal 33 ayat (4) Peraturan Menteri Perindustrian Nomor 27 Tahun 2025, dalam hal terjadi perubahan identitas perusahaan, perusahaan wajib menyampaikan akta perubahan beserta dokumen persetujuan yang diterbitkan oleh kementerian yang menyelenggarakan urusan pemerintahan di bidang hukum sebagai bagian dari perubahan LHVKI.",
       ];
     },
     kesimpulan: (ctx) => {
-      const { payload, company } = ctx;
-      if (!payload.notarialAmendmentDocPath) {
+      const { payload, company, companyLegal } = ctx;
+      const docPath = companyLegal?.notarialAmendmentDocPath || payload.notarialAmendmentDocPath;
+      if (!docPath) {
         return { memenuhi: true, text: `${company} tidak memiliki perubahan akta, sehingga aspek ini dinyatakan <strong>Tidak Berlaku</strong>.` };
       }
-      const memenuhi = Boolean(payload.notarialAmendmentNumber) && isVerified(ctx, "notarial-amendment");
+      const notarialAmendmentNumber = companyLegal?.notarialAmendmentNumber || payload.notarialAmendmentNumber;
+      const notarialAmendmentAuthority = companyLegal?.notarialAmendmentAuthority || payload.notarialAmendmentAuthority;
+      const notarialAmendmentDate = companyLegal?.notarialAmendmentDate || payload.notarialAmendmentDate;
+      const memenuhi = Boolean(notarialAmendmentNumber) && isVerified(ctx, "notarial-amendment");
       return {
         memenuhi,
-        text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki Akta Perubahan Nomor ${payload.notarialAmendmentNumber || "—"} tanggal ${fmtDate(payload.notarialAmendmentDate)}, yang dibuat oleh ${payload.notarialAmendmentAuthority || "—"}, Notaris. Dengan demikian, aspek verifikasi Akta Perubahan dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+        text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki Akta Perubahan Nomor ${notarialAmendmentNumber || "—"} tanggal ${fmtDate(notarialAmendmentDate)}, yang dibuat oleh ${notarialAmendmentAuthority || "—"}, Notaris. Dengan demikian, aspek verifikasi Akta Perubahan dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
       };
     },
   },
@@ -292,27 +336,31 @@ export const PERPAJAKAN_DOCUMENTS: DocDetail[] = [
     key: "npwp",
     no: 1,
     title: "Nomor Pokok Wajib Pajak (NPWP)",
-    documentPath: ({ payload }) => payload.npwpDocumentPath,
+    documentPath: ({ payload, companyLegal }) => companyLegal?.npwpDocumentPath || payload.npwpDocumentPath,
     imageAspectRatio: "18/11",
     intro: () => [
       "Verifikasi terhadap Nomor Pokok Wajib Pajak (NPWP) dilakukan melalui pemeriksaan dokumen identitas perpajakan yang diterbitkan oleh Direktorat Jenderal Pajak. Pemeriksaan bertujuan untuk memastikan bahwa perusahaan telah terdaftar sebagai wajib pajak dan memiliki identitas perpajakan yang sah sebagai salah satu persyaratan wajib dalam pengajuan Verifikasi Kemampuan Industri (VKI) sebagaimana diatur dalam Pasal 30 ayat (2) huruf b angka 1 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.",
     ],
-    fields: ({ payload, businessAddress }) => [
-      { label: "Nomor NPWP", value: payload.npwpNumber || "—", ok: Boolean(payload.npwpNumber) },
-      { label: "Nama Wajib Pajak", value: payload.companyName || "—", ok: Boolean(payload.companyName) },
-      { label: "Alamat Wajib Pajak", value: businessAddress || "—", ok: Boolean(businessAddress) },
-      { label: "Status NPWP", value: "NPWP Berstatus Aktif", ok: Boolean(payload.npwpDocumentPath) },
-    ],
-    findings: ({ payload, company }) => [
-      `Berdasarkan hasil pemeriksaan dokumen, ${company} memiliki Nomor Pokok Wajib Pajak (NPWP) ${payload.npwpNumber || "—"} yang terdaftar atas nama perusahaan.`,
+    fields: ({ payload, businessAddress, companyLegal }) => {
+      const npwpNumber = companyLegal?.npwpNumber || payload.npwpNumber;
+      return [
+        { label: "Nomor NPWP", value: npwpNumber || "—", ok: Boolean(npwpNumber) },
+        { label: "Nama Wajib Pajak", value: payload.companyName || "—", ok: Boolean(payload.companyName) },
+        { label: "Alamat Wajib Pajak", value: businessAddress || "—", ok: Boolean(businessAddress) },
+        { label: "Status NPWP", value: "NPWP Berstatus Aktif", ok: Boolean(companyLegal?.npwpDocumentPath || payload.npwpDocumentPath) },
+      ];
+    },
+    findings: ({ payload, company, companyLegal }) => [
+      `Berdasarkan hasil pemeriksaan dokumen, ${company} memiliki Nomor Pokok Wajib Pajak (NPWP) ${companyLegal?.npwpNumber || payload.npwpNumber || "—"} yang terdaftar atas nama perusahaan.`,
       "Hasil verifikasi menunjukkan bahwa nama wajib pajak dan alamat yang tercantum pada NPWP telah sesuai dengan data perusahaan pada dokumen legalitas lainnya, serta NPWP masih berstatus aktif dan dapat digunakan dalam memenuhi kewajiban perpajakan perusahaan.",
     ],
     kesimpulan: (ctx) => {
-      const { payload, company } = ctx;
-      const memenuhi = Boolean(payload.npwpDocumentPath && payload.npwpNumber) && isVerified(ctx, "npwp");
+      const { payload, company, companyLegal } = ctx;
+      const npwpNumber = companyLegal?.npwpNumber || payload.npwpNumber;
+      const memenuhi = Boolean((companyLegal?.npwpDocumentPath || payload.npwpDocumentPath) && npwpNumber) && isVerified(ctx, "npwp");
       return {
         memenuhi,
-        text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki NPWP ${payload.npwpNumber || "—"} yang sah dan aktif. Dengan demikian, aspek kelengkapan identitas perpajakan dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong> sesuai dengan ketentuan Pasal 30 ayat (2) huruf b angka 1 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.`,
+        text: `Berdasarkan hasil verifikasi dokumen, ${company} memiliki NPWP ${npwpNumber || "—"} yang sah dan aktif. Dengan demikian, aspek kelengkapan identitas perpajakan dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong> sesuai dengan ketentuan Pasal 30 ayat (2) huruf b angka 1 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.`,
       };
     },
   },
@@ -343,15 +391,15 @@ export const PERPAJAKAN_DOCUMENTS: DocDetail[] = [
     key: "skt",
     no: 2,
     title: "Surat Keterangan Terdaftar (SKT) Pajak",
-    documentPath: ({ payload, companySkt }) => payload.sktDocumentPath || companySkt?.sktDocumentPath,
+    documentPath: ({ payload, companyLegal }) => companyLegal?.sktDocumentPath || payload.sktDocumentPath,
     intro: () => [
       "Verifikasi terhadap Surat Keterangan Terdaftar (SKT) Pajak dilakukan sebagai pengganti Bukti Pembayaran Pajak 3 (tiga) Tahun Terakhir bagi perusahaan dengan Perizinan Berusaha kurang dari 3 (tiga) tahun, sebagaimana diatur dalam Pasal 30 ayat (2) huruf b angka 7 Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.",
     ],
-    fields: ({ payload, businessAddress, companySkt }) => {
-      const sktNumber = payload.sktNumber || companySkt?.sktNumber;
-      const sktIssuer = payload.sktIssuer || companySkt?.sktIssuer;
-      const sktDate = payload.sktDate || companySkt?.sktDate;
-      const sktDocPath = payload.sktDocumentPath || companySkt?.sktDocumentPath;
+    fields: ({ payload, businessAddress, companyLegal }) => {
+      const sktNumber = companyLegal?.sktNumber || payload.sktNumber;
+      const sktIssuer = companyLegal?.sktIssuer || payload.sktIssuer;
+      const sktDate = companyLegal?.sktDate || payload.sktDate;
+      const sktDocPath = companyLegal?.sktDocumentPath || payload.sktDocumentPath;
       return [
         { label: "Nomor Surat Keterangan Terdaftar (SKT)", value: sktNumber || "—", ok: Boolean(sktNumber) },
         { label: "Nomor NPWP", value: payload.npwpNumber || "—", ok: Boolean(payload.npwpNumber) },
@@ -362,20 +410,20 @@ export const PERPAJAKAN_DOCUMENTS: DocDetail[] = [
         { label: "Status Wajib Pajak", value: "Wajib Pajak Berstatus Aktif", ok: Boolean(sktDocPath) },
       ];
     },
-    findings: ({ payload, company, companySkt }) => {
-      const sktNumber = payload.sktNumber || companySkt?.sktNumber;
-      const sktIssuer = payload.sktIssuer || companySkt?.sktIssuer;
-      const sktDate = payload.sktDate || companySkt?.sktDate;
+    findings: ({ payload, company, companyLegal }) => {
+      const sktNumber = companyLegal?.sktNumber || payload.sktNumber;
+      const sktIssuer = companyLegal?.sktIssuer || payload.sktIssuer;
+      const sktDate = companyLegal?.sktDate || payload.sktDate;
       return [
         `Berdasarkan hasil pemeriksaan dokumen, ${company} memiliki Surat Keterangan Terdaftar Nomor ${sktNumber || "—"} yang diterbitkan oleh ${sktIssuer || "—"} pada tanggal ${fmtDate(sktDate)}.`,
         "Hasil verifikasi menunjukkan bahwa data wajib pajak yang tercantum dalam SKT, meliputi NPWP, nama wajib pajak, dan alamat wajib pajak, telah sesuai dengan data perusahaan pada dokumen legalitas lainnya, sehingga dapat digunakan sebagai pengganti Bukti Pembayaran Pajak 3 (tiga) Tahun Terakhir sesuai ketentuan yang berlaku bagi perusahaan dengan Perizinan Berusaha kurang dari 3 (tiga) tahun.",
       ];
     },
     kesimpulan: (ctx) => {
-      const { payload, company, companySkt } = ctx;
-      const sktNumber = payload.sktNumber || companySkt?.sktNumber;
-      const sktIssuer = payload.sktIssuer || companySkt?.sktIssuer;
-      const sktDocPath = payload.sktDocumentPath || companySkt?.sktDocumentPath;
+      const { payload, company, companyLegal } = ctx;
+      const sktNumber = companyLegal?.sktNumber || payload.sktNumber;
+      const sktIssuer = companyLegal?.sktIssuer || payload.sktIssuer;
+      const sktDocPath = companyLegal?.sktDocumentPath || payload.sktDocumentPath;
       const memenuhi = Boolean(sktDocPath && sktNumber) && isVerified(ctx, "skt");
       return {
         memenuhi,
@@ -550,6 +598,58 @@ export const PERPAJAKAN_DOCUMENTS: DocDetail[] = [
 function skfSupportNote(company: string): string {
   return `Dokumen ini bersifat pendukung dan hanya diperiksa apabila tersedia pada permohonan ${company}; ketiadaannya tidak memengaruhi kelengkapan persyaratan wajib Perpajakan.`;
 }
+
+/**
+ * "Dokumen Pendukung" chapter — VIU's "Bukti Kemampuan Finansial" checklist (shared between the
+ * "Bahan Baku Industri" and "Bahan Baku Non Industri" import types), one narrative document per
+ * `NON_INDUSTRI_SUPPORT_DOC_DEFS` entry. UTAMA docs are required; PENDUKUNG docs are supplementary
+ * evidence and only assessed when the company actually enabled/uploaded them (same "Tidak Berlaku"
+ * pattern as SKF in the Perpajakan chapter).
+ */
+function modalFinansialDocument(def: NonIndustriSupportDocDef, no: number): DocDetail {
+  const key = `nonindustri-support:${def.key}`;
+  return {
+    key,
+    no,
+    title: def.title,
+    documentPath: ({ payload }) => payload.nonIndustriDocuments?.find((d) => d.key === def.key)?.documentPath,
+    intro: () => [
+      `Verifikasi terhadap ${def.title} dilakukan sebagai bagian dari pemeriksaan bukti kemampuan finansial perusahaan dalam membiayai kegiatan importasi bahan baku, sebagaimana dipersyaratkan dalam pengajuan Verifikasi Importir Umum (VIU) bagi perusahaan non industri (API-U).`,
+    ],
+    fields: ({ payload }) => {
+      const entry = payload.nonIndustriDocuments?.find((d) => d.key === def.key);
+      return [{ label: def.title, value: entry?.documentPath ? "Tersedia" : "Belum Tersedia", ok: Boolean(entry?.documentPath) }];
+    },
+    findings: ({ payload, company }) => {
+      const entry = payload.nonIndustriDocuments?.find((d) => d.key === def.key);
+      if (!entry?.documentPath) {
+        return def.priority === "PENDUKUNG"
+          ? [skfSupportNote(company).replace("kelengkapan persyaratan wajib Perpajakan", "kelengkapan bukti kemampuan finansial")]
+          : [`Berdasarkan hasil pemeriksaan, ${company} belum menyampaikan ${def.title}.`];
+      }
+      return [
+        `Berdasarkan hasil pemeriksaan dokumen, ${company} telah menyampaikan ${def.title} sebagai bukti kemampuan finansial perusahaan dalam membiayai kegiatan importasi. ${def.desc}`,
+      ];
+    },
+    kesimpulan: (ctx) => {
+      const { payload, company } = ctx;
+      const entry = payload.nonIndustriDocuments?.find((d) => d.key === def.key);
+      if (!entry?.documentPath && def.priority === "PENDUKUNG") {
+        return {
+          memenuhi: true,
+          text: `${company} tidak menyampaikan ${def.title} karena dokumen ini bersifat pendukung dan hanya diperiksa apabila tersedia. Aspek ini dinyatakan <strong>Tidak Berlaku</strong>.`,
+        };
+      }
+      const memenuhi = Boolean(entry?.documentPath) && isVerified(ctx, key);
+      return {
+        memenuhi,
+        text: `Berdasarkan hasil verifikasi dokumen, ${company} ${memenuhi ? "telah menyampaikan" : "belum menyampaikan"} ${def.title}. Dengan demikian, aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong> sebagai bukti kemampuan finansial perusahaan dalam pengajuan Verifikasi Importir Umum (VIU).`,
+      };
+    },
+  };
+}
+
+export const MODAL_FINANSIAL_DOCUMENTS: DocDetail[] = NON_INDUSTRI_SUPPORT_DOC_DEFS.map((def, i) => modalFinansialDocument(def, i + 1));
 
 /** "Tenaga Kerja" chapter — a single fixed document (surat pernyataan jumlah tenaga kerja). */
 export const TENAGA_KERJA_DOCUMENTS: DocDetail[] = [
@@ -832,4 +932,120 @@ export function buildElectricityDocuments(ctx: NarrativeContext): DocDetail[] {
       };
     },
   }));
+}
+
+/**
+ * "Dokumen Partner Industri" chapter — dynamic, 4 narrative documents (NIB/NPWP/SK Kemenkumham
+ * Partner + LHVKI) per enabled `payload.partnerIndustriEntries[]` entry. NIB/NPWP/SK resolve
+ * against the partner's own Company row (`ctx.partners`, resolved by the caller via
+ * `resolvePartnerContexts`), not the applicant's — a mitra industri is a separate company with
+ * its own legal identity. LHVKI is the one document that actually lives on this application's
+ * own payload.
+ */
+export function buildPartnerIndustriDocuments(ctx: NarrativeContext): DocDetail[] {
+  const docs: DocDetail[] = [];
+  let no = 1;
+  for (const entry of ctx.payload.partnerIndustriEntries ?? []) {
+    if (!entry.enabled) continue;
+    const partner = ctx.partners?.find((p) => p.partnerId === entry.partnerId);
+    const partnerLabel = partner?.companyName ?? "Partner";
+
+    docs.push({
+      key: `partner:${entry.partnerId}:nib`,
+      no: no++,
+      title: `NIB Partner — ${partnerLabel}`,
+      documentPath: () => partner?.nibDocumentPath,
+      intro: () => [
+        `Verifikasi terhadap Nomor Induk Berusaha (NIB) mitra industri ${partnerLabel} dilakukan untuk memastikan legalitas usaha mitra yang memasok bahan baku dan/atau bahan penolong dalam pelaksanaan Verifikasi Importir Umum (VIU) bagi perusahaan industri.`,
+      ],
+      fields: () => [
+        { label: "Nama Mitra Industri", value: partnerLabel, ok: Boolean(partner) },
+        { label: "Dokumen NIB Partner", value: partner?.nibDocumentPath ? "Tersedia" : "Belum Tersedia", ok: Boolean(partner?.nibDocumentPath) },
+      ],
+      findings: () => [
+        `Berdasarkan hasil pemeriksaan dokumen, mitra industri ${partnerLabel} ${partner?.nibDocumentPath ? "memiliki Nomor Induk Berusaha (NIB) yang tersedia dalam Directory Perusahaan" : "belum melengkapi dokumen Nomor Induk Berusaha (NIB) pada Directory Perusahaan"}, sebagai bagian dari verifikasi legalitas rantai pasok bahan baku perusahaan.`,
+      ],
+      kesimpulan: (kctx) => {
+        const memenuhi = Boolean(partner?.nibDocumentPath) && isVerified(kctx, `partner:${entry.partnerId}:nib`);
+        return {
+          memenuhi,
+          text: `Mitra industri ${partnerLabel} ${memenuhi ? "memiliki" : "belum melengkapi"} Nomor Induk Berusaha (NIB) yang sah. Dengan demikian, aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+        };
+      },
+    });
+
+    docs.push({
+      key: `partner:${entry.partnerId}:npwp`,
+      no: no++,
+      title: `NPWP Partner — ${partnerLabel}`,
+      documentPath: () => partner?.npwpDocumentPath,
+      intro: () => [
+        `Verifikasi terhadap Nomor Pokok Wajib Pajak (NPWP) mitra industri ${partnerLabel} dilakukan untuk memastikan identitas perpajakan mitra yang sah sebagai bagian dari verifikasi kesesuaian rantai pasok bahan baku perusahaan.`,
+      ],
+      fields: () => [
+        { label: "Nama Mitra Industri", value: partnerLabel, ok: Boolean(partner) },
+        { label: "Dokumen NPWP Partner", value: partner?.npwpDocumentPath ? "Tersedia" : "Belum Tersedia", ok: Boolean(partner?.npwpDocumentPath) },
+      ],
+      findings: () => [
+        `Berdasarkan hasil pemeriksaan dokumen, mitra industri ${partnerLabel} ${partner?.npwpDocumentPath ? "memiliki Nomor Pokok Wajib Pajak (NPWP) yang tersedia dalam Directory Perusahaan" : "belum melengkapi dokumen Nomor Pokok Wajib Pajak (NPWP) pada Directory Perusahaan"}.`,
+      ],
+      kesimpulan: (kctx) => {
+        const memenuhi = Boolean(partner?.npwpDocumentPath) && isVerified(kctx, `partner:${entry.partnerId}:npwp`);
+        return {
+          memenuhi,
+          text: `Mitra industri ${partnerLabel} ${memenuhi ? "memiliki" : "belum melengkapi"} NPWP yang sah. Dengan demikian, aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+        };
+      },
+    });
+
+    docs.push({
+      key: `partner:${entry.partnerId}:sk`,
+      no: no++,
+      title: `SK Kemenkumham Partner — ${partnerLabel}`,
+      documentPath: () => partner?.skDocumentPath,
+      intro: () => [
+        `Verifikasi terhadap Surat Keputusan Kementerian Hukum dan Hak Asasi Manusia mitra industri ${partnerLabel} dilakukan sebagai bukti pendukung keabsahan badan usaha mitra dalam rantai pasok bahan baku perusahaan.`,
+      ],
+      fields: () => [
+        { label: "Nama Mitra Industri", value: partnerLabel, ok: Boolean(partner) },
+        { label: "Dokumen SK Kemenkumham Partner", value: partner?.skDocumentPath ? "Tersedia" : "Belum Tersedia", ok: Boolean(partner?.skDocumentPath) },
+      ],
+      findings: () => [
+        `Berdasarkan hasil pemeriksaan dokumen, mitra industri ${partnerLabel} ${partner?.skDocumentPath ? "melampirkan Surat Keputusan Kementerian Hukum dan HAM yang tersedia dalam Directory Perusahaan" : "belum melampirkan Surat Keputusan Kementerian Hukum dan HAM pada Directory Perusahaan"}.`,
+      ],
+      kesimpulan: (kctx) => {
+        const memenuhi = Boolean(partner?.skDocumentPath) && isVerified(kctx, `partner:${entry.partnerId}:sk`);
+        return {
+          memenuhi,
+          text: `Mitra industri ${partnerLabel} ${memenuhi ? "melampirkan" : "belum melampirkan"} Surat Keputusan Kementerian Hukum dan HAM. Dengan demikian, aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong> sebagai dokumen pendukung legalitas mitra.`,
+        };
+      },
+    });
+
+    docs.push({
+      key: `partner:${entry.partnerId}:lhvki`,
+      no: no++,
+      title: `LHVKI — ${partnerLabel}`,
+      documentPath: () => entry.lhvkiDocumentPath,
+      intro: () => [
+        `Verifikasi terhadap Laporan Hasil Verifikasi Kemampuan Industri (LHVKI) mitra industri ${partnerLabel} dilakukan untuk memastikan bahwa mitra telah dinyatakan memiliki kemampuan industri yang sah dan terverifikasi, sebagai dasar kerja sama pasokan bahan baku dalam pengajuan Verifikasi Importir Umum (VIU).`,
+      ],
+      fields: () => [
+        { label: "Nomor LHVKI", value: entry.lhvki || "—", ok: Boolean(entry.lhvki) },
+        { label: "Nama Mitra Industri", value: partnerLabel, ok: Boolean(partner) },
+        { label: "Dokumen LHVKI", value: entry.lhvkiDocumentPath ? "Tersedia" : "Belum Tersedia", ok: Boolean(entry.lhvkiDocumentPath) },
+      ],
+      findings: () => [
+        `Berdasarkan hasil pemeriksaan dokumen, mitra industri ${partnerLabel} melampirkan LHVKI Nomor ${entry.lhvki || "—"} sebagai bukti kemampuan industri yang telah terverifikasi.`,
+      ],
+      kesimpulan: (kctx) => {
+        const memenuhi = Boolean(entry.lhvkiDocumentPath && entry.lhvki) && isVerified(kctx, `partner:${entry.partnerId}:lhvki`);
+        return {
+          memenuhi,
+          text: `Mitra industri ${partnerLabel} ${memenuhi ? "melampirkan" : "belum melampirkan"} LHVKI Nomor ${entry.lhvki || "—"} yang sah. Dengan demikian, aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+        };
+      },
+    });
+  }
+  return docs;
 }

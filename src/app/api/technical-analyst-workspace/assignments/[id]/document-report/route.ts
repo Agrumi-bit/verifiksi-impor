@@ -21,7 +21,8 @@ import {
   COMPANY_MAPPED_DOCUMENT_KEYS,
   toChecklistStatus,
 } from "@/modules/verifikator-workspace/schema";
-import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
+import { toChecklistCompanyContext, toCompanyLegalContext } from "@/modules/verifikator-workspace/company-context";
+import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
 import {
   PRODUCTION_QTY_SEBELUMNYA_SUMMARY_KEY,
   PRODUCTION_QTY_PENGGUNAAN_SUMMARY_KEY,
@@ -69,7 +70,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     ? await db.company.findUnique({ where: { id: assignment.application.companyId } })
     : null;
 
-  const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company));
+  const partners = await resolvePartnerContexts(payload);
+  const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company), partners);
   const companyKeys = checklist.filter((item) => item.key in COMPANY_MAPPED_DOCUMENT_KEYS).map((item) => item.key);
   const appOnlyKeys = checklist.filter((item) => !(item.key in COMPANY_MAPPED_DOCUMENT_KEYS)).map((item) => item.key);
 
@@ -135,14 +137,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const rencanaKebutuhanConclusion = summaryConclusion(PRODUCTION_QTY_RENCANA_KEBUTUHAN_SUMMARY_KEY);
   const penjualanConclusion = summaryConclusion(PRODUCTION_QTY_PENJUALAN_SUMMARY_KEY);
 
-  const companySkt = company
-    ? {
-        sktNumber: company.sktNumber,
-        sktIssuer: company.sktIssuer,
-        sktDate: company.sktDate ? company.sktDate.toISOString() : null,
-        sktDocumentPath: company.sktDocumentPath,
-      }
-    : null;
+  const companyLegal = toCompanyLegalContext(company);
 
   return NextResponse.json({
     data: {
@@ -175,7 +170,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       rencanaKebutuhanConclusion,
       penjualanConclusion,
       payload,
-      companySkt,
+      companyLegal,
+      partners,
     },
   });
 }

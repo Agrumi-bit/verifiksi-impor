@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { MaterialIcon } from "./material-icon";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import type { CompanyLegalContext } from "../company-context";
 import {
   ASSIGNMENT_PRIORITY_BADGE,
   ASSIGNMENT_STATUS_PILL,
@@ -59,19 +60,13 @@ export type AssignmentDetailData = {
   };
   company: {
     companyName: string;
-    nibNumber: string;
-    nibIssueDate: string | null;
     businessAddress: string | null;
     kbliEntries: { code: string; description: string }[];
     locations: ApplicationWizardValues["locations"];
-    notarialDeedNumber: string | null;
-    notarialAmendmentNumber: string | null;
-    notarialAmendmentDate: string | null;
-    skNumber: string | null;
-    npwpNumber: string | null;
-    sktNumber: string | null;
-    sktIssuer: string | null;
-    sktDate: string | null;
+    // Live Company legal/tax fields (Company Workspace's profile editor can change these after
+    // submission) — see CompanyLegalContext for why the checklist/report prefer these over the
+    // frozen application payload.
+    companyLegal: CompanyLegalContext;
   };
   verificationProgram: {
     type: string;
@@ -248,18 +243,7 @@ export function AssignmentDetail({ id }: Props) {
             companyName={data.company.companyName}
             payload={data.application.payload}
             businessAddress={data.company.businessAddress}
-            companyLegal={{
-              nibNumber: data.company.nibNumber,
-              nibIssueDate: data.company.nibIssueDate,
-              notarialDeedNumber: data.company.notarialDeedNumber,
-              notarialAmendmentNumber: data.company.notarialAmendmentNumber,
-              notarialAmendmentDate: data.company.notarialAmendmentDate,
-              skNumber: data.company.skNumber,
-              npwpNumber: data.company.npwpNumber,
-              sktNumber: data.company.sktNumber,
-              sktIssuer: data.company.sktIssuer,
-              sktDate: data.company.sktDate,
-            }}
+            companyLegal={data.company.companyLegal}
           />
         )}
         {activeTab === "Survey Lapangan" && (

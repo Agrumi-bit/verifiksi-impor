@@ -23,33 +23,15 @@ import {
   type OwnershipDocumentType,
   type LeaseDocumentType,
 } from "@/modules/shared/schema";
+import type { CompanyLegalContext } from "./company-context";
 
-/**
- * Live Company fields for the checklist items whose comparison value can be
- * edited after the application was submitted (Company Workspace's profile
- * editor — "Legal" and "Tax" sections). `payload.Xxx` is a snapshot frozen
- * at submission time; once the company edits and re-uploads, only the
- * `Company` row changes, so `getValue` must prefer this live value over the
- * frozen one or a verifikator reviewing after the edit sees stale data next
- * to a document that no longer matches it.
- */
-export type ChecklistCompanyLegal = {
-  nibNumber: string | null;
-  nibIssueDate: string | null;
-  notarialDeedNumber: string | null;
-  notarialAmendmentNumber: string | null;
-  notarialAmendmentDate: string | null;
-  skNumber: string | null;
-  npwpNumber: string | null;
-  sktNumber: string | null;
-  sktIssuer: string | null;
-  sktDate: string | null;
-} | null;
+/** @deprecated import `CompanyLegalContext` from `./company-context` directly — kept as an alias so existing imports don't need to change. */
+export type ChecklistCompanyLegal = CompanyLegalContext;
 
 export type ChecklistContext = {
   payload: ApplicationWizardValues;
   businessAddress: string | null;
-  companyLegal: ChecklistCompanyLegal;
+  companyLegal: CompanyLegalContext;
 };
 
 export type ChecklistItemDef = {
