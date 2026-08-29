@@ -1144,6 +1144,16 @@ export function CompanyApplicationDetail({ id }: Props) {
                     <AddressField label="Kota / Kabupaten" value={location.city} />
                     <AddressField label="Provinsi" value={location.province} />
                     <AddressField label="Kode Pos" value={location.postalCode} />
+                    {location.buildingStatus === "SEWA" && (
+                      <div className="col-span-2 mt-1 rounded-lg bg-[#f7f2ec] p-4">
+                        <div className="mb-3 text-[12.5px] font-bold text-[#20180f]">Data Perjanjian Sewa</div>
+                        <div className="grid grid-cols-3 gap-4">
+                          <AddressField label="Pemilik Asli" value={location.leaseOriginalOwnerName ?? ""} />
+                          <AddressField label="Tanggal Mulai Sewa" value={location.leaseStartDate ? fmtDate(location.leaseStartDate) : ""} />
+                          <AddressField label="Tanggal Berakhir Sewa" value={location.leaseEndDate ? fmtDate(location.leaseEndDate) : ""} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

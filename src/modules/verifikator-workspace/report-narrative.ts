@@ -797,17 +797,35 @@ export function buildLocationDocuments(ctx: NarrativeContext): DocDetail[] {
           { label: "Kota/Kabupaten", value: loc.city || "—", ok: Boolean(loc.city) },
           { label: "Provinsi", value: loc.province || "—", ok: Boolean(loc.province) },
           { label: "Status Bangunan", value: isOwned ? "Milik Sendiri" : "Sewa", ok: true },
+          ...(isOwned
+            ? []
+            : [
+                { label: "Pemilik Asli", value: loc.leaseOriginalOwnerName || "—", ok: Boolean(loc.leaseOriginalOwnerName) },
+                {
+                  label: "Masa Sewa",
+                  value: loc.leaseStartDate || loc.leaseEndDate ? `${fmtDate(loc.leaseStartDate)} s.d. ${fmtDate(loc.leaseEndDate)}` : "—",
+                  ok: Boolean(loc.leaseStartDate && loc.leaseEndDate),
+                },
+              ]),
         ],
-        findings: ({ company }) => [
-          `Berdasarkan hasil pemeriksaan dokumen, ${company} menyampaikan ${typed.typeLabel} untuk lokasi ${label} yang beralamat di ${loc.address || "—"}, ${loc.city || "—"}, ${loc.province || "—"} dengan status bangunan ${isOwned ? "milik sendiri" : "sewa"}.`,
-          `Hasil verifikasi menunjukkan bahwa ${typed.typeLabel} yang diunggah perusahaan menunjukkan hak penggunaan yang sah atas lokasi tersebut dan konsisten dengan alamat lokasi yang tercantum dalam data permohonan.`,
-        ],
+        findings: ({ company }) => {
+          const base = [
+            `Berdasarkan hasil pemeriksaan dokumen, ${company} menyampaikan ${typed.typeLabel} untuk lokasi ${label} yang beralamat di ${loc.address || "—"}, ${loc.city || "—"}, ${loc.province || "—"} dengan status bangunan ${isOwned ? "milik sendiri" : "sewa"}.`,
+            `Hasil verifikasi menunjukkan bahwa ${typed.typeLabel} yang diunggah perusahaan menunjukkan hak penggunaan yang sah atas lokasi tersebut dan konsisten dengan alamat lokasi yang tercantum dalam data permohonan.`,
+          ];
+          if (isOwned) return base;
+          return [
+            ...base,
+            `Perjanjian sewa dibuat dengan pemilik asli ${loc.leaseOriginalOwnerName || "—"} untuk masa sewa ${fmtDate(loc.leaseStartDate)} sampai dengan ${fmtDate(loc.leaseEndDate)}.`,
+          ];
+        },
         kesimpulan: (ctx) => {
           const { company } = ctx;
-          const memenuhi = Boolean(typed.documentPath && loc.address) && isVerified(ctx, `location:${loc.id}:${typed.kind}:${typed.type}`);
+          const leaseComplete = isOwned || Boolean(loc.leaseOriginalOwnerName && loc.leaseStartDate && loc.leaseEndDate);
+          const memenuhi = Boolean(typed.documentPath && loc.address) && leaseComplete && isVerified(ctx, `location:${loc.id}:${typed.kind}:${typed.type}`);
           return {
             memenuhi,
-            text: `Berdasarkan hasil verifikasi dokumen, ${company} ${memenuhi ? "memiliki" : "belum melengkapi"} ${typed.typeLabel} yang sah atas lokasi ${label}. Dengan demikian, aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+            text: `Berdasarkan hasil verifikasi dokumen, ${company} ${memenuhi ? "memiliki" : "belum melengkapi"} ${typed.typeLabel} yang sah atas lokasi ${label}${isOwned ? "" : ` beserta data perjanjian sewa (pemilik asli dan masa sewa)`}. Dengan demikian, aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
           };
         },
       });

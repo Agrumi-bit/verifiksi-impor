@@ -993,6 +993,16 @@ function FacilitiesTab({ data, onView }: { data: CompanyProfileData; onView: (do
                 <AddressField label="Kota / Kabupaten" value={loc.city} />
                 <AddressField label="Provinsi" value={loc.province} />
                 <AddressField label="Kode Pos" value={loc.postalCode} />
+                {loc.buildingStatus === "SEWA" && (
+                  <div className="col-span-2 mt-1 rounded-lg bg-[#f7f2ec] p-4">
+                    <div className="mb-3 text-[12.5px] font-bold text-[#20180f]">Data Perjanjian Sewa</div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <AddressField label="Pemilik Asli" value={loc.leaseOriginalOwnerName ?? ""} />
+                      <AddressField label="Tanggal Mulai Sewa" value={loc.leaseStartDate ? fmtDate(loc.leaseStartDate) : ""} />
+                      <AddressField label="Tanggal Berakhir Sewa" value={loc.leaseEndDate ? fmtDate(loc.leaseEndDate) : ""} />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
