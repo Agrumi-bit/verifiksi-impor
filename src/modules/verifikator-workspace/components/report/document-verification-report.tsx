@@ -948,7 +948,13 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   }
 
   const company = data.companyName;
-  const documentStatuses = Object.fromEntries(data.documents.map((d) => [d.key, d.status]));
+  // Customer Relation (or the verifikator) can mark an individual "Dokumen Pendukung" (VIU's
+  // modal-finansial checklist) item as NOT_APPLICABLE ("Tidak Diperlukan") when it isn't needed
+  // for this application. Unlike every other category, where NOT_APPLICABLE still prints with a
+  // "Tidak Berlaku" conclusion, a Dokumen Pendukung item marked this way is dropped from the
+  // report entirely — narrative page, compliance table, and every count below.
+  const documents = data.documents.filter((d) => !(d.category === "Dokumen Pendukung" && d.status === "NOT_APPLICABLE"));
+  const documentStatuses = Object.fromEntries(documents.map((d) => [d.key, d.status]));
   const ctx: NarrativeContext = {
     payload: data.payload,
     company,
@@ -958,16 +964,16 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
     documentStatuses,
   };
 
-  const verified = data.documents.filter((d) => d.status === "VALID").length;
-  const needsRevision = data.documents.filter((d) => d.status === "NEED_REVISION").length;
-  const rejected = data.documents.filter((d) => d.status === "REJECTED").length;
-  const notApplicable = data.documents.filter((d) => d.status === "NOT_APPLICABLE").length;
-  const pending = data.documents.filter((d) => d.status === "PENDING").length;
-  const applicable = data.documents.length - notApplicable;
+  const verified = documents.filter((d) => d.status === "VALID").length;
+  const needsRevision = documents.filter((d) => d.status === "NEED_REVISION").length;
+  const rejected = documents.filter((d) => d.status === "REJECTED").length;
+  const notApplicable = documents.filter((d) => d.status === "NOT_APPLICABLE").length;
+  const pending = documents.filter((d) => d.status === "PENDING").length;
+  const applicable = documents.length - notApplicable;
   const completionPct = applicable > 0 ? Math.round((verified / applicable) * 100) : 0;
   const isFinal = data.status === "COMPLETED" || data.status === "RETURNED";
 
-  const categories = [...new Set(data.documents.map((d) => d.category))];
+  const categories = [...new Set(documents.map((d) => d.category))];
 
   // Every category gets the full narrative-page treatment (divider + compliance/
   // list page + one page per document + kesimpulan/rekap + visual summary) when
@@ -975,7 +981,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   // fall back to the compact compliance table + flat document list treatment.
   const categoryDocsMap: Record<string, DocDetail[]> = {};
   for (const category of categories) {
-    const realKeys = new Set(data.documents.filter((d) => d.category === category).map((d) => d.key));
+    const realKeys = new Set(documents.filter((d) => d.category === category).map((d) => d.key));
     if (category === "Legalitas Perusahaan") categoryDocsMap[category] = LEGALITAS_DOCUMENTS;
     else if (category === "Perpajakan") categoryDocsMap[category] = PERPAJAKAN_DOCUMENTS.filter((d) => realKeys.has(d.key));
     else if (category === "Surat Pernyataan") categoryDocsMap[category] = SURAT_PERNYATAAN_DOCUMENTS.filter((d) => realKeys.has(d.key));
@@ -1319,7 +1325,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 14, marginTop: 20 }}>
             <div style={{ background: NAVY, color: "#fff", padding: 18, borderRadius: 12 }}>
-              <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 6 }}>{data.documents.length}</div>
+              <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 6 }}>{documents.length}</div>
               <div style={{ fontSize: 10, letterSpacing: "0.04em", color: "#a8b3c2" }}>TOTAL DOKUMEN</div>
             </div>
             <div style={{ background: "#d2f6dd", color: "#0e3d24", padding: 18, borderRadius: 12 }}>
@@ -1383,7 +1389,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
               </tr>
             </thead>
             <tbody>
-              {data.documents.map((doc, i) => (
+              {documents.map((doc, i) => (
                 <tr key={doc.key} style={{ borderBottom: `1px solid ${CARD_BORDER}`, background: "#fff" }}>
                   <td style={{ padding: 10, verticalAlign: "top" }}>{i + 1}</td>
                   <td style={{ padding: 10, verticalAlign: "top", fontWeight: 600 }}>{doc.label}</td>
@@ -1428,7 +1434,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
 
         {/* ===== CHAPTERS ===== */}
         {categories.map((category, chapterIdx) => {
-          const catDocs = data.documents.filter((d) => d.category === category);
+          const catDocs = documents.filter((d) => d.category === category);
           const sectionDef = COMPLIANCE_SECTION_DEFS.find((s) => s.category === category);
           const complianceRows = catDocs.filter((d) => getComplianceDef(d.key));
           const narrativeDocs = categoryDocsMap[category] ?? [];
@@ -1829,8 +1835,8 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
           <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", marginBottom: 20 }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
               <tbody>
-                {data.documents.map((doc, i) => (
-                  <tr key={doc.key} style={{ borderBottom: i < data.documents.length - 1 ? "1px solid #f2ece0" : undefined }}>
+                {documents.map((doc, i) => (
+                  <tr key={doc.key} style={{ borderBottom: i < documents.length - 1 ? "1px solid #f2ece0" : undefined }}>
                     <td style={{ padding: "8px 12px", width: "8%", color: MUTED_2 }}>{String(i + 1).padStart(2, "0")}</td>
                     <td style={{ padding: "8px 12px" }}>{doc.label}</td>
                     <td style={{ padding: "8px 12px", textAlign: "right", color: MUTED_2 }}>{doc.category}</td>
