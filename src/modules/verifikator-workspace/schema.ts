@@ -62,6 +62,21 @@ export type ChecklistCompanyContext = {
   taxProofs: { year: string; type?: string | null; docPath?: string | null }[] | null;
 };
 
+/**
+ * A VIU-industri application's `partnerIndustriEntries` only stores `partnerId` +
+ * LHVKI — the partner's own NIB/NPWP/SK live on `Partner.company` (a separate Company
+ * row, not the applicant's). This is the resolved shape `buildDocumentChecklist` needs
+ * per enabled partner to render checklist items for those documents — see
+ * `resolvePartnerContexts` (partner-context.ts) for how callers build the array.
+ */
+export type ChecklistPartnerContext = {
+  partnerId: string;
+  companyName: string;
+  nibDocumentPath: string | null;
+  npwpDocumentPath: string | null;
+  skDocumentPath: string | null;
+};
+
 function latestTaxProofPath(taxProofs: ChecklistCompanyContext["taxProofs"], type?: string): string | null {
   if (!taxProofs?.length) return null;
   const withDocs = taxProofs.filter((tp) => tp.docPath && (!type || tp.type === type));
@@ -142,6 +157,7 @@ const LOCATION_TYPE_NAMES: Record<string, string> = {
 export function buildDocumentChecklist(
   payload: ApplicationWizardValues,
   company?: ChecklistCompanyContext | null,
+  partners?: ChecklistPartnerContext[],
 ): DocumentChecklistItem[] {
   const items: DocumentChecklistItem[] = [];
 
@@ -340,6 +356,40 @@ export function buildDocumentChecklist(
         documentPath: doc.documentPath || null,
       });
     }
+  }
+
+  // VIU-industri's "Partner Industri" step only lets a company enable a partner it already
+  // picked from the Directory — NIB/NPWP/SK checklist items resolve against that partner's own
+  // Company row (via `partners`, resolved by the caller); LHVKI is the one document actually
+  // captured on the application itself. No-op when the application has no enabled partners.
+  for (const entry of payload.partnerIndustriEntries ?? []) {
+    if (!entry.enabled) continue;
+    const partner = partners?.find((p) => p.partnerId === entry.partnerId);
+    const partnerLabel = partner?.companyName ?? "Partner";
+    items.push({
+      key: `partner:${entry.partnerId}:nib`,
+      label: `NIB Partner — ${partnerLabel}`,
+      category: "Dokumen Partner Industri",
+      documentPath: partner?.nibDocumentPath ?? null,
+    });
+    items.push({
+      key: `partner:${entry.partnerId}:npwp`,
+      label: `NPWP Partner — ${partnerLabel}`,
+      category: "Dokumen Partner Industri",
+      documentPath: partner?.npwpDocumentPath ?? null,
+    });
+    items.push({
+      key: `partner:${entry.partnerId}:sk`,
+      label: `SK Kemenkumham Partner — ${partnerLabel}`,
+      category: "Dokumen Partner Industri",
+      documentPath: partner?.skDocumentPath ?? null,
+    });
+    items.push({
+      key: `partner:${entry.partnerId}:lhvki`,
+      label: `LHVKI — ${partnerLabel}`,
+      category: "Dokumen Partner Industri",
+      documentPath: entry.lhvkiDocumentPath || null,
+    });
   }
 
   return items;

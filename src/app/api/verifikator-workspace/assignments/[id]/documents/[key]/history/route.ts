@@ -12,6 +12,7 @@ import {
 import { getVersionHistory, recordDocumentVersion } from "@/modules/company/document-versions";
 import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS } from "@/modules/verifikator-workspace/schema";
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
+import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
 
 async function findOwnedAssignment(assignmentNumber: string, verifikatorId: string) {
   const assignment = await db.assignment.findUnique({
@@ -42,7 +43,9 @@ export async function GET(
   const company = assignment.application.companyId
     ? await db.company.findUnique({ where: { id: assignment.application.companyId } })
     : null;
-  const item = buildDocumentChecklist(payload, toChecklistCompanyContext(company)).find((c) => c.key === key);
+  const item = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload)).find(
+    (c) => c.key === key,
+  );
   if (!item) {
     return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
   }
@@ -93,12 +96,24 @@ export async function PATCH(
   const company = assignment.application.companyId
     ? await db.company.findUnique({ where: { id: assignment.application.companyId } })
     : null;
-  const item = buildDocumentChecklist(payload, toChecklistCompanyContext(company)).find((c) => c.key === key);
+  const item = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload)).find(
+    (c) => c.key === key,
+  );
   if (!item) {
     return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
   }
   if (item.documentPath === path) {
     return NextResponse.json({ error: "Dokumen tidak berubah" }, { status: 400 });
+  }
+  // NIB/NPWP/SK partner documents live on Partner.company (a different Company row than the
+  // applicant's own) — there's nothing in this application's payload to write a replacement
+  // path into. Only LHVKI is a real application field; those get a proper 400 instead of the
+  // generic "unknown key" throw from applyChecklistDocumentPath.
+  if (/^partner:[^:]+:(nib|npwp|sk)$/.test(key)) {
+    return NextResponse.json(
+      { error: "Dokumen ini milik profil perusahaan partner — perbarui melalui profil perusahaan partner tersebut." },
+      { status: 400 },
+    );
   }
 
   const updatedPayload = applyChecklistDocumentPath(payload, key, path);

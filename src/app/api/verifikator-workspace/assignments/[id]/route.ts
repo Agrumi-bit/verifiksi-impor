@@ -14,7 +14,8 @@ import {
   COMPANY_MAPPED_DOCUMENT_KEYS,
   productVerificationsSchema,
 } from "@/modules/verifikator-workspace/schema";
-import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
+import { toChecklistCompanyContext, toCompanyLegalContext } from "@/modules/verifikator-workspace/company-context";
+import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
 
 async function loadAssignment(assignmentNumber: string, verifikatorId: string) {
   const found = await db.assignment.findUnique({
@@ -111,7 +112,7 @@ export async function GET(
   const company = assignment.application.companyId
     ? await db.company.findUnique({ where: { id: assignment.application.companyId } })
     : null;
-  const documentChecklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company));
+  const documentChecklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload));
   const productChecklist = buildProductChecklist(payload);
   const productVerifications = productVerificationsSchema.parse(assignment.productVerifications ?? {});
 
@@ -219,24 +220,15 @@ export async function GET(
       },
       company: {
         companyName: payload.companyName,
-        // Company Workspace's profile editor can change these after submission (Legal/Tax
-        // sections) — prefer the live Company row over the frozen application payload so the
-        // "Uraian yang Diperiksa" comparison values don't stay stuck on stale data.
-        nibNumber: company?.nibNumber || payload.nibNumber,
-        nibIssueDate: company?.nibIssueDate ? company.nibIssueDate.toISOString() : null,
         businessAddress: kantorLocation
           ? `${kantorLocation.address}, ${kantorLocation.city}, ${kantorLocation.province}`
           : null,
         kbliEntries: payload.kbliEntries ?? [],
         locations: payload.locations ?? [],
-        notarialDeedNumber: company?.notarialDeedNumber ?? null,
-        notarialAmendmentNumber: company?.notarialAmendmentNumber ?? null,
-        notarialAmendmentDate: company?.notarialAmendmentDate ? company.notarialAmendmentDate.toISOString() : null,
-        skNumber: company?.skNumber ?? null,
-        npwpNumber: company?.npwpNumber ?? null,
-        sktNumber: company?.sktNumber ?? null,
-        sktIssuer: company?.sktIssuer ?? null,
-        sktDate: company?.sktDate ? company.sktDate.toISOString() : null,
+        // Company Workspace's profile editor can change these after submission (Legal/Tax
+        // sections) — prefer the live Company row over the frozen application payload so the
+        // "Uraian yang Diperiksa" comparison values don't stay stuck on stale data.
+        companyLegal: toCompanyLegalContext(company),
       },
       verificationProgram: {
         type: assignment.application.verificationType,

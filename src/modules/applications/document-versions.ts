@@ -143,6 +143,21 @@ export function applyChecklistDocumentPath(
     };
   }
 
+  // LHVKI is the one Partner Industri document that actually lives on the application payload
+  // (see partnerIndustriEntrySchema) — the partner's NIB/NPWP/SK do not, they live on
+  // `Partner.company` (a different Company row entirely) and can't be written here; the caller
+  // (documents/[key]/history/route.ts) rejects those keys before ever reaching this function.
+  const partnerLhvkiMatch = key.match(/^partner:([^:]+):lhvki$/);
+  if (partnerLhvkiMatch) {
+    const [, partnerId] = partnerLhvkiMatch;
+    return {
+      ...payload,
+      partnerIndustriEntries: (payload.partnerIndustriEntries ?? []).map((entry) =>
+        entry.partnerId === partnerId ? { ...entry, lhvkiDocumentPath: newPath } : entry,
+      ),
+    };
+  }
+
   throw new Error(`Tidak diketahui cara menyimpan dokumen untuk key: ${key}`);
 }
 

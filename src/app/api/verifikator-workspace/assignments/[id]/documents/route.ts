@@ -14,6 +14,7 @@ import {
   toChecklistStatus,
 } from "@/modules/verifikator-workspace/schema";
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
+import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
 
 async function findOwnedAssignment(assignmentNumber: string, verifikatorId: string) {
   const assignment = await db.assignment.findUnique({
@@ -46,7 +47,7 @@ export async function GET(
     ? await db.company.findUnique({ where: { id: assignment.application.companyId } })
     : null;
 
-  const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company));
+  const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload));
 
   const companyKeys = checklist.filter((item) => item.key in COMPANY_MAPPED_DOCUMENT_KEYS).map((item) => item.key);
   const appOnlyKeys = checklist.filter((item) => !(item.key in COMPANY_MAPPED_DOCUMENT_KEYS)).map((item) => item.key);
@@ -117,7 +118,7 @@ export async function PATCH(
   const company = assignment.application.companyId
     ? await db.company.findUnique({ where: { id: assignment.application.companyId } })
     : null;
-  const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company));
+  const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload));
   const item = checklist.find((c) => c.key === parsed.data.key);
   if (!item) {
     return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
