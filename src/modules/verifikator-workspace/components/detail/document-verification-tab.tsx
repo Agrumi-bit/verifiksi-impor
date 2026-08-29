@@ -16,7 +16,7 @@ import {
 } from "../../status";
 import type { AssignmentStatusValue } from "../../status";
 import { COMPLIANCE_SECTION_DEFS, getComplianceDef } from "../../document-compliance-defs";
-import { getChecklistItems, type ChecklistItemDef } from "../../document-checklist-items";
+import { getChecklistItems, type ChecklistItemDef, type ChecklistCompanyLegal } from "../../document-checklist-items";
 
 type ChecklistResultValue = "PASS" | "FAIL" | "NA";
 type ChecklistItemResult = { result: ChecklistResultValue | null; note: string | null; criteriaChecked: boolean[] };
@@ -526,7 +526,7 @@ function ReviewModal({
   companyName,
   payload,
   businessAddress,
-  companySkt,
+  companyLegal,
   canEdit,
   isSaving,
   onClose,
@@ -538,7 +538,7 @@ function ReviewModal({
   companyName: string;
   payload: ApplicationWizardValues;
   businessAddress: string | null;
-  companySkt: CompanySkt;
+  companyLegal: ChecklistCompanyLegal;
   canEdit: boolean;
   isSaving: boolean;
   onClose: () => void;
@@ -649,7 +649,7 @@ function ReviewModal({
                     index={i + 1}
                     item={item}
                     value={checklistResult[item.id] ?? null}
-                    sourceValue={item.getValue?.({ payload, businessAddress, companySkt })}
+                    sourceValue={item.getValue?.({ payload, businessAddress, companyLegal })}
                     disabled={!canEdit}
                     onSelect={(value) => handleChecklistSelect(item.id, value)}
                     onNoteBlur={(note) => handleChecklistNoteBlur(item.id, note)}
@@ -804,8 +804,6 @@ function ReviewModal({
   );
 }
 
-type CompanySkt = { sktNumber: string | null; sktIssuer: string | null; sktDate: string | null };
-
 type Props = {
   assignmentId: string;
   assignmentStatus: AssignmentStatusValue;
@@ -813,7 +811,7 @@ type Props = {
   companyName: string;
   payload: ApplicationWizardValues;
   businessAddress: string | null;
-  companySkt: CompanySkt;
+  companyLegal: ChecklistCompanyLegal;
 };
 
 export function DocumentVerificationTab({
@@ -823,7 +821,7 @@ export function DocumentVerificationTab({
   companyName,
   payload,
   businessAddress,
-  companySkt,
+  companyLegal,
 }: Props) {
   const queryClient = useQueryClient();
   const [savingKey, setSavingKey] = useState<string | null>(null);
@@ -1126,7 +1124,7 @@ export function DocumentVerificationTab({
           companyName={companyName}
           payload={payload}
           businessAddress={businessAddress}
-          companySkt={companySkt}
+          companyLegal={companyLegal}
           canEdit={canEdit}
           isSaving={savingKey === reviewingRow.key}
           onClose={() => setReviewingRow(null)}

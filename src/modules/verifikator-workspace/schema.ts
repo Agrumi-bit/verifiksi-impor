@@ -41,15 +41,23 @@ export const COMPANY_MAPPED_DOCUMENT_KEYS: Record<string, DocumentFieldKey> = {
 };
 
 /**
- * Minimal Company shape `buildDocumentChecklist` needs for the Perpajakan
- * items that have no home in `ApplicationWizardValues` — `companyAge` picks
+ * Live Company shape `buildDocumentChecklist` needs — `companyAge` picks
  * between the "Bukti Pajak 3 Tahun" vs "SKT" alternative (Pasal 30 ayat (2)
- * huruf b angka 7), `sktDocumentPath`/`taxProofs` supply their real current
- * paths. Optional on every caller — omitted, both alternatives render so
- * nothing is silently hidden; a verifikator can still mark the wrong one N/A.
+ * huruf b angka 7). The document-path fields let every company-mapped
+ * checklist item (see `COMPANY_MAPPED_DOCUMENT_KEYS`) resolve to whatever the
+ * company most recently uploaded via Company Workspace's profile editor,
+ * instead of staying stuck on the file path frozen into the application
+ * payload at original submission. Optional on every caller — omitted, the
+ * checklist still renders off the payload snapshot alone.
  */
 export type ChecklistCompanyContext = {
   companyAge: "OVER_3" | "UNDER_3" | null;
+  nibDocumentPath: string | null;
+  kbliDocumentPath: string | null;
+  notarialDocumentPath: string | null;
+  notarialAmendmentDocPath: string | null;
+  skDocumentPath: string | null;
+  npwpDocumentPath: string | null;
   sktDocumentPath: string | null;
   taxProofs: { year: string; type?: string | null; docPath?: string | null }[] | null;
 };
@@ -141,45 +149,45 @@ export function buildDocumentChecklist(
     key: "nib",
     label: "NIB (Nomor Induk Berusaha)",
     category: "Legalitas Perusahaan",
-    documentPath: payload.nibDocumentPath || null,
+    documentPath: company?.nibDocumentPath || payload.nibDocumentPath || null,
   });
   items.push({
     key: "kbli-utama",
     label: "KBLI Utama",
     category: "Legalitas Perusahaan",
-    documentPath: payload.kbliDocumentPath || null,
+    documentPath: company?.kbliDocumentPath || payload.kbliDocumentPath || null,
   });
   items.push({
     key: "kbli-pendukung",
     label: "KBLI Pendukung",
     category: "Legalitas Perusahaan",
-    documentPath: payload.kbliDocumentPath || null,
+    documentPath: company?.kbliDocumentPath || payload.kbliDocumentPath || null,
   });
   items.push({
     key: "notarial",
     label: "Akta Notaris",
     category: "Legalitas Perusahaan",
-    documentPath: payload.notarialDocumentPath || null,
+    documentPath: company?.notarialDocumentPath || payload.notarialDocumentPath || null,
   });
   items.push({
     key: "sk",
     label: "SK Kemenkumham",
     category: "Legalitas Perusahaan",
-    documentPath: payload.skDocumentPath || null,
+    documentPath: company?.skDocumentPath || payload.skDocumentPath || null,
   });
-  if (payload.notarialAmendmentDocPath) {
+  if (payload.notarialAmendmentDocPath || company?.notarialAmendmentDocPath) {
     items.push({
       key: "notarial-amendment",
       label: "Akta Perubahan",
       category: "Legalitas Perusahaan",
-      documentPath: payload.notarialAmendmentDocPath,
+      documentPath: company?.notarialAmendmentDocPath || payload.notarialAmendmentDocPath || null,
     });
   }
   items.push({
     key: "npwp",
     label: "NPWP",
     category: "Perpajakan",
-    documentPath: payload.npwpDocumentPath || null,
+    documentPath: company?.npwpDocumentPath || payload.npwpDocumentPath || null,
   });
 
   const showTaxProofGroup = company?.companyAge !== "UNDER_3";
@@ -240,7 +248,7 @@ export function buildDocumentChecklist(
       key: "skt",
       label: "Surat Keterangan Terdaftar (SKT) Pajak",
       category: "Perpajakan",
-      documentPath: payload.sktDocumentPath || company?.sktDocumentPath || null,
+      documentPath: company?.sktDocumentPath || payload.sktDocumentPath || null,
     });
   }
 

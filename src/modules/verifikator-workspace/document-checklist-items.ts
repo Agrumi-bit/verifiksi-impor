@@ -25,22 +25,31 @@ import {
 } from "@/modules/shared/schema";
 
 /**
- * Real data available to a checklist item's `getValue` — the application
- * payload plus the handful of company-level fields that live outside it
- * (e.g. the registered business address, which is a `Company` column, not
- * part of the application JSON snapshot).
+ * Live Company fields for the checklist items whose comparison value can be
+ * edited after the application was submitted (Company Workspace's profile
+ * editor — "Legal" and "Tax" sections). `payload.Xxx` is a snapshot frozen
+ * at submission time; once the company edits and re-uploads, only the
+ * `Company` row changes, so `getValue` must prefer this live value over the
+ * frozen one or a verifikator reviewing after the edit sees stale data next
+ * to a document that no longer matches it.
  */
+export type ChecklistCompanyLegal = {
+  nibNumber: string | null;
+  nibIssueDate: string | null;
+  notarialDeedNumber: string | null;
+  notarialAmendmentNumber: string | null;
+  notarialAmendmentDate: string | null;
+  skNumber: string | null;
+  npwpNumber: string | null;
+  sktNumber: string | null;
+  sktIssuer: string | null;
+  sktDate: string | null;
+} | null;
+
 export type ChecklistContext = {
   payload: ApplicationWizardValues;
   businessAddress: string | null;
-  /**
-   * Live Company fallback for the SKT fields — `payload.sktXxx` is only
-   * populated for applications submitted after this field existed in the
-   * wizard schema; older applications' frozen snapshot never captured it, so
-   * `getValue` falls back to the company's current record instead of
-   * showing blank for data that genuinely exists.
-   */
-  companySkt: { sktNumber: string | null; sktIssuer: string | null; sktDate: string | null } | null;
+  companyLegal: ChecklistCompanyLegal;
 };
 
 export type ChecklistItemDef = {
@@ -138,7 +147,7 @@ function formatRupiah(value: string | null | undefined): string | undefined {
 
 /**
  * "2026-07-03" or a full ISO datetime like "2026-07-03T00:00:00.000Z" (the
- * latter comes from `companySkt.sktDate`, a Prisma `DateTime` column
+ * latter comes from a live `companyLegal` field, a Prisma `DateTime` column
  * serialized to JSON) → "3 Juli 2026". Invalid/unparseable input passes
  * through unchanged rather than showing "Invalid Date".
  */
@@ -216,7 +225,7 @@ const DOCUMENT_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
       description: "Nomor Induk Berusaha (NIB) adalah nomor identitas resmi perusahaan yang diterbitkan oleh OSS.",
       question: "Apakah nomor NIB perusahaan sesuai dengan nomor yang tercantum pada dokumen NIB?",
       dataSource: "Data nomor ditampilkan secara otomatis berdasarkan data permohonan pada saat mengupload NIB, diisi oleh perusahaan.",
-      getValue: ({ payload }) => payload.nibNumber,
+      getValue: ({ payload, companyLegal }) => companyLegal?.nibNumber || payload.nibNumber,
       criteria: [
         "Nomor NIB pada sistem harus sama dengan nomor pada dokumen.",
         "Nomor tidak boleh berbeda satu digit pun.",
@@ -244,7 +253,7 @@ const DOCUMENT_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
       description: "Tanggal terbit NIB merupakan tanggal penerbitan Nomor Induk Berusaha oleh sistem OSS.",
       question: "Apakah tanggal terbit NIB sesuai dengan yang tercantum pada dokumen?",
       dataSource: "Data tanggal ditampilkan secara otomatis berdasarkan data permohonan, diisi oleh perusahaan.",
-      getValue: ({ payload }) => formatTanggal(payload.nibIssueDate),
+      getValue: ({ payload, companyLegal }) => formatTanggal(companyLegal?.nibIssueDate || payload.nibIssueDate),
       criteria: [
         "Tanggal pada sistem harus sesuai dengan dokumen.",
         "Dokumen NIB harus masih berlaku.",
@@ -376,7 +385,7 @@ const DOCUMENT_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
         "Nomor SK Kemenkumham merupakan nomor keputusan yang diterbitkan oleh Kementerian Hukum dan HAM sebagai bukti pengesahan badan hukum perusahaan.",
       question: "Apakah nomor SK Kemenkumham sesuai dengan dokumen yang diunggah?",
       dataSource: "Data ditampilkan secara otomatis berdasarkan data permohonan.",
-      getValue: ({ payload }) => payload.skNumber,
+      getValue: ({ payload, companyLegal }) => companyLegal?.skNumber || payload.skNumber,
       examples: ["AHU-0012345.AH.01.01.Tahun 2024"],
       criteria: ["Nomor SK sesuai dengan dokumen.", "Nomor SK dapat dibaca dengan jelas.", "Nomor SK sesuai dengan akta pendirian atau akta perubahan."],
     },
@@ -410,7 +419,7 @@ const DOCUMENT_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
       description: "Nomor akta pendirian merupakan nomor resmi yang diterbitkan oleh notaris pada saat perusahaan didirikan.",
       question: "Apakah nomor akta pendirian sesuai dengan dokumen yang diunggah?",
       dataSource: "Data ditampilkan otomatis berdasarkan data permohonan.",
-      getValue: ({ payload }) => payload.notarialDeedNumber,
+      getValue: ({ payload, companyLegal }) => companyLegal?.notarialDeedNumber || payload.notarialDeedNumber,
       criteria: ["Nomor akta sesuai dengan dokumen.", "Nomor akta dapat dibaca dengan jelas.", "Tidak terdapat perbedaan nomor."],
     },
     {
@@ -455,7 +464,7 @@ const DOCUMENT_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
       description: "Nomor akta perubahan merupakan nomor resmi yang diterbitkan oleh notaris untuk setiap perubahan perusahaan.",
       question: "Apakah nomor akta perubahan sesuai dengan dokumen yang diunggah?",
       dataSource: "Data ditampilkan otomatis berdasarkan data permohonan.",
-      getValue: ({ payload }) => payload.notarialAmendmentNumber,
+      getValue: ({ payload, companyLegal }) => companyLegal?.notarialAmendmentNumber || payload.notarialAmendmentNumber,
       criteria: ["Nomor akta perubahan sesuai dengan dokumen.", "Tidak terdapat perbedaan nomor.", "Nomor akta dapat dibaca dengan jelas."],
     },
     {
@@ -464,7 +473,7 @@ const DOCUMENT_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
       description: "Tanggal akta perubahan menunjukkan tanggal resmi perubahan perusahaan dilakukan.",
       question: "Apakah tanggal akta perubahan sesuai dengan dokumen?",
       dataSource: "Data ditampilkan otomatis berdasarkan data permohonan.",
-      getValue: ({ payload }) => formatTanggal(payload.notarialAmendmentDate),
+      getValue: ({ payload, companyLegal }) => formatTanggal(companyLegal?.notarialAmendmentDate || payload.notarialAmendmentDate),
       criteria: ["Tanggal pada sistem sama dengan dokumen.", "Tanggal perubahan merupakan perubahan terakhir yang berlaku."],
     },
     {
@@ -507,7 +516,7 @@ const DOCUMENT_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
       description: "Nomor Pokok Wajib Pajak (NPWP) adalah nomor identitas perpajakan yang digunakan oleh perusahaan dalam memenuhi kewajiban perpajakan.",
       question: "Apakah nomor NPWP perusahaan sesuai dengan dokumen yang diunggah?",
       dataSource: "Data ditampilkan secara otomatis berdasarkan data permohonan.",
-      getValue: ({ payload }) => payload.npwpNumber,
+      getValue: ({ payload, companyLegal }) => companyLegal?.npwpNumber || payload.npwpNumber,
       examples: ["01.234.567.8-901.000"],
       criteria: ["Nomor NPWP pada sistem harus sama dengan dokumen.", "Jumlah digit NPWP lengkap dan dapat dibaca.", "Tidak terdapat perbedaan nomor."],
     },
@@ -557,7 +566,7 @@ const DOCUMENT_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
       description: "Nomor SKT merupakan nomor resmi yang diterbitkan oleh Direktorat Jenderal Pajak sebagai bukti registrasi wajib pajak.",
       question: "Apakah nomor SKT sesuai dengan dokumen yang diunggah?",
       dataSource: "Data ditampilkan secara otomatis berdasarkan data permohonan.",
-      getValue: ({ payload, companySkt }) => payload.sktNumber || companySkt?.sktNumber,
+      getValue: ({ payload, companyLegal }) => companyLegal?.sktNumber || payload.sktNumber,
       criteria: ["Nomor SKT sesuai dengan dokumen.", "Nomor dapat dibaca dengan jelas.", "Tidak terdapat perbedaan data."],
     },
     {
@@ -595,7 +604,7 @@ const DOCUMENT_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
       description: "Kantor Pelayanan Pajak (KPP) adalah kantor pajak tempat perusahaan terdaftar.",
       question: "Apakah KPP terdaftar sesuai dengan dokumen SKT?",
       dataSource: "Data ditampilkan secara otomatis berdasarkan data permohonan — KPP terdaftar sama dengan lembaga penerbit SKT.",
-      getValue: ({ payload, companySkt }) => payload.sktIssuer || companySkt?.sktIssuer,
+      getValue: ({ payload, companyLegal }) => companyLegal?.sktIssuer || payload.sktIssuer,
       examples: ["KPP Pratama Bandung Tengah"],
       criteria: ["Nama KPP tercantum dengan jelas.", "KPP sesuai dengan wilayah perusahaan."],
     },
@@ -605,7 +614,7 @@ const DOCUMENT_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
       description: "Tanggal terdaftar menunjukkan tanggal resmi perusahaan terdaftar sebagai wajib pajak.",
       question: "Apakah tanggal terdaftar sesuai dengan dokumen SKT?",
       dataSource: "Data ditampilkan secara otomatis berdasarkan data permohonan — tanggal terdaftar sama dengan tanggal terbit SKT.",
-      getValue: ({ payload, companySkt }) => formatTanggal(payload.sktDate || companySkt?.sktDate),
+      getValue: ({ payload, companyLegal }) => formatTanggal(companyLegal?.sktDate || payload.sktDate),
       criteria: ["Tanggal pada sistem sama dengan dokumen.", "Tidak terdapat perbedaan data."],
     },
     {

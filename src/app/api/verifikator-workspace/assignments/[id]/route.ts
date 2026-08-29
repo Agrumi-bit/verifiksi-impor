@@ -219,12 +219,21 @@ export async function GET(
       },
       company: {
         companyName: payload.companyName,
-        nibNumber: payload.nibNumber,
+        // Company Workspace's profile editor can change these after submission (Legal/Tax
+        // sections) — prefer the live Company row over the frozen application payload so the
+        // "Uraian yang Diperiksa" comparison values don't stay stuck on stale data.
+        nibNumber: company?.nibNumber || payload.nibNumber,
+        nibIssueDate: company?.nibIssueDate ? company.nibIssueDate.toISOString() : null,
         businessAddress: kantorLocation
           ? `${kantorLocation.address}, ${kantorLocation.city}, ${kantorLocation.province}`
           : null,
         kbliEntries: payload.kbliEntries ?? [],
         locations: payload.locations ?? [],
+        notarialDeedNumber: company?.notarialDeedNumber ?? null,
+        notarialAmendmentNumber: company?.notarialAmendmentNumber ?? null,
+        notarialAmendmentDate: company?.notarialAmendmentDate ? company.notarialAmendmentDate.toISOString() : null,
+        skNumber: company?.skNumber ?? null,
+        npwpNumber: company?.npwpNumber ?? null,
         sktNumber: company?.sktNumber ?? null,
         sktIssuer: company?.sktIssuer ?? null,
         sktDate: company?.sktDate ? company.sktDate.toISOString() : null,

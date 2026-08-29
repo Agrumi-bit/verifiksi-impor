@@ -60,9 +60,15 @@ export type AssignmentDetailData = {
   company: {
     companyName: string;
     nibNumber: string;
+    nibIssueDate: string | null;
     businessAddress: string | null;
     kbliEntries: { code: string; description: string }[];
     locations: ApplicationWizardValues["locations"];
+    notarialDeedNumber: string | null;
+    notarialAmendmentNumber: string | null;
+    notarialAmendmentDate: string | null;
+    skNumber: string | null;
+    npwpNumber: string | null;
     sktNumber: string | null;
     sktIssuer: string | null;
     sktDate: string | null;
@@ -242,7 +248,18 @@ export function AssignmentDetail({ id }: Props) {
             companyName={data.company.companyName}
             payload={data.application.payload}
             businessAddress={data.company.businessAddress}
-            companySkt={{ sktNumber: data.company.sktNumber, sktIssuer: data.company.sktIssuer, sktDate: data.company.sktDate }}
+            companyLegal={{
+              nibNumber: data.company.nibNumber,
+              nibIssueDate: data.company.nibIssueDate,
+              notarialDeedNumber: data.company.notarialDeedNumber,
+              notarialAmendmentNumber: data.company.notarialAmendmentNumber,
+              notarialAmendmentDate: data.company.notarialAmendmentDate,
+              skNumber: data.company.skNumber,
+              npwpNumber: data.company.npwpNumber,
+              sktNumber: data.company.sktNumber,
+              sktIssuer: data.company.sktIssuer,
+              sktDate: data.company.sktDate,
+            }}
           />
         )}
         {activeTab === "Survey Lapangan" && (
