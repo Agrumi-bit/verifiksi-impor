@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -82,6 +82,7 @@ export function PartnerForm({ partnerId }: Props) {
   const router = useRouter();
   const isEditing = Boolean(partnerId);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [relatedCompanySearch, setRelatedCompanySearch] = useState("");
   const { data: companies, isLoading: isLoadingCompanies } = useCompanyOptions();
   const { data: existingPartner, isLoading: isLoadingPartner } = usePartner(partnerId);
 
@@ -98,8 +99,17 @@ export function PartnerForm({ partnerId }: Props) {
     defaultValues: { companyId: "", relatedCompanyIds: [] },
   });
 
+  // TanStack Query v5 defaults (no defaultOptions set — see src/app/providers.tsx) mean this
+  // query can silently refetch in the background (window refocus, remount, staleTime 0) and
+  // hand back a new `existingPartner` object even though nothing server-side changed. Without
+  // this guard, that refetch re-fires `reset()` and wipes whatever the admin was mid-edit on —
+  // most noticeably the "Perusahaan API-U Terkait" checkboxes, the slowest field to fill in and
+  // so the one most likely to still be in progress when a stray refetch lands. Only prefill once
+  // per partner; the admin's own edits are the only thing allowed to change the form after that.
+  const prefilledPartnerIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!existingPartner) return;
+    if (!existingPartner || prefilledPartnerIdRef.current === existingPartner.id) return;
+    prefilledPartnerIdRef.current = existingPartner.id;
     reset({
       companyId: existingPartner.companyId,
       companyName: existingPartner.company.companyName,
@@ -116,6 +126,9 @@ export function PartnerForm({ partnerId }: Props) {
   const companyName = useWatch({ control, name: "companyName" });
   const companyOptions: SearchSelectOption[] = (companies ?? []).map((c) => ({ value: c.id, label: c.companyName }));
   const apiUCompanies = (companies ?? []).filter((c) => c.apiType === "API-U");
+  const filteredApiUCompanies = apiUCompanies.filter((c) =>
+    c.companyName.toLowerCase().includes(relatedCompanySearch.trim().toLowerCase()),
+  );
 
   async function onSubmit(values: AdminPartnerFormValues) {
     setIsSubmitting(true);
@@ -293,23 +306,42 @@ export function PartnerForm({ partnerId }: Props) {
                   field.onChange(checked ? [...selected, id] : selected.filter((v) => v !== id));
                 }
                 return (
-                  <div className="flex max-h-64 flex-col gap-2 overflow-y-auto rounded-lg border border-[#e8dccd] p-3">
-                    {isLoadingCompanies && <p className="text-[12.5px] text-[#8a7565]">Memuat perusahaan API-U...</p>}
-                    {!isLoadingCompanies && apiUCompanies.length === 0 && (
-                      <p className="text-[12.5px] text-[#8a7565]">Belum ada perusahaan dengan Jenis API API-U.</p>
-                    )}
-                    {apiUCompanies.map((company) => (
-                      <label
-                        key={company.id}
-                        className="flex cursor-pointer items-center gap-2.5 text-[12.5px] font-semibold text-[#20180f]"
-                      >
-                        <Checkbox
-                          checked={selected.includes(company.id)}
-                          onCheckedChange={(checked) => toggle(company.id, checked === true)}
-                        />
-                        {company.companyName}
-                      </label>
-                    ))}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between gap-2.5">
+                      <input
+                        type="text"
+                        value={relatedCompanySearch}
+                        onChange={(e) => setRelatedCompanySearch(e.target.value)}
+                        placeholder="Cari perusahaan API-U..."
+                        className={inputClass}
+                      />
+                      {selected.length > 0 && (
+                        <span className="shrink-0 text-[11.5px] font-semibold whitespace-nowrap text-[#8a7565]">
+                          {selected.length} dipilih
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex max-h-64 flex-col gap-2 overflow-y-auto rounded-lg border border-[#e8dccd] p-3">
+                      {isLoadingCompanies && <p className="text-[12.5px] text-[#8a7565]">Memuat perusahaan API-U...</p>}
+                      {!isLoadingCompanies && apiUCompanies.length === 0 && (
+                        <p className="text-[12.5px] text-[#8a7565]">Belum ada perusahaan dengan Jenis API API-U.</p>
+                      )}
+                      {!isLoadingCompanies && apiUCompanies.length > 0 && filteredApiUCompanies.length === 0 && (
+                        <p className="text-[12.5px] text-[#8a7565]">Tidak ada perusahaan API-U yang cocok dengan pencarian.</p>
+                      )}
+                      {filteredApiUCompanies.map((company) => (
+                        <label
+                          key={company.id}
+                          className="flex cursor-pointer items-center gap-2.5 text-[12.5px] font-semibold text-[#20180f]"
+                        >
+                          <Checkbox
+                            checked={selected.includes(company.id)}
+                            onCheckedChange={(checked) => toggle(company.id, checked === true)}
+                          />
+                          {company.companyName}
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 );
               }}
