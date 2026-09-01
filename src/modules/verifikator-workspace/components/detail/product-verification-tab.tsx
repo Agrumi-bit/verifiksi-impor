@@ -82,6 +82,29 @@ const EMPTY_CONVERSION_DRAFT: ConversionDraft = {
   keterangan: "",
 };
 
+/** "Nama Bahan Baku" is a hybrid select-or-type field: `ref` is either an existing raw
+ * material's id (picked from the list) or the freshly typed name (no match yet, so this
+ * becomes a brand-new raw material on save). `jenis`/`hsCode`/`hsDesc`/`photoPath` are always
+ * editable — auto-filled from the picked material, or blank for a new one — and get written
+ * back (via the raw-materials endpoint) whether the material is new or being corrected here. */
+type MaterialLinkDraft = {
+  ref: string;
+  jenis: string;
+  hsCode: string;
+  hsDesc: string;
+  deskripsi: string;
+  photoPath: string;
+};
+
+const EMPTY_MATERIAL_LINK_DRAFT: MaterialLinkDraft = {
+  ref: "",
+  jenis: "",
+  hsCode: "",
+  hsDesc: "",
+  deskripsi: "",
+  photoPath: "",
+};
+
 function ConversionForm({
   draft,
   onChange,
@@ -90,55 +113,151 @@ function ConversionForm({
   onSave,
   onCancel,
   saving,
+  materialLink,
 }: {
   draft: ConversionDraft;
   onChange: (patch: Partial<ConversionDraft>) => void;
-  rawMaterials: { id: string; jenis?: string; hsCode?: string }[];
+  rawMaterials: { id: string; jenis?: string; hsCode?: string; hsDesc?: string; deskripsi?: string; photoPath?: string }[];
   productHsCode: string;
   onSave: () => void;
   onCancel: () => void;
   saving: boolean;
+  /** Present only for the "Tambah Bahan Baku" (add) form — replaces the existing-only picker
+   * with the full Nama/Kategori/HS Code/Uraian HS Code/Foto field set. Omitted for the
+   * edit-conversion form, which only relinks an already-existing raw material. */
+  materialLink?: {
+    draft: MaterialLinkDraft;
+    onChange: (patch: Partial<MaterialLinkDraft>) => void;
+  };
 }) {
   const hsCodeOptions = useHsCodeOptions();
   const unitForHsCode = (hsCode: string | undefined) => hsCodeOptions.find((o) => o.value === hsCode)?.unit ?? "";
   const selectedRawMaterial = rawMaterials.find((rm) => rm.id === draft.rawMaterialId);
-  const bahanBakuSatuan = unitForHsCode(selectedRawMaterial?.hsCode);
+  const bahanBakuSatuan = materialLink
+    ? unitForHsCode(materialLink.draft.hsCode)
+    : unitForHsCode(selectedRawMaterial?.hsCode);
   const produkSatuan = unitForHsCode(productHsCode);
   const rawMaterialOptions = rawMaterials.map((rm) => ({
     value: rm.id,
     label: rm.jenis || "—",
     hint: rm.hsCode ? `HS Code: ${rm.hsCode}` : undefined,
   }));
+  const canSave = materialLink
+    ? Boolean(materialLink.draft.jenis.trim() && materialLink.draft.hsCode.trim())
+    : Boolean(draft.rawMaterialId);
 
   return (
     <div className="rounded-xl border border-dashed border-[#2f6fe0] bg-[#f5f8fe] p-4">
-      <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Bahan Baku</div>
-          <SearchSelectInput
-            value={draft.rawMaterialId}
-            onChange={(value) => onChange({ rawMaterialId: value })}
-            options={rawMaterialOptions}
-            placeholder="Cari bahan baku..."
-            allowFreeText={false}
-          />
+      {materialLink ? (
+        <>
+          <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Nama Bahan Baku</div>
+              <SearchSelectInput
+                value={materialLink.draft.ref}
+                onChange={(value) => materialLink.onChange({ ref: value, jenis: value })}
+                onSelectOption={(option) => {
+                  const rm = rawMaterials.find((r) => r.id === option.value);
+                  materialLink.onChange({
+                    ref: option.value,
+                    jenis: option.label,
+                    hsCode: rm?.hsCode ?? "",
+                    hsDesc: rm?.hsDesc ?? "",
+                    deskripsi: rm?.deskripsi ?? "",
+                    photoPath: rm?.photoPath ?? "",
+                  });
+                }}
+                options={rawMaterialOptions}
+                placeholder="Cari atau ketik nama bahan baku..."
+              />
+            </div>
+            <div>
+              <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Kategori</div>
+              <select
+                value={draft.kategori}
+                onChange={(e) => onChange({ kategori: e.target.value })}
+                className="w-full rounded-lg border border-[#e8dccd] bg-white px-3 py-2.5 text-[12.5px] text-[#20180f] outline-none"
+              >
+                <option value="">—</option>
+                {Object.entries(RAW_MATERIAL_CONVERSION_KATEGORI_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">HS Code</div>
+              <SearchSelectInput
+                value={materialLink.draft.hsCode}
+                onChange={(value) => materialLink.onChange({ hsCode: value })}
+                onSelectOption={(option) => materialLink.onChange({ hsCode: option.value, hsDesc: option.hint ?? "" })}
+                options={hsCodeOptions}
+                placeholder="Cari atau ketik HS Code..."
+              />
+            </div>
+            <div>
+              <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Uraian HS Code</div>
+              <input
+                type="text"
+                value={materialLink.draft.hsDesc}
+                onChange={(e) => materialLink.onChange({ hsDesc: e.target.value })}
+                placeholder="Terisi otomatis saat memilih HS Code"
+                className="w-full rounded-lg border border-[#e8dccd] bg-white px-3 py-2.5 text-[12.5px] text-[#20180f] outline-none"
+              />
+            </div>
+          </div>
+          <div className="mb-3">
+            <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Deskripsi Bahan Baku</div>
+            <textarea
+              rows={2}
+              value={materialLink.draft.deskripsi}
+              onChange={(e) => materialLink.onChange({ deskripsi: e.target.value })}
+              className="w-full rounded-lg border border-[#e8dccd] bg-white p-2.5 text-[12.5px] text-[#20180f] outline-none"
+            />
+          </div>
+          <div className="mb-3">
+            <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Unggah Foto</div>
+            <FileUploadField
+              namespace="photos"
+              accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+              label="Unggah Foto"
+              value={materialLink.draft.photoPath}
+              onChange={(path) => materialLink.onChange({ photoPath: path ?? "" })}
+            />
+          </div>
+        </>
+      ) : (
+        <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Bahan Baku</div>
+            <SearchSelectInput
+              value={draft.rawMaterialId}
+              onChange={(value) => onChange({ rawMaterialId: value })}
+              options={rawMaterialOptions}
+              placeholder="Cari bahan baku..."
+              allowFreeText={false}
+            />
+          </div>
+          <div>
+            <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Kategori</div>
+            <select
+              value={draft.kategori}
+              onChange={(e) => onChange({ kategori: e.target.value })}
+              className="w-full rounded-lg border border-[#e8dccd] bg-white px-3 py-2.5 text-[12.5px] text-[#20180f] outline-none"
+            >
+              <option value="">—</option>
+              {Object.entries(RAW_MATERIAL_CONVERSION_KATEGORI_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div>
-          <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Kategori</div>
-          <select
-            value={draft.kategori}
-            onChange={(e) => onChange({ kategori: e.target.value })}
-            className="w-full rounded-lg border border-[#e8dccd] bg-white px-3 py-2.5 text-[12.5px] text-[#20180f] outline-none"
-          >
-            <option value="">—</option>
-            {Object.entries(RAW_MATERIAL_CONVERSION_KATEGORI_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      )}
       <div className="mb-3 rounded-lg border border-[#e1bfb3] bg-white p-3">
         <div className="text-[12px] font-bold text-[#20180f]">Rasio Konversi Bahan Baku ke Produk</div>
         <div className="mt-0.5 text-[11px] leading-relaxed text-[#8a7565]">
@@ -209,7 +328,7 @@ function ConversionForm({
         <button
           type="button"
           onClick={onSave}
-          disabled={saving || !draft.rawMaterialId}
+          disabled={saving || !canSave}
           className="flex items-center gap-1.5 rounded-lg bg-[#2f6fe0] px-3.5 py-2 text-[12px] font-semibold text-white disabled:opacity-50"
         >
           <MaterialIcon name="save" className="text-[15px]" />
@@ -341,6 +460,113 @@ function ProductForm({
   );
 }
 
+type RawMaterialDraft = {
+  jenis: string;
+  hsCode: string;
+  hsDesc: string;
+  deskripsi: string;
+  photoPath: string;
+};
+
+const EMPTY_RAW_MATERIAL_DRAFT: RawMaterialDraft = {
+  jenis: "",
+  hsCode: "",
+  hsDesc: "",
+  deskripsi: "",
+  photoPath: "",
+};
+
+function RawMaterialForm({
+  draft,
+  onChange,
+  onSave,
+  onCancel,
+  saving,
+}: {
+  draft: RawMaterialDraft;
+  onChange: (patch: Partial<RawMaterialDraft>) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  saving: boolean;
+}) {
+  const hsCodeOptions = useHsCodeOptions();
+
+  return (
+    <div className="rounded-xl border border-dashed border-[#2f6fe0] bg-[#f5f8fe] p-5.5">
+      <div className="mb-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+        <div>
+          <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Jenis Bahan Baku</div>
+          <input
+            type="text"
+            value={draft.jenis}
+            onChange={(e) => onChange({ jenis: e.target.value })}
+            placeholder="cth: Benang Katun"
+            className="w-full rounded-lg border border-[#e8dccd] bg-white px-3 py-2.5 text-[12.5px] text-[#20180f] outline-none"
+          />
+        </div>
+        <div>
+          <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">HS Code</div>
+          <SearchSelectInput
+            value={draft.hsCode}
+            onChange={(value) => onChange({ hsCode: value })}
+            onSelectOption={(option) => onChange({ hsCode: option.value, hsDesc: option.hint ?? "" })}
+            options={hsCodeOptions}
+            placeholder="Cari atau ketik HS Code..."
+          />
+        </div>
+      </div>
+      <div className="mb-3.5">
+        <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Deskripsi HS Code</div>
+        <input
+          type="text"
+          value={draft.hsDesc}
+          onChange={(e) => onChange({ hsDesc: e.target.value })}
+          placeholder="Terisi otomatis saat memilih HS Code"
+          className="w-full rounded-lg border border-[#e8dccd] bg-white px-3 py-2.5 text-[12.5px] text-[#20180f] outline-none"
+        />
+      </div>
+      <div className="mb-3.5">
+        <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Deskripsi Bahan Baku</div>
+        <textarea
+          rows={2}
+          value={draft.deskripsi}
+          onChange={(e) => onChange({ deskripsi: e.target.value })}
+          className="w-full rounded-lg border border-[#e8dccd] bg-white p-2.5 text-[12.5px] text-[#20180f] outline-none"
+        />
+      </div>
+      <div className="mb-3.5">
+        <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Foto Bahan Baku</div>
+        <FileUploadField
+          namespace="photos"
+          accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+          label="Unggah Foto"
+          value={draft.photoPath}
+          onChange={(path) => onChange({ photoPath: path ?? "" })}
+        />
+      </div>
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={saving}
+          className="rounded-lg border border-[#e1bfb3] bg-white px-3.5 py-2 text-[12px] font-semibold text-[#261813] disabled:opacity-50"
+        >
+          Batal
+        </button>
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={saving || !draft.jenis.trim() || !draft.hsCode.trim()}
+          className="flex items-center gap-1.5 rounded-lg bg-[#2f6fe0] px-3.5 py-2 text-[12px] font-semibold text-white disabled:opacity-50"
+        >
+          <MaterialIcon name="save" className="text-[15px]" />
+          {saving ? "Menyimpan..." : "Simpan Bahan Baku"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 type Props = {
   assignmentId: string;
   assignmentStatus: AssignmentStatusValue;
@@ -376,6 +602,11 @@ export function ProductVerificationTab({
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editProduct, setEditProduct] = useState<ProductDraft>(EMPTY_PRODUCT_DRAFT);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [materialLinkDraft, setMaterialLinkDraft] = useState<MaterialLinkDraft>(EMPTY_MATERIAL_LINK_DRAFT);
+  const [editingRawMaterialId, setEditingRawMaterialId] = useState<string | null>(null);
+  const [editRawMaterial, setEditRawMaterial] = useState<RawMaterialDraft>(EMPTY_RAW_MATERIAL_DRAFT);
+  const [savingRawMaterialId, setSavingRawMaterialId] = useState<string | null>(null);
+  const [deletingRawMaterialId, setDeletingRawMaterialId] = useState<string | null>(null);
   const canEdit = assignmentStatus === "SUBMITTED";
   const hsCodeOptions = useHsCodeOptions();
   const unitForHsCode = (hsCode: string | undefined) => hsCodeOptions.find((o) => o.value === hsCode)?.unit ?? "";
@@ -510,27 +741,76 @@ export function ProductVerificationTab({
   }
 
   async function handleAddConversion(productId: string) {
-    if (!newConversion.rawMaterialId) return;
+    if (!materialLinkDraft.jenis.trim() || !materialLinkDraft.hsCode.trim()) return;
     setSavingConversionId("new");
+
+    const existingRawMaterial = rawMaterials.find((r) => r.id === materialLinkDraft.ref);
+    const rawMaterialData = {
+      jenis: materialLinkDraft.jenis,
+      hsCode: materialLinkDraft.hsCode,
+      hsDesc: materialLinkDraft.hsDesc,
+      deskripsi: materialLinkDraft.deskripsi,
+      photoPath: materialLinkDraft.photoPath,
+    };
+    let rawMaterialId: string;
+    if (existingRawMaterial) {
+      // Picked an existing raw material — persist any corrections made to its own fields here
+      // (name/HS Code/uraian/foto) too, not just the conversion link.
+      rawMaterialId = existingRawMaterial.id;
+      const patchResponse = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/raw-materials`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: rawMaterialId, rawMaterialData }),
+      });
+      if (!patchResponse.ok) {
+        setSavingConversionId(null);
+        const body = await patchResponse.json().catch(() => null);
+        toast.error(body?.error ?? "Gagal menyimpan bahan baku");
+        return;
+      }
+    } else {
+      // No match — the typed name is a brand-new raw material, create it first.
+      const createResponse = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/raw-materials`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(rawMaterialData),
+      });
+      if (!createResponse.ok) {
+        setSavingConversionId(null);
+        const body = await createResponse.json().catch(() => null);
+        toast.error(body?.error ?? "Gagal menambahkan bahan baku");
+        return;
+      }
+      const created = (await createResponse.json()) as { data: { id: string } };
+      rawMaterialId = created.data.id;
+    }
+
     const product = rows.find((r) => r.id === productId);
-    const rawMaterial = rawMaterials.find((r) => r.id === newConversion.rawMaterialId);
     const rasioKonversi = computeRasio(newConversion.volumeKebutuhanJumlah, newConversion.volumeProduksiJumlah);
-    const volumeKebutuhanSatuan = unitForHsCode(rawMaterial?.hsCode);
+    const volumeKebutuhanSatuan = unitForHsCode(materialLinkDraft.hsCode);
     const volumeProduksiSatuan = unitForHsCode(product?.hsCode);
     const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/raw-material-conversions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId, ...newConversion, rasioKonversi, volumeKebutuhanSatuan, volumeProduksiSatuan }),
+      body: JSON.stringify({
+        productId,
+        ...newConversion,
+        rawMaterialId,
+        rasioKonversi,
+        volumeKebutuhanSatuan,
+        volumeProduksiSatuan,
+      }),
     });
     setSavingConversionId(null);
     if (!response.ok) {
       const body = await response.json().catch(() => null);
-      toast.error(body?.error ?? "Gagal menambahkan bahan baku");
+      toast.error(body?.error ?? "Bahan baku disimpan, tapi gagal menautkan ke produk");
       return;
     }
     toast.success("Bahan baku ditambahkan ke produk.");
     setAddingForProductId(null);
     setNewConversion(EMPTY_CONVERSION_DRAFT);
+    setMaterialLinkDraft(EMPTY_MATERIAL_LINK_DRAFT);
     invalidateAfterConversionChange();
   }
 
@@ -570,6 +850,46 @@ export function ProductVerificationTab({
       { method: "DELETE" },
     );
     setSavingConversionId(null);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal menghapus bahan baku");
+      return;
+    }
+    toast.success("Bahan baku dihapus.");
+    invalidateAfterConversionChange();
+  }
+
+  function startEditRawMaterial(rawMaterialId: string, current: RawMaterialDraft) {
+    setEditingRawMaterialId(rawMaterialId);
+    setEditRawMaterial(current);
+  }
+
+  async function handleSaveEditRawMaterial(rawMaterialId: string) {
+    if (!editRawMaterial.jenis.trim() || !editRawMaterial.hsCode.trim()) return;
+    setSavingRawMaterialId(rawMaterialId);
+    const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/raw-materials`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: rawMaterialId, rawMaterialData: editRawMaterial }),
+    });
+    setSavingRawMaterialId(null);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal menyimpan bahan baku");
+      return;
+    }
+    toast.success("Bahan baku diperbarui.");
+    setEditingRawMaterialId(null);
+    invalidateAfterConversionChange();
+  }
+
+  async function handleDeleteRawMaterial(rawMaterialId: string) {
+    setDeletingRawMaterialId(rawMaterialId);
+    const response = await fetch(
+      `/api/verifikator-workspace/assignments/${assignmentId}/raw-materials?rawMaterialId=${encodeURIComponent(rawMaterialId)}`,
+      { method: "DELETE" },
+    );
+    setDeletingRawMaterialId(null);
     if (!response.ok) {
       const body = await response.json().catch(() => null);
       toast.error(body?.error ?? "Gagal menghapus bahan baku");
@@ -789,6 +1109,7 @@ export function ProductVerificationTab({
                       onClick={() => {
                         setAddingForProductId(row.id);
                         setNewConversion(EMPTY_CONVERSION_DRAFT);
+                        setMaterialLinkDraft(EMPTY_MATERIAL_LINK_DRAFT);
                       }}
                       className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-3 py-1.5 text-[11.5px] font-semibold text-[#261813]"
                     >
@@ -809,8 +1130,15 @@ export function ProductVerificationTab({
                         rawMaterials={rawMaterials}
                         productHsCode={row.hsCode}
                         onSave={() => handleAddConversion(row.id)}
-                        onCancel={() => setAddingForProductId(null)}
+                        onCancel={() => {
+                          setAddingForProductId(null);
+                          setMaterialLinkDraft(EMPTY_MATERIAL_LINK_DRAFT);
+                        }}
                         saving={savingConversionId === "new"}
+                        materialLink={{
+                          draft: materialLinkDraft,
+                          onChange: (patch) => setMaterialLinkDraft((prev) => ({ ...prev, ...patch })),
+                        }}
                       />
                     )}
                     {materials.map((m) =>
@@ -824,6 +1152,15 @@ export function ProductVerificationTab({
                           onSave={() => handleSaveEditConversion(m.id)}
                           onCancel={() => setEditingConversionId(null)}
                           saving={savingConversionId === m.id}
+                        />
+                      ) : editingRawMaterialId === m.rawMaterialId ? (
+                        <RawMaterialForm
+                          key={m.id}
+                          draft={editRawMaterial}
+                          onChange={(patch) => setEditRawMaterial((prev) => ({ ...prev, ...patch }))}
+                          onSave={() => handleSaveEditRawMaterial(m.rawMaterialId)}
+                          onCancel={() => setEditingRawMaterialId(null)}
+                          saving={savingRawMaterialId === m.rawMaterialId}
                         />
                       ) : (
                       <div
@@ -859,7 +1196,23 @@ export function ProductVerificationTab({
                           </div>
                         </div>
                         {canEdit && (
-                          <div className="flex shrink-0 gap-1.5">
+                          <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                startEditRawMaterial(m.rawMaterialId, {
+                                  jenis: m.jenis,
+                                  hsCode: m.hsCode,
+                                  hsDesc: m.hsDesc,
+                                  deskripsi: m.deskripsi,
+                                  photoPath: m.photoPath,
+                                })
+                              }
+                              className="flex items-center gap-1 rounded-lg border border-[#e1bfb3] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#261813]"
+                            >
+                              <MaterialIcon name="edit" className="text-[13px]" />
+                              Edit Bahan Baku
+                            </button>
                             <button
                               type="button"
                               onClick={() =>
@@ -876,8 +1229,8 @@ export function ProductVerificationTab({
                               }
                               className="flex items-center gap-1 rounded-lg border border-[#e1bfb3] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#261813]"
                             >
-                              <MaterialIcon name="edit" className="text-[13px]" />
-                              Edit
+                              <MaterialIcon name="sync_alt" className="text-[13px]" />
+                              Edit Rasio
                             </button>
                             <button
                               type="button"
@@ -885,8 +1238,20 @@ export function ProductVerificationTab({
                               onClick={() => handleDeleteConversion(m.id)}
                               className="flex items-center gap-1 rounded-lg border border-[#dc2626] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#dc2626] disabled:opacity-50"
                             >
+                              <MaterialIcon name="link_off" className="text-[13px]" />
+                              Lepas Tautan
+                            </button>
+                            <button
+                              type="button"
+                              disabled={deletingRawMaterialId === m.rawMaterialId}
+                              onClick={() => {
+                                if (!window.confirm(`Hapus bahan baku "${m.jenis || "ini"}" dari seluruh aplikasi?`)) return;
+                                handleDeleteRawMaterial(m.rawMaterialId);
+                              }}
+                              className="flex items-center gap-1 rounded-lg border border-[#dc2626] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#dc2626] disabled:opacity-50"
+                            >
                               <MaterialIcon name="delete" className="text-[13px]" />
-                              Hapus
+                              Hapus Bahan Baku
                             </button>
                           </div>
                         )}
