@@ -27,7 +27,7 @@ import { FormField } from "@/components/form/form-field";
 import { createUserSchema, type CreateUserValues } from "../schema";
 import { ROLES, ROLE_LABELS } from "../roles";
 
-export function AddUserDialog() {
+export function AddUserDialog({ className }: { className?: string }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
 
@@ -60,7 +60,7 @@ export function AddUserDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button>+ Add User</Button>} />
+      <DialogTrigger render={<Button className={className}>+ Add User</Button>} />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Tambah Pengguna Baru</DialogTitle>

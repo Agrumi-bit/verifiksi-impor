@@ -65,6 +65,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "User Management",
     icon: Users,
     children: [
+      { label: "Manage Workspaces", href: "/user-management/workspaces" },
       { label: "User List", href: "/user-management/users" },
       { label: "Role Management", href: "/user-management/roles" },
       { label: "Permission Management" },

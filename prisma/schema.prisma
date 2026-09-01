@@ -57,6 +57,10 @@ model Session {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // Set by better-auth's admin plugin while an admin is impersonating this
+  // session's user — holds the impersonating admin's own user id.
+  impersonatedBy String?
+
   @@unique([token])
   @@index([userId])
   @@map("session")
