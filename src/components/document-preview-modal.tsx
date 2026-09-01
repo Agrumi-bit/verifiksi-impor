@@ -16,6 +16,25 @@ type LocationCheck = {
   onReject: () => void;
 };
 
+const VERIFICATION_STATUS_LABELS: Record<string, string> = {
+  NOT_YET_VERIFIED: "Belum Diverifikasi",
+  VERIFIED: "Terverifikasi",
+  NEED_REVISION: "Perlu Revisi",
+  REJECTED: "Ditolak",
+  NOT_APPLICABLE: "Tidak Berlaku",
+  EXPIRED: "Kedaluwarsa",
+};
+
+type DocumentInfo = {
+  /** e.g. "NIB", "Akta Notaris", "Dokumen Sewa Lokasi" — same label already shown as the row/modal
+   * title, repeated here as its own field to match verifikator's Document Information panel. */
+  documentType: string;
+  version: number;
+  uploadedByName: string | null;
+  uploadedAt: string | null;
+  verificationStatus: string;
+};
+
 type Props = {
   documentPath: string;
   label: string;
@@ -24,6 +43,11 @@ type Props = {
    * address on file match what the surveyor finds on-site? Renders that comparison (system value +
    * an editable on-site answer) in the left panel instead of the plain document label. */
   locationCheck?: LocationCheck;
+  /** Same "Document Information" fields verifikator's ReviewModal shows (name/type/format/size/
+   * status/version/uploader/date) — reads the real CompanyDocumentVersion/ApplicationDocumentVersion
+   * trail, not a stub. Falls back to the bare Format/Ukuran block when the caller has no version
+   * tracking to offer (e.g. a key that isn't company- or application-mapped). */
+  documentInfo?: DocumentInfo;
 };
 
 function fileHref(path: string): string {
@@ -34,6 +58,11 @@ const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png"]);
 function isImagePath(path: string): boolean {
   const extension = path.split(".").pop()?.toLowerCase() ?? "";
   return IMAGE_EXTENSIONS.has(extension);
+}
+
+function fmtDate(value: string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 }
 
 function formatFileSize(bytes: number): string {
@@ -49,10 +78,11 @@ function formatFileSize(bytes: number): string {
  * left panel shows the system-vs-actual location check when `locationCheck` is passed, or just
  * the document label when it's not.
  */
-export function DocumentPreviewModal({ documentPath, label, onClose, locationCheck }: Props) {
+export function DocumentPreviewModal({ documentPath, label, onClose, locationCheck, documentInfo }: Props) {
   const href = fileHref(documentPath);
   const [fileSize, setFileSize] = useState<string | null>(null);
   const format = (documentPath.split(".").pop() ?? "").toUpperCase();
+  const documentName = documentPath.split("/").pop() ?? documentPath;
 
   useEffect(() => {
     let cancelled = false;
@@ -151,16 +181,48 @@ export function DocumentPreviewModal({ documentPath, label, onClose, locationChe
             )}
           </div>
           <div className="w-55 shrink-0 overflow-y-auto rounded-lg border border-[#efe2d4] p-3.5">
-            <div className="mb-3 text-[10.5px] font-bold uppercase tracking-wide text-[#8a7565]">Informasi</div>
+            <div className="mb-3 text-[10.5px] font-bold uppercase tracking-wide text-[#8a7565]">Document Information</div>
             <div className="flex flex-col gap-3 text-[12px]">
+              <div>
+                <div className="text-[#8a7565]">Document Name</div>
+                <div className="mt-0.5 break-all font-bold text-[#20180f]">{documentName}</div>
+              </div>
+              {documentInfo && (
+                <div>
+                  <div className="text-[#8a7565]">Document Type</div>
+                  <div className="mt-0.5 font-bold text-[#20180f]">{documentInfo.documentType}</div>
+                </div>
+              )}
               <div>
                 <div className="text-[#8a7565]">Format</div>
                 <div className="mt-0.5 font-bold text-[#20180f]">{format || "—"}</div>
               </div>
               <div>
-                <div className="text-[#8a7565]">Ukuran</div>
+                <div className="text-[#8a7565]">File Size</div>
                 <div className="mt-0.5 font-bold text-[#20180f]">{fileSize ?? "Memuat..."}</div>
               </div>
+              {documentInfo && (
+                <>
+                  <div>
+                    <div className="text-[#8a7565]">Status Dokumen</div>
+                    <div className="mt-0.5 font-bold text-[#20180f]">
+                      {VERIFICATION_STATUS_LABELS[documentInfo.verificationStatus] ?? documentInfo.verificationStatus}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[#8a7565]">Version</div>
+                    <div className="mt-0.5 font-bold text-[#20180f]">v{documentInfo.version}</div>
+                  </div>
+                  <div>
+                    <div className="text-[#8a7565]">Uploaded By</div>
+                    <div className="mt-0.5 font-bold text-[#20180f]">{documentInfo.uploadedByName ?? "Company"}</div>
+                  </div>
+                  <div>
+                    <div className="text-[#8a7565]">Upload Date</div>
+                    <div className="mt-0.5 font-bold text-[#20180f]">{fmtDate(documentInfo.uploadedAt)}</div>
+                  </div>
+                </>
+              )}
             </div>
             <a
               href={href}

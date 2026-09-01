@@ -17,10 +17,18 @@ type PayloadLocation = {
   province?: string | null;
 };
 
+type DocumentMetaEntry = {
+  version: number;
+  uploadedByName: string | null;
+  uploadedAt: string | null;
+  verificationStatus: string;
+};
+
 type Props = {
   kind: FieldKind;
   docs: DocCheckValues[];
   payloadLocation: PayloadLocation | null;
+  documentMeta: Record<string, DocumentMetaEntry | null>;
   answers: Record<string, AnswerValues>;
   onDocChange: (key: string, patch: Partial<DocCheckValues>) => void;
   onAnswer: (key: string, value: AnswerValues) => void;
@@ -33,6 +41,7 @@ export function Section1DocsQuestions({
   kind,
   docs,
   payloadLocation,
+  documentMeta,
   answers,
   onDocChange,
   onAnswer,
@@ -141,6 +150,17 @@ export function Section1DocsQuestions({
             onApprove: () => onDocChange(previewDoc.key, { status: "approved" }),
             onReject: () => onDocChange(previewDoc.key, { status: "rejected" }),
           }}
+          documentInfo={
+            documentMeta[previewDoc.key]
+              ? {
+                  documentType: previewDoc.name,
+                  version: documentMeta[previewDoc.key]!.version,
+                  uploadedByName: documentMeta[previewDoc.key]!.uploadedByName,
+                  uploadedAt: documentMeta[previewDoc.key]!.uploadedAt,
+                  verificationStatus: documentMeta[previewDoc.key]!.verificationStatus,
+                }
+              : undefined
+          }
         />
       )}
     </SectionShell>

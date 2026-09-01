@@ -9,6 +9,7 @@ import {
   computeFindings,
   computeSectionKinds,
   emptyOfficeVerification,
+  officeVerificationSchema,
   DOC_TYPE_DEFS,
   MIN_DOCUMENTATION_REQUIRED,
   OWNERSHIP_QUESTION,
@@ -216,7 +217,10 @@ export function OfficeReportPreview({
     );
   }
 
-  const ov = data.officeVerification ?? emptyOfficeVerification();
+  // Re-parsed instead of used as-is: records saved before a schema field existed (e.g.
+  // documentationOther) come back from the DB without it — `officeVerificationSchema.parse`
+  // fills in every `.default(...)` so the rest of this report never has to guard against it.
+  const ov = data.officeVerification ? officeVerificationSchema.parse(data.officeVerification) : emptyOfficeVerification();
   const buildingStatus = data.payloadLocation?.buildingStatus ?? null;
   const isSewa = buildingStatus === "SEWA";
   const findings = computeFindings(ov);

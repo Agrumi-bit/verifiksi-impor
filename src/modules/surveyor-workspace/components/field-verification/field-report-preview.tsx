@@ -17,6 +17,7 @@ import {
   computeSectionKinds,
   docTypeDefs,
   emptyFieldVerification,
+  fieldVerificationSchema,
   ownershipQuestion,
   sectionTitles,
   sewaQuestions,
@@ -229,7 +230,10 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
     return <p className="mx-auto max-w-4xl py-10 text-sm text-destructive">Laporan tidak ditemukan.</p>;
   }
 
-  const fv = data[dataField] ?? emptyFieldVerification();
+  // Re-parsed instead of used as-is: records saved before a schema field existed (e.g.
+  // documentationOther) come back from the DB without it — `fieldVerificationSchema.parse`
+  // fills in every `.default(...)` so the rest of this report never has to guard against it.
+  const fv = data[dataField] ? fieldVerificationSchema.parse(data[dataField]) : emptyFieldVerification();
   const buildingStatus = data.payloadLocation?.buildingStatus ?? null;
   const isSewa = buildingStatus === "SEWA";
   const isWarehouse = kind === "GUDANG";

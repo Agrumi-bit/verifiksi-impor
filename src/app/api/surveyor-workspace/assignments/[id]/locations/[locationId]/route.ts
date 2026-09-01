@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { composeLocationAddress, type LocationValues } from "@/modules/shared/schema";
+import { getDocumentMeta, type DocumentMetaEntry } from "@/modules/company/document-versions";
+import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
 
 async function loadScopedLocation(assignmentNumber: string, locationId: string, surveyorId: string) {
   const visit = await db.locationVisit.findUnique({
@@ -52,6 +54,31 @@ export async function GET(
   const liveLocation = liveLocations?.find((loc) => loc.id === payloadLocationSnapshot?.id) ?? null;
   const payloadLocation = liveLocation ?? payloadLocationSnapshot;
 
+  // Document Information (version/uploader/upload date) for the same 3 "Dokumen yang diperiksa"
+  // rows Section1Documents shows — reuses the exact tracking verifikator's own checklist reads:
+  // nib/akta are company-mapped (CompanyDocumentVersion), the location ownership/lease doc is
+  // application-only (ApplicationDocumentVersion), keyed the same way buildDocumentChecklist does.
+  const isSewa = payloadLocation?.buildingStatus === "SEWA";
+  const ownershipDocs = (isSewa ? payloadLocation?.leaseDocuments : payloadLocation?.ownershipDocuments) ?? [];
+  const kepemilikanVersionKey =
+    payloadLocation && ownershipDocs.length > 0
+      ? `location:${payloadLocation.id}:${isSewa ? "lease" : "ownership"}:${ownershipDocs[0].type}`
+      : null;
+
+  const companyMetaKeys: ("nibDocumentPath" | "notarialDocumentPath")[] = [];
+  if (company?.nibDocumentPath) companyMetaKeys.push("nibDocumentPath");
+  if (company?.notarialDocumentPath) companyMetaKeys.push("notarialDocumentPath");
+  const companyMeta = company && companyMetaKeys.length ? await getDocumentMeta(company.id, companyMetaKeys, company.createdAt) : {};
+  const appMeta = kepemilikanVersionKey
+    ? await getApplicationDocumentMeta(application.id, [kepemilikanVersionKey], application.createdAt)
+    : {};
+
+  const documentMeta: Record<string, DocumentMetaEntry | null> = {
+    nib: companyMeta.nibDocumentPath ?? null,
+    akta: companyMeta.notarialDocumentPath ?? null,
+    kepemilikan: kepemilikanVersionKey ? (appMeta[kepemilikanVersionKey] ?? null) : null,
+  };
+
   return NextResponse.json({
     data: {
       ...visit,
@@ -66,6 +93,7 @@ export async function GET(
       applicationNumber: application.applicationNumber,
       verificationType: application.verificationType,
       surveyorName: visit.assignment.surveyor?.name ?? null,
+      documentMeta,
       company: {
         companyName: payload.companyName ?? "—",
         nibNumber: company?.nibNumber || payload.nibNumber || null,

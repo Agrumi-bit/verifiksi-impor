@@ -16,16 +16,24 @@ type PayloadLocation = {
   province?: string | null;
 };
 
+type DocumentMetaEntry = {
+  version: number;
+  uploadedByName: string | null;
+  uploadedAt: string | null;
+  verificationStatus: string;
+};
+
 type Props = {
   docs: DocCheckValues[];
   payloadLocation: PayloadLocation | null;
+  documentMeta: Record<string, DocumentMetaEntry | null>;
   onChange: (key: string, patch: Partial<DocCheckValues>) => void;
   onSave: () => void;
   onSaveNext: () => void;
   isSaving?: boolean;
 };
 
-export function Section1Documents({ docs, payloadLocation, onChange, onSave, onSaveNext, isSaving }: Props) {
+export function Section1Documents({ docs, payloadLocation, documentMeta, onChange, onSave, onSaveNext, isSaving }: Props) {
   const [expandedKey, setExpandedKey] = useState<string | null>(docs[0]?.key ?? null);
   const [previewKey, setPreviewKey] = useState<string | null>(null);
 
@@ -136,6 +144,17 @@ export function Section1Documents({ docs, payloadLocation, onChange, onSave, onS
             onApprove: () => onChange(previewDoc.key, { status: "approved" }),
             onReject: () => onChange(previewDoc.key, { status: "rejected" }),
           }}
+          documentInfo={
+            documentMeta[previewDoc.key]
+              ? {
+                  documentType: previewDoc.name,
+                  version: documentMeta[previewDoc.key]!.version,
+                  uploadedByName: documentMeta[previewDoc.key]!.uploadedByName,
+                  uploadedAt: documentMeta[previewDoc.key]!.uploadedAt,
+                  verificationStatus: documentMeta[previewDoc.key]!.verificationStatus,
+                }
+              : undefined
+          }
         />
       )}
     </SectionShell>

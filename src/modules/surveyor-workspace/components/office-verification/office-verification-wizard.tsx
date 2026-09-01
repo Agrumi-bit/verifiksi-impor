@@ -44,6 +44,13 @@ type PayloadLocation = {
   province?: string | null;
 };
 
+type DocumentMetaEntry = {
+  version: number;
+  uploadedByName: string | null;
+  uploadedAt: string | null;
+  verificationStatus: string;
+};
+
 type LocationDetail = {
   id: string;
   status: LocationVisitStatusValue;
@@ -53,6 +60,7 @@ type LocationDetail = {
   officeVerification: OfficeVerificationValues | null;
   company: { companyName: string; nibDocumentPath: string | null; notarialDocumentPath: string | null };
   payloadLocation: PayloadLocation | null;
+  documentMeta: Record<string, DocumentMetaEntry | null>;
 };
 
 function buildDefaultSection1Docs(
@@ -105,10 +113,16 @@ export function OfficeVerificationWizard({ assignmentId, locationId }: Props) {
   if (data && data.id !== loadedForId) {
     setLoadedForId(data.id);
     setValues(
-      data.officeVerification ?? {
-        ...emptyOfficeVerification(),
-        section1Docs: buildDefaultSection1Docs(data.company, data.payloadLocation),
-      },
+      data.officeVerification
+        ? // Re-parsed instead of used as-is: records saved before a schema field existed (e.g.
+          // documentationOther) come back from the DB without it, and this is the one place that
+          // matters — `officeVerificationSchema.parse` fills in every `.default(...)` so the rest
+          // of the wizard never has to guard against a legacy shape.
+          officeVerificationSchema.parse(data.officeVerification)
+        : {
+            ...emptyOfficeVerification(),
+            section1Docs: buildDefaultSection1Docs(data.company, data.payloadLocation),
+          },
     );
   }
 
@@ -282,6 +296,7 @@ export function OfficeVerificationWizard({ assignmentId, locationId }: Props) {
           <Section1Documents
             docs={values.section1Docs}
             payloadLocation={data.payloadLocation}
+            documentMeta={data.documentMeta}
             onChange={(key, docPatch) =>
               patch({
                 section1Docs: values.section1Docs.map((d) => (d.key === key ? { ...d, ...docPatch } : d)),

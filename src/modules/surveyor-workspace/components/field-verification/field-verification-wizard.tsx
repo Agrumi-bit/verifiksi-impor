@@ -50,6 +50,13 @@ type PayloadLocation = {
   warehouseRegistrationDocumentPath?: string | null;
 };
 
+type DocumentMetaEntry = {
+  version: number;
+  uploadedByName: string | null;
+  uploadedAt: string | null;
+  verificationStatus: string;
+};
+
 type LocationDetail = {
   id: string;
   status: LocationVisitStatusValue;
@@ -66,6 +73,7 @@ type LocationDetail = {
     kbliDocumentPath: string | null;
   };
   payloadLocation: PayloadLocation | null;
+  documentMeta: Record<string, DocumentMetaEntry | null>;
 };
 
 function buildDefaultSection1Docs(company: LocationDetail["company"], payloadLocation: PayloadLocation | null): DocCheckValues[] {
@@ -119,10 +127,16 @@ export function FieldVerificationWizard({ kind, assignmentId, locationId }: Prop
   if (data && data.id !== loadedForId) {
     setLoadedForId(data.id);
     setValues(
-      data[dataField] ?? {
-        ...emptyFieldVerification(),
-        section1Docs: buildDefaultSection1Docs(data.company, data.payloadLocation),
-      },
+      data[dataField]
+        ? // Re-parsed instead of used as-is: records saved before a schema field existed (e.g.
+          // documentationOther) come back from the DB without it, and this is the one place that
+          // matters — `fieldVerificationSchema.parse` fills in every `.default(...)` so the rest
+          // of the wizard never has to guard against a legacy shape.
+          fieldVerificationSchema.parse(data[dataField])
+        : {
+            ...emptyFieldVerification(),
+            section1Docs: buildDefaultSection1Docs(data.company, data.payloadLocation),
+          },
     );
   }
 
@@ -279,6 +293,7 @@ export function FieldVerificationWizard({ kind, assignmentId, locationId }: Prop
             kind={kind}
             docs={values.section1Docs}
             payloadLocation={data.payloadLocation}
+            documentMeta={data.documentMeta}
             answers={values.section1Answers}
             onDocChange={(key, docPatch) => patch({ section1Docs: values.section1Docs.map((d) => (d.key === key ? { ...d, ...docPatch } : d)) })}
             onAnswer={(key, v) => patch({ section1Answers: { ...values.section1Answers, [key]: v } })}
