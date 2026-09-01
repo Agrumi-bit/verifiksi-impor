@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { PdfViewer } from "@/components/pdf-viewer";
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -583,7 +584,7 @@ function DocumentViewerModal({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={href} alt={doc.title} className="mx-auto max-h-[70vh] w-auto" />
               ) : (
-                <iframe src={href} title={doc.title} className="h-[70vh] w-full border-0" />
+                <PdfViewer url={href} title={doc.title} className="max-h-[70vh] overflow-y-auto p-2" />
               )}
             </div>
           </div>

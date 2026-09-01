@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { MaterialIcon } from "./material-icon";
+import { PdfViewer } from "@/components/pdf-viewer";
 import { buildDisplayFileName } from "@/lib/document-filename";
 import { documentFieldCode } from "@/modules/company/document-fields";
 
@@ -360,7 +361,7 @@ function FilePreviewModal({
                 <img src={href} alt={doc.title} className="mx-auto max-h-[70vh] w-auto" />
               )}
               {href && !isImagePath(previewPath!) && (
-                <iframe src={href} title={doc.title} className="h-[70vh] w-full border-0" />
+                <PdfViewer url={href} title={doc.title} className="max-h-[70vh] overflow-y-auto p-2" />
               )}
             </div>
           </div>

@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { MaterialIcon } from "../material-icon";
+import { PdfViewer } from "@/components/pdf-viewer";
 import { buildDisplayFileName } from "@/lib/document-filename";
 import { checklistItemCode } from "../../schema";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
@@ -734,7 +735,7 @@ function ReviewModal({
               <img src={href} alt={row.label} className="mx-auto max-h-[68vh] w-auto" />
             )}
             {href && !isImagePath(previewPath!) && (
-              <iframe src={href} title={row.label} className="h-[68vh] w-full border-0" />
+              <PdfViewer url={href} title={row.label} className="max-h-[68vh] overflow-y-auto p-2" />
             )}
           </div>
           <div

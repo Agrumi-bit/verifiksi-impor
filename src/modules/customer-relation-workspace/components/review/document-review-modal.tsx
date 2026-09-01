@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, ChevronLeft, ChevronRight, HelpCircle, History, MailQuestion, X, XCircle } from "lucide-react";
 
+import { PdfViewer } from "@/components/pdf-viewer";
 import { buildDisplayFileName } from "@/lib/document-filename";
 import { checklistItemCode } from "@/modules/verifikator-workspace/schema";
 import { docStatusLabel, InfoRow } from "@/modules/verifikator-workspace/components/detail/document-verification-tab";
@@ -169,7 +170,7 @@ export function DocumentReviewModal({ company, doc, isSaving, onClose, onDecide,
               // eslint-disable-next-line @next/next/no-img-element
               <img src={href} alt={doc.label} className="mx-auto max-h-[68vh] w-auto" />
             )}
-            {href && !isImagePath(doc.documentPath!) && <iframe src={href} title={doc.label} className="h-[68vh] w-full border-0" />}
+            {href && !isImagePath(doc.documentPath!) && <PdfViewer url={href} title={doc.label} className="max-h-[68vh] overflow-y-auto p-2" />}
           </div>
           <div className={`flex shrink-0 flex-col gap-3 overflow-y-auto transition-[width] duration-200 ${collapsed ? "w-13" : "w-70"}`}>
             <div

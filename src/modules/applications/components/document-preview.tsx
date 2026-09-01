@@ -1,5 +1,7 @@
 "use client";
 
+import { PdfViewer } from "@/components/pdf-viewer";
+
 type Props = { path?: string | null; label?: string };
 
 export function DocumentPreview({ path, label }: Props) {
@@ -21,7 +23,7 @@ export function DocumentPreview({ path, label }: Props) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={url} alt={label ?? "Dokumen"} className="size-full object-contain" />
         ) : (
-          <iframe src={url} title={label ?? "Dokumen"} className="size-full" />
+          <PdfViewer url={url} title={label ?? "Dokumen"} className="size-full overflow-y-auto" />
         )}
       </div>
       <a
