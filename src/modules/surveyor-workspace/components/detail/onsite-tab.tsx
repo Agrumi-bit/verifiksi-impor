@@ -237,14 +237,28 @@ export function OnSiteTab({ assignmentId }: Props) {
                       )}
                     </>
                   ) : isInProgress ? (
-                    <button
-                      type="button"
-                      onClick={() => router.push(`/surveyor-workspace/assignments/${assignmentId}/verify/${loc.id}`)}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-[9px] bg-[#e0662e] py-2.5 text-[13px] font-bold text-white"
-                    >
-                      <MaterialIcon name="play_arrow" className="text-base" />
-                      Resume Verification
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/surveyor-workspace/assignments/${assignmentId}/verify/${loc.id}`)}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-[9px] bg-[#e0662e] py-2.5 text-[13px] font-bold text-white"
+                      >
+                        <MaterialIcon name="play_arrow" className="text-base" />
+                        Resume Verification
+                      </button>
+                      {["KANTOR", "GUDANG", "PABRIK"].includes(loc.locationType) && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            window.open(`/surveyor-workspace/assignments/${assignmentId}/verify/${loc.id}/report`, "_blank")
+                          }
+                          className="flex flex-1 items-center justify-center gap-2 rounded-[9px] border border-[#e1bfb3] bg-white py-2.5 text-[13px] font-bold"
+                        >
+                          <MaterialIcon name="description" className="text-base" />
+                          Generate Report
+                        </button>
+                      )}
+                    </>
                   ) : (
                     <button
                       type="button"
