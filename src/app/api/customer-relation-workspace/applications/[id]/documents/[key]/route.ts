@@ -7,6 +7,8 @@ import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { setApplicationDocumentVerificationStatus } from "@/modules/applications/document-versions";
 import { setDocumentVerificationStatus } from "@/modules/company/document-versions";
 import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS, fromChecklistStatus } from "@/modules/verifikator-workspace/schema";
+import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
+import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
 import { crDocumentRequestsSchema, verifyDocumentSchema } from "@/modules/customer-relation-workspace/schema";
 
 export async function POST(
@@ -31,7 +33,11 @@ export async function POST(
   }
 
   const payload = application.payload as ApplicationWizardValues;
-  const checklist = buildDocumentChecklist(payload);
+  const company = application.companyId ? await db.company.findUnique({ where: { id: application.companyId } }) : null;
+  // Same live-data + partner context as the GET route — without it, a VIU-industri
+  // `partner:{id}:...` key wouldn't exist in the checklist at all and every check on it would
+  // 400 as "Dokumen tidak dikenali".
+  const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload));
   const doc = checklist.find((d) => d.key === key);
   if (!doc) {
     return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
@@ -47,10 +53,6 @@ export async function POST(
 
     const targetStatus = fromChecklistStatus(status);
     if (key in COMPANY_MAPPED_DOCUMENT_KEYS) {
-      if (!application.companyId) {
-        return NextResponse.json({ error: "Perusahaan tidak ditemukan" }, { status: 404 });
-      }
-      const company = await db.company.findUnique({ where: { id: application.companyId } });
       if (!company) {
         return NextResponse.json({ error: "Perusahaan tidak ditemukan" }, { status: 404 });
       }

@@ -11,6 +11,8 @@ import {
 } from "@/modules/applications/document-versions";
 import { getVersionHistory, recordDocumentVersion } from "@/modules/company/document-versions";
 import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS } from "@/modules/verifikator-workspace/schema";
+import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
+import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
 
 export async function GET(
   _request: Request,
@@ -27,7 +29,7 @@ export async function GET(
 
   const payload = application.payload as ApplicationWizardValues;
   const company = application.companyId ? await db.company.findUnique({ where: { id: application.companyId } }) : null;
-  const item = buildDocumentChecklist(payload).find((c) => c.key === key);
+  const item = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload)).find((c) => c.key === key);
   if (!item) {
     return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
   }
@@ -68,7 +70,7 @@ export async function PATCH(
 
   const payload = application.payload as ApplicationWizardValues;
   const company = application.companyId ? await db.company.findUnique({ where: { id: application.companyId } }) : null;
-  const item = buildDocumentChecklist(payload).find((c) => c.key === key);
+  const item = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload)).find((c) => c.key === key);
   if (!item) {
     return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
   }

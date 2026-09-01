@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, ChevronDown, ChevronUp, HelpCircle, History, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Eye, FileText, Filter, HelpCircle, LayoutGrid, List, Search, XCircle } from "lucide-react";
 
-import { DocumentPreview } from "@/modules/applications/components/document-preview";
+import { COMPLIANCE_SECTION_DEFS } from "@/modules/verifikator-workspace/document-compliance-defs";
+import { CollapsibleCard, ComplianceTable, docStatusLabel } from "@/modules/verifikator-workspace/components/detail/document-verification-tab";
 import {
+  CR_DOCUMENT_CHECK_STATUSES,
   CR_DOCUMENT_STATUS_LABELS,
   DOC_VERIFICATION_STATUS_BADGE,
   type CrDocumentCheckStatus,
@@ -13,40 +15,47 @@ import {
 } from "../../status";
 import { RequestDocumentModal } from "./request-document-modal";
 import { DocumentHistoryModal } from "./document-history-modal";
-
-type DocItem = {
-  key: string;
-  label: string;
-  category: string;
-  documentPath: string | null;
-  lengkap: boolean;
-  status: DocVerificationStatusValue;
-  rejectionNote: string;
-  requestNote: string;
-};
+import { DocumentReviewModal, type DocItem } from "./document-review-modal";
 
 type Props = {
   applicationId: string;
   company: string;
+  verificationType: string;
   documents: DocItem[];
-  docsSummary: string;
   showMarkAcceptedButton: boolean;
   onMarkAccepted: () => void;
   onChanged: () => void;
 };
 
-const CHECK_BUTTONS: { status: CrDocumentCheckStatus; label: string; icon: typeof CheckCircle2 }[] = [
-  { status: "VALID", label: "Dokumen Benar", icon: CheckCircle2 },
-  { status: "REJECTED", label: "Dokumen Salah", icon: XCircle },
-  { status: "NOT_APPLICABLE", label: "Dokumen Tidak Diperlukan", icon: HelpCircle },
-];
+const FILTER_STATUSES: DocVerificationStatusValue[] = ["PENDING", ...CR_DOCUMENT_CHECK_STATUSES];
 
-export function DocumentsTab({ applicationId, company, documents, docsSummary, showMarkAcceptedButton, onMarkAccepted, onChanged }: Props) {
-  const [expandedKey, setExpandedKey] = useState<string | null>(null);
-  const [notes, setNotes] = useState<Record<string, string>>({});
+function fmtDate(value: string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function reviewLabel(doc: DocItem): string {
+  return doc.status === "PENDING" && !doc.lengkap ? "Belum Ada" : CR_DOCUMENT_STATUS_LABELS[doc.status];
+}
+
+/**
+ * Customer Relation's "Kelengkapan Dokumen" — same format as verifikator-workspace's "Verifikasi
+ * Dokumen" (Document Summary stat header, category-grouped compliance-section cards, a searchable/
+ * filterable Document List with table/card views, and a review modal), reusing that module's
+ * `COMPLIANCE_SECTION_DEFS`/`CollapsibleCard`/`ComplianceTable`/`docStatusLabel` directly. The one
+ * real difference: CR only judges a document benar/salah/tidak diperlukan (`CrDocumentCheckStatus`,
+ * `CR_DOCUMENT_STATUS_LABELS`) as an administrative completeness check, not a full verification —
+ * see `DocumentReviewModal` for the narrower decision UI (no "Uraian yang Diperiksa" checklist).
+ */
+export function DocumentsTab({ applicationId, company, verificationType, documents, showMarkAcceptedButton, onMarkAccepted, onChanged }: Props) {
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [reviewingDoc, setReviewingDoc] = useState<DocItem | null>(null);
   const [requestModalDoc, setRequestModalDoc] = useState<DocItem | null>(null);
   const [historyDoc, setHistoryDoc] = useState<DocItem | null>(null);
+  const [docView, setDocView] = useState<"table" | "card">("table");
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   async function callAction(key: string, body: { action: "check"; status: CrDocumentCheckStatus; note?: string } | { action: "request"; note?: string }) {
     setSavingKey(key);
@@ -63,176 +72,265 @@ export function DocumentsTab({ applicationId, company, documents, docsSummary, s
     onChanged();
   }
 
+  const stats = useMemo(() => {
+    const total = documents.length;
+    const benar = documents.filter((d) => d.status === "VALID").length;
+    const salah = documents.filter((d) => d.status === "REJECTED").length;
+    const tidakDiperlukan = documents.filter((d) => d.status === "NOT_APPLICABLE").length;
+    const kurang = documents.filter((d) => !d.lengkap).length;
+    const reviewed = documents.filter((d) => d.status !== "PENDING").length;
+    return { total, benar, salah, tidakDiperlukan, kurang, reviewed };
+  }, [documents]);
+  const progressPct = stats.total ? Math.round((stats.reviewed / stats.total) * 100) : 0;
+
+  const categories = useMemo(() => Array.from(new Set(documents.map((d) => d.category))), [documents]);
+
+  const filteredDocs = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return documents.filter((doc) => {
+      if (q && !doc.label.toLowerCase().includes(q)) return false;
+      if (categoryFilter && doc.category !== categoryFilter) return false;
+      if (statusFilter && doc.status !== statusFilter) return false;
+      return true;
+    });
+  }, [documents, search, categoryFilter, statusFilter]);
+
+  function handleDecide(doc: DocItem, status: CrDocumentCheckStatus, note: string) {
+    callAction(doc.key, { action: "check", status, note });
+    setReviewingDoc(null);
+  }
+
   return (
-    <div className="rounded-xl border border-[#f0ded0] bg-white p-5.5">
-      <div className="mb-1 flex items-start justify-between">
-        <div className="text-[15px] font-extrabold text-[#20180f]">Kelengkapan Dokumen</div>
-        {showMarkAcceptedButton && (
-          <button
-            type="button"
-            onClick={onMarkAccepted}
-            className="rounded-lg bg-[#1f8a4c] px-3.5 py-1.75 text-[12px] font-bold text-white"
-          >
-            Tandai Permohonan Diterima
-          </button>
+    <div className="flex flex-col gap-5">
+      <div className="rounded-[10px] border border-[#f0ded0] bg-white p-6">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[15.5px] font-extrabold text-[#20180f]">Kelengkapan Dokumen</div>
+            <div className="mt-0.5 text-[13px] text-[#8a7565]">Ringkasan status dokumen yang diunggah oleh perusahaan</div>
+          </div>
+          {showMarkAcceptedButton && (
+            <button
+              type="button"
+              onClick={onMarkAccepted}
+              className="whitespace-nowrap rounded-lg bg-[#1f8a4c] px-3.5 py-1.75 text-[12px] font-bold text-white"
+            >
+              Tandai Permohonan Diterima
+            </button>
+          )}
+        </div>
+        <div className="mb-5.5 grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
+          {[
+            { label: "Total Dokumen", value: stats.total, icon: FileText, color: "#2f6fe0", iconBg: "#e6effa" },
+            { label: "Benar", value: stats.benar, icon: CheckCircle2, color: "#1a9850", iconBg: "#e2f7ea" },
+            { label: "Salah", value: stats.salah, icon: XCircle, color: "#c1361f", iconBg: "#fbe4de" },
+            { label: "Tidak Diperlukan", value: stats.tidakDiperlukan, icon: HelpCircle, color: "#6d28d9", iconBg: "#ede9fe" },
+            { label: "Kurang", value: stats.kurang, icon: AlertCircle, color: "#dc2626", iconBg: "#fbe4de" },
+          ].map((stat) => (
+            <div key={stat.label} className="flex items-center gap-3 rounded-[10px] border border-[#efe2d4] p-3.5">
+              <div className="flex size-9.5 shrink-0 items-center justify-center rounded-[9px]" style={{ background: stat.iconBg }}>
+                <stat.icon className="size-4.75" style={{ color: stat.color }} />
+              </div>
+              <div>
+                <div className="text-[20px] font-extrabold text-[#20180f]">{stat.value}</div>
+                <div className="text-[11.5px] text-[#8a7565]">{stat.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mb-2 flex items-center justify-between">
+          <div className="text-[13.5px] font-bold text-[#20180f]">Progress Pemeriksaan Dokumen</div>
+          <div className="text-[13px] font-bold text-[#2f6fe0]">
+            {stats.reviewed} / {stats.total} Dokumen Diperiksa
+          </div>
+        </div>
+        <div className="mb-2 h-2 overflow-hidden rounded-full bg-[#e8e2da]">
+          <div className="h-full rounded-full bg-[#20180f]" style={{ width: `${progressPct}%` }} />
+        </div>
+        <div className="text-[12px] text-[#6b5b4c]">
+          {progressPct}% selesai — {stats.total - stats.reviewed} dokumen belum diperiksa
+        </div>
+      </div>
+
+      {COMPLIANCE_SECTION_DEFS.filter(
+        (def) => (!def.vkiOnly || verificationType === "VKI") && (!def.viuOnly || verificationType === "VIU"),
+      ).map((def) => {
+        const sectionDocs = documents.filter((doc) => doc.category === def.category);
+        return (
+          <CollapsibleCard key={def.category} title={def.title} desc={def.desc}>
+            <div className="mb-4.5 flex flex-col gap-3 text-[12.5px] leading-relaxed text-[#4a4038]">
+              {def.intro.map((p, i) => (
+                <p key={i} className="m-0">
+                  {p}
+                </p>
+              ))}
+            </div>
+            <ComplianceTable rows={sectionDocs} onReview={setReviewingDoc} statusLabels={CR_DOCUMENT_STATUS_LABELS} />
+          </CollapsibleCard>
+        );
+      })}
+
+      <div className="rounded-[10px] border border-[#f0ded0] bg-white p-6">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-[15.5px] font-extrabold text-[#20180f]">Document List</div>
+            <div className="mt-0.5 text-[13px] text-[#8a7565]">Tabel daftar dokumen yang diunggah oleh perusahaan</div>
+          </div>
+          <div className="flex gap-1 rounded-lg bg-[#f0ede8] p-1">
+            <button
+              type="button"
+              onClick={() => setDocView("table")}
+              className={"flex items-center gap-1.5 rounded-md px-3.5 py-1.75 text-[12px] font-bold " + (docView === "table" ? "bg-[#20180f] text-white" : "text-[#4a4038]")}
+            >
+              <List className="size-4" />
+              Table
+            </button>
+            <button
+              type="button"
+              onClick={() => setDocView("card")}
+              className={"flex items-center gap-1.5 rounded-md px-3.5 py-1.75 text-[12px] font-bold " + (docView === "card" ? "bg-[#20180f] text-white" : "text-[#4a4038]")}
+            >
+              <LayoutGrid className="size-4" />
+              Card
+            </button>
+          </div>
+        </div>
+
+        <div className="mb-4 rounded-[10px] bg-[#f7f2ec] p-4">
+          <div className="mb-3 flex items-center gap-2 text-[13px] font-bold text-[#20180f]">
+            <Filter className="size-4" />
+            Filters
+          </div>
+          <div className="mb-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            <div className="flex items-center gap-2 rounded-lg bg-white px-3 py-2">
+              <Search className="size-4 text-[#a68f80]" />
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Cari dokumen..."
+                className="flex-1 border-none bg-transparent text-[12.5px] outline-none"
+              />
+            </div>
+            <select
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+              className="rounded-lg bg-white px-3 py-2 text-[12.5px] text-[#20180f] outline-none"
+            >
+              <option value="">Semua Kategori</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="rounded-lg bg-white px-3 py-2 text-[12.5px] text-[#20180f] outline-none"
+            >
+              <option value="">Semua Status</option>
+              {FILTER_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {CR_DOCUMENT_STATUS_LABELS[s]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="text-[12px] text-[#8a7565]">
+            Menampilkan {filteredDocs.length} dari {documents.length} dokumen
+          </div>
+        </div>
+
+        {docView === "table" ? (
+          <div className="overflow-auto">
+            <div className="grid grid-cols-[0.4fr_1.5fr_1.4fr_1fr_1fr_1.2fr_0.8fr] gap-2 px-1 pb-2.5 text-[11.5px] font-bold text-[#8a7565]">
+              <div>No</div>
+              <div>Dokumen</div>
+              <div>Kategori</div>
+              <div>Tanggal Upload</div>
+              <div>Status Dokumen</div>
+              <div>Status Pemeriksaan</div>
+              <div>Action</div>
+            </div>
+            {filteredDocs.map((doc, index) => {
+              const docStatus = docStatusLabel(doc);
+              return (
+                <div key={doc.key} className="grid grid-cols-[0.4fr_1.5fr_1.4fr_1fr_1fr_1.2fr_0.8fr] items-center gap-2 border-t border-[#f5ebe1] px-1 py-3 text-[13px]">
+                  <div className="text-[#6b5b4c]">{index + 1}</div>
+                  <div className="font-bold text-[#20180f]">{doc.label}</div>
+                  <div className="text-[#c14a1f]">{doc.category}</div>
+                  <div className="text-[#4a4038]">{fmtDate(doc.uploadedAt)}</div>
+                  <div>
+                    <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: docStatus.bg, color: docStatus.color }}>
+                      {docStatus.label}
+                    </span>
+                  </div>
+                  <div>
+                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${DOC_VERIFICATION_STATUS_BADGE[doc.status]}`}>{reviewLabel(doc)}</span>
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setReviewingDoc(doc)}
+                      className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#261813]"
+                    >
+                      <Eye className="size-3.75" />
+                      Review
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredDocs.map((doc) => {
+              const docStatus = docStatusLabel(doc);
+              return (
+                <div key={doc.key} className="flex flex-col rounded-[10px] border border-[#efe2d4] p-4.5">
+                  <div className="mb-3 flex items-start justify-between gap-2">
+                    <div className="flex size-9 items-center justify-center rounded-lg bg-[#e6effa]">
+                      <FileText className="size-4.75 text-[#2f6fe0]" />
+                    </div>
+                    <span className="rounded-full px-2.5 py-1 text-[10.5px] font-bold" style={{ background: docStatus.bg, color: docStatus.color }}>
+                      {docStatus.label}
+                    </span>
+                  </div>
+                  <div className="text-[13.5px] font-bold text-[#20180f]">{doc.label}</div>
+                  <div className="mt-0.5 text-[11.5px] text-[#c14a1f]">{doc.category}</div>
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <span className={`rounded-full px-2.5 py-1 text-[10.5px] font-bold ${DOC_VERIFICATION_STATUS_BADGE[doc.status]}`}>{reviewLabel(doc)}</span>
+                    <button
+                      type="button"
+                      onClick={() => setReviewingDoc(doc)}
+                      className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#261813]"
+                    >
+                      <Eye className="size-3.75" />
+                      Review
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
-      <p className="mb-3.5 text-[12.5px] text-[#8a7565]">{docsSummary}. Minta dokumen tambahan untuk item yang masih kurang.</p>
 
-      <div className="flex flex-col gap-2.5">
-        {documents.map((doc) => {
-          const expanded = doc.lengkap && expandedKey === doc.key;
-          return (
-            <div key={doc.key} className="overflow-hidden rounded-[9px] border border-[#efe2d4]">
-              <div
-                onClick={() => doc.lengkap && setExpandedKey((cur) => (cur === doc.key ? null : doc.key))}
-                className="flex items-center justify-between px-3.5 py-3"
-                style={{ cursor: doc.lengkap ? "pointer" : "default" }}
-              >
-                <div className="flex items-center gap-2.5">
-                  {doc.lengkap ? (
-                    <CheckCircle2 className="size-4.5 text-[#1f8a4c]" />
-                  ) : (
-                    <XCircle className="size-4.5 text-[#c1361f]" />
-                  )}
-                  <div>
-                    <div className="text-[13px] font-bold text-[#20180f]">{doc.label}</div>
-                    {doc.requestNote && (
-                      <div className="mt-0.5 text-[11px] text-[#c14a1f]">Diminta: {doc.requestNote}</div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  {doc.lengkap ? (
-                    <>
-                      <span className="rounded-md px-2.25 py-0.75 text-[10.5px] font-bold" style={{ background: "#e5f6ec", color: "#1f8a4c" }}>
-                        Tersedia
-                      </span>
-                      <span className={`whitespace-nowrap rounded-full px-2.25 py-0.75 text-[10.5px] font-bold ${DOC_VERIFICATION_STATUS_BADGE[doc.status]}`}>
-                        {CR_DOCUMENT_STATUS_LABELS[doc.status]}
-                      </span>
-                      {expanded ? <ChevronUp className="size-4.5 text-[#a68f80]" /> : <ChevronDown className="size-4.5 text-[#a68f80]" />}
-                    </>
-                  ) : doc.status === "NOT_APPLICABLE" ? (
-                    <span className={`whitespace-nowrap rounded-full px-2.25 py-0.75 text-[10.5px] font-bold ${DOC_VERIFICATION_STATUS_BADGE.NOT_APPLICABLE}`}>
-                      Tidak Diperlukan
-                    </span>
-                  ) : (
-                    <>
-                      <span className="rounded-md px-2.25 py-0.75 text-[10.5px] font-bold" style={{ background: "#fbe4de", color: "#c1361f" }}>
-                        Kurang
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setRequestModalDoc(doc);
-                        }}
-                        className="whitespace-nowrap rounded-lg border border-[#e8b89a] bg-[#fdeadd] px-3 py-1.75 text-[12px] font-bold text-[#c14a1f]"
-                      >
-                        Minta Dokumen
-                      </button>
-                      <button
-                        type="button"
-                        disabled={savingKey === doc.key}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          callAction(doc.key, { action: "check", status: "NOT_APPLICABLE" });
-                        }}
-                        className="whitespace-nowrap rounded-lg border border-[#e0d3e8] bg-[#f3edf9] px-3 py-1.75 text-[12px] font-bold text-[#6d28d9] disabled:opacity-60"
-                      >
-                        Tidak Diperlukan
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {expanded && (
-                <div className="border-t border-[#f5ebe1] p-4.5">
-                  <div className="grid gap-5 sm:grid-cols-[1fr_1.3fr]">
-                    <div className="flex flex-col gap-3.5">
-                      <div>
-                        <div className="mb-1.5 text-[12px] font-semibold text-[#594138]">Nama Dokumen</div>
-                        <div className="rounded-lg bg-[#f7f2ec] p-2.75 text-[13px] font-semibold text-[#20180f]">{doc.label}</div>
-                      </div>
-                      <div>
-                        <div className="mb-1.5 text-[12px] font-semibold text-[#594138]">Kategori</div>
-                        <div className="rounded-lg bg-[#f7f2ec] p-2.75 text-[13px] font-semibold text-[#20180f]">{doc.category}</div>
-                      </div>
-                    </div>
-                    <DocumentPreview path={doc.documentPath ?? undefined} label={doc.label} />
-                  </div>
-
-                  <div className="mt-4 border-t border-dashed border-[#e8dccd] pt-4">
-                    <div className="mb-2.5 flex items-center justify-between gap-2">
-                      <div className="text-[12.5px] font-bold text-[#20180f]">Verifikasi Dokumen</div>
-                      <button
-                        type="button"
-                        onClick={() => setHistoryDoc(doc)}
-                        className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] px-3 py-1.5 text-[11.5px] font-semibold text-[#261813]"
-                      >
-                        <History className="size-3.5" />
-                        Riwayat &amp; Upload Dokumen
-                      </button>
-                    </div>
-                    <textarea
-                      value={notes[doc.key] ?? doc.rejectionNote}
-                      onChange={(e) => setNotes((cur) => ({ ...cur, [doc.key]: e.target.value }))}
-                      rows={2}
-                      placeholder="Catatan (opsional) — mis. alasan dokumen salah..."
-                      className="mb-2.5 w-full resize-y rounded-lg border border-[#e8dccd] bg-white p-2.5 font-sans text-[12.5px] text-[#20180f] outline-none"
-                    />
-                    <div className="flex flex-wrap gap-2.5">
-                      {CHECK_BUTTONS.map(({ status, label, icon: Icon }) => {
-                        const active = doc.status === status;
-                        const color = status === "VALID" ? "#1f8a4c" : status === "REJECTED" ? "#c1361f" : "#6d28d9";
-                        const bg = status === "VALID" ? "#e9f6ee" : status === "REJECTED" ? "#fbe4de" : "#ede9fe";
-                        return (
-                          <button
-                            key={status}
-                            type="button"
-                            disabled={savingKey === doc.key}
-                            onClick={() => callAction(doc.key, { action: "check", status, note: notes[doc.key] ?? doc.rejectionNote })}
-                            className="flex items-center gap-1.5 rounded-lg border-[1.5px] px-4 py-2 text-[12.5px] font-bold disabled:opacity-60"
-                            style={{
-                              background: active ? color : "#fff",
-                              borderColor: active ? color : bg,
-                              color: active ? "#fff" : color,
-                            }}
-                          >
-                            <Icon className="size-4" />
-                            {label}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {doc.status === "VALID" && (
-                      <div className="mt-3 flex items-center gap-1.5 text-[12px] text-[#1f8a4c]">
-                        <CheckCircle2 className="size-4" />
-                        Dokumen ditandai valid oleh Customer Relation.
-                      </div>
-                    )}
-                    {doc.status === "REJECTED" && (
-                      <div className="mt-3 flex items-center gap-1.5 text-[12px] text-[#c1361f]">
-                        <XCircle className="size-4" />
-                        Dokumen ditandai tidak valid dan dikembalikan ke perusahaan untuk diunggah ulang.
-                      </div>
-                    )}
-                    {doc.status === "NOT_APPLICABLE" && (
-                      <div className="mt-3 flex items-center gap-1.5 text-[12px] text-[#6d28d9]">
-                        <HelpCircle className="size-4" />
-                        Dokumen ditandai tidak diperlukan.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {reviewingDoc && (
+        <DocumentReviewModal
+          key={reviewingDoc.key}
+          company={company}
+          doc={reviewingDoc}
+          isSaving={savingKey === reviewingDoc.key}
+          onClose={() => setReviewingDoc(null)}
+          onDecide={(status, note) => handleDecide(reviewingDoc, status, note)}
+          onRequest={() => {
+            setRequestModalDoc(reviewingDoc);
+            setReviewingDoc(null);
+          }}
+          onShowHistory={() => setHistoryDoc(reviewingDoc)}
+        />
+      )}
 
       {requestModalDoc && (
         <RequestDocumentModal

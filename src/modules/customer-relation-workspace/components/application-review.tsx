@@ -36,6 +36,10 @@ export type ApplicationDetail = {
     status: DocVerificationStatusValue;
     rejectionNote: string;
     requestNote: string;
+    version: number;
+    uploadedByName: string | null;
+    uploadedAt: string | null;
+    verifiedAt: string | null;
   }[];
   schedules: {
     id: string;
@@ -131,7 +135,7 @@ export function ApplicationReview({ id }: { id: string }) {
   }
 
   return (
-    <div className="max-w-230 p-7">
+    <div className="p-7">
       <div className="mb-4.5 flex items-center gap-2.5">
         <button type="button" onClick={() => router.back()} className="text-[#a68f80]">
           <ArrowLeft className="size-5" />
@@ -231,8 +235,8 @@ export function ApplicationReview({ id }: { id: string }) {
         <DocumentsTab
           applicationId={id}
           company={data.company}
+          verificationType={data.jenis}
           documents={data.documents}
-          docsSummary={`${data.docsLengkap}/${data.docsTotal} Dokumen Lengkap`}
           showMarkAcceptedButton={showMarkAcceptedButton}
           onMarkAccepted={markAccepted}
           onChanged={invalidate}

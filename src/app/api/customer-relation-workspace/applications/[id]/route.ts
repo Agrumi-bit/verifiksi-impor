@@ -7,6 +7,8 @@ import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
 import { getDocumentMeta } from "@/modules/company/document-versions";
 import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS, toChecklistStatus } from "@/modules/verifikator-workspace/schema";
+import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
+import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
 import {
   crDocumentRequestsSchema,
   editApplicationFieldsSchema,
@@ -46,12 +48,16 @@ export async function GET(
   }
 
   const payload = application.payload as ApplicationWizardValues;
-  const checklist = buildDocumentChecklist(payload);
+  // Prefer the live Company row (legal/tax/location docs a company edited via its own profile
+  // after submission) and resolve VIU-industri Partner Industri docs — same live-data context
+  // every other workspace's buildDocumentChecklist call passes, so CR's "Kelengkapan Dokumen"
+  // check doesn't show stale paths or silently drop the Dokumen Partner Industri category.
+  const company = application.companyId ? await db.company.findUnique({ where: { id: application.companyId } }) : null;
+  const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload));
   const requests = crDocumentRequestsSchema.parse(application.crDocumentVerifications ?? {});
   const docsTotal = checklist.length;
   const docsLengkap = checklist.filter((d) => d.documentPath).length;
 
-  const company = application.companyId ? await db.company.findUnique({ where: { id: application.companyId } }) : null;
   const companyKeys = checklist.filter((item) => item.key in COMPANY_MAPPED_DOCUMENT_KEYS).map((item) => item.key);
   const appOnlyKeys = checklist.filter((item) => !(item.key in COMPANY_MAPPED_DOCUMENT_KEYS)).map((item) => item.key);
   const companyMeta = company
@@ -71,6 +77,10 @@ export async function GET(
       status: meta ? toChecklistStatus(meta.verificationStatus) : "PENDING",
       rejectionNote: meta?.rejectionNote ?? "",
       requestNote: requests[item.key]?.requestNote ?? "",
+      version: meta?.version ?? 1,
+      uploadedByName: meta?.uploadedByName ?? null,
+      uploadedAt: meta?.uploadedAt ?? null,
+      verifiedAt: meta?.verifiedAt ?? null,
     };
   });
 
