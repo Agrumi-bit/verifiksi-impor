@@ -36,6 +36,18 @@ type DocumentRow = {
   checklistResult: Record<string, ChecklistItemResult> | null;
 };
 
+/** Minimal row shape `docStatusLabel`/`ComplianceTable` actually need — lets other workspaces
+ * (Customer Relation's own document-completeness check, same categories/compliance defs, a
+ * narrower VALID/REJECTED/NOT_APPLICABLE decision set) reuse these without adopting verifikator's
+ * full checklist-review `DocumentRow` shape. */
+export type ComplianceRow = {
+  key: string;
+  label: string;
+  category: string;
+  documentPath: string | null;
+  status: DocVerificationStatusValue;
+};
+
 type VersionEntry = {
   version: number;
   path: string;
@@ -68,7 +80,7 @@ function isImagePath(path: string): boolean {
   return IMAGE_EXTENSIONS.has(extension);
 }
 
-function docStatusLabel(row: DocumentRow): { label: string; bg: string; color: string } {
+export function docStatusLabel(row: ComplianceRow): { label: string; bg: string; color: string } {
   if (!row.documentPath) return { label: "Belum Diunggah", bg: "#fbe4de", color: "#c1361f" };
   if (row.status === "VALID") return { label: "Valid", bg: "#e2f7ea", color: "#1a9850" };
   return { label: "Uploaded", bg: "#e6effa", color: "#2f6fe0" };
@@ -85,7 +97,7 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function InfoRow({
+export function InfoRow({
   icon,
   label,
   collapsed,
@@ -236,7 +248,7 @@ function ChecklistItemRow({
   );
 }
 
-function CollapsibleCard({
+export function CollapsibleCard({
   title,
   desc,
   children,
@@ -271,7 +283,20 @@ function CollapsibleCard({
   );
 }
 
-function ComplianceTable({ rows, onReview }: { rows: DocumentRow[]; onReview: (row: DocumentRow) => void }) {
+export function ComplianceTable<Row extends ComplianceRow>({
+  rows,
+  onReview,
+  statusLabels = DOC_VERIFICATION_STATUS_LABELS,
+  reviewActionLabel = "Review",
+}: {
+  rows: Row[];
+  onReview: (row: Row) => void;
+  /** Defaults to verifikator's own "Verified/Need Revision/..." wording — Customer Relation's
+   * document-completeness check passes `CR_DOCUMENT_STATUS_LABELS` ("Valid/Tidak Valid/Tidak
+   * Diperlukan") instead, since it's a narrower administrative check, not a full verification. */
+  statusLabels?: Record<DocVerificationStatusValue, string>;
+  reviewActionLabel?: string;
+}) {
   return (
     <div className="overflow-auto rounded-lg border border-[#e8dccd]">
       <table className="w-full min-w-[900px] border-collapse text-[11.5px]">
@@ -290,6 +315,7 @@ function ComplianceTable({ rows, onReview }: { rows: DocumentRow[]; onReview: (r
           {rows.map((row, index) => {
             const def = getComplianceDef(row.key);
             const docStatus = docStatusLabel(row);
+            const reviewLabel = row.status === "PENDING" && !row.documentPath ? "Belum Ada" : statusLabels[row.status];
             return (
               <tr key={row.key}>
                 <td className="border border-[#efe2d4] px-2.5 py-2.25 align-top text-[#6b5b4c]">{index + 1}</td>
@@ -320,7 +346,7 @@ function ComplianceTable({ rows, onReview }: { rows: DocumentRow[]; onReview: (r
                   <span
                     className={`whitespace-nowrap rounded-full px-2 py-0.75 text-[10.5px] font-bold ${DOC_VERIFICATION_STATUS_BADGE[row.status]}`}
                   >
-                    {reviewStatusLabel(row)}
+                    {reviewLabel}
                   </span>
                 </td>
                 <td className="border border-[#efe2d4] px-2.5 py-2.25 align-top">
@@ -330,7 +356,7 @@ function ComplianceTable({ rows, onReview }: { rows: DocumentRow[]; onReview: (r
                     className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#e1bfb3] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#261813]"
                   >
                     <MaterialIcon name="visibility" className="text-[14px]" />
-                    Review
+                    {reviewActionLabel}
                   </button>
                 </td>
               </tr>
@@ -939,7 +965,9 @@ export function DocumentVerificationTab({
         </div>
       </div>
 
-      {COMPLIANCE_SECTION_DEFS.filter((def) => !def.vkiOnly || verificationType === "VKI").map((def) => {
+      {COMPLIANCE_SECTION_DEFS.filter(
+        (def) => (!def.vkiOnly || verificationType === "VKI") && (!def.viuOnly || verificationType === "VIU"),
+      ).map((def) => {
         const sectionRows = rows.filter((row) => row.category === def.category);
         return (
           <CollapsibleCard key={def.category} title={def.title} desc={def.desc}>

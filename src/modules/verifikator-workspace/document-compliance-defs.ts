@@ -271,6 +271,7 @@ export const COMPLIANCE_SECTION_DEFS = [
       "Pemeriksaan dilakukan melalui verifikasi terhadap dokumen persyaratan wajib yang menjadi dasar dalam pengajuan Verifikasi Kemampuan Industri sebagaimana diatur dalam Pasal 30 ayat (2), serta dokumen pendukung verifikasi yang digunakan untuk memastikan keabsahan, konsistensi, dan kesesuaian identitas badan usaha berdasarkan hasil pemeriksaan dokumen sebagaimana dimaksud dalam Pasal 31 ayat (1) huruf a.",
     ],
     vkiOnly: false,
+    viuOnly: false,
   },
   {
     category: "Perpajakan",
@@ -281,6 +282,7 @@ export const COMPLIANCE_SECTION_DEFS = [
       "Pemeriksaan dilakukan melalui verifikasi terhadap dokumen persyaratan wajib yang dipersyaratkan dalam permohonan Verifikasi Kemampuan Industri sebagaimana diatur dalam Pasal 30 ayat (2) huruf b angka 1, meliputi Nomor Pokok Wajib Pajak (NPWP) perusahaan.",
     ],
     vkiOnly: false,
+    viuOnly: false,
   },
   {
     category: "Tenaga Kerja",
@@ -290,6 +292,7 @@ export const COMPLIANCE_SECTION_DEFS = [
       "Pemeriksaan administratif tenaga kerja dilakukan untuk memastikan bahwa perusahaan telah memenuhi persyaratan administratif terkait ketersediaan tenaga kerja dalam mendukung pelaksanaan kegiatan industri sebagaimana diatur dalam Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.",
     ],
     vkiOnly: true,
+    viuOnly: false,
   },
   {
     category: "Surat Pernyataan",
@@ -299,6 +302,7 @@ export const COMPLIANCE_SECTION_DEFS = [
       "Pemeriksaan administratif surat pernyataan dilakukan untuk memastikan bahwa perusahaan telah memenuhi persyaratan administratif terkait surat pernyataan dalam mendukung pelaksanaan kegiatan industri sebagaimana diatur dalam Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.",
     ],
     vkiOnly: true,
+    viuOnly: false,
   },
   {
     category: "Dokumen Lokasi",
@@ -310,6 +314,7 @@ export const COMPLIANCE_SECTION_DEFS = [
       "Selanjutnya, kesesuaian antara dokumen administratif dengan kondisi aktual di lapangan diverifikasi melalui observasi lokasi industri sesuai ketentuan Pasal 31 Permenperin Nomor 27 Tahun 2025, untuk memastikan bahwa fasilitas bangunan yang digunakan perusahaan benar-benar tersedia, digunakan untuk kegiatan produksi, dan sesuai dengan informasi yang tercantum dalam dokumen permohonan VKI.",
     ],
     vkiOnly: false,
+    viuOnly: false,
   },
   {
     category: "Dokumen Pendukung",
@@ -319,7 +324,11 @@ export const COMPLIANCE_SECTION_DEFS = [
       "Pemeriksaan administratif bukti kemampuan finansial dilaksanakan untuk memastikan bahwa perusahaan memiliki kemampuan keuangan yang memadai dalam membiayai kegiatan importasi bahan baku dan/atau bahan penolong, sebagai bagian dari persyaratan pengajuan Verifikasi Importir Umum (VIU) bagi perusahaan non industri (API-U).",
       "Pemeriksaan dilakukan melalui verifikasi terhadap dokumen keuangan wajib (rekening koran, surat referensi bank, laporan keuangan, dan bukti fasilitas kredit) serta dokumen pendukung tambahan yang diserahkan perusahaan apabila tersedia.",
     ],
+    // VIU-only — a VKI application never has these checklist items (buildDocumentChecklist only
+    // pushes them for non-VKI applications), so without this flag the section rendered as an
+    // empty, VIU-worded card on every VKI application.
     vkiOnly: false,
+    viuOnly: true,
   },
   {
     category: "Dokumen Partner Industri",
@@ -329,7 +338,9 @@ export const COMPLIANCE_SECTION_DEFS = [
       "Pemeriksaan administratif mitra industri dilaksanakan untuk memastikan bahwa mitra industri (pemasok bahan baku dan/atau bahan penolong) yang dicantumkan perusahaan dalam permohonan Verifikasi Importir Umum (VIU) memiliki legalitas usaha yang sah dan telah dinyatakan memiliki kemampuan industri yang terverifikasi.",
       "Pemeriksaan dilakukan melalui verifikasi terhadap Nomor Induk Berusaha (NIB), Nomor Pokok Wajib Pajak (NPWP), dan Surat Keputusan Kementerian Hukum dan Hak Asasi Manusia mitra industri, serta Laporan Hasil Verifikasi Kemampuan Industri (LHVKI) sebagai bukti kemampuan industri mitra yang bersangkutan.",
     ],
+    // Same reasoning — VIU-industri only (Partner Industri entries never exist on a VKI payload).
     vkiOnly: false,
+    viuOnly: true,
   },
 ] as const;
 
