@@ -48,9 +48,24 @@ export const TECHNICAL_MODULE_LABELS: Record<TechnicalModuleKey, string> = {
   listrik: "Analisis Kebutuhan dan Pemakaian Energi Listrik",
   kapasitas: "Kapasitas Produksi",
   bahanbaku: "Kapasitas Kebutuhan Bahan Baku",
-  rencana: "Analisis Kebutuhan dan Rencana Impor",
-  penyimpanan: "Analisis Penyimpanan",
-  modal: "Analisis Kesesuaian Modal",
+  // VIU-industri's 3 required analyses (Jenis Analisis / Tujuan table): rencana checks the
+  // requested HS Code/volume against the mitra industri's own LHVKI need; penyimpanan and modal
+  // check the import plan against API-U's own storage capacity and capital.
+  rencana: "Analisis Kesesuaian HS Code dan Volume Permohonan API-U terhadap LHVKI Mitra Industri",
+  penyimpanan: "Analisis Pengajuan Impor vs Kapasitas Gudang API-U",
+  modal: "Analisis Pengajuan Impor vs Kepemilikan Modal Perusahaan Importir Umum (API-U)",
+};
+
+/** Short form of `TECHNICAL_MODULE_LABELS` for the module tab pills — the full formal titles
+ * above are meant for the module's own header and read-only summaries, not a `flex-wrap` row of
+ * buttons. */
+export const TECHNICAL_MODULE_NAV_LABELS: Record<TechnicalModuleKey, string> = {
+  listrik: "Energi Listrik",
+  kapasitas: "Kapasitas Produksi",
+  bahanbaku: "Kebutuhan Bahan Baku",
+  rencana: "HS Code & Volume vs LHVKI",
+  penyimpanan: "Kapasitas Gudang API-U",
+  modal: "Kepemilikan Modal API-U",
 };
 
 /** Shared by Dashboard and My Assignment stat-card grids (design's `assignmentStats`). */

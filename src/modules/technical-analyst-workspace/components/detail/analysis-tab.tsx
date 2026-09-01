@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import {
-  TECHNICAL_MODULE_LABELS,
+  TECHNICAL_MODULE_NAV_LABELS,
   VIU_MODULE_KEYS,
   VKI_MODULE_KEYS,
   type TechnicalModuleKey,
@@ -118,7 +118,7 @@ export function AnalysisTab({ assignmentNumber, verificationType }: AnalysisTabP
                 border: `1px solid ${active ? "#e0662e" : "#e1bfb3"}`,
               }}
             >
-              {TECHNICAL_MODULE_LABELS[key]}
+              {TECHNICAL_MODULE_NAV_LABELS[key]}
             </button>
           );
         })}

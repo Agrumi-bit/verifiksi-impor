@@ -27,12 +27,12 @@ export function PenyimpananModule({
         <ModuleIntro
           icon="warehouse"
           iconColor="#1a9850"
-          title="Analisis Penyimpanan"
-          subtitle="Kapasitas gudang dibandingkan dengan jumlah barang yang akan diimpor."
+          title="Analisis Pengajuan Impor vs Kapasitas Gudang API-U"
+          subtitle="Memastikan volume barang yang diajukan masih rasional terhadap kemampuan penyimpanan dan pengelolaan barang API-U."
         />
         <div className="mb-4 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
           <div>
-            <div className="mb-1 text-xs font-semibold text-[#594138]">Kapasitas Gudang (m³)</div>
+            <div className="mb-1 text-xs font-semibold text-[#594138]">Kapasitas Gudang API-U (m³)</div>
             <input
               type="text"
               inputMode="decimal"
@@ -56,7 +56,7 @@ export function PenyimpananModule({
             />
           </div>
           <div>
-            <div className="mb-1 text-xs font-semibold text-[#594138]">Rencana Jumlah Impor (m³)</div>
+            <div className="mb-1 text-xs font-semibold text-[#594138]">Volume Pengajuan Impor (m³)</div>
             <input
               type="text"
               inputMode="decimal"
@@ -85,10 +85,10 @@ export function PenyimpananModule({
           icon={sesuai === null ? "info" : sesuai ? "check_circle" : "warning"}
           text={
             sesuai === null
-              ? "Isi kapasitas gudang, stok terkini, dan rencana impor untuk menghitung utilisasi."
+              ? "Isi kapasitas gudang API-U, stok terkini, dan volume pengajuan impor untuk menghitung utilisasi."
               : sesuai
-                ? "Kapasitas gudang mencukupi untuk stok terkini dan rencana impor."
-                : `Kapasitas gudang tidak mencukupi — total ${pct}% dari kapasitas.`
+                ? "Volume pengajuan impor masih rasional terhadap kapasitas penyimpanan dan pengelolaan barang API-U."
+                : `Volume pengajuan impor tidak rasional terhadap kapasitas gudang API-U — total ${pct}% dari kapasitas.`
           }
         />
       </Card>

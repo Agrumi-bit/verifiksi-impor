@@ -26,12 +26,12 @@ export function ModalModule({
         <ModuleIntro
           icon="payments"
           iconColor="#2f6fe0"
-          title="Analisis Kesesuaian Modal"
-          subtitle="Kemampuan membeli barang yang diimpor berdasarkan kemampuan modal yang dimiliki perusahaan."
+          title="Analisis Pengajuan Impor vs Kepemilikan Modal Perusahaan Importir Umum (API-U)"
+          subtitle="Menilai kewajaran nilai rencana impor dibandingkan kemampuan permodalan/keuangan API-U."
         />
         <div className="mb-4 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           <div>
-            <div className="mb-1 text-xs font-semibold text-[#594138]">Nilai Impor (Rp)</div>
+            <div className="mb-1 text-xs font-semibold text-[#594138]">Nilai Rencana Impor (Rp)</div>
             <input
               type="text"
               inputMode="decimal"
@@ -43,7 +43,7 @@ export function ModalModule({
             />
           </div>
           <div>
-            <div className="mb-1 text-xs font-semibold text-[#594138]">Modal Kerja (Rp)</div>
+            <div className="mb-1 text-xs font-semibold text-[#594138]">Kepemilikan Modal API-U (Rp)</div>
             <input
               type="text"
               inputMode="decimal"
@@ -55,17 +55,17 @@ export function ModalModule({
             />
           </div>
         </div>
-        <StatBoxes items={[{ label: "Rasio Modal Kerja / Nilai Impor", value: ratio !== null ? `${fmtNum(ratio, 2)}x` : "—" }]} />
+        <StatBoxes items={[{ label: "Rasio Kepemilikan Modal / Nilai Rencana Impor", value: ratio !== null ? `${fmtNum(ratio, 2)}x` : "—" }]} />
         <ResultBanner
           bg={sesuai === null ? "#f2ece5" : sesuai ? "#e2f7ea" : "#fbe4de"}
           color={sesuai === null ? "#6b5b4c" : sesuai ? "#1a9850" : "#c1361f"}
           icon={sesuai === null ? "info" : sesuai ? "check_circle" : "warning"}
           text={
             sesuai === null
-              ? "Isi nilai impor dan modal kerja untuk menghitung rasio."
+              ? "Isi nilai rencana impor dan kepemilikan modal API-U untuk menghitung rasio."
               : sesuai
-                ? "Modal kerja mencukupi untuk membeli barang yang akan diimpor."
-                : "Modal kerja tidak mencukupi terhadap estimasi nilai barang impor."
+                ? "Kepemilikan modal API-U wajar terhadap nilai rencana impor yang diajukan."
+                : "Kepemilikan modal API-U tidak mencukupi terhadap nilai rencana impor yang diajukan."
           }
         />
       </Card>
