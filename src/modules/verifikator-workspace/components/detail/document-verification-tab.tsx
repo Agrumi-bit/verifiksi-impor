@@ -8,6 +8,7 @@ import { MaterialIcon } from "../material-icon";
 import { buildDisplayFileName } from "@/lib/document-filename";
 import { checklistItemCode } from "../../schema";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import type { LocationValues } from "@/modules/shared/schema";
 import {
   DOC_VERIFICATION_STATUSES,
   DOC_VERIFICATION_STATUS_BADGE,
@@ -527,6 +528,7 @@ function ReviewModal({
   payload,
   businessAddress,
   companyLegal,
+  companyLocations,
   canEdit,
   isSaving,
   onClose,
@@ -539,6 +541,7 @@ function ReviewModal({
   payload: ApplicationWizardValues;
   businessAddress: string | null;
   companyLegal: ChecklistCompanyLegal;
+  companyLocations: LocationValues[] | null;
   canEdit: boolean;
   isSaving: boolean;
   onClose: () => void;
@@ -649,7 +652,7 @@ function ReviewModal({
                     index={i + 1}
                     item={item}
                     value={checklistResult[item.id] ?? null}
-                    sourceValue={item.getValue?.({ payload, businessAddress, companyLegal })}
+                    sourceValue={item.getValue?.({ payload, businessAddress, companyLegal, companyLocations })}
                     disabled={!canEdit}
                     onSelect={(value) => handleChecklistSelect(item.id, value)}
                     onNoteBlur={(note) => handleChecklistNoteBlur(item.id, note)}
@@ -812,6 +815,7 @@ type Props = {
   payload: ApplicationWizardValues;
   businessAddress: string | null;
   companyLegal: ChecklistCompanyLegal;
+  companyLocations: LocationValues[] | null;
 };
 
 export function DocumentVerificationTab({
@@ -822,6 +826,7 @@ export function DocumentVerificationTab({
   payload,
   businessAddress,
   companyLegal,
+  companyLocations,
 }: Props) {
   const queryClient = useQueryClient();
   const [savingKey, setSavingKey] = useState<string | null>(null);
@@ -1125,6 +1130,7 @@ export function DocumentVerificationTab({
           payload={payload}
           businessAddress={businessAddress}
           companyLegal={companyLegal}
+          companyLocations={companyLocations}
           canEdit={canEdit}
           isSaving={savingKey === reviewingRow.key}
           onClose={() => setReviewingRow(null)}

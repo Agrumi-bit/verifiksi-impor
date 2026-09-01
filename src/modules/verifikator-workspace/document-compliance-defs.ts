@@ -164,6 +164,18 @@ export const DOCUMENT_COMPLIANCE_DEFS: Record<string, DocumentComplianceDef> = {
     referensi: "Pasal 31 ayat (2) huruf a Permenperin Nomor 27 Tahun 2025",
     keterangan: "Dokumen lain yang sah yang dapat menunjukkan hak penguasaan atas fasilitas produksi dan/atau gudang.",
   },
+  // Same suffix-match idea as the ownership/lease entries above — dynamic per-location keys
+  // (`location:{id}:warehouseRegistration` / `location:{id}:warehouseLayout`) for GUDANG.
+  "location:warehouseRegistration": {
+    persyaratan: "Wajib",
+    referensi: "Pasal 30 ayat (2) huruf b angka 6 Permenperin Nomor 27 Tahun 2025",
+    keterangan: "Tanda Daftar Gudang membuktikan bahwa fasilitas gudang telah terdaftar secara resmi.",
+  },
+  "location:warehouseLayout": {
+    persyaratan: "Wajib",
+    referensi: "Pasal 30 ayat (2) huruf b angka 6 Permenperin Nomor 27 Tahun 2025",
+    keterangan: "Layout gudang menunjukkan tata letak dan kapasitas ruang penyimpanan.",
+  },
   "nonindustri-support:rekening-koran": {
     persyaratan: "Wajib",
     referensi: "Persyaratan Bukti Kemampuan Finansial — Verifikasi Importir Umum (VIU)",
@@ -241,6 +253,8 @@ export function getComplianceDef(key: string): DocumentComplianceDef | undefined
   if (DOCUMENT_COMPLIANCE_DEFS[key]) return DOCUMENT_COMPLIANCE_DEFS[key];
   const locationMatch = key.match(/^location:[^:]+:(ownership|lease):([A-Z_]+)$/);
   if (locationMatch) return DOCUMENT_COMPLIANCE_DEFS[`location:${locationMatch[1]}:${locationMatch[2]}`];
+  const warehouseMatch = key.match(/^location:[^:]+:(warehouseRegistration|warehouseLayout)$/);
+  if (warehouseMatch) return DOCUMENT_COMPLIANCE_DEFS[`location:${warehouseMatch[1]}`];
   // Partner Industri keys are dynamic per partnerId (`partner:{partnerId}:nib`) — same
   // suffix-match idea as the per-location lookup above.
   const partnerMatch = key.match(/^partner:[^:]+:(nib|npwp|sk|lhvki)$/);

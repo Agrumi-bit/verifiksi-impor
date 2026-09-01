@@ -1,5 +1,5 @@
 import { NON_INDUSTRI_SUPPORT_DOC_DEFS, type ApplicationWizardValues, type NonIndustriSupportDocDef } from "@/modules/applications/schema";
-import { OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS, splitKbliEntries } from "@/modules/shared/schema";
+import { OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS, splitKbliEntries, type LocationValues } from "@/modules/shared/schema";
 import type { CompanyLegalContext } from "./company-context";
 import type { ChecklistPartnerContext } from "./schema";
 
@@ -21,6 +21,8 @@ export type NarrativeContext = {
    * `document-checklist-items.ts`'s `ChecklistContext`.
    */
   companyLegal: CompanyLegalContext;
+  /** Live `Company.locations`, same precedence as `companyLegal` — see `buildLocationDocuments`. */
+  companyLocations: LocationValues[] | null;
   /**
    * Per-document checklist status (`data.documents[].status`, keyed by the
    * same `DocDetail.key`) — "memenuhi" must reflect that the verifikator has
@@ -775,7 +777,10 @@ const LOCATION_TYPE_NAMES: Record<string, string> = {
 export function buildLocationDocuments(ctx: NarrativeContext): DocDetail[] {
   const docs: DocDetail[] = [];
   let no = 1;
-  for (const loc of ctx.payload.locations ?? []) {
+  for (const payloadLoc of ctx.payload.locations ?? []) {
+    // Prefer the live Company.locations entry over the frozen payload snapshot — same
+    // precedence as `companyLegal` above, see `ChecklistCompanyContext.locations`.
+    const loc = ctx.companyLocations?.find((l) => l.id === payloadLoc.id) ?? payloadLoc;
     const label = LOCATION_TYPE_NAMES[loc.locationType] ?? loc.locationType;
     const isOwned = loc.buildingStatus === "MILIK_SENDIRI";
     const typedDocs = isOwned

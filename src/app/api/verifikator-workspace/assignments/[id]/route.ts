@@ -14,7 +14,11 @@ import {
   COMPANY_MAPPED_DOCUMENT_KEYS,
   productVerificationsSchema,
 } from "@/modules/verifikator-workspace/schema";
-import { toChecklistCompanyContext, toCompanyLegalContext } from "@/modules/verifikator-workspace/company-context";
+import {
+  toChecklistCompanyContext,
+  toCompanyLegalContext,
+  toCompanyLocationsContext,
+} from "@/modules/verifikator-workspace/company-context";
 import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
 
 async function loadAssignment(assignmentNumber: string, verifikatorId: string) {
@@ -229,6 +233,7 @@ export async function GET(
         // sections) — prefer the live Company row over the frozen application payload so the
         // "Uraian yang Diperiksa" comparison values don't stay stuck on stale data.
         companyLegal: toCompanyLegalContext(company),
+        companyLocations: toCompanyLocationsContext(company),
       },
       verificationProgram: {
         type: assignment.application.verificationType,

@@ -20,6 +20,7 @@ import {
   OWNERSHIP_DOCUMENT_TYPE_LABELS,
   LEASE_DOCUMENT_TYPE_LABELS,
   splitKbliEntries,
+  type LocationValues,
   type OwnershipDocumentType,
   type LeaseDocumentType,
 } from "@/modules/shared/schema";
@@ -32,6 +33,8 @@ export type ChecklistContext = {
   payload: ApplicationWizardValues;
   businessAddress: string | null;
   companyLegal: CompanyLegalContext;
+  /** Live `Company.locations`, same live-over-payload-snapshot precedence as `companyLegal` — see `findLocation` below. */
+  companyLocations: LocationValues[] | null;
 };
 
 export type ChecklistItemDef = {
@@ -661,8 +664,8 @@ const DOCUMENT_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
  * sewa). All `getValue` fields resolve the specific `locationId` from
  * `payload.locations` at review time — real lokasi data, not a guess.
  */
-function findLocation(payload: ApplicationWizardValues, locationId: string) {
-  return payload.locations?.find((loc) => loc.id === locationId);
+function findLocation(ctx: Pick<ChecklistContext, "payload" | "companyLocations">, locationId: string) {
+  return ctx.companyLocations?.find((loc) => loc.id === locationId) ?? ctx.payload.locations?.find((loc) => loc.id === locationId);
 }
 
 function ownershipDocumentItems(locationId: string, type: OwnershipDocumentType): ChecklistItemDef[] {
@@ -683,8 +686,8 @@ function ownershipDocumentItems(locationId: string, type: OwnershipDocumentType)
       description: "Alamat lokasi menunjukkan alamat fasilitas bangunan yang menjadi objek dokumen kepemilikan.",
       question: "Apakah alamat pada dokumen sesuai dengan alamat lokasi yang diajukan dalam permohonan?",
       dataSource: "Data ditampilkan secara otomatis berdasarkan data lokasi pada permohonan.",
-      getValue: ({ payload }) => {
-        const loc = findLocation(payload, locationId);
+      getValue: (ctx) => {
+        const loc = findLocation(ctx, locationId);
         return loc ? `${composeLocationAddress(loc)}, ${loc.city}, ${loc.province}` : undefined;
       },
       criteria: ["Alamat pada dokumen sesuai dengan alamat lokasi permohonan.", "Tidak terdapat perbedaan alamat yang signifikan."],
@@ -695,7 +698,7 @@ function ownershipDocumentItems(locationId: string, type: OwnershipDocumentType)
       description: "Status kepemilikan menunjukkan bahwa bangunan merupakan milik perusahaan sendiri.",
       question: "Apakah status kepemilikan pada dokumen konsisten dengan status bangunan yang dinyatakan perusahaan?",
       dataSource: "Data ditampilkan secara otomatis berdasarkan status bangunan pada data lokasi.",
-      getValue: ({ payload }) => (findLocation(payload, locationId)?.buildingStatus === "MILIK_SENDIRI" ? "Milik Sendiri" : undefined),
+      getValue: (ctx) => (findLocation(ctx, locationId)?.buildingStatus === "MILIK_SENDIRI" ? "Milik Sendiri" : undefined),
       criteria: ["Status kepemilikan pada dokumen sesuai dengan data sistem.", "Tidak terdapat sengketa atau catatan hukum atas bangunan."],
     },
     {
@@ -726,8 +729,8 @@ function leaseDocumentItems(locationId: string, type: LeaseDocumentType): Checkl
       description: "Alamat lokasi menunjukkan alamat fasilitas bangunan yang menjadi objek perjanjian.",
       question: "Apakah alamat pada dokumen sesuai dengan alamat lokasi yang diajukan dalam permohonan?",
       dataSource: "Data ditampilkan secara otomatis berdasarkan data lokasi pada permohonan.",
-      getValue: ({ payload }) => {
-        const loc = findLocation(payload, locationId);
+      getValue: (ctx) => {
+        const loc = findLocation(ctx, locationId);
         return loc ? `${composeLocationAddress(loc)}, ${loc.city}, ${loc.province}` : undefined;
       },
       criteria: ["Alamat pada dokumen sesuai dengan alamat lokasi permohonan.", "Tidak terdapat perbedaan alamat yang signifikan."],
@@ -738,7 +741,7 @@ function leaseDocumentItems(locationId: string, type: LeaseDocumentType): Checkl
       description: "Nama pemilik asli merupakan pihak yang menyewakan/memberikan hak penguasaan atas bangunan.",
       question: "Apakah nama pemilik asli pada dokumen sesuai dengan data permohonan?",
       dataSource: "Data ditampilkan secara otomatis berdasarkan data lokasi pada permohonan.",
-      getValue: ({ payload }) => findLocation(payload, locationId)?.leaseOriginalOwnerName,
+      getValue: (ctx) => findLocation(ctx, locationId)?.leaseOriginalOwnerName,
       criteria: ["Nama pemilik asli tercantum dengan jelas pada dokumen.", "Nama sesuai dengan data permohonan."],
     },
     {
@@ -747,8 +750,8 @@ function leaseDocumentItems(locationId: string, type: LeaseDocumentType): Checkl
       description: "Masa berlaku menunjukkan jangka waktu penguasaan bangunan sebagaimana disepakati para pihak.",
       question: "Apakah masa berlaku pada dokumen masih berlaku pada saat verifikasi dilakukan?",
       dataSource: "Data ditampilkan secara otomatis berdasarkan data lokasi pada permohonan — tanggal mulai dan berakhir.",
-      getValue: ({ payload }) => {
-        const loc = findLocation(payload, locationId);
+      getValue: (ctx) => {
+        const loc = findLocation(ctx, locationId);
         if (!loc?.leaseStartDate && !loc?.leaseEndDate) return undefined;
         return `${formatTanggal(loc?.leaseStartDate) ?? "—"} s.d. ${formatTanggal(loc?.leaseEndDate) ?? "—"}`;
       },
@@ -764,6 +767,86 @@ function leaseDocumentItems(locationId: string, type: LeaseDocumentType): Checkl
   ];
 }
 
+const WAREHOUSE_REGISTRATION_TYPE_LABELS: Record<string, string> = {
+  TANDA_DAFTAR_GUDANG: "Tanda Daftar Gudang",
+  PENETAPAN_GUDANG_BERIKAT: "Penetapan Gudang Berikat",
+  GUDANG_PENIMBUNAN_SEMENTARA: "Gudang Penimbunan Sementara",
+};
+
+function warehouseRegistrationItems(locationId: string): ChecklistItemDef[] {
+  return [
+    {
+      id: "location-warehouse-registration-type",
+      title: "Jenis Tanda Daftar",
+      description: "Jenis tanda daftar menunjukkan bentuk pendaftaran resmi fasilitas gudang.",
+      question: "Apakah jenis tanda daftar pada dokumen sesuai dengan yang tercantum pada sistem?",
+      dataSource: "Data ditampilkan secara otomatis berdasarkan data lokasi pada permohonan.",
+      getValue: (ctx) => {
+        const type = findLocation(ctx, locationId)?.warehouseRegistrationType;
+        return type ? (WAREHOUSE_REGISTRATION_TYPE_LABELS[type] ?? type) : undefined;
+      },
+      criteria: ["Jenis tanda daftar pada sistem sesuai dengan dokumen yang diunggah.", "Dokumen dapat dibaca dengan jelas."],
+    },
+    {
+      id: "location-warehouse-registration-number",
+      title: "Nomor Tanda Daftar Gudang",
+      description: "Nomor tanda daftar merupakan nomor identifikasi resmi pendaftaran gudang.",
+      question: "Apakah nomor pada dokumen sesuai dengan data permohonan?",
+      dataSource: "Data ditampilkan secara otomatis berdasarkan data lokasi pada permohonan.",
+      getValue: (ctx) => findLocation(ctx, locationId)?.warehouseRegistrationNumber,
+      criteria: ["Nomor tanda daftar sesuai dengan dokumen.", "Nomor dapat dibaca dengan jelas."],
+    },
+    {
+      id: "location-warehouse-registration-issuer",
+      title: "Tanggal dan Instansi Penerbit",
+      description: "Tanggal dan instansi penerbit menunjukkan keabsahan dan kewenangan penerbitan tanda daftar.",
+      question: "Apakah tanggal dan instansi penerbit pada dokumen sesuai dengan data permohonan?",
+      dataSource: "Data ditampilkan secara otomatis berdasarkan data lokasi pada permohonan.",
+      getValue: (ctx) => {
+        const loc = findLocation(ctx, locationId);
+        if (!loc?.warehouseRegistrationIssueDate && !loc?.warehouseRegistrationIssuingAuthority) return undefined;
+        return `${formatTanggal(loc?.warehouseRegistrationIssueDate) ?? "—"} — ${loc?.warehouseRegistrationIssuingAuthority || "—"}`;
+      },
+      criteria: ["Tanggal penerbitan sesuai dengan dokumen.", "Instansi penerbit berwenang menerbitkan tanda daftar gudang."],
+    },
+    {
+      id: "location-warehouse-registration-field-match",
+      title: "Kesesuaian dengan Kondisi Lapangan",
+      description: "Kesesuaian dokumen dengan kondisi aktual gudang diverifikasi melalui observasi lokasi industri.",
+      question: "Apakah gudang yang tercantum dalam dokumen benar-benar tersedia dan digunakan untuk kegiatan produksi?",
+      criteria: ["Gudang sesuai dengan yang tercantum dalam dokumen.", "Gudang digunakan untuk kegiatan produksi sesuai permohonan."],
+    },
+  ];
+}
+
+function warehouseLayoutItems(locationId: string): ChecklistItemDef[] {
+  return [
+    {
+      id: "location-warehouse-layout-owner-nib",
+      title: "NIB Pemilik Gudang",
+      description: "NIB pemilik gudang menunjukkan identitas badan usaha yang menguasai fasilitas gudang.",
+      question: "Apakah NIB pemilik gudang pada dokumen sesuai dengan data permohonan?",
+      dataSource: "Data ditampilkan secara otomatis berdasarkan data lokasi pada permohonan.",
+      getValue: (ctx) => findLocation(ctx, locationId)?.warehouseOwnerNibNumber,
+      criteria: ["NIB pemilik gudang tercantum dengan jelas.", "NIB sesuai dengan data permohonan."],
+    },
+    {
+      id: "location-warehouse-layout-content",
+      title: "Kesesuaian Tata Letak",
+      description: "Layout gudang menunjukkan tata letak dan kapasitas ruang penyimpanan barang.",
+      question: "Apakah tata letak pada dokumen layout sesuai dengan kondisi aktual gudang?",
+      criteria: ["Tata letak tergambar dengan jelas.", "Kapasitas ruang penyimpanan sesuai dengan skala kegiatan usaha yang dimohonkan."],
+    },
+    {
+      id: "location-warehouse-layout-field-match",
+      title: "Kesesuaian dengan Kondisi Lapangan",
+      description: "Kesesuaian dokumen dengan kondisi aktual gudang diverifikasi melalui observasi lokasi industri.",
+      question: "Apakah gudang yang tercantum dalam dokumen benar-benar tersedia dan digunakan untuk kegiatan produksi?",
+      criteria: ["Gudang sesuai dengan yang tercantum dalam dokumen.", "Gudang digunakan untuk kegiatan produksi sesuai permohonan."],
+    },
+  ];
+}
+
 export function getChecklistItems(key: string): ChecklistItemDef[] {
   const electricityMatch = key.match(/^vki-support:listrik:(.+)$/);
   if (electricityMatch) return electricityBillItems(electricityMatch[1]);
@@ -774,6 +857,12 @@ export function getChecklistItems(key: string): ChecklistItemDef[] {
     return kind === "ownership"
       ? ownershipDocumentItems(locationId, docType as OwnershipDocumentType)
       : leaseDocumentItems(locationId, docType as LeaseDocumentType);
+  }
+
+  const warehouseMatch = key.match(/^location:([^:]+):(warehouseRegistration|warehouseLayout)$/);
+  if (warehouseMatch) {
+    const [, locationId, kind] = warehouseMatch;
+    return kind === "warehouseRegistration" ? warehouseRegistrationItems(locationId) : warehouseLayoutItems(locationId);
   }
 
   return DOCUMENT_CHECKLIST_ITEMS[key] ?? GENERIC_CHECKLIST_ITEMS;

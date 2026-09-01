@@ -21,7 +21,7 @@ import {
   COMPANY_MAPPED_DOCUMENT_KEYS,
   toChecklistStatus,
 } from "@/modules/verifikator-workspace/schema";
-import { toChecklistCompanyContext, toCompanyLegalContext } from "@/modules/verifikator-workspace/company-context";
+import { toChecklistCompanyContext, toCompanyLegalContext, toCompanyLocationsContext } from "@/modules/verifikator-workspace/company-context";
 import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
 import {
   PRODUCTION_QTY_SEBELUMNYA_SUMMARY_KEY,
@@ -119,6 +119,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 
   const companyLegal = toCompanyLegalContext(company);
+  const companyLocations = toCompanyLocationsContext(company);
 
   return NextResponse.json({
     data: {
@@ -152,6 +153,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       penjualanConclusion: summaryConclusion(PRODUCTION_QTY_PENJUALAN_SUMMARY_KEY),
       payload,
       companyLegal,
+      companyLocations,
       partners,
     },
   });

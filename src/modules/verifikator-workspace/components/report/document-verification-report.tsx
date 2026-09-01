@@ -20,6 +20,7 @@ import {
   type DocDetail,
 } from "../../report-narrative";
 import type { ApplicationWizardValues, MachineKondisiValue } from "@/modules/applications/schema";
+import type { LocationValues } from "@/modules/shared/schema";
 import type { CompanyLegalContext } from "../../company-context";
 import type { ChecklistPartnerContext } from "../../schema";
 import { useHsCodeOptions } from "@/modules/applications/hooks/use-hs-code-options";
@@ -81,6 +82,7 @@ export type ReportData = {
   penjualanConclusion: { status: string; keterangan: string; kesimpulan: string };
   payload: ApplicationWizardValues;
   companyLegal: CompanyLegalContext;
+  companyLocations: LocationValues[] | null;
   partners: ChecklistPartnerContext[];
 };
 
@@ -960,6 +962,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
     company,
     businessAddress: data.businessAddress,
     companyLegal: data.companyLegal,
+    companyLocations: data.companyLocations,
     partners: data.partners,
     documentStatuses,
   };

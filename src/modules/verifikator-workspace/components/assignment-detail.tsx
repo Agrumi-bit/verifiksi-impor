@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { MaterialIcon } from "./material-icon";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import type { CompanyLegalContext } from "../company-context";
+import type { LocationValues } from "@/modules/shared/schema";
 import {
   ASSIGNMENT_PRIORITY_BADGE,
   ASSIGNMENT_STATUS_PILL,
@@ -67,6 +68,8 @@ export type AssignmentDetailData = {
     // submission) — see CompanyLegalContext for why the checklist/report prefer these over the
     // frozen application payload.
     companyLegal: CompanyLegalContext;
+    // Live `Company.locations` — same precedence, for location-document checklist items.
+    companyLocations: LocationValues[] | null;
   };
   verificationProgram: {
     type: string;
@@ -244,6 +247,7 @@ export function AssignmentDetail({ id }: Props) {
             payload={data.application.payload}
             businessAddress={data.company.businessAddress}
             companyLegal={data.company.companyLegal}
+            companyLocations={data.company.companyLocations}
           />
         )}
         {activeTab === "Survey Lapangan" && (

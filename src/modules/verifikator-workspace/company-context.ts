@@ -1,3 +1,4 @@
+import type { LocationValues } from "@/modules/shared/schema";
 import type { ChecklistCompanyContext } from "./schema";
 
 /**
@@ -99,6 +100,7 @@ export function toChecklistCompanyContext(
     npwpDocumentPath: string | null;
     sktDocumentPath: string | null;
     taxProofs: unknown;
+    locations: unknown;
   } | null,
 ): ChecklistCompanyContext | null {
   if (!company) return null;
@@ -112,5 +114,16 @@ export function toChecklistCompanyContext(
     npwpDocumentPath: company.npwpDocumentPath,
     sktDocumentPath: company.sktDocumentPath,
     taxProofs: company.taxProofs as ChecklistCompanyContext["taxProofs"],
+    locations: company.locations as LocationValues[] | null,
   };
+}
+
+/**
+ * Live `Company.locations` alone, JSON-safe for the interactive checklist's `ChecklistContext`
+ * and the printed report's `NarrativeContext` — both need the same live-vs-payload-snapshot
+ * lookup `buildDocumentChecklist` above already does for its own `documentPath` resolution.
+ */
+export function toCompanyLocationsContext(company: { locations: unknown } | null): LocationValues[] | null {
+  if (!company) return null;
+  return company.locations as LocationValues[] | null;
 }

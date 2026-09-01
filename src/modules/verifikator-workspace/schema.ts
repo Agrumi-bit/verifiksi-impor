@@ -8,7 +8,7 @@ import {
 } from "@/modules/applications/schema";
 import { documentFieldCode, type DocumentFieldKey } from "@/modules/company/document-fields";
 import { slugify } from "@/lib/document-filename";
-import { OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS } from "@/modules/shared/schema";
+import { OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS, type LocationValues } from "@/modules/shared/schema";
 import {
   PRODUCT_VERIFICATION_STATUSES,
   MACHINE_VERIFICATION_STATUSES,
@@ -60,6 +60,14 @@ export type ChecklistCompanyContext = {
   npwpDocumentPath: string | null;
   sktDocumentPath: string | null;
   taxProofs: { year: string; type?: string | null; docPath?: string | null }[] | null;
+  /**
+   * Live `Company.locations` — Company Workspace's "Facilities" tab lets a company edit/re-upload
+   * a location's ownership/lease/warehouse documents after the application was submitted, same as
+   * every other company-mapped field above. `payload.locations` stays a frozen snapshot, so every
+   * location-keyed checklist item below must prefer the matching live entry (looked up by `id`,
+   * preserved across edits — see `FacilitiesTab`) over the payload's own copy.
+   */
+  locations: LocationValues[] | null;
 };
 
 /**
@@ -268,7 +276,11 @@ export function buildDocumentChecklist(
     });
   }
 
-  for (const loc of payload.locations ?? []) {
+  for (const payloadLoc of payload.locations ?? []) {
+    // Prefer the live Company.locations entry (same id, edited via Company Workspace's
+    // Facilities tab after submission) over the frozen payload snapshot — see
+    // `ChecklistCompanyContext.locations` above.
+    const loc = company?.locations?.find((l) => l.id === payloadLoc.id) ?? payloadLoc;
     const label = LOCATION_TYPE_NAMES[loc.locationType] ?? loc.locationType;
     if (loc.buildingStatus === "MILIK_SENDIRI") {
       for (const entry of loc.ownershipDocuments ?? []) {
