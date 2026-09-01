@@ -4,7 +4,13 @@ import { useState } from "react";
 
 import { MaterialIcon } from "../material-icon";
 import { SectionShell } from "../office-verification/section-shell";
-import { docTypeDefs, MIN_DOCUMENTATION_REQUIRED, type FieldKind, type DocumentationItemValues } from "./schema";
+import {
+  docTypeDefs,
+  MIN_DOCUMENTATION_REQUIRED,
+  type FieldKind,
+  type DocumentationItemValues,
+  type DocumentationOtherItemValues,
+} from "./schema";
 
 type UploadState = { uploading: boolean; error?: string; previewUrl?: string };
 
@@ -12,7 +18,11 @@ type Props = {
   kind: FieldKind;
   index: number;
   documentation: Record<string, DocumentationItemValues>;
+  documentationOther: DocumentationOtherItemValues[];
   onChange: (key: string, patch: Partial<DocumentationItemValues>) => void;
+  onOtherChange: (id: string, patch: Partial<DocumentationOtherItemValues>) => void;
+  onOtherAdd: (id: string) => void;
+  onOtherRemove: (id: string) => void;
   onSave: () => void;
   onSaveNext: () => void;
   isSaving?: boolean;
@@ -28,10 +38,40 @@ async function uploadFile(file: File): Promise<string> {
   return data.path;
 }
 
-export function SectionDocumentation({ kind, index, documentation, onChange, onSave, onSaveNext, isSaving }: Props) {
+export function SectionDocumentation({
+  kind,
+  index,
+  documentation,
+  documentationOther,
+  onChange,
+  onOtherChange,
+  onOtherAdd,
+  onOtherRemove,
+  onSave,
+  onSaveNext,
+  isSaving,
+}: Props) {
   const [uploads, setUploads] = useState<Record<string, UploadState>>({});
   const docTypes = docTypeDefs(kind);
-  const filledCount = Object.values(documentation).filter((d) => d.filePath).length;
+  const otherLabel = docTypes.find((dt) => dt.key === "other")!.label;
+  const fixedDocTypes = docTypes.filter((dt) => dt.key !== "other");
+  const filledCount =
+    Object.values(documentation).filter((d) => d.filePath).length + documentationOther.filter((d) => d.filePath).length;
+
+  async function handleOtherFile(file: File | undefined) {
+    if (!file) return;
+    const id = crypto.randomUUID();
+    const previewUrl = URL.createObjectURL(file);
+    onOtherAdd(id);
+    setUploads((prev) => ({ ...prev, [id]: { uploading: true, previewUrl } }));
+    try {
+      const path = await uploadFile(file);
+      onOtherChange(id, { filePath: path });
+      setUploads((prev) => ({ ...prev, [id]: { uploading: false, previewUrl } }));
+    } catch {
+      setUploads((prev) => ({ ...prev, [id]: { uploading: false, previewUrl, error: "Gagal mengunggah file" } }));
+    }
+  }
 
   async function handleFile(key: string, file: File | undefined) {
     if (!file) return;
@@ -71,7 +111,7 @@ export function SectionDocumentation({ kind, index, documentation, onChange, onS
       )}
 
       <div className="mb-1 flex flex-col gap-3.5">
-        {docTypes.map((dt) => {
+        {fixedDocTypes.map((dt) => {
           const item = documentation[dt.key] ?? {};
           const upload = uploads[dt.key];
           const galleryInputId = `${kind}-doc-gallery-${dt.key}`;
@@ -181,6 +221,70 @@ export function SectionDocumentation({ kind, index, documentation, onChange, onS
             </div>
           );
         })}
+      </div>
+
+      <div className="mt-5 border-t border-[#e0e5eb] pt-5">
+        <div className="mb-3 text-[13.5px] font-semibold text-[#1c2530]">{otherLabel}</div>
+        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4">
+          {documentationOther.map((item) => {
+            const upload = uploads[item.id];
+            return (
+              <div key={item.id} className="min-w-0 rounded-xl border-[1.5px] border-[#f26522] p-3.5">
+                <div className="relative">
+                  {upload?.previewUrl ? (
+                    <div className="aspect-3/4 w-full rounded-lg bg-cover bg-center" style={{ backgroundImage: `url(${upload.previewUrl})` }} />
+                  ) : item.filePath ? (
+                    <div className="flex aspect-3/4 w-full flex-col items-center justify-center gap-1.5 rounded-lg bg-[#f2f0ee] text-[#8a96a8]">
+                      <MaterialIcon name="image" className="text-[28px]" />
+                      <span className="text-xs">Sudah diunggah</span>
+                    </div>
+                  ) : (
+                    <div className="flex aspect-3/4 w-full items-center justify-center rounded-lg bg-[#f2f0ee] text-[#8a96a8]">
+                      <MaterialIcon name="hourglass_empty" className="text-[22px]" />
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => onOtherRemove(item.id)}
+                    aria-label="Hapus foto"
+                    className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-full bg-[#1c2530]/70 text-white hover:bg-[#dc2626]"
+                  >
+                    <MaterialIcon name="delete" className="text-base" />
+                  </button>
+                </div>
+                {upload?.uploading && <div className="mt-2 text-xs text-[#8a96a8]">Mengunggah...</div>}
+                {upload?.error && <div className="mt-2 text-xs text-[#dc2626]">{upload.error}</div>}
+                <textarea
+                  value={item.caption ?? ""}
+                  onChange={(e) => onOtherChange(item.id, { caption: e.target.value })}
+                  placeholder="Keterangan"
+                  className="mt-2 min-h-[44px] w-full resize-y rounded-lg border border-[#d7dbe0] p-2 text-[12px]"
+                />
+              </div>
+            );
+          })}
+
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => document.getElementById(`${kind}-doc-other-gallery`)?.click()}
+            onKeyDown={(e) => e.key === "Enter" && document.getElementById(`${kind}-doc-other-gallery`)?.click()}
+            className="flex aspect-3/4 min-w-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-dashed border-[#c7d0dc] bg-[#f2f2f2] p-3.5"
+          >
+            <MaterialIcon name="add_photo_alternate" className="text-[28px] text-[#f26522]" />
+            <span className="text-center text-xs text-[#6b7685]">Tambah Foto</span>
+            <input
+              id={`${kind}-doc-other-gallery`}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                handleOtherFile(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </div>
+        </div>
       </div>
     </SectionShell>
   );

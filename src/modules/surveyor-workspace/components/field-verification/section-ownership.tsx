@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { InlineDocumentPreview } from "@/components/inline-document-preview";
+import { DocumentPreviewModal } from "@/components/document-preview-modal";
 import { SectionShell } from "../office-verification/section-shell";
 import { SurveyorNotes } from "../office-verification/question-list";
 import { ownershipQuestion, sewaQuestions, LOCATION_LABEL, type FieldKind, type AnswerValues } from "./schema";
@@ -108,16 +108,13 @@ export function SectionOwnership({
               {ownershipDocPath && (
                 <button
                   type="button"
-                  onClick={() => setPreviewOpen((cur) => (cur === "ownership" ? null : "ownership"))}
+                  onClick={() => setPreviewOpen("ownership")}
                   className="whitespace-nowrap rounded-lg border border-[#d7dbe0] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#1c2530]"
                 >
-                  {previewOpen === "ownership" ? "Sembunyikan Dokumen" : "Lihat Dokumen"}
+                  Lihat Dokumen
                 </button>
               )}
             </div>
-            {previewOpen === "ownership" && ownershipDocPath && (
-              <InlineDocumentPreview documentPath={ownershipDocPath} label={`Dokumen Kepemilikan ${label}`} />
-            )}
           </div>
           <div className="mb-5 rounded-xl border border-[#dbe4f0] bg-white p-[18px]">
             <div className="mb-1 text-[14.5px] font-bold text-[#1c2530]">{ownershipQ.title}</div>
@@ -138,16 +135,13 @@ export function SectionOwnership({
               {leaseDocPath && (
                 <button
                   type="button"
-                  onClick={() => setPreviewOpen((cur) => (cur === "lease" ? null : "lease"))}
+                  onClick={() => setPreviewOpen("lease")}
                   className="whitespace-nowrap rounded-lg border border-[#d7dbe0] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#1c2530]"
                 >
-                  {previewOpen === "lease" ? "Sembunyikan Dokumen" : "Lihat Dokumen"}
+                  Lihat Dokumen
                 </button>
               )}
             </div>
-            {previewOpen === "lease" && leaseDocPath && (
-              <InlineDocumentPreview documentPath={leaseDocPath} label={`Dokumen Sewa Menyewa ${label}`} />
-            )}
           </div>
 
           <div className="mb-5 flex flex-col gap-4">
@@ -204,6 +198,13 @@ export function SectionOwnership({
         onChange={onNotesChange}
         placeholder={`Contoh: ${label} perusahaan menggunakan bangunan yang disewa dengan masa sewa yang masih berlaku hingga saat verifikasi dilakukan.`}
       />
+
+      {previewOpen === "ownership" && ownershipDocPath && (
+        <DocumentPreviewModal documentPath={ownershipDocPath} label={`Dokumen Kepemilikan ${label}`} onClose={() => setPreviewOpen(null)} />
+      )}
+      {previewOpen === "lease" && leaseDocPath && (
+        <DocumentPreviewModal documentPath={leaseDocPath} label={`Dokumen Sewa Menyewa ${label}`} onClose={() => setPreviewOpen(null)} />
+      )}
     </SectionShell>
   );
 }

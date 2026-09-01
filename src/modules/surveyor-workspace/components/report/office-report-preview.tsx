@@ -222,7 +222,12 @@ export function OfficeReportPreview({
   const findings = computeFindings(ov);
   const kinds = computeSectionKinds(ov, buildingStatus);
   const surveyorName = data.surveyorName ?? "—";
-  const docsFilled = Object.values(ov.documentation).filter((d) => d.filePath).length;
+  const docsFilled =
+    Object.values(ov.documentation).filter((d) => d.filePath).length + ov.documentationOther.filter((d) => d.filePath).length;
+  // "Dokumentasi Lainnya" is a real array (multi-photo), not one more single-slot DOC_TYPE_DEFS
+  // key — rendered separately below.
+  const fixedDocTypeDefs = DOC_TYPE_DEFS.filter((dt) => dt.key !== "other");
+  const otherLabel = DOC_TYPE_DEFS.find((dt) => dt.key === "other")!.label;
   const company = data.company.companyName;
   const reportVerification = data.reportVerification;
   const reviewDecision = reportVerification?.decision ?? null;
@@ -900,10 +905,10 @@ export function OfficeReportPreview({
           </h2>
           <p className="rd-lede">
             Dokumentasi visual yang menunjukkan kondisi kantor perusahaan pada saat verifikasi lapangan dilakukan (
-            {docsFilled} dari {DOC_TYPE_DEFS.length} diunggah, minimal {MIN_DOCUMENTATION_REQUIRED}).
+            {docsFilled} dari {fixedDocTypeDefs.length + ov.documentationOther.length} diunggah, minimal {MIN_DOCUMENTATION_REQUIRED}).
           </p>
           <div className="rd-photo-grid">
-            {DOC_TYPE_DEFS.map((dt) => {
+            {fixedDocTypeDefs.map((dt) => {
               const item = ov.documentation[dt.key];
               return (
                 <div className="rd-photo-card" key={dt.key}>
@@ -924,6 +929,26 @@ export function OfficeReportPreview({
                 </div>
               );
             })}
+            {ov.documentationOther.map((item, i) => (
+              <div className="rd-photo-card" key={item.id}>
+                <div className={`rd-photo-thumb ${item.filePath ? "rd-photo-filled" : ""}`}>
+                  {item.filePath ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={`/api/files?path=${encodeURIComponent(item.filePath)}`}
+                      alt={otherLabel}
+                      style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }}
+                    />
+                  ) : (
+                    <MaterialIcon name="hide_image" className="text-2xl" />
+                  )}
+                </div>
+                <div className="rd-photo-name">
+                  {otherLabel} #{i + 1}
+                </div>
+                <div className="rd-photo-caption">{item.filePath ? item.caption || "Terunggah" : "Belum diunggah"}</div>
+              </div>
+            ))}
           </div>
         </PageShell>
 
@@ -1178,12 +1203,23 @@ export function OfficeReportPreview({
           <div className="rd-card-lg" style={{ background: "#fff", overflow: "hidden", marginBottom: 20 }}>
             <table className="rd-table">
               <tbody>
-                {DOC_TYPE_DEFS.map((dt, i) => (
+                {fixedDocTypeDefs.map((dt, i) => (
                   <tr key={dt.key}>
                     <td style={{ width: "8%", color: "var(--ink-faint)" }}>{String(i + 1).padStart(2, "0")}</td>
                     <td>{dt.label}</td>
                     <td style={{ textAlign: "right", color: "var(--ink-faint)" }}>
                       {ov.documentation[dt.key]?.filePath ? fmtDate(data.submittedAt) : "belum diunggah"}
+                    </td>
+                  </tr>
+                ))}
+                {ov.documentationOther.map((item, i) => (
+                  <tr key={item.id}>
+                    <td style={{ width: "8%", color: "var(--ink-faint)" }}>{String(fixedDocTypeDefs.length + i + 1).padStart(2, "0")}</td>
+                    <td>
+                      {otherLabel} #{i + 1}
+                    </td>
+                    <td style={{ textAlign: "right", color: "var(--ink-faint)" }}>
+                      {item.filePath ? fmtDate(data.submittedAt) : "belum diunggah"}
                     </td>
                   </tr>
                 ))}

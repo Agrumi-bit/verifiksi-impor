@@ -3,21 +3,46 @@
 import { useState } from "react";
 
 import { MaterialIcon } from "../material-icon";
-import { InlineDocumentPreview } from "@/components/inline-document-preview";
+import { DocumentPreviewModal } from "@/components/document-preview-modal";
+import { composeLocationAddress } from "@/modules/shared/schema";
 import { SectionShell } from "./section-shell";
 import type { DocCheckValues } from "./schema";
 
+type PayloadLocation = {
+  address?: string | null;
+  addressDesa?: string | null;
+  addressKecamatan?: string | null;
+  city?: string | null;
+  province?: string | null;
+};
+
 type Props = {
   docs: DocCheckValues[];
+  payloadLocation: PayloadLocation | null;
   onChange: (key: string, patch: Partial<DocCheckValues>) => void;
   onSave: () => void;
   onSaveNext: () => void;
   isSaving?: boolean;
 };
 
-export function Section1Documents({ docs, onChange, onSave, onSaveNext, isSaving }: Props) {
+export function Section1Documents({ docs, payloadLocation, onChange, onSave, onSaveNext, isSaving }: Props) {
   const [expandedKey, setExpandedKey] = useState<string | null>(docs[0]?.key ?? null);
   const [previewKey, setPreviewKey] = useState<string | null>(null);
+
+  const systemAddress = payloadLocation
+    ? [
+        composeLocationAddress({
+          address: payloadLocation.address ?? undefined,
+          addressDesa: payloadLocation.addressDesa ?? undefined,
+          addressKecamatan: payloadLocation.addressKecamatan ?? undefined,
+        }),
+        payloadLocation.city,
+        payloadLocation.province,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "";
+  const previewDoc = docs.find((d) => d.key === previewKey) ?? null;
 
   return (
     <SectionShell
@@ -70,12 +95,6 @@ export function Section1Documents({ docs, onChange, onSave, onSaveNext, isSaving
               </div>
               {expanded && (
                 <div className="mt-3.5">
-                  <textarea
-                    value={doc.addressText ?? ""}
-                    onChange={(e) => onChange(doc.key, { addressText: e.target.value })}
-                    placeholder={`isikan alamat kantor pada ${doc.name}`}
-                    className="mb-4 min-h-[56px] w-full resize-y rounded-[10px] border border-[#e4e8ee] bg-[#f6f7f9] p-3 text-[13.5px]"
-                  />
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="mb-0.5 text-sm font-bold" style={{ color: textColor }}>
@@ -89,37 +108,36 @@ export function Section1Documents({ docs, onChange, onSave, onSaveNext, isSaving
                       {doc.documentPath && (
                         <button
                           type="button"
-                          onClick={() => setPreviewKey((cur) => (cur === doc.key ? null : doc.key))}
+                          onClick={() => setPreviewKey(doc.key)}
                           className="rounded-[9px] border border-[#d7dbe0] bg-white px-4 py-2 text-[13px] font-bold text-[#1c2530]"
                         >
-                          {previewKey === doc.key ? "Sembunyikan Dokumen" : "Lihat Dokumen"}
+                          Lihat Dokumen
                         </button>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => onChange(doc.key, { status: "rejected" })}
-                        className="rounded-[9px] bg-[#dc2626] px-4 py-2 text-[13px] font-bold text-white"
-                      >
-                        Reject
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onChange(doc.key, { status: "approved" })}
-                        className="rounded-[9px] bg-[#16a34a] px-4 py-2 text-[13px] font-bold text-white"
-                      >
-                        Approve
-                      </button>
                     </div>
                   </div>
-                  {previewKey === doc.key && doc.documentPath && (
-                    <InlineDocumentPreview documentPath={doc.documentPath} label={doc.name} />
-                  )}
                 </div>
               )}
             </div>
           );
         })}
       </div>
+
+      {previewDoc?.documentPath && (
+        <DocumentPreviewModal
+          documentPath={previewDoc.documentPath}
+          label={previewDoc.name}
+          onClose={() => setPreviewKey(null)}
+          locationCheck={{
+            systemAddress,
+            actualAddress: previewDoc.addressText ?? "",
+            onActualAddressChange: (value) => onChange(previewDoc.key, { addressText: value }),
+            status: previewDoc.status,
+            onApprove: () => onChange(previewDoc.key, { status: "approved" }),
+            onReject: () => onChange(previewDoc.key, { status: "rejected" }),
+          }}
+        />
+      )}
     </SectionShell>
   );
 }

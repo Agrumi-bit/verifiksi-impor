@@ -24,6 +24,9 @@ const answerSchema = z.object({
 const docCheckSchema = z.object({
   key: z.string(),
   name: z.string(),
+  // "Uraian yang Diperiksa" for this section is a single question: does the location address on
+  // file match what the surveyor actually finds on-site? `addressText` is that on-site answer —
+  // a real input field, not a display value.
   addressText: z.string().trim().optional(),
   status: z.enum(["pending", "approved", "rejected"]).default("pending"),
   // Baked in once at row-creation time (buildDefaultSection1Docs), same as `name` — the source
@@ -35,6 +38,16 @@ const documentationItemSchema = z.object({
   filePath: z.string().trim().optional(),
   caption: z.string().trim().optional(),
 });
+
+// "Dokumentasi Lainnya" is the one documentation type that isn't a single fixed slot — a surveyor
+// can have any number of miscellaneous photos, so it's a real array instead of one more key in the
+// single-slot `documentation` record below.
+const documentationOtherItemSchema = z.object({
+  id: z.string(),
+  filePath: z.string().trim().optional(),
+  caption: z.string().trim().optional(),
+});
+export type DocumentationOtherItemValues = z.infer<typeof documentationOtherItemSchema>;
 
 const capacitySchema = z.object({
   luasTotal: z.number().nullable().default(null),
@@ -74,6 +87,7 @@ export const fieldVerificationSchema = z.object({
   section6Notes: z.string().trim().optional(),
 
   documentation: z.record(z.string(), documentationItemSchema).default({}),
+  documentationOther: z.array(documentationOtherItemSchema).default([]),
 
   findingsExplanation: z.string().trim().optional(),
   findingsImpact: z.enum(FINDINGS_IMPACTS).nullable().default(null),
@@ -276,7 +290,9 @@ export function computeSectionKinds(
 
   result.push(kindForKeys(SECTION6_QUESTIONS[kind].map((q) => q.key), values.section6Answers));
 
-  const docCount = Object.values(values.documentation).filter((d) => d.filePath).length;
+  const docCount =
+    Object.values(values.documentation).filter((d) => d.filePath).length +
+    values.documentationOther.filter((d) => d.filePath).length;
   result.push(docCount >= MIN_DOCUMENTATION_REQUIRED ? "ok" : "unfilled");
 
   const findingsCount = computeFindings(kind, values).length;

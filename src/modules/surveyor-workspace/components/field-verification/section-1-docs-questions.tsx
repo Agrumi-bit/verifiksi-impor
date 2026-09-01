@@ -3,14 +3,24 @@
 import { useState } from "react";
 
 import { MaterialIcon } from "../material-icon";
-import { InlineDocumentPreview } from "@/components/inline-document-preview";
+import { DocumentPreviewModal } from "@/components/document-preview-modal";
+import { composeLocationAddress } from "@/modules/shared/schema";
 import { SectionShell } from "../office-verification/section-shell";
 import { QuestionList } from "../office-verification/question-list";
 import { SECTION1_QUESTIONS, LOCATION_LABEL, type FieldKind, type AnswerValues, type DocCheckValues } from "./schema";
 
+type PayloadLocation = {
+  address?: string | null;
+  addressDesa?: string | null;
+  addressKecamatan?: string | null;
+  city?: string | null;
+  province?: string | null;
+};
+
 type Props = {
   kind: FieldKind;
   docs: DocCheckValues[];
+  payloadLocation: PayloadLocation | null;
   answers: Record<string, AnswerValues>;
   onDocChange: (key: string, patch: Partial<DocCheckValues>) => void;
   onAnswer: (key: string, value: AnswerValues) => void;
@@ -22,6 +32,7 @@ type Props = {
 export function Section1DocsQuestions({
   kind,
   docs,
+  payloadLocation,
   answers,
   onDocChange,
   onAnswer,
@@ -32,6 +43,21 @@ export function Section1DocsQuestions({
   const [expandedKey, setExpandedKey] = useState<string | null>(docs[0]?.key ?? null);
   const [previewKey, setPreviewKey] = useState<string | null>(null);
   const label = LOCATION_LABEL[kind].toLowerCase();
+
+  const systemAddress = payloadLocation
+    ? [
+        composeLocationAddress({
+          address: payloadLocation.address ?? undefined,
+          addressDesa: payloadLocation.addressDesa ?? undefined,
+          addressKecamatan: payloadLocation.addressKecamatan ?? undefined,
+        }),
+        payloadLocation.city,
+        payloadLocation.province,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "";
+  const previewDoc = docs.find((d) => d.key === previewKey) ?? null;
 
   return (
     <SectionShell index={1} title={`Kesesuaian Lokasi ${LOCATION_LABEL[kind]} Berdasarkan Dokumen`} onSave={onSave} onSaveNext={onSaveNext} isSaving={isSaving}>
@@ -71,12 +97,6 @@ export function Section1DocsQuestions({
               </div>
               {expanded && (
                 <div className="mt-3.5">
-                  <textarea
-                    value={doc.addressText ?? ""}
-                    onChange={(e) => onDocChange(doc.key, { addressText: e.target.value })}
-                    placeholder={`isikan alamat ${label} pada ${doc.name}`}
-                    className="mb-4 min-h-[56px] w-full resize-y rounded-[10px] border border-[#e4e8ee] bg-[#f6f7f9] p-3 text-[13.5px]"
-                  />
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="mb-0.5 text-sm font-bold" style={{ color: textColor }}>
@@ -90,31 +110,14 @@ export function Section1DocsQuestions({
                       {doc.documentPath && (
                         <button
                           type="button"
-                          onClick={() => setPreviewKey((cur) => (cur === doc.key ? null : doc.key))}
+                          onClick={() => setPreviewKey(doc.key)}
                           className="rounded-[9px] border border-[#d7dbe0] bg-white px-4 py-2 text-[13px] font-bold text-[#1c2530]"
                         >
-                          {previewKey === doc.key ? "Sembunyikan Dokumen" : "Lihat Dokumen"}
+                          Lihat Dokumen
                         </button>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => onDocChange(doc.key, { status: "rejected" })}
-                        className="rounded-[9px] bg-[#dc2626] px-4 py-2 text-[13px] font-bold text-white"
-                      >
-                        Reject
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDocChange(doc.key, { status: "approved" })}
-                        className="rounded-[9px] bg-[#16a34a] px-4 py-2 text-[13px] font-bold text-white"
-                      >
-                        Approve
-                      </button>
                     </div>
                   </div>
-                  {previewKey === doc.key && doc.documentPath && (
-                    <InlineDocumentPreview documentPath={doc.documentPath} label={doc.name} />
-                  )}
                 </div>
               )}
             </div>
@@ -124,6 +127,22 @@ export function Section1DocsQuestions({
 
       <div className="mb-3.5 text-sm font-extrabold text-[#1c2530]">Pertanyaan Verifikasi</div>
       <QuestionList questions={SECTION1_QUESTIONS[kind]} answers={answers} onAnswer={onAnswer} />
+
+      {previewDoc?.documentPath && (
+        <DocumentPreviewModal
+          documentPath={previewDoc.documentPath}
+          label={previewDoc.name}
+          onClose={() => setPreviewKey(null)}
+          locationCheck={{
+            systemAddress,
+            actualAddress: previewDoc.addressText ?? "",
+            onActualAddressChange: (value) => onDocChange(previewDoc.key, { addressText: value }),
+            status: previewDoc.status,
+            onApprove: () => onDocChange(previewDoc.key, { status: "approved" }),
+            onReject: () => onDocChange(previewDoc.key, { status: "rejected" }),
+          }}
+        />
+      )}
     </SectionShell>
   );
 }

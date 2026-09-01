@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { InlineDocumentPreview } from "@/components/inline-document-preview";
+import { DocumentPreviewModal } from "@/components/document-preview-modal";
 import { SectionShell } from "./section-shell";
 import { SurveyorNotes } from "./question-list";
 import { OWNERSHIP_QUESTION, SEWA_QUESTIONS, type AnswerValues } from "./schema";
@@ -118,16 +118,13 @@ export function Section3Ownership({
             {ownershipDocPath && (
               <button
                 type="button"
-                onClick={() => setPreviewOpen((cur) => (cur === "ownership" ? null : "ownership"))}
+                onClick={() => setPreviewOpen("ownership")}
                 className="whitespace-nowrap rounded-lg border border-[#d7dbe0] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#1c2530]"
               >
-                {previewOpen === "ownership" ? "Sembunyikan Dokumen" : "Lihat Dokumen"}
+                Lihat Dokumen
               </button>
             )}
           </div>
-          {previewOpen === "ownership" && ownershipDocPath && (
-            <InlineDocumentPreview documentPath={ownershipDocPath} label="Dokumen Kepemilikan" />
-          )}
         </div>
       )}
       {buildingStatus === "MILIK_SENDIRI" && (
@@ -149,16 +146,13 @@ export function Section3Ownership({
               {leaseDocPath && (
                 <button
                   type="button"
-                  onClick={() => setPreviewOpen((cur) => (cur === "lease" ? null : "lease"))}
+                  onClick={() => setPreviewOpen("lease")}
                   className="whitespace-nowrap rounded-lg border border-[#d7dbe0] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#1c2530]"
                 >
-                  {previewOpen === "lease" ? "Sembunyikan Dokumen" : "Lihat Dokumen"}
+                  Lihat Dokumen
                 </button>
               )}
             </div>
-            {previewOpen === "lease" && leaseDocPath && (
-              <InlineDocumentPreview documentPath={leaseDocPath} label="Dokumen Sewa Menyewa" />
-            )}
           </div>
 
           <div className="mb-5 flex flex-col gap-4">
@@ -228,6 +222,13 @@ export function Section3Ownership({
         onChange={onNotesChange}
         placeholder="Contoh: Kantor perusahaan menggunakan bangunan yang disewa dengan masa sewa selama 3 tahun dan masih berlaku hingga saat verifikasi dilakukan."
       />
+
+      {previewOpen === "ownership" && ownershipDocPath && (
+        <DocumentPreviewModal documentPath={ownershipDocPath} label="Dokumen Kepemilikan" onClose={() => setPreviewOpen(null)} />
+      )}
+      {previewOpen === "lease" && leaseDocPath && (
+        <DocumentPreviewModal documentPath={leaseDocPath} label="Dokumen Sewa Menyewa" onClose={() => setPreviewOpen(null)} />
+      )}
     </SectionShell>
   );
 }

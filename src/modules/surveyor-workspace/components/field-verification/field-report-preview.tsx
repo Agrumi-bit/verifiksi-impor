@@ -238,7 +238,12 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
   const titles = sectionTitles(kind);
   const surveyorName = data.surveyorName ?? "—";
   const docTypes = docTypeDefs(kind);
-  const docsFilled = Object.values(fv.documentation).filter((d) => d.filePath).length;
+  const docsFilled =
+    Object.values(fv.documentation).filter((d) => d.filePath).length + fv.documentationOther.filter((d) => d.filePath).length;
+  // "Dokumentasi Lainnya" is a real array (multi-photo), not one more single-slot docTypes key —
+  // rendered separately below.
+  const fixedDocTypes = docTypes.filter((dt) => dt.key !== "other");
+  const otherLabel = docTypes.find((dt) => dt.key === "other")!.label;
   const company = data.company.companyName;
   const capacityEfektif = computeCapacityEfektif(fv.capacity);
 
@@ -1020,10 +1025,10 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
           </h2>
           <p className="rd-lede">
             Dokumentasi visual yang menunjukkan kondisi {label.toLowerCase()} perusahaan pada saat verifikasi
-            lapangan dilakukan ({docsFilled} dari {docTypes.length} diunggah, minimal {MIN_DOCUMENTATION_REQUIRED}).
+            lapangan dilakukan ({docsFilled} dari {fixedDocTypes.length + fv.documentationOther.length} diunggah, minimal {MIN_DOCUMENTATION_REQUIRED}).
           </p>
           <div className="rd-photo-grid">
-            {docTypes.map((dt) => {
+            {fixedDocTypes.map((dt) => {
               const item = fv.documentation[dt.key];
               return (
                 <div className="rd-photo-card" key={dt.key}>
@@ -1044,6 +1049,26 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
                 </div>
               );
             })}
+            {fv.documentationOther.map((item, i) => (
+              <div className="rd-photo-card" key={item.id}>
+                <div className={`rd-photo-thumb ${item.filePath ? "rd-photo-filled" : ""}`}>
+                  {item.filePath ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={`/api/files?path=${encodeURIComponent(item.filePath)}`}
+                      alt={otherLabel}
+                      style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }}
+                    />
+                  ) : (
+                    <MaterialIcon name="hide_image" className="text-2xl" />
+                  )}
+                </div>
+                <div className="rd-photo-name">
+                  {otherLabel} #{i + 1}
+                </div>
+                <div className="rd-photo-caption">{item.filePath ? item.caption || "Terunggah" : "Belum diunggah"}</div>
+              </div>
+            ))}
           </div>
         </PageShell>
 
@@ -1312,12 +1337,23 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
           <div className="rd-card-lg" style={{ background: "#fff", overflow: "hidden", marginBottom: 20 }}>
             <table className="rd-table">
               <tbody>
-                {docTypes.map((dt, i) => (
+                {fixedDocTypes.map((dt, i) => (
                   <tr key={dt.key}>
                     <td style={{ width: "8%", color: "var(--ink-faint)" }}>{String(i + 1).padStart(2, "0")}</td>
                     <td>{dt.label}</td>
                     <td style={{ textAlign: "right", color: "var(--ink-faint)" }}>
                       {fv.documentation[dt.key]?.filePath ? fmtDate(data.submittedAt) : "belum diunggah"}
+                    </td>
+                  </tr>
+                ))}
+                {fv.documentationOther.map((item, i) => (
+                  <tr key={item.id}>
+                    <td style={{ width: "8%", color: "var(--ink-faint)" }}>{String(fixedDocTypes.length + i + 1).padStart(2, "0")}</td>
+                    <td>
+                      {otherLabel} #{i + 1}
+                    </td>
+                    <td style={{ textAlign: "right", color: "var(--ink-faint)" }}>
+                      {item.filePath ? fmtDate(data.submittedAt) : "belum diunggah"}
                     </td>
                   </tr>
                 ))}

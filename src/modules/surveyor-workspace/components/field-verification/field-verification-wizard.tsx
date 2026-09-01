@@ -32,6 +32,10 @@ import { FieldVerificationSidebar } from "./sidebar";
 import { SECTION4_QUESTIONS, SECTION6_QUESTIONS } from "./schema";
 
 type PayloadLocation = {
+  address?: string | null;
+  addressDesa?: string | null;
+  addressKecamatan?: string | null;
+  city?: string | null;
   buildingStatus?: "MILIK_SENDIRI" | "SEWA" | null;
   ownershipDocuments?: { type: string; documentPath?: string | null }[] | null;
   leaseDocuments?: { type: string; documentPath?: string | null }[] | null;
@@ -274,6 +278,7 @@ export function FieldVerificationWizard({ kind, assignmentId, locationId }: Prop
           <Section1DocsQuestions
             kind={kind}
             docs={values.section1Docs}
+            payloadLocation={data.payloadLocation}
             answers={values.section1Answers}
             onDocChange={(key, docPatch) => patch({ section1Docs: values.section1Docs.map((d) => (d.key === key ? { ...d, ...docPatch } : d)) })}
             onAnswer={(key, v) => patch({ section1Answers: { ...values.section1Answers, [key]: v } })}
@@ -384,7 +389,15 @@ export function FieldVerificationWizard({ kind, assignmentId, locationId }: Prop
             kind={kind}
             index={idxDocumentation}
             documentation={values.documentation}
+            documentationOther={values.documentationOther}
             onChange={(key, docPatch) => patch({ documentation: { ...values.documentation, [key]: { ...values.documentation[key], ...docPatch } } })}
+            onOtherAdd={(id) => patch({ documentationOther: [...values.documentationOther, { id }] })}
+            onOtherChange={(id, itemPatch) =>
+              patch({
+                documentationOther: values.documentationOther.map((item) => (item.id === id ? { ...item, ...itemPatch } : item)),
+              })
+            }
+            onOtherRemove={(id) => patch({ documentationOther: values.documentationOther.filter((item) => item.id !== id) })}
             onSave={() => saveMutation.mutate(values)}
             onSaveNext={() => saveAndGoTo(idxFindings)}
             isSaving={saveMutation.isPending}
