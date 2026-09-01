@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
-import { composeLocationAddress } from "@/modules/shared/schema";
+import { composeLocationAddress, type LocationValues } from "@/modules/shared/schema";
 
 async function loadScopedLocation(assignmentNumber: string, locationId: string, surveyorId: string) {
   const visit = await db.locationVisit.findUnique({
@@ -37,10 +37,20 @@ export async function GET(
     return NextResponse.json({ error: "Lokasi tidak ditemukan" }, { status: 404 });
   }
 
-  const payload = visit.assignment.application.payload as ApplicationWizardValues;
-  const payloadLocation = (payload.locations ?? []).find(
+  const application = visit.assignment.application;
+  const payload = application.payload as ApplicationWizardValues;
+  // Prefer the live Company row over the frozen application payload — same staleness fix already
+  // applied to verifikator/CR's document checklists this session: a company can edit/re-upload
+  // legal docs and location documents via Company Workspace's profile editor after submission, and
+  // a surveyor visiting on-site afterward should see the current document, not what was on file at
+  // submission time.
+  const company = application.companyId ? await db.company.findUnique({ where: { id: application.companyId } }) : null;
+  const payloadLocationSnapshot = (payload.locations ?? []).find(
     (loc) => loc.locationType === visit.locationType && composeLocationAddress(loc) === visit.address,
   );
+  const liveLocations = (company?.locations as LocationValues[] | null) ?? null;
+  const liveLocation = liveLocations?.find((loc) => loc.id === payloadLocationSnapshot?.id) ?? null;
+  const payloadLocation = liveLocation ?? payloadLocationSnapshot;
 
   return NextResponse.json({
     data: {
@@ -53,17 +63,17 @@ export async function GET(
       warehouseVerification: visit.warehouseVerification ?? null,
       factoryVerification: visit.factoryVerification ?? null,
       assignmentNumber: visit.assignment.assignmentNumber,
-      applicationNumber: visit.assignment.application.applicationNumber,
-      verificationType: visit.assignment.application.verificationType,
+      applicationNumber: application.applicationNumber,
+      verificationType: application.verificationType,
       surveyorName: visit.assignment.surveyor?.name ?? null,
       company: {
         companyName: payload.companyName ?? "—",
-        nibNumber: payload.nibNumber ?? null,
-        nibDocumentPath: payload.nibDocumentPath ?? null,
-        notarialDeedNumber: payload.notarialDeedNumber ?? null,
-        notarialDocumentPath: payload.notarialDocumentPath ?? null,
+        nibNumber: company?.nibNumber || payload.nibNumber || null,
+        nibDocumentPath: company?.nibDocumentPath || payload.nibDocumentPath || null,
+        notarialDeedNumber: company?.notarialDeedNumber || payload.notarialDeedNumber || null,
+        notarialDocumentPath: company?.notarialDocumentPath || payload.notarialDocumentPath || null,
         kbliEntries: payload.kbliEntries ?? [],
-        kbliDocumentPath: payload.kbliDocumentPath ?? null,
+        kbliDocumentPath: company?.kbliDocumentPath || payload.kbliDocumentPath || null,
       },
       payloadLocation: payloadLocation ?? null,
     },

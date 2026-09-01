@@ -1,7 +1,8 @@
 "use client";
 
-import { toast } from "sonner";
+import { useState } from "react";
 
+import { InlineDocumentPreview } from "@/components/inline-document-preview";
 import { SectionShell } from "../office-verification/section-shell";
 import { SurveyorNotes } from "../office-verification/question-list";
 import { ownershipQuestion, sewaQuestions, LOCATION_LABEL, type FieldKind, type AnswerValues } from "./schema";
@@ -69,6 +70,9 @@ export function SectionOwnership({
   const label = LOCATION_LABEL[kind];
   const ownershipQ = ownershipQuestion(kind);
   const sewaQs = sewaQuestions(kind);
+  const [previewOpen, setPreviewOpen] = useState<"ownership" | "lease" | null>(null);
+  const ownershipDocPath = payloadLocation?.ownershipDocuments?.[0]?.documentPath;
+  const leaseDocPath = payloadLocation?.leaseDocuments?.[0]?.documentPath;
 
   return (
     <SectionShell index={2} title={`Status Kepemilikan ${label}`} onSave={onSave} onSaveNext={onSaveNext} isSaving={isSaving}>
@@ -95,20 +99,25 @@ export function SectionOwnership({
 
       {buildingStatus === "MILIK_SENDIRI" && (
         <>
-          <div className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-[#dbe4f0] bg-white p-[18px]">
-            <div>
-              <div className="mb-1 text-sm font-bold text-[#1c2530]">Dokumen Kepemilikan</div>
-              <div className="text-[13px] text-[#4a5568]">
-                {(payloadLocation?.ownershipDocuments?.length ?? 0) > 0 ? `Dokumen Kepemilikan ${label}` : "Belum diunggah"}
+          <div className="mb-5 rounded-xl border border-[#dbe4f0] bg-white p-[18px]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="mb-1 text-sm font-bold text-[#1c2530]">Dokumen Kepemilikan</div>
+                <div className="text-[13px] text-[#4a5568]">{ownershipDocPath ? `Dokumen Kepemilikan ${label}` : "Belum diunggah"}</div>
               </div>
+              {ownershipDocPath && (
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen((cur) => (cur === "ownership" ? null : "ownership"))}
+                  className="whitespace-nowrap rounded-lg border border-[#d7dbe0] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#1c2530]"
+                >
+                  {previewOpen === "ownership" ? "Sembunyikan Dokumen" : "Lihat Dokumen"}
+                </button>
+              )}
             </div>
-            <button
-              type="button"
-              onClick={() => toast.info("Pratinjau dokumen akan tersedia di iterasi berikutnya.")}
-              className="whitespace-nowrap rounded-lg border border-[#d7dbe0] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#1c2530]"
-            >
-              View Document
-            </button>
+            {previewOpen === "ownership" && ownershipDocPath && (
+              <InlineDocumentPreview documentPath={ownershipDocPath} label={`Dokumen Kepemilikan ${label}`} />
+            )}
           </div>
           <div className="mb-5 rounded-xl border border-[#dbe4f0] bg-white p-[18px]">
             <div className="mb-1 text-[14.5px] font-bold text-[#1c2530]">{ownershipQ.title}</div>
@@ -120,20 +129,25 @@ export function SectionOwnership({
 
       {buildingStatus === "SEWA" && (
         <>
-          <div className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-[#dbe4f0] bg-white p-[18px]">
-            <div>
-              <div className="mb-1 text-sm font-bold text-[#1c2530]">Dokumen Sewa</div>
-              <div className="text-[13px] text-[#4a5568]">
-                {(payloadLocation?.leaseDocuments?.length ?? 0) > 0 ? `Dokumen Sewa Menyewa ${label}` : "Belum diunggah"}
+          <div className="mb-5 rounded-xl border border-[#dbe4f0] bg-white p-[18px]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="mb-1 text-sm font-bold text-[#1c2530]">Dokumen Sewa</div>
+                <div className="text-[13px] text-[#4a5568]">{leaseDocPath ? `Dokumen Sewa Menyewa ${label}` : "Belum diunggah"}</div>
               </div>
+              {leaseDocPath && (
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen((cur) => (cur === "lease" ? null : "lease"))}
+                  className="whitespace-nowrap rounded-lg border border-[#d7dbe0] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#1c2530]"
+                >
+                  {previewOpen === "lease" ? "Sembunyikan Dokumen" : "Lihat Dokumen"}
+                </button>
+              )}
             </div>
-            <button
-              type="button"
-              onClick={() => toast.info("Pratinjau dokumen akan tersedia di iterasi berikutnya.")}
-              className="whitespace-nowrap rounded-lg border border-[#d7dbe0] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#1c2530]"
-            >
-              View Document
-            </button>
+            {previewOpen === "lease" && leaseDocPath && (
+              <InlineDocumentPreview documentPath={leaseDocPath} label={`Dokumen Sewa Menyewa ${label}`} />
+            )}
           </div>
 
           <div className="mb-5 flex flex-col gap-4">

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { MaterialIcon } from "../material-icon";
+import { InlineDocumentPreview } from "@/components/inline-document-preview";
 import { SectionShell } from "./section-shell";
 import type { DocCheckValues } from "./schema";
 
@@ -17,6 +17,7 @@ type Props = {
 
 export function Section1Documents({ docs, onChange, onSave, onSaveNext, isSaving }: Props) {
   const [expandedKey, setExpandedKey] = useState<string | null>(docs[0]?.key ?? null);
+  const [previewKey, setPreviewKey] = useState<string | null>(null);
 
   return (
     <SectionShell
@@ -85,13 +86,15 @@ export function Section1Documents({ docs, onChange, onSave, onSaveNext, isSaving
                       </div>
                     </div>
                     <div className="flex gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() => toast.info("Pratinjau dokumen akan tersedia di iterasi berikutnya.")}
-                        className="rounded-[9px] border border-[#d7dbe0] bg-white px-4 py-2 text-[13px] font-bold text-[#1c2530]"
-                      >
-                        View Document
-                      </button>
+                      {doc.documentPath && (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewKey((cur) => (cur === doc.key ? null : doc.key))}
+                          className="rounded-[9px] border border-[#d7dbe0] bg-white px-4 py-2 text-[13px] font-bold text-[#1c2530]"
+                        >
+                          {previewKey === doc.key ? "Sembunyikan Dokumen" : "Lihat Dokumen"}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => onChange(doc.key, { status: "rejected" })}
@@ -108,6 +111,9 @@ export function Section1Documents({ docs, onChange, onSave, onSaveNext, isSaving
                       </button>
                     </div>
                   </div>
+                  {previewKey === doc.key && doc.documentPath && (
+                    <InlineDocumentPreview documentPath={doc.documentPath} label={doc.name} />
+                  )}
                 </div>
               )}
             </div>

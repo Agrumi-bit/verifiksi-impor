@@ -56,18 +56,21 @@ function buildDefaultSection1Docs(
   payloadLocation: PayloadLocation | null,
 ): DocCheckValues[] {
   const docs: DocCheckValues[] = [];
-  if (company.nibDocumentPath) docs.push({ key: "nib", name: "NIB", status: "pending", addressText: "" });
+  if (company.nibDocumentPath) {
+    docs.push({ key: "nib", name: "NIB", status: "pending", addressText: "", documentPath: company.nibDocumentPath });
+  }
   if (company.notarialDocumentPath) {
-    docs.push({ key: "akta", name: "Akta Notaris", status: "pending", addressText: "" });
+    docs.push({ key: "akta", name: "Akta Notaris", status: "pending", addressText: "", documentPath: company.notarialDocumentPath });
   }
   const isSewa = payloadLocation?.buildingStatus === "SEWA";
-  const hasOwnershipDoc = ((isSewa ? payloadLocation?.leaseDocuments : payloadLocation?.ownershipDocuments) ?? []).length > 0;
-  if (hasOwnershipDoc) {
+  const ownershipDocs = (isSewa ? payloadLocation?.leaseDocuments : payloadLocation?.ownershipDocuments) ?? [];
+  if (ownershipDocs.length > 0) {
     docs.push({
       key: "kepemilikan",
       name: isSewa ? "Dokumen Sewa Lokasi" : "Dokumen Kepemilikan Lokasi",
       status: "pending",
       addressText: "",
+      documentPath: ownershipDocs[0].documentPath ?? null,
     });
   }
   return docs;
@@ -400,6 +403,7 @@ export function OfficeVerificationWizard({ assignmentId, locationId }: Props) {
         {openStep === 9 && (
           <Section9Review
             kinds={kinds}
+            reportHref={`/surveyor-workspace/assignments/${assignmentId}/verify/${locationId}/report`}
             onGoTo={(i) => setOpenStep(i)}
             onSave={() => saveMutation.mutate(values)}
             onOpenSubmitConfirm={() => setShowSubmitConfirm(true)}

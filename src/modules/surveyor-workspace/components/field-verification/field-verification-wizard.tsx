@@ -66,12 +66,22 @@ type LocationDetail = {
 
 function buildDefaultSection1Docs(company: LocationDetail["company"], payloadLocation: PayloadLocation | null): DocCheckValues[] {
   const docs: DocCheckValues[] = [];
-  if (company.nibDocumentPath) docs.push({ key: "nib", name: "NIB", status: "pending", addressText: "" });
-  if (company.notarialDocumentPath) docs.push({ key: "akta", name: "Akta Notaris", status: "pending", addressText: "" });
+  if (company.nibDocumentPath) {
+    docs.push({ key: "nib", name: "NIB", status: "pending", addressText: "", documentPath: company.nibDocumentPath });
+  }
+  if (company.notarialDocumentPath) {
+    docs.push({ key: "akta", name: "Akta Notaris", status: "pending", addressText: "", documentPath: company.notarialDocumentPath });
+  }
   const isSewa = payloadLocation?.buildingStatus === "SEWA";
-  const hasOwnershipDoc = ((isSewa ? payloadLocation?.leaseDocuments : payloadLocation?.ownershipDocuments) ?? []).length > 0;
-  if (hasOwnershipDoc) {
-    docs.push({ key: "kepemilikan", name: isSewa ? "Dokumen Sewa Lokasi" : "Dokumen Kepemilikan Lokasi", status: "pending", addressText: "" });
+  const ownershipDocs = (isSewa ? payloadLocation?.leaseDocuments : payloadLocation?.ownershipDocuments) ?? [];
+  if (ownershipDocs.length > 0) {
+    docs.push({
+      key: "kepemilikan",
+      name: isSewa ? "Dokumen Sewa Lokasi" : "Dokumen Kepemilikan Lokasi",
+      status: "pending",
+      addressText: "",
+      documentPath: ownershipDocs[0].documentPath ?? null,
+    });
   }
   return docs;
 }
@@ -403,6 +413,7 @@ export function FieldVerificationWizard({ kind, assignmentId, locationId }: Prop
             status={values.conclusionStatus}
             recommendation={values.conclusionRecommendation}
             summary={values.conclusionSummary ?? ""}
+            reportHref={`/surveyor-workspace/assignments/${assignmentId}/verify/${locationId}/report`}
             onStatusChange={(v) => patch({ conclusionStatus: v })}
             onRecommendationChange={(v) => patch({ conclusionRecommendation: v })}
             onSummaryChange={(v) => patch({ conclusionSummary: v })}

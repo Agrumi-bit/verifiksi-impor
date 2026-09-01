@@ -14,6 +14,9 @@ const docCheckSchema = z.object({
   name: z.string(),
   addressText: z.string().trim().optional(),
   status: z.enum(["pending", "approved", "rejected"]).default("pending"),
+  // Baked in once at row-creation time (buildDefaultSection1Docs), same as `name` — the source
+  // document a surveyor is looking at while filling this row, not something they edit themselves.
+  documentPath: z.string().trim().nullable().optional(),
 });
 export type DocCheckValues = z.infer<typeof docCheckSchema>;
 

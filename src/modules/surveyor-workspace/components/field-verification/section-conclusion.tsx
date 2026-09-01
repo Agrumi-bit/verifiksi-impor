@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { MaterialIcon } from "../material-icon";
 import { CONCLUSION_RECOMMENDATIONS, CONCLUSION_STATUSES, LOCATION_LABEL, type FieldKind, type FieldVerificationValues } from "./schema";
 
@@ -21,6 +23,7 @@ type Props = {
   status: FieldVerificationValues["conclusionStatus"];
   recommendation: FieldVerificationValues["conclusionRecommendation"];
   summary: string;
+  reportHref: string;
   onStatusChange: (v: (typeof CONCLUSION_STATUSES)[number]) => void;
   onRecommendationChange: (v: (typeof CONCLUSION_RECOMMENDATIONS)[number]) => void;
   onSummaryChange: (v: string) => void;
@@ -35,6 +38,7 @@ export function SectionConclusion({
   status,
   recommendation,
   summary,
+  reportHref,
   onStatusChange,
   onRecommendationChange,
   onSummaryChange,
@@ -149,6 +153,16 @@ export function SectionConclusion({
           <MaterialIcon name="save" className="text-base" />
           Save
         </button>
+        {/* Renders off whatever's saved so far — the report route has no COMPLETED gate, so this
+            works as a real preview before submitting, same as verifikator's Generate Report. */}
+        <Link
+          href={reportHref}
+          target="_blank"
+          className="flex items-center gap-1.5 rounded-[9px] border border-[#9333ea] bg-white px-[18px] py-2.5 text-[13px] font-bold text-[#9333ea]"
+        >
+          <MaterialIcon name="description" className="text-base" />
+          Generate Report
+        </Link>
         <button
           type="button"
           onClick={onSubmit}

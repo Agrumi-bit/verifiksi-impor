@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { MaterialIcon } from "../material-icon";
 import { SECTION_TITLES, type SectionKind } from "./schema";
 
@@ -9,13 +11,14 @@ const COLOR_MAP: Record<SectionKind, string> = { ok: "#166534", issue: "#b91c1c"
 
 type Props = {
   kinds: SectionKind[];
+  reportHref: string;
   onGoTo: (index: number) => void;
   onSave: () => void;
   onOpenSubmitConfirm: () => void;
   isSaving?: boolean;
 };
 
-export function Section9Review({ kinds, onGoTo, onSave, onOpenSubmitConfirm, isSaving }: Props) {
+export function Section9Review({ kinds, reportHref, onGoTo, onSave, onOpenSubmitConfirm, isSaving }: Props) {
   const unfilled = kinds.filter((k) => k === "unfilled").length;
   const issues = kinds.filter((k) => k === "issue").length;
   const outstandingLabel =
@@ -78,6 +81,16 @@ export function Section9Review({ kinds, onGoTo, onSave, onOpenSubmitConfirm, isS
           <MaterialIcon name="save" className="text-base" />
           Save
         </button>
+        {/* Renders off whatever's saved so far — the report route has no COMPLETED gate, so this
+            works as a real preview before submitting, same as verifikator's Generate Report. */}
+        <Link
+          href={reportHref}
+          target="_blank"
+          className="flex items-center gap-1.5 rounded-[9px] border border-[#4a5568] bg-white px-[18px] py-2.5 text-[13px] font-bold text-[#4a5568]"
+        >
+          <MaterialIcon name="description" className="text-base" />
+          Generate Report
+        </Link>
         <button
           type="button"
           onClick={onOpenSubmitConfirm}
