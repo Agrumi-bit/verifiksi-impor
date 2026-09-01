@@ -104,8 +104,8 @@ export function useCompanyProfileQuery() {
   });
 }
 
-async function saveSection(section: string, values: object) {
-  const response = await fetch("/api/company-workspace/profile", {
+async function saveSection(basePath: string, section: string, values: object) {
+  const response = await fetch(basePath, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ section, ...values }),
@@ -184,12 +184,16 @@ function SectionForm({
   step,
   section,
   successMessage,
+  basePath,
+  queryKey,
   children,
 }: {
   form: UseFormReturn<CompanyWizardValues>;
   step: number;
   section: string;
   successMessage: string;
+  basePath: string;
+  queryKey: unknown[];
   children: React.ReactNode;
 }) {
   const queryClient = useQueryClient();
@@ -200,9 +204,9 @@ function SectionForm({
     if (!isValid) return;
     const values = form.getValues();
     try {
-      await saveSection(section, values);
+      await saveSection(basePath, section, values);
       toast.success(successMessage);
-      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal menyimpan perubahan");
     }
@@ -225,7 +229,7 @@ function SectionForm({
   );
 }
 
-function FacilitiesTab({ data }: { data: CompanyProfileData }) {
+function FacilitiesTab({ data, basePath, queryKey }: { data: CompanyProfileData; basePath: string; queryKey: unknown[] }) {
   const queryClient = useQueryClient();
   const form = useForm<{ locations: LocationValues[] }>({
     resolver: zodResolver(locationsSchema),
@@ -238,9 +242,9 @@ function FacilitiesTab({ data }: { data: CompanyProfileData }) {
 
   async function onSubmit(values: { locations: LocationValues[] }) {
     try {
-      await saveSection("facilities", values);
+      await saveSection(basePath, "facilities", values);
       toast.success("Facilities berhasil disimpan.");
-      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal menyimpan perubahan");
     }
@@ -285,14 +289,37 @@ export function CompanyProfileTabs() {
   return <CompanyProfileTabsContent data={data} />;
 }
 
-function CompanyProfileTabsContent({ data }: { data: CompanyProfileData }) {
+/**
+ * The Company Profile view + edit tabs, factored out so both Company Workspace's own profile
+ * page and admin's Company Detail page (a different `basePath`/`queryKey`, pointed at an
+ * arbitrary company id instead of the caller's own) can share one implementation instead of
+ * drifting apart. Defaults match Company Workspace's own usage.
+ */
+export function CompanyProfileTabsContent({
+  data,
+  basePath = "/api/company-workspace/profile",
+  queryKey = QUERY_KEY,
+  allowDocumentHistory = true,
+  extraTab,
+}: {
+  data: CompanyProfileData;
+  basePath?: string;
+  queryKey?: unknown[];
+  allowDocumentHistory?: boolean;
+  extraTab?: { label: string; content: React.ReactNode };
+}) {
   const form = useCompanyWizardForm(data);
   const [mode, setMode] = useState<"view" | "edit">("view");
 
   if (mode === "view") {
     return (
       <div className="mx-auto w-full max-w-5xl py-8">
-        <CompanyProfileView data={data} onEdit={() => setMode("edit")} />
+        <CompanyProfileView
+          data={data}
+          onEdit={() => setMode("edit")}
+          allowDocumentHistory={allowDocumentHistory}
+          extraTab={extraTab}
+        />
       </div>
     );
   }
@@ -351,27 +378,27 @@ function CompanyProfileTabsContent({ data }: { data: CompanyProfileData }) {
         </TabsList>
 
         <TabsPanel value="general">
-          <SectionForm form={form} step={1} section="data" successMessage="Company Profile berhasil disimpan.">
+          <SectionForm form={form} step={1} section="data" successMessage="Company Profile berhasil disimpan." basePath={basePath} queryKey={queryKey}>
             <Step1DataPerusahaan form={form} />
           </SectionForm>
         </TabsPanel>
         <TabsPanel value="contact">
-          <SectionForm form={form} step={2} section="contacts" successMessage="Contact Person berhasil disimpan.">
+          <SectionForm form={form} step={2} section="contacts" successMessage="Contact Person berhasil disimpan." basePath={basePath} queryKey={queryKey}>
             <Step2Pic form={form} />
           </SectionForm>
         </TabsPanel>
         <TabsPanel value="legal">
-          <SectionForm form={form} step={3} section="legal" successMessage="Legal Entity berhasil disimpan.">
+          <SectionForm form={form} step={3} section="legal" successMessage="Legal Entity berhasil disimpan." basePath={basePath} queryKey={queryKey}>
             <Step3Legal form={form} />
           </SectionForm>
         </TabsPanel>
         <TabsPanel value="tax">
-          <SectionForm form={form} step={4} section="tax" successMessage="Pajak berhasil disimpan.">
+          <SectionForm form={form} step={4} section="tax" successMessage="Pajak berhasil disimpan." basePath={basePath} queryKey={queryKey}>
             <Step4Pajak form={form} />
           </SectionForm>
         </TabsPanel>
         <TabsPanel value="facilities">
-          <FacilitiesTab data={data} />
+          <FacilitiesTab data={data} basePath={basePath} queryKey={queryKey} />
         </TabsPanel>
       </Tabs>
     </div>

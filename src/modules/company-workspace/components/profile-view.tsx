@@ -328,11 +328,16 @@ function DocumentViewerModal({
   companyName,
   onClose,
   onSelectVersion,
+  allowVersionHistory = true,
 }: {
   doc: ViewingDoc;
   companyName: string;
   onClose: () => void;
   onSelectVersion: (entry: DocumentVersionEntry, title: string) => void;
+  /** Version history reads/writes go through `/api/company-workspace/profile/document-history`,
+   * scoped to the caller's own `session.user.companyId` — meaningless (and a 404) for a viewer
+   * looking at a company that isn't their own, e.g. admin's read-only Company Detail page. */
+  allowVersionHistory?: boolean;
 }) {
   const href = fileHref(doc.path)!;
   const fileName = fieldDisplayFileName(doc.fieldKey, companyName, doc.version, doc.path);
@@ -447,13 +452,17 @@ function DocumentViewerModal({
                 </InfoRow>
                 <div className="border-t border-[#f5ebe1] pt-3">
                   <InfoRow icon={History} label="Version">
-                    <button
-                      type="button"
-                      onClick={() => setShowVersionHistory(true)}
-                      className="text-[#2f6fd6] underline decoration-dotted underline-offset-2"
-                    >
-                      v{doc.version}
-                    </button>
+                    {allowVersionHistory ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowVersionHistory(true)}
+                        className="text-[#2f6fd6] underline decoration-dotted underline-offset-2"
+                      >
+                        v{doc.version}
+                      </button>
+                    ) : (
+                      `v${doc.version}`
+                    )}
                   </InfoRow>
                 </div>
                 <InfoRow icon={User} label="Uploaded By">
@@ -467,7 +476,7 @@ function DocumentViewerModal({
           </div>
         </div>
       </div>
-      {showVersionHistory && (
+      {allowVersionHistory && showVersionHistory && (
         <VersionHistoryModal
           fieldKey={doc.fieldKey}
           docTitle={doc.title}
@@ -1012,7 +1021,25 @@ function FacilitiesTab({ data, onView }: { data: CompanyProfileData; onView: (do
   );
 }
 
-export function CompanyProfileView({ data, onEdit }: { data: CompanyProfileData; onEdit: () => void }) {
+export function CompanyProfileView({
+  data,
+  onEdit,
+  allowDocumentHistory = true,
+  extraTab,
+}: {
+  data: CompanyProfileData;
+  /** Omit to render read-only (no "Edit Profile" button) — e.g. admin's Company Detail page,
+   * which has no company-profile edit flow of its own. */
+  onEdit?: () => void;
+  /** See `DocumentViewerModal`'s `allowVersionHistory` — defaults on for Company Workspace's own
+   * profile, off for any other viewer (the underlying route is scoped to the caller's own
+   * companyId). */
+  allowDocumentHistory?: boolean;
+  /** One additional tab appended after the 5 built-in ones — e.g. admin's Company Detail page
+   * adds a read-only "Partner" tab here; Company Workspace's own profile leaves this unset since
+   * it already has a dedicated Partner Companies section elsewhere. */
+  extraTab?: { label: string; content: React.ReactNode };
+}) {
   const statusStyle = STATUS_STYLE[data.status];
 
   const infoBar = [
@@ -1022,7 +1049,10 @@ export function CompanyProfileView({ data, onEdit }: { data: CompanyProfileData;
     { icon: RefreshCw, label: "Terakhir Diperbarui", value: fmtDate(data.updatedAt) },
   ];
 
-  const [activeTab, setActiveTab] = useState<ProfileTabKey>("general");
+  const tabs: readonly { key: ProfileTabKey | "extra"; label: string }[] = extraTab
+    ? [...PROFILE_TABS, { key: "extra" as const, label: extraTab.label }]
+    : PROFILE_TABS;
+  const [activeTab, setActiveTab] = useState<ProfileTabKey | "extra">("general");
   const [viewingDoc, setViewingDoc] = useState<ViewingDoc | null>(null);
 
   return (
@@ -1033,13 +1063,15 @@ export function CompanyProfileView({ data, onEdit }: { data: CompanyProfileData;
             <div className="text-[23px] font-extrabold tracking-tight text-[#20180f]">Company Profile</div>
             <div className="mt-0.75 text-[13.5px] text-[#8a7565]">Informasi perusahaan yang terdaftar pada platform.</div>
           </div>
-          <button
-            type="button"
-            onClick={onEdit}
-            className="rounded-lg bg-[#e0662e] px-5 py-2.75 text-[13px] font-bold text-white"
-          >
-            Edit Profile
-          </button>
+          {onEdit && (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="rounded-lg bg-[#e0662e] px-5 py-2.75 text-[13px] font-bold text-white"
+            >
+              Edit Profile
+            </button>
+          )}
         </div>
         <div className="flex items-start gap-5.5">
           <div
@@ -1078,7 +1110,7 @@ export function CompanyProfileView({ data, onEdit }: { data: CompanyProfileData;
       </div>
 
       <div className="flex w-fit gap-1.5 rounded-[10px] bg-[#fdeadd] p-1.25">
-        {PROFILE_TABS.map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab.key}
             type="button"
@@ -1098,11 +1130,13 @@ export function CompanyProfileView({ data, onEdit }: { data: CompanyProfileData;
       {activeTab === "legal" && <LegalTab data={data} onView={setViewingDoc} />}
       {activeTab === "tax" && <TaxTab data={data} onView={setViewingDoc} />}
       {activeTab === "facilities" && <FacilitiesTab data={data} onView={setViewingDoc} />}
+      {activeTab === "extra" && extraTab?.content}
 
       {viewingDoc && (
         <DocumentViewerModal
           doc={viewingDoc}
           companyName={data.companyName}
+          allowVersionHistory={allowDocumentHistory}
           onClose={() => setViewingDoc(null)}
           onSelectVersion={(entry, title) =>
             setViewingDoc((prev) =>
