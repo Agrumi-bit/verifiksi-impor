@@ -602,11 +602,13 @@ export function ProductVerificationTab({
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editProduct, setEditProduct] = useState<ProductDraft>(EMPTY_PRODUCT_DRAFT);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [duplicatingProductId, setDuplicatingProductId] = useState<string | null>(null);
   const [materialLinkDraft, setMaterialLinkDraft] = useState<MaterialLinkDraft>(EMPTY_MATERIAL_LINK_DRAFT);
   const [editingRawMaterialId, setEditingRawMaterialId] = useState<string | null>(null);
   const [editRawMaterial, setEditRawMaterial] = useState<RawMaterialDraft>(EMPTY_RAW_MATERIAL_DRAFT);
   const [savingRawMaterialId, setSavingRawMaterialId] = useState<string | null>(null);
   const [deletingRawMaterialId, setDeletingRawMaterialId] = useState<string | null>(null);
+  const [duplicatingConversionId, setDuplicatingConversionId] = useState<string | null>(null);
   const canEdit = assignmentStatus === "SUBMITTED";
   const hsCodeOptions = useHsCodeOptions();
   const unitForHsCode = (hsCode: string | undefined) => hsCodeOptions.find((o) => o.value === hsCode)?.unit ?? "";
@@ -736,6 +738,36 @@ export function ProductVerificationTab({
     queryClient.invalidateQueries({ queryKey: ["verifikator-workspace", "assignments", "detail", assignmentId] });
   }
 
+  /**
+   * Copies a product the applicant already listed (same HS Code/kategori/deskripsi/photo) into a
+   * new row, so a near-duplicate product doesn't have to be retyped from scratch — just
+   * duplicated and then adjusted via Edit. Uses the same POST endpoint "Tambah Produk" uses.
+   */
+  async function handleDuplicateProduct(row: ProductRow) {
+    setDuplicatingProductId(row.id);
+    const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/products`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kategori: row.kategori,
+        materialType: `${row.materialType} (Salinan)`,
+        hsCode: row.hsCode,
+        hsDesc: row.hsDesc,
+        deskripsi: row.deskripsi,
+        photoPath: row.photoPath ?? "",
+      }),
+    });
+    setDuplicatingProductId(null);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal menduplikat produk");
+      return;
+    }
+    toast.success("Produk diduplikat.");
+    queryClient.invalidateQueries({ queryKey });
+    queryClient.invalidateQueries({ queryKey: ["verifikator-workspace", "assignments", "detail", assignmentId] });
+  }
+
   function invalidateAfterConversionChange() {
     queryClient.invalidateQueries({ queryKey: ["verifikator-workspace", "assignments", "detail", assignmentId] });
   }
@@ -856,6 +888,75 @@ export function ProductVerificationTab({
       return;
     }
     toast.success("Bahan baku dihapus.");
+    invalidateAfterConversionChange();
+  }
+
+  /**
+   * Copies a raw material already linked to this product (same jenis/HS Code/deskripsi/photo)
+   * into a new raw material + a new link with the same ratio/kategori/keterangan — for the case
+   * where the same raw material (or a near-identical one) is used again, so neither the material
+   * nor the conversion has to be retyped.
+   */
+  async function handleDuplicateConversion(
+    productId: string,
+    conversionId: string,
+    material: {
+      jenis: string;
+      hsCode: string;
+      hsDesc: string;
+      deskripsi: string;
+      photoPath: string;
+      kategori: string;
+      volumeProduksiJumlah: string;
+      volumeProduksiSatuan: string;
+      volumeKebutuhanJumlah: string;
+      volumeKebutuhanSatuan: string;
+      rasioKonversi: string;
+      keterangan: string;
+    },
+  ) {
+    setDuplicatingConversionId(conversionId);
+    const createResponse = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/raw-materials`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jenis: `${material.jenis} (Salinan)`,
+        hsCode: material.hsCode,
+        hsDesc: material.hsDesc,
+        deskripsi: material.deskripsi,
+        photoPath: material.photoPath,
+      }),
+    });
+    if (!createResponse.ok) {
+      setDuplicatingConversionId(null);
+      const body = await createResponse.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal menduplikat bahan baku");
+      return;
+    }
+    const created = (await createResponse.json()) as { data: { id: string } };
+    const linkResponse = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/raw-material-conversions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        productId,
+        rawMaterialId: created.data.id,
+        kategori: material.kategori,
+        volumeProduksiJumlah: material.volumeProduksiJumlah,
+        volumeProduksiSatuan: material.volumeProduksiSatuan,
+        volumeKebutuhanJumlah: material.volumeKebutuhanJumlah,
+        volumeKebutuhanSatuan: material.volumeKebutuhanSatuan,
+        rasioKonversi: material.rasioKonversi,
+        keterangan: material.keterangan,
+      }),
+    });
+    setDuplicatingConversionId(null);
+    if (!linkResponse.ok) {
+      const body = await linkResponse.json().catch(() => null);
+      toast.error(body?.error ?? "Bahan baku diduplikat, tapi gagal menautkan ke produk");
+      invalidateAfterConversionChange();
+      return;
+    }
+    toast.success("Bahan baku diduplikat.");
     invalidateAfterConversionChange();
   }
 
@@ -1026,6 +1127,15 @@ export function ProductVerificationTab({
                     >
                       <MaterialIcon name="edit" className="text-[13px]" />
                       Edit
+                    </button>
+                    <button
+                      type="button"
+                      disabled={duplicatingProductId === row.id}
+                      onClick={() => handleDuplicateProduct(row)}
+                      className="flex items-center gap-1 rounded-lg border border-[#e1bfb3] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#261813] disabled:opacity-50"
+                    >
+                      <MaterialIcon name="content_copy" className="text-[13px]" />
+                      Duplikat
                     </button>
                     <button
                       type="button"
@@ -1231,6 +1341,30 @@ export function ProductVerificationTab({
                             >
                               <MaterialIcon name="sync_alt" className="text-[13px]" />
                               Edit Rasio
+                            </button>
+                            <button
+                              type="button"
+                              disabled={duplicatingConversionId === m.id}
+                              onClick={() =>
+                                handleDuplicateConversion(row.id, m.id, {
+                                  jenis: m.jenis,
+                                  hsCode: m.hsCode,
+                                  hsDesc: m.hsDesc,
+                                  deskripsi: m.deskripsi,
+                                  photoPath: m.photoPath,
+                                  kategori: m.kategori,
+                                  volumeProduksiJumlah: m.volumeProduksiJumlah,
+                                  volumeProduksiSatuan: m.volumeProduksiSatuan,
+                                  volumeKebutuhanJumlah: m.volumeKebutuhanJumlah,
+                                  volumeKebutuhanSatuan: m.volumeKebutuhanSatuan,
+                                  rasioKonversi: m.rasioKonversi,
+                                  keterangan: m.keterangan,
+                                })
+                              }
+                              className="flex items-center gap-1 rounded-lg border border-[#e1bfb3] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#261813] disabled:opacity-50"
+                            >
+                              <MaterialIcon name="content_copy" className="text-[13px]" />
+                              Duplikat
                             </button>
                             <button
                               type="button"
