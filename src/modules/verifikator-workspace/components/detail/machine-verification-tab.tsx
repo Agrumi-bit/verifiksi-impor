@@ -327,6 +327,13 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
 
   async function patchPhotos(row: MachineRow, patch: { photoPath?: string; photoPaths?: string[] }) {
     setSavingId(row.id);
+    // Optimistic: the gallery reads straight off the query cache, so without this the photo
+    // only appears after the PATCH round-trip resolves AND the subsequent refetch lands —
+    // a second wait stacked on top of the upload itself. Apply the patch to the cache
+    // immediately; on failure, invalidate to snap back to the real server state.
+    queryClient.setQueryData<MachineRow[]>(queryKey, (prev) =>
+      prev?.map((r) => (r.id === row.id ? { ...r, ...patch } : r)),
+    );
     const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/machines`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -336,6 +343,7 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
     if (!response.ok) {
       const body = await response.json().catch(() => null);
       toast.error(body?.error ?? "Gagal menyimpan foto mesin");
+      invalidateAll();
       return false;
     }
     invalidateAll();
@@ -700,7 +708,7 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                       />
                       <Field
                         label="Kapasitas per Hari (waktu beroperasi × kapasitas produksi)"
-                        value={[row.kapasitasPerHari, row.kapasitasJamSatuan].filter(Boolean).join(" ")}
+                        value={row.kapasitasPerHari ? [fmtNum(Number(row.kapasitasPerHari)), row.kapasitasJamSatuan].filter(Boolean).join(" ") : ""}
                       />
                       <div>
                         <div className="mb-1.5 text-[12.5px] font-bold text-[#20180f]">Kondisi</div>
@@ -728,7 +736,7 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                       />
                       <Field
                         label="Kapasitas per Tahun (hari efektif × kapasitas per hari)"
-                        value={[row.kapasitasPerTahun, row.kapasitasJamSatuan].filter(Boolean).join(" ")}
+                        value={row.kapasitasPerTahun ? [fmtNum(Number(row.kapasitasPerTahun)), row.kapasitasJamSatuan].filter(Boolean).join(" ") : ""}
                       />
                     </div>
                     <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">

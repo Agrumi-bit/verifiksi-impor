@@ -624,6 +624,12 @@ const MACHINE_STATUS_META: Record<MachineRow["status"], { bg: string; color: str
   REJECTED: { bg: "#ffe0dc", color: "#7a1f14", label: "Rejected" },
 };
 
+function fmtNum(value: string): string {
+  const n = Number(value);
+  if (!value || !Number.isFinite(n)) return value || "—";
+  return n.toLocaleString("id-ID");
+}
+
 export function MiniField({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ background: CREAM, borderRadius: 8, padding: "8px 12px" }}>
@@ -794,8 +800,8 @@ function MachineChapter({
                 <MiniField label="OUTPUT / PRODUK" value={m.output} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
-                <MiniField label="HARI EFEKTIF / TAHUN" value={m.hariEfektifPerTahun ? `${m.hariEfektifPerTahun} hari` : ""} />
-                <MiniField label="KAPASITAS PRODUKSI / TAHUN" value={m.kapasitasPerTahun ? `${m.kapasitasPerTahun} ${m.kapasitasJamSatuan}`.trim() : ""} />
+                <MiniField label="HARI EFEKTIF / TAHUN" value={m.hariEfektifPerTahun ? `${fmtNum(m.hariEfektifPerTahun)} hari` : ""} />
+                <MiniField label="KAPASITAS PRODUKSI / TAHUN" value={m.kapasitasPerTahun ? `${fmtNum(m.kapasitasPerTahun)} ${m.kapasitasJamSatuan}`.trim() : ""} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 8 }}>
                 <MiniField label="JUMLAH MESIN PADA PERMOHONAN" value={m.quantity ? `${m.quantity} ${m.quantitySatuan}`.trim() : ""} />
