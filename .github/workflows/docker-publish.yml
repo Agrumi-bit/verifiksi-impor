@@ -14,7 +14,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Compute lowercase repository name
         id: repo
@@ -64,10 +64,25 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
+      # Fail early and clearly if a required secret/variable is missing or was
+      # added in the wrong place. In particular, HOSTINGER_VM_ID must be a
+      # repository *Variable* — if it is stored as a Secret, `vars.HOSTINGER_VM_ID`
+      # resolves to empty and the deploy action aborts with a bare "exit 1".
+      - name: Preflight - deploy config present
+        run: |
+          missing=0
+          check() { if [ -z "$2" ]; then echo "::error::$1 is empty or unset"; missing=1; fi; }
+          check "secret HOSTINGER_API_KEY"  "${{ secrets.HOSTINGER_API_KEY }}"
+          check "variable HOSTINGER_VM_ID"  "${{ vars.HOSTINGER_VM_ID }}"
+          check "secret POSTGRES_PASSWORD"  "${{ secrets.POSTGRES_PASSWORD }}"
+          check "secret BETTER_AUTH_SECRET" "${{ secrets.BETTER_AUTH_SECRET }}"
+          exit $missing
 
       - name: Deploy to Hostinger VPS
-        uses: hostinger/deploy-on-vps@v2
+        # Pinned to the v2 tag's commit so a moved tag cannot change deploy behaviour silently.
+        uses: hostinger/deploy-on-vps@b0868cec74bfa63af6bfa7bdb0dfee2f9bef13ea # v2
         with:
           api-key: ${{ secrets.HOSTINGER_API_KEY }}
           virtual-machine: ${{ vars.HOSTINGER_VM_ID }}
