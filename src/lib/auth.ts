@@ -42,6 +42,18 @@ export const auth = betterAuth({
   },
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
+  session: {
+    // Every authenticated request — every tab, every save click — was hitting the Session
+    // table on every single call just to resolve `getServerSession()`. This caches the
+    // session+user in a short-lived signed cookie so most requests skip that DB round-trip
+    // entirely. 60s keeps role/ban changes and impersonation start/end showing up quickly;
+    // `disableCookieCache: true` on any individual getSession call still forces a fresh read
+    // when that matters more than speed.
+    cookieCache: {
+      enabled: true,
+      maxAge: 60,
+    },
+  },
   plugins: [
     admin({
       defaultRole: "SURVEYOR",

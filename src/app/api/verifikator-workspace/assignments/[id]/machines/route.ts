@@ -128,19 +128,6 @@ export async function PATCH(
     return NextResponse.json({ error: "Mesin tidak dikenali" }, { status: 400 });
   }
 
-  if (parsed.data.machineData) {
-    // Read-modify-write under a row lock — two "Simpan Data Mesin ke Aplikasi" clicks (different
-    // machines, or racing an add/delete/reorder) landing within milliseconds of each other used
-    // to silently clobber one another: whichever write committed last overwrote the whole
-    // payload.machines array from its own stale read, discarding the other's change.
-    await updateApplicationPayload(assignment.applicationId, (freshPayload) => {
-      const machines = (freshPayload.machines ?? []).map((m) =>
-        m.id === parsed.data.id ? { ...m, ...parsed.data.machineData } : m,
-      );
-      return { payload: { ...freshPayload, machines }, result: undefined };
-    });
-  }
-
   const decisions = machineVerificationsSchema.parse(assignment.machineVerifications ?? {});
   const existing = decisions[parsed.data.id];
   decisions[parsed.data.id] = {
@@ -154,10 +141,29 @@ export async function PATCH(
     verifiedAt: new Date().toISOString(),
   };
 
-  const updated = await db.assignment.update({
-    where: { id: assignment.id },
-    data: { machineVerifications: decisions },
-  });
+  // payload.machines (Application) and machineVerifications (Assignment) are different rows —
+  // the second doesn't depend on the first's result (it was already built from the
+  // pre-transaction `assignment.machineVerifications` read above), so run them concurrently
+  // instead of back-to-back. Halves the round-trip on every "Simpan Data Mesin ke Aplikasi".
+  const [, updated] = await Promise.all([
+    parsed.data.machineData
+      ? // Read-modify-write under a row lock — two "Simpan Data Mesin ke Aplikasi" clicks
+        // (different machines, or racing an add/delete/reorder) landing within milliseconds of
+        // each other used to silently clobber one another: whichever write committed last
+        // overwrote the whole payload.machines array from its own stale read, discarding the
+        // other's change.
+        updateApplicationPayload(assignment.applicationId, (freshPayload) => {
+          const machines = (freshPayload.machines ?? []).map((m) =>
+            m.id === parsed.data.id ? { ...m, ...parsed.data.machineData } : m,
+          );
+          return { payload: { ...freshPayload, machines }, result: undefined };
+        })
+      : Promise.resolve(),
+    db.assignment.update({
+      where: { id: assignment.id },
+      data: { machineVerifications: decisions },
+    }),
+  ]);
 
   return NextResponse.json({ data: updated.machineVerifications });
 }

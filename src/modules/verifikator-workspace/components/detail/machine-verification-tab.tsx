@@ -297,7 +297,7 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
    * photos, data corrections, add/delete, reorder) must invalidate it too, or a report tab
    * already open in this session keeps showing stale data until a hard refresh. */
   function invalidateAll() {
-    invalidateAll();
+    queryClient.invalidateQueries({ queryKey });
     queryClient.invalidateQueries({ queryKey: reportQueryKey });
   }
   const currentOrderIds =

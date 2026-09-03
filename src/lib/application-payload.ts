@@ -20,9 +20,15 @@ export async function updateApplicationPayload<T>(
   mutate: (payload: ApplicationWizardValues) => { payload: ApplicationWizardValues; result: T },
 ): Promise<T> {
   return db.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM application WHERE id = ${applicationId} FOR UPDATE`;
-    const fresh = await tx.application.findUniqueOrThrow({ where: { id: applicationId } });
-    const { payload, result } = mutate(fresh.payload as ApplicationWizardValues);
+    // Lock the row and read its payload in one round-trip (was a separate `SELECT ... FOR
+    // UPDATE` + `findUniqueOrThrow` before — same guarantee, one fewer query per save).
+    const rows = await tx.$queryRaw<{ payload: ApplicationWizardValues }[]>`
+      SELECT payload FROM application WHERE id = ${applicationId} FOR UPDATE
+    `;
+    if (rows.length === 0) {
+      throw new Error(`Application ${applicationId} not found`);
+    }
+    const { payload, result } = mutate(rows[0].payload);
     await tx.application.update({ where: { id: applicationId }, data: { payload } });
     return result;
   });
