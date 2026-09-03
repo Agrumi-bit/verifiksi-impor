@@ -97,11 +97,19 @@ export async function PATCH(
       const rowId = (item: Record<string, unknown>) =>
         source === "capacity" ? (item.id ?? item.productId) : item[config.idField];
       const index = list.findIndex((item) => rowId(item) === itemId);
-      if (index === -1) {
+
+      const isNew = index === -1;
+      // rawMaterialUsage rows aren't seeded anywhere — a raw material linked to a product in
+      // Product Verification has no usage row until the first edit here creates one. Every
+      // other source is still 1:1-seeded elsewhere (capacity has its own add/delete route;
+      // productionQty/sales are seeded per product), so a missing row there stays a real 404.
+      if (isNew && source !== "rawMaterialUsage") {
         return { payload: freshPayload, result: { ok: false } };
       }
 
-      const merged = { ...list[index], ...filteredFields };
+      const merged: Record<string, unknown> = isNew
+        ? { rawMaterialId: itemId, ...filteredFields }
+        : { ...list[index], ...filteredFields };
       // A legacy capacity row (no `id` of its own yet) converges onto the new shape the first
       // time it's edited, so future edits/deletes address it by a real id instead of productId.
       if (source === "capacity" && !merged.id) {
@@ -114,7 +122,7 @@ export async function PATCH(
         const luarNegeri = Number(merged.rencanaKebutuhanLuarNegeri) || 0;
         merged.rencanaKebutuhan = String(dalamNegeri + luarNegeri);
       }
-      const updatedList = list.map((item, i) => (i === index ? merged : item));
+      const updatedList = isNew ? [...list, merged] : list.map((item, i) => (i === index ? merged : item));
 
       return { payload: { ...freshPayload, [source]: updatedList }, result: { ok: true, item: merged } };
     },

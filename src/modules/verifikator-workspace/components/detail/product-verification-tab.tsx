@@ -128,10 +128,20 @@ function ConversionForm({
   materialLink?: {
     draft: MaterialLinkDraft;
     onChange: (patch: Partial<MaterialLinkDraft>) => void;
+    /** HS Code options for the picker — restricted to codes this application already declared
+     * (its own products/raw materials), not the full master-data registry. */
+    hsCodeOptions: { value: string; label: string; hint?: string }[];
   };
 }) {
-  const hsCodeOptions = useHsCodeOptions();
-  const unitForHsCode = (hsCode: string | undefined) => hsCodeOptions.find((o) => o.value === hsCode)?.unit ?? "";
+  // Default HS Code options are restricted to what this application already declared
+  // (materialLink.hsCodeOptions) — searching the full master-data registry is an explicit
+  // opt-in via the toggle below, for the case where the raw material genuinely needs an HS
+  // Code the application hasn't used yet.
+  const [searchAllHsCodes, setSearchAllHsCodes] = useState(false);
+  // Master-data list — used both for the opt-in "search all" toggle and (regardless of that
+  // toggle) for satuan lookups, which should always resolve against the full registry.
+  const allHsCodeOptions = useHsCodeOptions();
+  const unitForHsCode = (hsCode: string | undefined) => allHsCodeOptions.find((o) => o.value === hsCode)?.unit ?? "";
   const selectedRawMaterial = rawMaterials.find((rm) => rm.id === draft.rawMaterialId);
   const bahanBakuSatuan = materialLink
     ? unitForHsCode(materialLink.draft.hsCode)
@@ -189,14 +199,26 @@ function ConversionForm({
           </div>
           <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">HS Code</div>
+              <div className="mb-1 flex items-center justify-between">
+                <div className="text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">HS Code</div>
+                <button
+                  type="button"
+                  onClick={() => setSearchAllHsCodes((prev) => !prev)}
+                  className="text-[10.5px] font-semibold text-[#2f6fe0] underline decoration-dotted underline-offset-2"
+                >
+                  {searchAllHsCodes ? "Pilih dari HS Code aplikasi" : "Belum ada? Cari dari semua HS Code"}
+                </button>
+              </div>
               <SearchSelectInput
                 value={materialLink.draft.hsCode}
                 onChange={(value) => materialLink.onChange({ hsCode: value })}
                 onSelectOption={(option) => materialLink.onChange({ hsCode: option.value, hsDesc: option.hint ?? "" })}
-                options={hsCodeOptions}
-                placeholder="Cari atau ketik HS Code..."
+                options={searchAllHsCodes ? allHsCodeOptions : materialLink.hsCodeOptions}
+                placeholder={searchAllHsCodes ? "Cari dari semua HS Code..." : "Cari atau ketik HS Code..."}
               />
+              {/* Picking a code here writes it onto the raw material (payload.rawMaterials), so it
+                  becomes part of applicationHsCodeOptions on the very next render — no separate
+                  "add to application" step needed. */}
             </div>
             <div>
               <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Uraian HS Code</div>
@@ -482,14 +504,21 @@ function RawMaterialForm({
   onSave,
   onCancel,
   saving,
+  hsCodeOptions,
 }: {
   draft: RawMaterialDraft;
   onChange: (patch: Partial<RawMaterialDraft>) => void;
   onSave: () => void;
   onCancel: () => void;
   saving: boolean;
+  /** Restricted to HS Codes this application already declared — see applicationHsCodeOptions. */
+  hsCodeOptions: { value: string; label: string; hint?: string }[];
 }) {
-  const hsCodeOptions = useHsCodeOptions();
+  // Default options are the restricted (application-only) list passed in — searching the full
+  // master-data registry is an explicit opt-in, for a raw material that genuinely needs an HS
+  // Code the application hasn't used yet.
+  const [searchAllHsCodes, setSearchAllHsCodes] = useState(false);
+  const allHsCodeOptions = useHsCodeOptions();
 
   return (
     <div className="rounded-xl border border-dashed border-[#2f6fe0] bg-[#f5f8fe] p-5.5">
@@ -505,13 +534,22 @@ function RawMaterialForm({
           />
         </div>
         <div>
-          <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">HS Code</div>
+          <div className="mb-1 flex items-center justify-between">
+            <div className="text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">HS Code</div>
+            <button
+              type="button"
+              onClick={() => setSearchAllHsCodes((prev) => !prev)}
+              className="text-[10.5px] font-semibold text-[#2f6fe0] underline decoration-dotted underline-offset-2"
+            >
+              {searchAllHsCodes ? "Pilih dari HS Code aplikasi" : "Belum ada? Cari dari semua HS Code"}
+            </button>
+          </div>
           <SearchSelectInput
             value={draft.hsCode}
             onChange={(value) => onChange({ hsCode: value })}
             onSelectOption={(option) => onChange({ hsCode: option.value, hsDesc: option.hint ?? "" })}
-            options={hsCodeOptions}
-            placeholder="Cari atau ketik HS Code..."
+            options={searchAllHsCodes ? allHsCodeOptions : hsCodeOptions}
+            placeholder={searchAllHsCodes ? "Cari dari semua HS Code..." : "Cari atau ketik HS Code..."}
           />
         </div>
       </div>
@@ -631,6 +669,24 @@ export function ProductVerificationTab({
   const rows = data ?? [];
   const rawMaterials = payload.rawMaterials ?? [];
   const rawMaterialConversions = payload.rawMaterialConversions ?? [];
+  // "Bahan Baku yang Digunakan" picks HS Code from what this application itself already
+  // declared (its products' and raw materials' own HS Code), not the whole master-data
+  // registry — a verifikator adding/correcting a raw material here should only be choosing
+  // among codes the applicant actually submitted, not any HS Code that exists anywhere.
+  const applicationHsCodeOptions = (() => {
+    const seen = new Map<string, { value: string; label: string; hint?: string }>();
+    for (const p of payload.products ?? []) {
+      if (p.hsCode && !seen.has(p.hsCode)) {
+        seen.set(p.hsCode, { value: p.hsCode, label: p.hsCode, hint: p.hsDesc || descForHsCode(p.hsCode) });
+      }
+    }
+    for (const rm of rawMaterials) {
+      if (rm.hsCode && !seen.has(rm.hsCode)) {
+        seen.set(rm.hsCode, { value: rm.hsCode, label: rm.hsCode, hint: rm.hsDesc || descForHsCode(rm.hsCode) });
+      }
+    }
+    return Array.from(seen.values());
+  })();
 
   // Scroll to + briefly ring-highlight the target conversion row once its product section has
   // rendered (expandedId was already seeded above, so this only waits on the async product list).
@@ -1254,6 +1310,7 @@ export function ProductVerificationTab({
                         materialLink={{
                           draft: materialLinkDraft,
                           onChange: (patch) => setMaterialLinkDraft((prev) => ({ ...prev, ...patch })),
+                          hsCodeOptions: applicationHsCodeOptions,
                         }}
                       />
                     )}
@@ -1277,6 +1334,7 @@ export function ProductVerificationTab({
                           onSave={() => handleSaveEditRawMaterial(m.rawMaterialId)}
                           onCancel={() => setEditingRawMaterialId(null)}
                           saving={savingRawMaterialId === m.rawMaterialId}
+                          hsCodeOptions={applicationHsCodeOptions}
                         />
                       ) : (
                       <div

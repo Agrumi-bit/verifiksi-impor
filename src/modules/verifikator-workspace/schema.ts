@@ -660,6 +660,8 @@ export type RawMaterialUsageRow = {
   jenis: string;
   hsCode: string;
   hsDesc: string;
+  /** The raw material's own description (Product Verification's "Deskripsi Bahan Baku") — distinct from hsDesc (that field's "Deskripsi HS Code"). */
+  deskripsi: string;
   productId: string | null;
   productName: string;
   conversionId: string | null;
@@ -673,43 +675,61 @@ export type RawMaterialUsageRow = {
 };
 
 /**
- * Real-data readout of `payload.rawMaterialUsage[]`, joined to the raw
- * material's own info and (via the conversion table) every product it's
- * paired with. No verifikator review system exists for this data yet —
- * unlike products/machines/productionQty, there is no `Assignment` field or
- * status enum for it, so this never carries a `status`.
+ * Real-data readout of raw material usage, joined to the raw material's own
+ * info and (via the conversion table) every product it's paired with. No
+ * verifikator review system exists for this data yet — unlike
+ * products/machines/productionQty, there is no `Assignment` field or status
+ * enum for it, so this never carries a `status`.
+ *
+ * Driven by the UNION of `payload.rawMaterialUsage` (existing usage figures)
+ * and `payload.rawMaterialConversions` (raw material <-> product links,
+ * created/edited in Product Verification) — not `rawMaterialUsage` alone.
+ * A raw material linked to a product there has no reason to also have a
+ * usage row yet (nothing seeds one), so reading `rawMaterialUsage` alone
+ * left it invisible here even though it's clearly "in use." Every raw
+ * material actually tied to a product now always shows up, with blank
+ * penggunaan/dataStock/rencanaKebutuhan fields when no usage row exists —
+ * same "starts blank, fill in once" pattern as legacy capacity rows.
  */
 export function buildRawMaterialUsageChecklist(payload: ApplicationWizardValues): RawMaterialUsageRow[] {
   if (payload.verificationType !== "VKI") return [];
   const rawMaterials = payload.rawMaterials ?? [];
   const products = payload.products ?? [];
   const conversions = payload.rawMaterialConversions ?? [];
-  return (payload.rawMaterialUsage ?? []).flatMap((u, i) => {
-    const rawMaterial = rawMaterials.find((rm) => rm.id === u.rawMaterialId);
+  const usageByRawMaterialId = new Map((payload.rawMaterialUsage ?? []).map((u) => [u.rawMaterialId, u]));
+  const rawMaterialIds = new Set<string>([
+    ...conversions.map((c) => c.rawMaterialId).filter((rmId): rmId is string => Boolean(rmId)),
+    ...usageByRawMaterialId.keys(),
+  ]);
+
+  return Array.from(rawMaterialIds).flatMap((rawMaterialId, i) => {
+    const rawMaterial = rawMaterials.find((rm) => rm.id === rawMaterialId);
+    const usage = usageByRawMaterialId.get(rawMaterialId);
     // A raw material can be paired with several products via the conversion table —
     // emit one row per pairing so each product's usage is its own row, not merged
     // into a single row that only shows the first product found.
-    const pairings = conversions.filter((c) => c.rawMaterialId === u.rawMaterialId);
+    const pairings = conversions.filter((c) => c.rawMaterialId === rawMaterialId);
     const productIds = pairings.length > 0 ? pairings.map((c) => c.productId) : [undefined];
     return productIds.map((productId, j) => {
       const product = products.find((p) => p.id === productId);
       const conversion = pairings.find((c) => c.productId === productId);
       return {
-        id: `${u.rawMaterialId}:${i}:${j}`,
-        rawMaterialId: u.rawMaterialId,
+        id: `${rawMaterialId}:${i}:${j}`,
+        rawMaterialId,
         jenis: rawMaterial?.jenis ?? "",
         hsCode: rawMaterial?.hsCode ?? "",
         hsDesc: rawMaterial?.hsDesc ?? "",
+        deskripsi: rawMaterial?.deskripsi ?? "",
         productId: productId ?? null,
         productName: product?.materialType ?? "",
         conversionId: conversion?.id ?? null,
-        penggunaan: u.penggunaan ?? "",
-        dataStock: u.dataStock ?? "",
-        rencanaKebutuhan: u.rencanaKebutuhan ?? "",
-        rencanaKebutuhanDalamNegeri: u.rencanaKebutuhanDalamNegeri ?? "",
-        rencanaKebutuhanLuarNegeri: u.rencanaKebutuhanLuarNegeri ?? "",
-        rencanaKebutuhanNegaraAsal: u.rencanaKebutuhanNegaraAsal ?? "",
-        satuan: u.satuan ?? "",
+        penggunaan: usage?.penggunaan ?? "",
+        dataStock: usage?.dataStock ?? "",
+        rencanaKebutuhan: usage?.rencanaKebutuhan ?? "",
+        rencanaKebutuhanDalamNegeri: usage?.rencanaKebutuhanDalamNegeri ?? "",
+        rencanaKebutuhanLuarNegeri: usage?.rencanaKebutuhanLuarNegeri ?? "",
+        rencanaKebutuhanNegaraAsal: usage?.rencanaKebutuhanNegaraAsal ?? "",
+        satuan: usage?.satuan ?? "",
       };
     });
   });

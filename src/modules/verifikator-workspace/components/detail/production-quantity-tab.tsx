@@ -58,6 +58,7 @@ type RawMaterialUsageRow = {
   jenis: string;
   hsCode: string;
   hsDesc: string;
+  deskripsi: string;
   productId: string | null;
   productName: string;
   conversionId: string | null;
@@ -300,7 +301,7 @@ function EditableValueInput({ value, onSave, numeric = false }: { value: string;
   );
 }
 
-type RawMaterialSortField = "hsCode" | "uraian" | "productName";
+type RawMaterialSortField = "hsCode" | "uraian" | "productName" | "jenis" | "deskripsi";
 
 /** Sortable column header — click toggles asc/desc on that field, switching field resets to asc. */
 function SortableHeader({
@@ -394,21 +395,33 @@ function RawMaterialUsageTable({
     const getValue = (r: RawMaterialUsageRow) => {
       if (sortField === "hsCode") return r.hsCode || "";
       if (sortField === "uraian") return r.hsDesc || r.jenis || "";
+      if (sortField === "jenis") return r.jenis || "";
+      if (sortField === "deskripsi") return r.deskripsi || "";
       return r.productName || "";
     };
     const sorted = [...rows].sort((a, b) => getValue(a).localeCompare(getValue(b), "id-ID"));
     return sortDirection === "asc" ? sorted : sorted.reverse();
   }, [rows, sortField, sortDirection]);
 
-  const columnCount = splitRencanaKebutuhan ? 10 : 8;
+  const columnCount = splitRencanaKebutuhan ? 11 : 8;
 
   return (
     <table className="w-full min-w-205 border-collapse text-[12px]">
       <thead>
         <tr style={{ background: "#e0662e" }}>
           <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">No</th>
-          <SortableHeader label="HS Code" field="hsCode" activeField={sortField} direction={sortDirection} onSort={handleSort} />
-          <SortableHeader label="Uraian Barang" field="uraian" activeField={sortField} direction={sortDirection} onSort={handleSort} />
+          {splitRencanaKebutuhan ? (
+            <>
+              <SortableHeader label="Jenis Bahan Baku" field="jenis" activeField={sortField} direction={sortDirection} onSort={handleSort} />
+              <SortableHeader label="HS Code" field="hsCode" activeField={sortField} direction={sortDirection} onSort={handleSort} />
+              <SortableHeader label="Deskripsi Bahan Baku" field="deskripsi" activeField={sortField} direction={sortDirection} onSort={handleSort} />
+            </>
+          ) : (
+            <>
+              <SortableHeader label="HS Code" field="hsCode" activeField={sortField} direction={sortDirection} onSort={handleSort} />
+              <SortableHeader label="Uraian Barang" field="uraian" activeField={sortField} direction={sortDirection} onSort={handleSort} />
+            </>
+          )}
           {splitRencanaKebutuhan ? (
             <>
               <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">Jumlah Dalam Negeri</th>
@@ -442,31 +455,41 @@ function RawMaterialUsageTable({
           const status = rawMaterialTopicStatus(r, topic);
           const keterangan = rawMaterialTopicKeterangan(r, topic);
           const rowKey = rawMaterialUsageRowKey(topic, r.id);
+          const navigable = (label: string) =>
+            r.conversionId ? (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={() => onNavigateToRawMaterial(r)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onNavigateToRawMaterial(r);
+                  }
+                }}
+                title="Buka di Product Verification"
+                className="cursor-pointer text-[#2f6fe0] underline decoration-dotted underline-offset-2 hover:text-[#1d4fb8]"
+              >
+                {label || "—"}
+              </span>
+            ) : (
+              label || "—"
+            );
           return (
             <tr key={r.id}>
               <td className="border border-[#efe2d4] px-3 py-2.25 text-[#6b5b4c]">{index + 1}</td>
-              <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{r.hsCode || "—"}</td>
-              <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
-                {r.conversionId ? (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => onNavigateToRawMaterial(r)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        onNavigateToRawMaterial(r);
-                      }
-                    }}
-                    title="Buka di Product Verification"
-                    className="cursor-pointer text-[#2f6fe0] underline decoration-dotted underline-offset-2 hover:text-[#1d4fb8]"
-                  >
-                    {r.hsDesc || r.jenis || "—"}
-                  </span>
-                ) : (
-                  r.hsDesc || r.jenis || "—"
-                )}
-              </td>
+              {splitRencanaKebutuhan ? (
+                <>
+                  <td className="border border-[#efe2d4] px-3 py-2.25 font-bold text-[#20180f]">{navigable(r.jenis)}</td>
+                  <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{r.hsCode || "—"}</td>
+                  <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{r.deskripsi || "—"}</td>
+                </>
+              ) : (
+                <>
+                  <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{r.hsCode || "—"}</td>
+                  <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">{navigable(r.hsDesc || r.jenis)}</td>
+                </>
+              )}
               {splitRencanaKebutuhan ? (
                 <>
                   <td className="border border-[#efe2d4] px-3 py-2.25 font-bold text-[#20180f]">
