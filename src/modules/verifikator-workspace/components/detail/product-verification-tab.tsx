@@ -1011,6 +1011,9 @@ export function ProductVerificationTab({
           <div className="flex items-center gap-2.5">
             <MaterialIcon name="inventory_2" className="text-[19px] text-[#e0662e]" />
             <h3 className="text-[14.5px] font-extrabold text-[#20180f]">Product Verification</h3>
+            <span className="rounded-full bg-[#fdeadd] px-2.5 py-0.5 text-[11px] font-bold text-[#c14a1f]">
+              {rows.length} Produk
+            </span>
           </div>
           {canEdit && !isAddingProduct && (
             <button
@@ -1048,7 +1051,7 @@ export function ProductVerificationTab({
         </p>
       )}
 
-      {rows.map((row) => {
+      {rows.map((row, productIndex) => {
         const materials = rawMaterialConversions
           .filter((c) => c.productId === row.id)
           .map((c) => {
@@ -1087,6 +1090,9 @@ export function ProductVerificationTab({
           <div key={row.id} className="rounded-xl border border-[#e0662e] bg-white p-5.5">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div className="flex flex-1 flex-wrap gap-5">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#fdeadd] text-[13px] font-extrabold text-[#e0662e]">
+                  {productIndex + 1}
+                </div>
                 {row.photoPath ? (
                   <a href={fileHref(row.photoPath)} target="_blank" rel="noopener noreferrer" className="shrink-0">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
