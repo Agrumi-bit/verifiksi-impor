@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import { kbliEntrySchema } from "@/modules/shared/schema";
 import {
   PRODUCTION_QTY_VERIFICATION_STATUSES,
   PRODUCTION_QTY_SEBELUMNYA_SUMMARY_KEY,
@@ -47,7 +48,7 @@ function summaryConclusion(decisions: ReturnType<typeof productionQtyVerificatio
 async function findOwnedAssignment(assignmentNumber: string, verifikatorId: string) {
   const assignment = await db.assignment.findUnique({
     where: { assignmentNumber },
-    include: { application: true },
+    include: { application: { include: { company: true } } },
   });
   if (!assignment || assignment.verifikatorId !== verifikatorId) return null;
   return assignment;
@@ -77,11 +78,15 @@ export async function GET(
   const rawMaterialConversion = buildRawMaterialConversionRows(payload);
   const sales = buildSalesChecklist(payload);
   const capacityDocumentPath = payload.capacityDocumentPath ?? null;
+  // Kapasitas Produksi Berdasarkan Perizinan is keyed off KBLI — offer the company's own
+  // registered KBLI list as pick-from options (izin is granted per KBLI, not invented ad hoc).
+  const kbliOptions = kbliEntrySchema.array().safeParse(assignment.application.company?.kbliEntries ?? []).data ?? [];
 
   return NextResponse.json({
     data: {
       capacity,
       capacityDocumentPath,
+      kbliOptions,
       rows: checklist.map((item) => ({
         ...item,
         status: decisions[item.key]?.status ?? "PENDING",

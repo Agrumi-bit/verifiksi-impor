@@ -321,8 +321,20 @@ export const productionQtyItemSchema = z.object({
 });
 export type ProductionQtyItemValues = z.infer<typeof productionQtyItemSchema>;
 
+// One row per licensed capacity entry — deliberately NOT forced 1:1 with a product. Perizinan
+// (izin usaha) is granted per KBLI, not per HS Code — one KBLI (e.g. a textile spinning
+// license) commonly covers many HS Codes/product variants — so this is keyed off the company's
+// own registered KBLI, not a product's HS Code. A verifikator manages this list freely:
+// add/edit/delete rows, each carrying its own jenisProduk/kbliCode/kbliDescription rather than
+// joining against payload.products. `productId` is kept only for backward compatibility with
+// rows created before this changed (when it WAS auto-seeded 1:1 per product) — no longer read
+// or written.
 export const capacityItemSchema = z.object({
-  productId: z.string(),
+  id: z.string(),
+  productId: z.string().optional(),
+  jenisProduk: z.string().trim().optional(),
+  kbliCode: z.string().trim().optional(),
+  kbliDescription: z.string().trim().optional(),
   berdasarkanIzin: z.string().trim().optional(),
   kapasitasTerpasang: z.string().trim().optional(),
   satuan: z.string().trim().optional(),

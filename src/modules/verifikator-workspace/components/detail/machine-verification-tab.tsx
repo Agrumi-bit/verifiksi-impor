@@ -370,25 +370,37 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
     setDraftMachineData((prev) => ({ ...prev, [rowId]: { ...prev[rowId], ...patch } }));
   }
 
+  /** Saves both SPESIFIKASI PROSES (payload.machines) and HASIL VERIFIKASI JUMLAH MESIN
+   * (jumlahTerpasang/jumlahTidakAktif/keteranganJumlah — verifikator's own findings, stored
+   * separately on machineVerifications) in one PATCH, since the button sits below both sections
+   * now and either one alone (or both) can be dirty when it's clicked. */
   async function handleSaveMachineData(row: MachineRow) {
     const draft = draftMachineData[row.id];
-    if (!draft) return;
+    const hasJumlahDraft =
+      row.id in draftJumlahTerpasang || row.id in draftJumlahTidakAktif || row.id in draftKeteranganJumlah;
+    if (!draft && !hasJumlahDraft) return;
     setSavingId(row.id);
     // Kapasitas Produksi is derived, never hand-typed — always recompute from the
     // effective (draft-or-saved) jumlah × kapasitas per jam at save time.
-    const jumlah = parseNum(draft.jumlah ?? row.quantity);
-    const kapasitasJam = parseNum(draft.kapasitasJam ?? row.kapasitasJam);
+    const jumlah = parseNum(draft?.jumlah ?? row.quantity);
+    const kapasitasJam = parseNum(draft?.kapasitasJam ?? row.kapasitasJam);
     const computedKapasitas = jumlah !== null && kapasitasJam !== null ? jumlah * kapasitasJam : null;
     const machineData: MachineDataDraft = {
       ...draft,
       ...(computedKapasitas !== null
-        ? { kapasitas: fmtNum(computedKapasitas), kapasitasSatuan: draft.kapasitasJamSatuan ?? row.kapasitasJamSatuan }
+        ? { kapasitas: fmtNum(computedKapasitas), kapasitasSatuan: draft?.kapasitasJamSatuan ?? row.kapasitasJamSatuan }
         : {}),
     };
     const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/machines`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: row.id, machineData }),
+      body: JSON.stringify({
+        id: row.id,
+        ...(draft ? { machineData } : {}),
+        jumlahTerpasang: draftJumlahTerpasang[row.id] ?? row.jumlahTerpasang,
+        jumlahTidakAktif: draftJumlahTidakAktif[row.id] ?? row.jumlahTidakAktif,
+        keteranganJumlah: draftKeteranganJumlah[row.id] ?? row.keteranganJumlah,
+      }),
     });
     setSavingId(null);
     if (!response.ok) {
@@ -398,6 +410,21 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
     }
     toast.success(`Data mesin ${row.proses} diperbarui — tersinkron ke data aplikasi.`);
     setDraftMachineData((prev) => {
+      const next = { ...prev };
+      delete next[row.id];
+      return next;
+    });
+    setDraftJumlahTerpasang((prev) => {
+      const next = { ...prev };
+      delete next[row.id];
+      return next;
+    });
+    setDraftJumlahTidakAktif((prev) => {
+      const next = { ...prev };
+      delete next[row.id];
+      return next;
+    });
+    setDraftKeteranganJumlah((prev) => {
       const next = { ...prev };
       delete next[row.id];
       return next;
@@ -594,7 +621,11 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                   const draft = draftMachineData[row.id];
                   const value = (key: keyof MachineDataDraft, fallback: string): string => (draft?.[key] as string | undefined) ?? fallback;
                   const set = (patch: MachineDataDraft) => updateDraftMachineData(row.id, patch);
-                  const hasDraft = Boolean(draft && Object.keys(draft).length > 0);
+                  const hasDraft =
+                    Boolean(draft && Object.keys(draft).length > 0) ||
+                    row.id in draftJumlahTerpasang ||
+                    row.id in draftJumlahTidakAktif ||
+                    row.id in draftKeteranganJumlah;
                   // Kapasitas Produksi = jumlah mesin × kapasitas/jam — never hand-typed.
                   const liveJumlah = parseNum(value("jumlah", row.quantity));
                   const liveKapasitasJam = parseNum(value("kapasitasJam", row.kapasitasJam));
@@ -704,29 +735,6 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                       <EditableField label="Input / Raw Material" value={value("input", row.input)} onChange={(v) => set({ input: v })} disabled={!canEdit} />
                       <EditableField label="Output / Produk" value={value("output", row.output)} onChange={(v) => set({ output: v })} disabled={!canEdit} />
                     </div>
-                    {canEdit && (
-                      <div className="mb-4 flex justify-between gap-2">
-                        <button
-                          type="button"
-                          disabled={deletingId === row.id}
-                          onClick={() => handleDeleteMachine(row)}
-                          className="flex items-center gap-1.5 rounded-lg border border-[#dc2626] bg-white px-3.5 py-2 text-[12px] font-semibold text-[#dc2626] disabled:opacity-50"
-                        >
-                          <MaterialIcon name="delete" className="text-[15px]" />
-                          {deletingId === row.id ? "Menghapus..." : "Hapus Mesin"}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={!hasDraft || savingId === row.id}
-                          onClick={() => handleSaveMachineData(row)}
-                          className="flex items-center gap-1.5 rounded-lg bg-[#2f6fe0] px-3.5 py-2 text-[12px] font-semibold text-white disabled:opacity-50"
-                        >
-                          <MaterialIcon name="sync" className="text-[15px]" />
-                          Simpan Data Mesin ke Aplikasi
-                        </button>
-                      </div>
-                    )}
-
                     <div className="mb-3.5 border-t border-[#e8dccd] pt-3.5">
                       <div className="mb-3 text-[11px] font-bold tracking-wide text-[#8a7565]">HASIL VERIFIKASI JUMLAH MESIN</div>
                       <div className="mb-3.5 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -750,6 +758,29 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                         />
                       </div>
                     </div>
+
+                    {canEdit && (
+                      <div className="mb-4 flex justify-between gap-2">
+                        <button
+                          type="button"
+                          disabled={deletingId === row.id}
+                          onClick={() => handleDeleteMachine(row)}
+                          className="flex items-center gap-1.5 rounded-lg border border-[#dc2626] bg-white px-3.5 py-2 text-[12px] font-semibold text-[#dc2626] disabled:opacity-50"
+                        >
+                          <MaterialIcon name="delete" className="text-[15px]" />
+                          {deletingId === row.id ? "Menghapus..." : "Hapus Mesin"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!hasDraft || savingId === row.id}
+                          onClick={() => handleSaveMachineData(row)}
+                          className="flex items-center gap-1.5 rounded-lg bg-[#2f6fe0] px-3.5 py-2 text-[12px] font-semibold text-white disabled:opacity-50"
+                        >
+                          <MaterialIcon name="sync" className="text-[15px]" />
+                          Simpan Data Mesin ke Aplikasi
+                        </button>
+                      </div>
+                    )}
 
                     <div className="border-t border-[#e8dccd] pt-3.5">
                       <div className="mb-1.5 text-[12.5px] font-bold text-[#20180f]">Uraian Observasi</div>

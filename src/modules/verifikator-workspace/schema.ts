@@ -578,24 +578,39 @@ export function emptyProductionQtyVerifications(): ProductionQtyVerifications {
 }
 
 export type CapacityRow = {
-  productId: string;
+  id: string;
   jenisProduk: string;
-  hsCode: string;
+  kbliCode: string;
+  kbliDescription: string;
   berdasarkanIzin: string;
   kapasitasTerpasang: string;
   satuan: string;
 };
 
-/** Read-only — Kapasitas Berdasarkan Perizinan has no verifikator decision, VKI-only. */
+/**
+ * Free-standing list, NOT 1:1 with payload.products — perizinan (izin usaha) is granted per
+ * KBLI, not per HS Code, and one KBLI commonly covers several product variants (e.g. a textile
+ * spinning license producing many yarn types under one KBLI). jenisProduk/kbliCode/
+ * kbliDescription live on the row itself, not joined from a product. Verifikator manages this
+ * list directly (add/edit/delete); no verifikator decision status, VKI-only.
+ *
+ * `c.productId` fallback covers rows created before this changed (when capacity rows were
+ * auto-seeded 1:1 per product and had no id of their own) — every such row has a productId,
+ * so it doubles as a stable identity until the row is next edited and gets a real id. There is
+ * no product-side fallback for kbliCode/kbliDescription (HS Code and KBLI are different
+ * classification systems, so a linked product's HS Code is not a stand-in for its KBLI) — a
+ * legacy row simply starts with those two fields blank until filled in once.
+ */
 export function buildCapacityRows(payload: ApplicationWizardValues): CapacityRow[] {
   if (payload.verificationType !== "VKI") return [];
   const products = payload.products ?? [];
   return (payload.capacity ?? []).map((c) => {
-    const product = products.find((p) => p.id === c.productId);
+    const linkedProduct = !c.jenisProduk ? products.find((p) => p.id === c.productId) : undefined;
     return {
-      productId: c.productId,
-      jenisProduk: product?.materialType ?? "",
-      hsCode: product?.hsCode ?? "",
+      id: c.id ?? c.productId ?? crypto.randomUUID(),
+      jenisProduk: c.jenisProduk || linkedProduct?.materialType || "",
+      kbliCode: c.kbliCode ?? "",
+      kbliDescription: c.kbliDescription ?? "",
       berdasarkanIzin: c.berdasarkanIzin ?? "",
       kapasitasTerpasang: c.kapasitasTerpasang ?? "",
       satuan: c.satuan ?? "",

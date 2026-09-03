@@ -3,10 +3,15 @@ import { z } from "zod";
 
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
-import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import { updateApplicationPayload } from "@/lib/application-payload";
 
 const SOURCE_CONFIG = {
-  capacity: { idField: "productId", allowedFields: ["berdasarkanIzin", "kapasitasTerpasang", "satuan"] },
+  // capacity rows are matched by their own id now, not productId — see capacityItemSchema for
+  // why (no longer forced 1:1 with a product, and keyed by KBLI, not HS Code).
+  capacity: {
+    idField: "id",
+    allowedFields: ["jenisProduk", "kbliCode", "kbliDescription", "berdasarkanIzin", "kapasitasTerpasang", "satuan"],
+  },
   productionQty: { idField: "productId", allowedFields: ["perTahunSebelumnya", "perTahunRencana", "satuan"] },
   rawMaterialUsage: {
     idField: "rawMaterialId",
@@ -83,27 +88,41 @@ export async function PATCH(
     return NextResponse.json({ error: "Tidak ada field yang valid untuk diubah" }, { status: 400 });
   }
 
-  const payload = assignment.application.payload as ApplicationWizardValues;
-  const list = (payload[source] ?? []) as Array<Record<string, unknown>>;
-  const index = list.findIndex((item) => item[config.idField] === itemId);
-  if (index === -1) {
+  const result = await updateApplicationPayload<{ ok: boolean; item?: Record<string, unknown> }>(
+    assignment.applicationId,
+    (freshPayload) => {
+      const list = (freshPayload[source] ?? []) as Array<Record<string, unknown>>;
+      // capacity rows created before they had their own `id` fall back to `productId` as a
+      // stable identity (see buildCapacityRows) — match either.
+      const rowId = (item: Record<string, unknown>) =>
+        source === "capacity" ? (item.id ?? item.productId) : item[config.idField];
+      const index = list.findIndex((item) => rowId(item) === itemId);
+      if (index === -1) {
+        return { payload: freshPayload, result: { ok: false } };
+      }
+
+      const merged = { ...list[index], ...filteredFields };
+      // A legacy capacity row (no `id` of its own yet) converges onto the new shape the first
+      // time it's edited, so future edits/deletes address it by a real id instead of productId.
+      if (source === "capacity" && !merged.id) {
+        merged.id = itemId;
+      }
+      // rencanaKebutuhan is kept as an auto-summed total (dalamNegeri + luarNegeri) — report
+      // code reads this single field, so keep it in sync whenever either half changes.
+      if (source === "rawMaterialUsage" && ("rencanaKebutuhanDalamNegeri" in filteredFields || "rencanaKebutuhanLuarNegeri" in filteredFields)) {
+        const dalamNegeri = Number(merged.rencanaKebutuhanDalamNegeri) || 0;
+        const luarNegeri = Number(merged.rencanaKebutuhanLuarNegeri) || 0;
+        merged.rencanaKebutuhan = String(dalamNegeri + luarNegeri);
+      }
+      const updatedList = list.map((item, i) => (i === index ? merged : item));
+
+      return { payload: { ...freshPayload, [source]: updatedList }, result: { ok: true, item: merged } };
+    },
+  );
+
+  if (!result.ok) {
     return NextResponse.json({ error: "Data tidak ditemukan" }, { status: 404 });
   }
 
-  const merged = { ...list[index], ...filteredFields };
-  // rencanaKebutuhan is kept as an auto-summed total (dalamNegeri + luarNegeri) — report code
-  // reads this single field, so keep it in sync whenever either half changes.
-  if (source === "rawMaterialUsage" && ("rencanaKebutuhanDalamNegeri" in filteredFields || "rencanaKebutuhanLuarNegeri" in filteredFields)) {
-    const dalamNegeri = Number(merged.rencanaKebutuhanDalamNegeri) || 0;
-    const luarNegeri = Number(merged.rencanaKebutuhanLuarNegeri) || 0;
-    merged.rencanaKebutuhan = String(dalamNegeri + luarNegeri);
-  }
-  const updatedList = list.map((item, i) => (i === index ? merged : item));
-
-  await db.application.update({
-    where: { id: assignment.applicationId },
-    data: { payload: { ...payload, [source]: updatedList } },
-  });
-
-  return NextResponse.json({ data: updatedList[index] });
+  return NextResponse.json({ data: result.item });
 }

@@ -320,7 +320,7 @@ export function ProductionCapabilityChapter({
   const kapasitasParagraphs = capacity.map((c) => {
     const izin = c.berdasarkanIzin ? `${fmtNum(c.berdasarkanIzin)} ${c.satuan}` : "belum dicantumkan";
     const terpasang = c.kapasitasTerpasang ? `${fmtNum(c.kapasitasTerpasang)} ${c.satuan}` : "belum dicantumkan";
-    return `Untuk produk ${c.jenisProduk || "—"} (HS ${c.hsCode || "—"}), dokumen perizinan berusaha mencantumkan kapasitas produksi sebesar ${izin}, sedangkan hasil verifikasi teknis terhadap fasilitas produksi menunjukkan kapasitas terpasang sebesar ${terpasang}.`;
+    return `Untuk produk ${c.jenisProduk || "—"} (KBLI ${c.kbliCode || "—"}), dokumen perizinan berusaha mencantumkan kapasitas produksi sebesar ${izin}, sedangkan hasil verifikasi teknis terhadap fasilitas produksi menunjukkan kapasitas terpasang sebesar ${terpasang}.`;
   });
 
   const machinesByProses = new Map<string, MachineRow[]>();
@@ -485,7 +485,7 @@ export function ProductionCapabilityChapter({
             <tr style={{ background: ORANGE }}>
               <Th width="4%">NO</Th>
               <Th width="20%">JENIS PRODUKSI</Th>
-              <Th width="10%">HS CODE</Th>
+              <Th width="10%">KBLI</Th>
               <Th width="18%">KAPASITAS/TAHUN</Th>
               <Th width="10%">SATUAN</Th>
               <Th width="18%">KAPASITAS TERPASANG/TAHUN</Th>
@@ -495,10 +495,10 @@ export function ProductionCapabilityChapter({
           <tbody>
             {capacity.length === 0 && <EmptyRow colSpan={7} />}
             {capacity.map((c, i) => (
-              <Row key={c.productId} index={i}>
+              <Row key={c.id} index={i}>
                 <Td>{i + 1}</Td>
                 <Td bold>{c.jenisProduk || "—"}</Td>
-                <Td>{c.hsCode || "—"}</Td>
+                <Td>{c.kbliCode || "—"}</Td>
                 <Td>{fmtNum(c.berdasarkanIzin)}</Td>
                 <Td>{c.satuan || "—"}</Td>
                 <Td>{fmtNum(c.kapasitasTerpasang)}</Td>

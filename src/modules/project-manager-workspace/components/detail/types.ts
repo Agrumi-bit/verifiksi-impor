@@ -126,7 +126,7 @@ export type PmApplicationDetail = {
     verifiedAt: string | null;
     photoPath: string | null;
   }[];
-  capacity: { productId: string; jenisProduk: string; hsCode: string; berdasarkanIzin: string; kapasitasTerpasang: string; satuan: string }[];
+  capacity: { id: string; jenisProduk: string; kbliCode: string; kbliDescription: string; berdasarkanIzin: string; kapasitasTerpasang: string; satuan: string }[];
   capacityDocumentPath: string | null;
   productionQty: { key: string; section: string; jenisProduk: string; hsCode: string; jumlah: string; satuan: string; status: string }[];
   rawMaterialUsage: { id: string; jenis: string; hsCode: string; productName: string; penggunaan: string; dataStock: string; rencanaKebutuhan: string; satuan: string }[];

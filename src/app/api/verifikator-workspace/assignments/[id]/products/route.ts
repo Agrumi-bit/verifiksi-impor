@@ -131,11 +131,15 @@ export async function PATCH(
  * it directly to Application.payload.products, same source array as PATCH decisions above,
  * starting blank so nothing is fabricated on the applicant's behalf.
  *
- * Verifikasi Jumlah Produksi's capacity/productionQty/sales sections are keyed off
- * payload.capacity/productionQty/sales — separate arrays from payload.products, one row per
- * product, created during the wizard. A product added here has no such rows yet, so it silently
- * never showed up on that tab. Seed blank rows (VKI only, matching what buildCapacityRows /
- * buildProductionQtyChecklist / buildSalesChecklist require) alongside the product itself.
+ * Verifikasi Jumlah Produksi's productionQty/sales sections are keyed off
+ * payload.productionQty/sales — separate arrays from payload.products, one row per product,
+ * created during the wizard. A product added here has no such rows yet, so it silently never
+ * showed up on that tab. Seed blank rows (VKI only, matching what buildProductionQtyChecklist /
+ * buildSalesChecklist require) alongside the product itself.
+ *
+ * payload.capacity ("Kapasitas Produksi Berdasarkan Perizinan") is deliberately NOT seeded here
+ * — it's a free-standing, manually-managed list (one izin/license can cover several HS codes,
+ * e.g. a textile spinning license producing many yarn types), not 1:1 with products anymore.
  */
 export async function POST(
   request: Request,
@@ -169,9 +173,6 @@ export async function POST(
   const products = [...(payload.products ?? []), newProduct];
 
   const isVki = payload.verificationType === "VKI";
-  const capacity = isVki
-    ? [...(payload.capacity ?? []), { productId: newProduct.id, berdasarkanIzin: "", kapasitasTerpasang: "", satuan: "" }]
-    : payload.capacity;
   const productionQty = isVki
     ? [...(payload.productionQty ?? []), { productId: newProduct.id, perTahunSebelumnya: "", perTahunRencana: "", satuan: "" }]
     : payload.productionQty;
@@ -181,7 +182,7 @@ export async function POST(
 
   await db.application.update({
     where: { id: assignment.applicationId },
-    data: { payload: { ...payload, products, capacity, productionQty, sales } },
+    data: { payload: { ...payload, products, productionQty, sales } },
   });
 
   return NextResponse.json({ data: newProduct }, { status: 201 });
@@ -189,10 +190,13 @@ export async function POST(
 
 /**
  * Removes a product verifikator added by mistake — cascades to every other array keyed by
- * productId (capacity/productionQty/sales seeded on add, plus any rawMaterialConversions
- * linking it to raw materials) so nothing orphaned lingers, and drops its productVerifications
- * decision. Products originally submitted by the applicant can also be deleted here — same
- * capability as the underlying array edit, no separate "own vs applicant's" distinction.
+ * productId (productionQty/sales seeded on add, plus any rawMaterialConversions linking it to
+ * raw materials) so nothing orphaned lingers, and drops its productVerifications decision.
+ * Products originally submitted by the applicant can also be deleted here — same capability as
+ * the underlying array edit, no separate "own vs applicant's" distinction.
+ *
+ * payload.capacity is deliberately left alone — it's no longer 1:1 with products (see the POST
+ * handler above), so a capacity row never gets cascade-deleted just because some product was.
  */
 export async function DELETE(
   request: Request,
@@ -229,14 +233,13 @@ export async function DELETE(
   }
 
   const products = (payload.products ?? []).filter((p) => p.id !== productId);
-  const capacity = (payload.capacity ?? []).filter((c) => c.productId !== productId);
   const productionQty = (payload.productionQty ?? []).filter((p) => p.productId !== productId);
   const sales = (payload.sales ?? []).filter((s) => s.productId !== productId);
   const rawMaterialConversions = (payload.rawMaterialConversions ?? []).filter((c) => c.productId !== productId);
 
   await db.application.update({
     where: { id: assignment.applicationId },
-    data: { payload: { ...payload, products, capacity, productionQty, sales, rawMaterialConversions } },
+    data: { payload: { ...payload, products, productionQty, sales, rawMaterialConversions } },
   });
 
   const decisions = productVerificationsSchema.parse(assignment.productVerifications ?? {});

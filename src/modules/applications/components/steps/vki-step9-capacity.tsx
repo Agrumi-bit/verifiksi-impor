@@ -28,7 +28,10 @@ export function VkiStep9Capacity({ form }: Props) {
     const current = form.getValues("capacity") ?? [];
     const synced = products.map((p) => {
       const existing = current.find((row) => row.productId === p.id);
-      return { ...(existing ?? { productId: p.id }), satuan: unitFor(p.hsCode) };
+      // `id` became required on capacity rows so verifikator-workspace can manage the list
+      // independently of products — this step still auto-syncs 1:1 with products as before, it
+      // just needs to carry an id along; preserve an existing one, else mint a fresh one.
+      return { ...(existing ?? { productId: p.id }), id: existing?.id ?? crypto.randomUUID(), satuan: unitFor(p.hsCode) };
     });
     replace(synced);
     // eslint-disable-next-line react-hooks/exhaustive-deps

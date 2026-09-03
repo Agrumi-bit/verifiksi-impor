@@ -144,9 +144,10 @@ export type MachineRow = {
 };
 
 export type CapacityRow = {
-  productId: string;
+  id: string;
   jenisProduk: string;
-  hsCode: string;
+  kbliCode: string;
+  kbliDescription: string;
   berdasarkanIzin: string;
   kapasitasTerpasang: string;
   satuan: string;

@@ -432,7 +432,7 @@ export function VerificationTab({ data }: { data: PmApplicationDetail }) {
         <div className="flex flex-col gap-4">
           <div>
             <div className="mb-2 text-[12.5px] font-bold text-[#20180f]">Kapasitas Produksi Berdasarkan Perizinan</div>
-            <Table headers={["HS Code", "Berdasarkan Izin", "Kapasitas Terpasang", "Satuan"]}>
+            <Table headers={["KBLI", "Berdasarkan Izin", "Kapasitas Terpasang", "Satuan"]}>
               {data.capacity.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-3 py-4 text-center text-[#a68f80]">
@@ -441,8 +441,11 @@ export function VerificationTab({ data }: { data: PmApplicationDetail }) {
                 </tr>
               )}
               {data.capacity.map((c) => (
-                <tr key={c.productId} className="border-t border-[#efe2d4]">
-                  <td className="px-3 py-2 font-semibold text-[#20180f]">{c.hsCode}</td>
+                <tr key={c.id} className="border-t border-[#efe2d4]">
+                  <td className="px-3 py-2 font-semibold text-[#20180f]">
+                    {c.kbliCode || "—"}
+                    {c.kbliDescription && <div className="mt-0.5 text-[10.5px] font-normal text-[#8a7565]">{c.kbliDescription}</div>}
+                  </td>
                   <td className="px-3 py-2 text-[#4a4038]">{c.berdasarkanIzin || "—"}</td>
                   <td className="px-3 py-2 text-[#4a4038]">{c.kapasitasTerpasang || "—"}</td>
                   <td className="px-3 py-2 text-[#4a4038]">{c.satuan || "—"}</td>

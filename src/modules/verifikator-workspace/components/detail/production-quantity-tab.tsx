@@ -20,15 +20,37 @@ import {
 } from "../../status";
 import type { AssignmentStatusValue } from "../../status";
 import { RichTextEditor } from "@/components/form/rich-text-editor";
+import { SearchSelectInput } from "@/components/form/search-select-input";
 
 type CapacityRow = {
-  productId: string;
+  id: string;
   jenisProduk: string;
-  hsCode: string;
+  kbliCode: string;
+  kbliDescription: string;
   berdasarkanIzin: string;
   kapasitasTerpasang: string;
   satuan: string;
 };
+
+type CapacityDraft = {
+  jenisProduk: string;
+  kbliCode: string;
+  kbliDescription: string;
+  berdasarkanIzin: string;
+  kapasitasTerpasang: string;
+  satuan: string;
+};
+
+const EMPTY_CAPACITY_DRAFT: CapacityDraft = {
+  jenisProduk: "",
+  kbliCode: "",
+  kbliDescription: "",
+  berdasarkanIzin: "",
+  kapasitasTerpasang: "",
+  satuan: "",
+};
+
+type KbliOption = { code: string; description: string; category?: "UTAMA" | "PENDUKUNG" };
 
 type RawMaterialUsageRow = {
   id: string;
@@ -537,6 +559,11 @@ type Props = {
 export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNavigateToRawMaterial }: Props) {
   const queryClient = useQueryClient();
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [isAddingCapacity, setIsAddingCapacity] = useState(false);
+  const [newCapacity, setNewCapacity] = useState<CapacityDraft>(EMPTY_CAPACITY_DRAFT);
+  const [savingCapacity, setSavingCapacity] = useState(false);
+  const [deletingCapacityId, setDeletingCapacityId] = useState<string | null>(null);
+  const [clearingLegacyCapacity, setClearingLegacyCapacity] = useState(false);
   const canEdit = assignmentStatus === "SUBMITTED";
 
   const queryKey = ["verifikator-workspace", "assignments", assignmentId, "production-quantity"];
@@ -549,6 +576,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
         data: {
           capacity: CapacityRow[];
           capacityDocumentPath: string | null;
+          kbliOptions: KbliOption[];
           rows: ProductionQtyRow[];
           rawMaterialUsage: RawMaterialUsageRow[];
           rawMaterialConversion: RawMaterialConversionRow[];
@@ -567,6 +595,8 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
   });
 
   const capacity = data?.capacity ?? [];
+  const kbliOptions = data?.kbliOptions ?? [];
+  const kbliSelectOptions = kbliOptions.map((k) => ({ value: k.code, label: k.code, hint: k.description }));
   const capacityDocumentPath = data?.capacityDocumentPath ?? null;
   const rawMaterialUsage = data?.rawMaterialUsage ?? [];
   const rawMaterialConversion = data?.rawMaterialConversion ?? [];
@@ -682,6 +712,66 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
       toast.error(body?.error ?? "Gagal menyimpan data");
       return;
     }
+    queryClient.invalidateQueries({ queryKey });
+  }
+
+  async function handleAddCapacity() {
+    if (!canEdit) return;
+    setSavingCapacity(true);
+    const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/capacity`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newCapacity),
+    });
+    setSavingCapacity(false);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal menambahkan kapasitas");
+      return;
+    }
+    toast.success("Kapasitas produksi ditambahkan.");
+    setIsAddingCapacity(false);
+    setNewCapacity(EMPTY_CAPACITY_DRAFT);
+    queryClient.invalidateQueries({ queryKey });
+  }
+
+  async function handleDeleteCapacity(row: CapacityRow) {
+    if (!canEdit) return;
+    if (!window.confirm(`Hapus kapasitas "${row.jenisProduk || row.kbliCode || "ini"}"?`)) return;
+    setDeletingCapacityId(row.id);
+    const response = await fetch(
+      `/api/verifikator-workspace/assignments/${assignmentId}/capacity?capacityId=${encodeURIComponent(row.id)}`,
+      { method: "DELETE" },
+    );
+    setDeletingCapacityId(null);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal menghapus kapasitas");
+      return;
+    }
+    toast.success("Kapasitas produksi dihapus.");
+    queryClient.invalidateQueries({ queryKey });
+  }
+
+  /** Bulk-clears rows left over from the old 1:1-per-product auto-seed system (no kbliCode of
+   * their own, since KBLI wasn't a field back then) — a one-click reset instead of deleting each
+   * one by hand. */
+  async function handleClearLegacyCapacity() {
+    if (!canEdit) return;
+    const legacyCount = capacity.filter((c) => !c.kbliCode).length;
+    if (legacyCount === 0) return;
+    if (!window.confirm(`Hapus ${legacyCount} baris kapasitas lama (peninggalan sistem lama, belum ada KBLI)? Tindakan ini tidak bisa dibatalkan.`)) return;
+    setClearingLegacyCapacity(true);
+    const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/capacity?legacy=true`, {
+      method: "DELETE",
+    });
+    setClearingLegacyCapacity(false);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal menghapus data lama");
+      return;
+    }
+    toast.success("Baris kapasitas lama dihapus.");
     queryClient.invalidateQueries({ queryKey });
   }
 
@@ -811,67 +901,236 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
         berikutnya.
       </p>
 
-      <CollapsibleSection title="Kapasitas Produksi Berdasarkan Perizinan" desc="Kapasitas produksi berdasarkan izin dan kapasitas terpasang">
-        <table className="w-full min-w-[600px] border-collapse text-[12px]">
-          <thead>
-            <tr className="bg-[#f7f2ec]">
-              {["HS Code", "Berdasarkan Izin", "Kapasitas Terpasang", "Satuan"].map((h) => (
-                <th key={h} className="border-b border-[#e8dccd] px-3 py-2.25 text-left text-[11px] font-bold text-[#6b5b4c]">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {capacity.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-3 py-3 text-center text-[#a68f80]">
-                  Tidak ada data kapasitas.
-                </td>
-              </tr>
+      <CollapsibleSection
+        title="Kapasitas Produksi Berdasarkan Perizinan"
+        desc="Perizinan diberikan per KBLI, bukan per HS Code — satu KBLI bisa mencakup beberapa jenis produk (mis. izin spinning untuk berbagai jenis benang). Daftar ini dikelola manual, tidak otomatis mengikuti daftar produk."
+      >
+        {canEdit && !isAddingCapacity && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsAddingCapacity(true);
+                setNewCapacity(EMPTY_CAPACITY_DRAFT);
+              }}
+              className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-3 py-1.5 text-[11.5px] font-semibold text-[#261813]"
+            >
+              <MaterialIcon name="add" className="text-[14px]" />
+              Tambah Kapasitas
+            </button>
+            {capacity.some((c) => !c.kbliCode) && (
+              <button
+                type="button"
+                disabled={clearingLegacyCapacity}
+                onClick={handleClearLegacyCapacity}
+                className="flex items-center gap-1.5 rounded-lg border border-[#dc2626] bg-white px-3 py-1.5 text-[11.5px] font-semibold text-[#dc2626] disabled:opacity-50"
+              >
+                <MaterialIcon name="delete_sweep" className="text-[14px]" />
+                {clearingLegacyCapacity ? "Menghapus..." : "Hapus Baris Lama (Belum Ada KBLI)"}
+              </button>
             )}
-            {capacity.map((c) => (
-              <tr key={c.productId}>
-                <td className="border-b border-[#f0ded0] px-3 py-2.25">
-                  <div className="text-[12.5px] font-extrabold text-[#20180f]">{c.hsCode}</div>
-                  <div className="mt-0.5 text-[11px] text-[#8a7565]">{c.jenisProduk}</div>
-                </td>
-                <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">
-                  {canEdit ? (
-                    <EditableValueInput
-                      value={c.berdasarkanIzin}
-                      onSave={(value) => savePayloadField("capacity", c.productId, "berdasarkanIzin", value, `capacity:${c.productId}:berdasarkanIzin`)}
-                      numeric
-                    />
-                  ) : (
-                    fmtNum(c.berdasarkanIzin)
-                  )}
-                </td>
-                <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">
-                  {canEdit ? (
-                    <EditableValueInput
-                      value={c.kapasitasTerpasang}
-                      onSave={(value) => savePayloadField("capacity", c.productId, "kapasitasTerpasang", value, `capacity:${c.productId}:kapasitasTerpasang`)}
-                      numeric
-                    />
-                  ) : (
-                    fmtNum(c.kapasitasTerpasang)
-                  )}
-                </td>
-                <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">
-                  {canEdit ? (
-                    <EditableValueInput
-                      value={c.satuan}
-                      onSave={(value) => savePayloadField("capacity", c.productId, "satuan", value, `capacity:${c.productId}:satuan`)}
-                    />
-                  ) : (
-                    c.satuan || "—"
-                  )}
-                </td>
+          </div>
+        )}
+        {isAddingCapacity && (
+          <div className="mb-3 rounded-lg border border-dashed border-[#2f6fe0] bg-[#f5f8fe] p-3.5">
+            <div className="mb-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <div>
+                <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">KBLI</div>
+                <SearchSelectInput
+                  value={newCapacity.kbliCode}
+                  onChange={(value) => setNewCapacity((prev) => ({ ...prev, kbliCode: value }))}
+                  onSelectOption={(option) => setNewCapacity((prev) => ({ ...prev, kbliCode: option.value, kbliDescription: option.hint ?? "" }))}
+                  options={kbliSelectOptions}
+                  placeholder="Cari atau ketik kode KBLI..."
+                />
+              </div>
+              <div>
+                <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Uraian KBLI</div>
+                <input
+                  type="text"
+                  value={newCapacity.kbliDescription}
+                  onChange={(e) => setNewCapacity((prev) => ({ ...prev, kbliDescription: e.target.value }))}
+                  placeholder="Terisi otomatis saat memilih KBLI"
+                  className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1.5 text-[11.5px] text-[#20180f] outline-none"
+                />
+              </div>
+            </div>
+            <div className="mb-2.5">
+              <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Jenis Produk</div>
+              <input
+                type="text"
+                value={newCapacity.jenisProduk}
+                onChange={(e) => setNewCapacity((prev) => ({ ...prev, jenisProduk: e.target.value }))}
+                className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1.5 text-[11.5px] text-[#20180f] outline-none"
+              />
+            </div>
+            <div className="mb-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+              <div>
+                <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">
+                  Kapasitas Produksi per Tahun Berdasarkan Perizinan
+                </div>
+                <input
+                  type="text"
+                  value={newCapacity.berdasarkanIzin}
+                  onChange={(e) => setNewCapacity((prev) => ({ ...prev, berdasarkanIzin: e.target.value }))}
+                  className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1.5 text-[11.5px] text-[#20180f] outline-none"
+                />
+              </div>
+              <div>
+                <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Kapasitas Produksi Terpasang per Tahun</div>
+                <input
+                  type="text"
+                  value={newCapacity.kapasitasTerpasang}
+                  onChange={(e) => setNewCapacity((prev) => ({ ...prev, kapasitasTerpasang: e.target.value }))}
+                  className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1.5 text-[11.5px] text-[#20180f] outline-none"
+                />
+              </div>
+              <div>
+                <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Satuan</div>
+                <input
+                  type="text"
+                  value={newCapacity.satuan}
+                  onChange={(e) => setNewCapacity((prev) => ({ ...prev, satuan: e.target.value }))}
+                  className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1.5 text-[11.5px] text-[#20180f] outline-none"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={savingCapacity}
+                onClick={() => setIsAddingCapacity(false)}
+                className="rounded-lg border border-[#e1bfb3] bg-white px-3 py-1.5 text-[11.5px] font-semibold text-[#261813] disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={savingCapacity}
+                onClick={handleAddCapacity}
+                className="flex items-center gap-1.5 rounded-lg bg-[#2f6fe0] px-3 py-1.5 text-[11.5px] font-semibold text-white disabled:opacity-50"
+              >
+                <MaterialIcon name="save" className="text-[13px]" />
+                {savingCapacity ? "Menyimpan..." : "Simpan"}
+              </button>
+            </div>
+          </div>
+        )}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-225 border-collapse text-[12px]">
+            <thead>
+              <tr className="bg-[#f7f2ec]">
+                {[
+                  "KBLI",
+                  "Uraian KBLI",
+                  "Jenis Produk",
+                  "Kapasitas Produksi per Tahun Berdasarkan Perizinan",
+                  "Kapasitas Produksi Terpasang per Tahun",
+                  "Satuan",
+                  ...(canEdit ? ["Aksi"] : []),
+                ].map((h) => (
+                  <th key={h} className="border-b border-[#e8dccd] px-3 py-2.25 text-left text-[11px] font-bold text-[#6b5b4c]">
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {capacity.length === 0 && !isAddingCapacity && (
+                <tr>
+                  <td colSpan={canEdit ? 7 : 6} className="px-3 py-3 text-center text-[#a68f80]">
+                    Tidak ada data kapasitas.
+                  </td>
+                </tr>
+              )}
+              {capacity.map((c) => (
+                <tr key={c.id}>
+                  <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">
+                    {canEdit ? (
+                      <SearchSelectInput
+                        value={c.kbliCode}
+                        onChange={(value) => savePayloadField("capacity", c.id, "kbliCode", value, `capacity:${c.id}:kbliCode`)}
+                        onSelectOption={(option) => {
+                          savePayloadField("capacity", c.id, "kbliCode", option.value, `capacity:${c.id}:kbliCode`);
+                          savePayloadField("capacity", c.id, "kbliDescription", option.hint ?? "", `capacity:${c.id}:kbliDescription`);
+                        }}
+                        options={kbliSelectOptions}
+                        placeholder="Cari atau ketik kode KBLI..."
+                      />
+                    ) : (
+                      c.kbliCode || "—"
+                    )}
+                  </td>
+                  <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">
+                    {canEdit ? (
+                      <EditableValueInput
+                        value={c.kbliDescription}
+                        onSave={(value) => savePayloadField("capacity", c.id, "kbliDescription", value, `capacity:${c.id}:kbliDescription`)}
+                      />
+                    ) : (
+                      c.kbliDescription || "—"
+                    )}
+                  </td>
+                  <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">
+                    {canEdit ? (
+                      <EditableValueInput
+                        value={c.jenisProduk}
+                        onSave={(value) => savePayloadField("capacity", c.id, "jenisProduk", value, `capacity:${c.id}:jenisProduk`)}
+                      />
+                    ) : (
+                      c.jenisProduk || "—"
+                    )}
+                  </td>
+                  <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">
+                    {canEdit ? (
+                      <EditableValueInput
+                        value={c.berdasarkanIzin}
+                        onSave={(value) => savePayloadField("capacity", c.id, "berdasarkanIzin", value, `capacity:${c.id}:berdasarkanIzin`)}
+                        numeric
+                      />
+                    ) : (
+                      fmtNum(c.berdasarkanIzin)
+                    )}
+                  </td>
+                  <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">
+                    {canEdit ? (
+                      <EditableValueInput
+                        value={c.kapasitasTerpasang}
+                        onSave={(value) => savePayloadField("capacity", c.id, "kapasitasTerpasang", value, `capacity:${c.id}:kapasitasTerpasang`)}
+                        numeric
+                      />
+                    ) : (
+                      fmtNum(c.kapasitasTerpasang)
+                    )}
+                  </td>
+                  <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">
+                    {canEdit ? (
+                      <EditableValueInput
+                        value={c.satuan}
+                        onSave={(value) => savePayloadField("capacity", c.id, "satuan", value, `capacity:${c.id}:satuan`)}
+                      />
+                    ) : (
+                      c.satuan || "—"
+                    )}
+                  </td>
+                  {canEdit && (
+                    <td className="border-b border-[#f0ded0] px-3 py-2.25">
+                      <button
+                        type="button"
+                        disabled={deletingCapacityId === c.id}
+                        onClick={() => handleDeleteCapacity(c)}
+                        className="flex items-center gap-1 rounded-md border border-[#dc2626] bg-white px-2 py-1 text-[10.5px] font-semibold text-[#dc2626] disabled:opacity-50"
+                      >
+                        <MaterialIcon name="delete" className="text-[12px]" />
+                        Hapus
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         {capacityDocumentPath ? (
           <a
             href={fileHref(capacityDocumentPath)}
