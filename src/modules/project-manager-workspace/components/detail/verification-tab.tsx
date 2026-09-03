@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import DOMPurify from "dompurify";
 
 import { MaterialIcon } from "../material-icon";
+import "@/components/form/rich-text-editor.css";
 import {
   MACHINE_VERIFICATION_STATUS_BADGE,
   MACHINE_VERIFICATION_STATUS_LABELS,
@@ -178,9 +180,16 @@ function MesinSection({ data }: { data: PmApplicationDetail }) {
 
                     <div className="border-t border-[#e8dccd] pt-3.5">
                       <div className="mb-1.5 text-[12.5px] font-bold text-[#20180f]">Uraian Observasi Verifikator</div>
-                      <div className="min-h-16 rounded-lg border border-[#e8dccd] bg-white p-2.5 text-[12.5px] text-[#20180f]">
-                        {row.note || <span className="text-[#a68f80]">Belum ada catatan.</span>}
-                      </div>
+                      {row.note ? (
+                        <div
+                          className="rte-content min-h-16 rounded-lg border border-[#e8dccd] bg-white p-2.5 text-[12.5px] text-[#20180f]"
+                          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(row.note, { ADD_ATTR: ["target"] }) }}
+                        />
+                      ) : (
+                        <div className="min-h-16 rounded-lg border border-[#e8dccd] bg-white p-2.5 text-[12.5px] text-[#a68f80]">
+                          Belum ada catatan.
+                        </div>
+                      )}
                       {row.verifiedAt && (
                         <div className="mt-2 text-[10.5px] text-[#8a7565]">Diverifikasi: {new Date(row.verifiedAt).toLocaleString("id-ID")}</div>
                       )}

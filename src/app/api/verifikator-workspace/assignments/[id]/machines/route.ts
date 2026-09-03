@@ -22,6 +22,7 @@ const machineDataSchema = z.object({
   kapasitasJam: z.string().trim().optional(),
   kapasitasJamSatuan: z.string().trim().optional(),
   waktuBeroperasi: z.string().trim().optional(),
+  hariEfektifPerTahun: z.string().trim().optional(),
   kondisi: z.enum(MACHINE_KONDISI_VALUES).optional(),
   power: z.string().trim().optional(),
   powerSatuan: z.string().trim().optional(),
@@ -70,6 +71,9 @@ export async function GET(
       photoMesinPaths: decisions[item.id]?.photoPaths ?? [],
       status: decisions[item.id]?.status ?? "PENDING",
       note: decisions[item.id]?.note ?? "",
+      jumlahTerpasang: decisions[item.id]?.jumlahTerpasang ?? "",
+      jumlahTidakAktif: decisions[item.id]?.jumlahTidakAktif ?? "",
+      keteranganJumlah: decisions[item.id]?.keteranganJumlah ?? "",
       verifiedAt: decisions[item.id]?.verifiedAt ?? null,
     })),
   });
@@ -81,6 +85,9 @@ const patchSchema = z.object({
   note: z.string().trim().optional(),
   photoPath: z.string().trim().optional(),
   photoPaths: z.array(z.string().trim()).optional(),
+  jumlahTerpasang: z.string().trim().optional(),
+  jumlahTidakAktif: z.string().trim().optional(),
+  keteranganJumlah: z.string().trim().optional(),
   // Corrections to the applicant's own machine data — written back to
   // Application.payload.machines (the source of truth every other workspace
   // reads from via buildMachineChecklist), not to machineVerifications.
@@ -137,6 +144,9 @@ export async function PATCH(
     note: parsed.data.note ?? existing?.note,
     photoPath: parsed.data.photoPath ?? existing?.photoPath,
     photoPaths: parsed.data.photoPaths ?? existing?.photoPaths,
+    jumlahTerpasang: parsed.data.jumlahTerpasang ?? existing?.jumlahTerpasang,
+    jumlahTidakAktif: parsed.data.jumlahTidakAktif ?? existing?.jumlahTidakAktif,
+    keteranganJumlah: parsed.data.keteranganJumlah ?? existing?.keteranganJumlah,
     verifiedAt: new Date().toISOString(),
   };
 
@@ -146,6 +156,60 @@ export async function PATCH(
   });
 
   return NextResponse.json({ data: updated.machineVerifications });
+}
+
+const reorderSchema = z.object({
+  orderedIds: z.array(z.string().min(1)).min(1),
+});
+
+/**
+ * Drag-to-reorder in the Verifikasi Mesin table — rewrites `payload.machines`' own array order
+ * (the same array every workspace reads via `buildMachineChecklist`, which preserves array
+ * order), so the new sequence sticks everywhere the list is shown, not just this session.
+ */
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await getServerSession();
+  const verifikatorId = session?.user.id;
+  if (!verifikatorId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const assignment = await findOwnedAssignment(id, verifikatorId);
+  if (!assignment) {
+    return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
+  }
+  if (assignment.status !== "SUBMITTED") {
+    return NextResponse.json(
+      { error: "Urutan mesin hanya dapat diubah saat assignment berstatus Submitted." },
+      { status: 400 },
+    );
+  }
+
+  const parsed = reorderSchema.safeParse(await request.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Data tidak valid" }, { status: 400 });
+  }
+
+  const payload = assignment.application.payload as ApplicationWizardValues;
+  const machines = payload.machines ?? [];
+  const byId = new Map(machines.map((m) => [m.id, m]));
+  const { orderedIds } = parsed.data;
+  // Must be a full permutation of the current machine ids — never silently drop or invent one.
+  if (orderedIds.length !== machines.length || !orderedIds.every((mid) => byId.has(mid))) {
+    return NextResponse.json({ error: "Urutan mesin tidak valid" }, { status: 400 });
+  }
+
+  const reordered = orderedIds.map((mid) => byId.get(mid)!);
+  await db.application.update({
+    where: { id: assignment.applicationId },
+    data: { payload: { ...payload, machines: reordered } },
+  });
+
+  return NextResponse.json({ data: { orderedIds } });
 }
 
 /**

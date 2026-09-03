@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { MaterialIcon } from "../material-icon";
+import { RichTextEditor } from "@/components/form/rich-text-editor";
 import { MACHINE_VERIFICATION_STATUS_BADGE, MACHINE_VERIFICATION_STATUS_LABELS, type MachineVerificationStatusValue } from "../../status";
 import type { AssignmentStatusValue } from "../../status";
 import { MACHINE_KONDISI_LABELS, MACHINE_KONDISI_VALUES, type MachineKondisiValue } from "@/modules/applications/schema";
@@ -38,6 +39,8 @@ type MachineRow = {
   kapasitasJamSatuan: string;
   waktuBeroperasi: string;
   kapasitasPerHari: string;
+  hariEfektifPerTahun: string;
+  kapasitasPerTahun: string;
   kondisi: MachineKondisiValue | "";
   power: string;
   powerSatuan: string;
@@ -48,6 +51,9 @@ type MachineRow = {
   photoMesinPaths: string[];
   status: MachineVerificationStatusValue;
   note: string;
+  jumlahTerpasang: string;
+  jumlahTidakAktif: string;
+  keteranganJumlah: string;
   verifiedAt: string | null;
 };
 
@@ -176,6 +182,7 @@ type MachineDataDraft = {
   kapasitasJam?: string;
   kapasitasJamSatuan?: string;
   waktuBeroperasi?: string;
+  hariEfektifPerTahun?: string;
   kondisi?: MachineKondisiValue;
   power?: string;
   powerSatuan?: string;
@@ -258,9 +265,18 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [draftNotes, setDraftNotes] = useState<Record<string, string>>({});
+  const [draftJumlahTerpasang, setDraftJumlahTerpasang] = useState<Record<string, string>>({});
+  const [draftJumlahTidakAktif, setDraftJumlahTidakAktif] = useState<Record<string, string>>({});
+  const [draftKeteranganJumlah, setDraftKeteranganJumlah] = useState<Record<string, string>>({});
   const [draftMachineData, setDraftMachineData] = useState<Record<string, MachineDataDraft>>({});
   const [isAdding, setIsAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  // Local drag-time order — reset to natural (server) order whenever it stops matching the
+  // current row set (fresh load, add/delete, or a refetch after persisting), so this never
+  // needs an effect to stay in sync.
+  const [orderIds, setOrderIds] = useState<string[]>([]);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
   const canEdit = assignmentStatus === "SUBMITTED";
 
   const queryKey = ["verifikator-workspace", "assignments", assignmentId, "machines"];
@@ -275,14 +291,29 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
   });
 
   const rows = data ?? [];
+  const rowById = new Map(rows.map((r) => [r.id, r]));
+  const reportQueryKey = ["/api/verifikator-workspace", "assignments", assignmentId, "document-report"];
+  /** The report page has its own separate query cache — any machine mutation here (status,
+   * photos, data corrections, add/delete, reorder) must invalidate it too, or a report tab
+   * already open in this session keeps showing stale data until a hard refresh. */
+  function invalidateAll() {
+    invalidateAll();
+    queryClient.invalidateQueries({ queryKey: reportQueryKey });
+  }
+  const currentOrderIds =
+    orderIds.length === rows.length && orderIds.every((rid) => rowById.has(rid)) ? orderIds : rows.map((r) => r.id);
+  const orderedRows = currentOrderIds.map((rid) => rowById.get(rid)!);
 
   async function handleDecision(row: MachineRow, status: MachineVerificationStatusValue) {
     setSavingId(row.id);
     const note = draftNotes[row.id] ?? row.note;
+    const jumlahTerpasang = draftJumlahTerpasang[row.id] ?? row.jumlahTerpasang;
+    const jumlahTidakAktif = draftJumlahTidakAktif[row.id] ?? row.jumlahTidakAktif;
+    const keteranganJumlah = draftKeteranganJumlah[row.id] ?? row.keteranganJumlah;
     const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/machines`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: row.id, status, note }),
+      body: JSON.stringify({ id: row.id, status, note, jumlahTerpasang, jumlahTidakAktif, keteranganJumlah }),
     });
     setSavingId(null);
     if (!response.ok) {
@@ -291,7 +322,7 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
       return;
     }
     toast.success(`${row.proses} ditandai ${MACHINE_VERIFICATION_STATUS_LABELS[status]}.`);
-    queryClient.invalidateQueries({ queryKey });
+    invalidateAll();
   }
 
   async function patchPhotos(row: MachineRow, patch: { photoPath?: string; photoPaths?: string[] }) {
@@ -307,7 +338,7 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
       toast.error(body?.error ?? "Gagal menyimpan foto mesin");
       return false;
     }
-    queryClient.invalidateQueries({ queryKey });
+    invalidateAll();
     return true;
   }
 
@@ -371,7 +402,7 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
       delete next[row.id];
       return next;
     });
-    queryClient.invalidateQueries({ queryKey });
+    invalidateAll();
   }
 
   async function handleAddMachine() {
@@ -390,7 +421,7 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
     const { data: newMachine } = (await response.json()) as { data: { id: string } };
     toast.success("Mesin baru ditambahkan — lengkapi datanya di bawah.");
     setExpandedId(newMachine.id);
-    queryClient.invalidateQueries({ queryKey });
+    invalidateAll();
   }
 
   async function handleDeleteMachine(row: MachineRow) {
@@ -408,7 +439,49 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
     }
     toast.success(`Mesin "${row.proses || row.nama}" dihapus.`);
     setExpandedId((prev) => (prev === row.id ? null : prev));
-    queryClient.invalidateQueries({ queryKey });
+    invalidateAll();
+  }
+
+  function handleDragStart(id: string) {
+    setDragId(id);
+  }
+
+  /** Reorders the local (unsaved) list live as the dragged row passes over another — the actual
+   * PUT only fires once on drop, in handleDragEnd. */
+  function handleDragOver(event: React.DragEvent, overId: string) {
+    event.preventDefault();
+    if (!dragId || dragId === overId) return;
+    const from = currentOrderIds.indexOf(dragId);
+    const to = currentOrderIds.indexOf(overId);
+    if (from === -1 || to === -1) return;
+    const next = [...currentOrderIds];
+    next.splice(from, 1);
+    next.splice(to, 0, dragId);
+    setOrderIds(next);
+  }
+
+  async function handleDragEnd() {
+    const draggedId = dragId;
+    setDragId(null);
+    if (!draggedId) return;
+    // Nothing moved — server order already matches, skip the request.
+    if (currentOrderIds.every((rid, i) => rid === rows[i]?.id)) return;
+
+    setIsSavingOrder(true);
+    const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/machines`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderedIds: currentOrderIds }),
+    });
+    setIsSavingOrder(false);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal menyimpan urutan mesin");
+      setOrderIds([]);
+      return;
+    }
+    toast.success("Urutan mesin diperbarui.");
+    invalidateAll();
   }
 
   if (isLoading) {
@@ -418,7 +491,11 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[13px] text-[#8a7565]">Data mesin produksi sesuai lampiran aplikasi.</p>
+        <p className="text-[13px] text-[#8a7565]">
+          Data mesin produksi sesuai lampiran aplikasi.
+          {canEdit && " Geser ikon di kiri baris untuk mengubah urutan."}
+          {isSavingOrder && " Menyimpan urutan..."}
+        </p>
         {canEdit && (
           <button
             type="button"
@@ -439,21 +516,36 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
       )}
 
       {rows.length > 0 && (
-        <div className="overflow-hidden rounded-[9px] border border-[#e8dccd]">
-          <div className="grid grid-cols-[0.5fr_1.1fr_1.2fr_0.9fr_0.9fr_0.7fr_0.8fr] bg-[#e0662e]">
-            {["No", "Proses", "Jenis Mesin", "Merk", "Model", "Tahun", "Quantity"].map((h) => (
+        <div className="overflow-x-auto rounded-[9px] border border-[#e8dccd]">
+          <div className="grid min-w-7xl grid-cols-[0.3fr_0.35fr_0.9fr_0.9fr_0.6fr_0.6fr_0.5fr_1fr_1fr_1fr_1.2fr_0.9fr] bg-[#e0662e]">
+            {[
+              "",
+              "No",
+              "Proses",
+              "Jenis Mesin",
+              "Merk",
+              "Model",
+              "Tahun",
+              "Jumlah Mesin pada Permohonan",
+              "Jumlah Mesin Terpasang",
+              "Jumlah Mesin Tidak Aktif",
+              "Keterangan",
+              "Kapasitas/Tahun",
+            ].map((h) => (
               <div key={h} className="border-r border-white/30 px-3 py-2.5 text-[12px] font-extrabold text-white last:border-r-0">
                 {h}
               </div>
             ))}
           </div>
-          {rows.map((row, index) => {
+          {orderedRows.map((row, index) => {
             const isExpanded = expandedId === row.id;
+            const isDragging = dragId === row.id;
             return (
               <div key={row.id}>
                 <div
                   role="button"
                   tabIndex={0}
+                  draggable={canEdit && !isSavingOrder}
                   onClick={() => setExpandedId((prev) => (prev === row.id ? null : row.id))}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
@@ -461,8 +553,19 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                       setExpandedId((prev) => (prev === row.id ? null : row.id));
                     }
                   }}
-                  className="grid cursor-pointer grid-cols-[0.5fr_1.1fr_1.2fr_0.9fr_0.9fr_0.7fr_0.8fr] border-t border-[#f0ded0]"
+                  onDragStart={() => handleDragStart(row.id)}
+                  onDragOver={(event) => handleDragOver(event, row.id)}
+                  onDrop={(event) => event.preventDefault()}
+                  onDragEnd={handleDragEnd}
+                  className={`grid min-w-7xl cursor-pointer grid-cols-[0.3fr_0.35fr_0.9fr_0.9fr_0.6fr_0.6fr_0.5fr_1fr_1fr_1fr_1.2fr_0.9fr] border-t border-[#f0ded0] ${isDragging ? "opacity-40" : ""}`}
                 >
+                  <div
+                    className="flex items-center justify-center border-r border-[#f0ded0] text-[#c8bba9]"
+                    style={{ cursor: canEdit ? "grab" : "default" }}
+                    title={canEdit ? "Geser untuk mengubah urutan" : undefined}
+                  >
+                    {canEdit && <MaterialIcon name="drag_indicator" className="text-[16px]" />}
+                  </div>
                   <div className="flex items-center gap-1.5 border-r border-[#f0ded0] px-3 py-2.5 text-[12.5px] text-[#4a4038]">
                     <MaterialIcon name={isExpanded ? "expand_less" : "expand_more"} className="text-[16px] text-[#a68f80]" />
                     {index + 1}
@@ -472,9 +575,15 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                   <div className="border-r border-[#f0ded0] px-3 py-2.5 text-[12.5px] text-[#4a4038]">{row.merk || "—"}</div>
                   <div className="border-r border-[#f0ded0] px-3 py-2.5 text-[12.5px] text-[#4a4038]">{row.model || "—"}</div>
                   <div className="border-r border-[#f0ded0] px-3 py-2.5 text-[12.5px] text-[#4a4038]">{row.tahun || "—"}</div>
+                  <div className="border-r border-[#f0ded0] px-3 py-2.5 text-[12.5px] text-[#4a4038]">
+                    {row.quantity ? `${row.quantity} ${row.quantitySatuan}`.trim() : "—"}
+                  </div>
+                  <div className="border-r border-[#f0ded0] px-3 py-2.5 text-[12.5px] text-[#4a4038]">{row.jumlahTerpasang || "—"}</div>
+                  <div className="border-r border-[#f0ded0] px-3 py-2.5 text-[12.5px] text-[#4a4038]">{row.jumlahTidakAktif || "—"}</div>
+                  <div className="border-r border-[#f0ded0] px-3 py-2.5 text-[12.5px] text-[#4a4038]">{row.keteranganJumlah || "—"}</div>
                   <div className="flex items-center justify-between gap-1.5 px-3 py-2.5">
                     <span className="text-[12.5px] text-[#4a4038]">
-                      {row.quantity ? `${row.quantity} ${row.quantitySatuan}`.trim() : "—"}
+                      {row.kapasitasPerTahun ? `${fmtNum(Number(row.kapasitasPerTahun))} ${row.kapasitasJamSatuan}`.trim() : "—"}
                     </span>
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${MACHINE_VERIFICATION_STATUS_BADGE[row.status]}`}>
                       {MACHINE_VERIFICATION_STATUS_LABELS[row.status]}
@@ -510,7 +619,7 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                         <EditableField label="Tahun" value={value("tahun", row.tahun)} onChange={(v) => set({ tahun: v })} disabled={!canEdit} />
                       </div>
                       <EditableFieldUnit
-                        label="Quantity"
+                        label="Jumlah Mesin pada Permohonan"
                         value={value("jumlah", row.quantity)}
                         onValueChange={(v) => set({ jumlah: v })}
                         unit={value("jumlahSatuan", row.quantitySatuan)}
@@ -579,6 +688,18 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                         </select>
                       </div>
                     </div>
+                    <div className="mb-3.5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      <EditableField
+                        label="Jumlah Hari Efektif per Tahun (hari)"
+                        value={value("hariEfektifPerTahun", row.hariEfektifPerTahun)}
+                        onChange={(v) => set({ hariEfektifPerTahun: v })}
+                        disabled={!canEdit}
+                      />
+                      <Field
+                        label="Kapasitas per Tahun (hari efektif × kapasitas per hari)"
+                        value={[row.kapasitasPerTahun, row.kapasitasJamSatuan].filter(Boolean).join(" ")}
+                      />
+                    </div>
                     <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <EditableField label="Input / Raw Material" value={value("input", row.input)} onChange={(v) => set({ input: v })} disabled={!canEdit} />
                       <EditableField label="Output / Produk" value={value("output", row.output)} onChange={(v) => set({ output: v })} disabled={!canEdit} />
@@ -606,15 +727,37 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
                       </div>
                     )}
 
+                    <div className="mb-3.5 border-t border-[#e8dccd] pt-3.5">
+                      <div className="mb-3 text-[11px] font-bold tracking-wide text-[#8a7565]">HASIL VERIFIKASI JUMLAH MESIN</div>
+                      <div className="mb-3.5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <EditableField
+                          label="Jumlah Mesin Terpasang"
+                          value={draftJumlahTerpasang[row.id] ?? row.jumlahTerpasang}
+                          onChange={(v) => setDraftJumlahTerpasang((prev) => ({ ...prev, [row.id]: v }))}
+                          disabled={!canEdit}
+                        />
+                        <EditableField
+                          label="Jumlah Mesin Tidak Aktif"
+                          value={draftJumlahTidakAktif[row.id] ?? row.jumlahTidakAktif}
+                          onChange={(v) => setDraftJumlahTidakAktif((prev) => ({ ...prev, [row.id]: v }))}
+                          disabled={!canEdit}
+                        />
+                        <EditableField
+                          label="Keterangan"
+                          value={draftKeteranganJumlah[row.id] ?? row.keteranganJumlah}
+                          onChange={(v) => setDraftKeteranganJumlah((prev) => ({ ...prev, [row.id]: v }))}
+                          disabled={!canEdit}
+                        />
+                      </div>
+                    </div>
+
                     <div className="border-t border-[#e8dccd] pt-3.5">
                       <div className="mb-1.5 text-[12.5px] font-bold text-[#20180f]">Uraian Observasi</div>
-                      <textarea
-                        className="w-full rounded-lg border border-[#e8dccd] bg-white p-2.5 text-[12.5px] text-[#20180f] outline-none disabled:bg-[#f7f2ec]"
-                        rows={3}
+                      <RichTextEditor
+                        value={draftNotes[row.id] ?? row.note}
                         placeholder="Tuliskan hasil observasi verifikator terhadap mesin ini..."
-                        defaultValue={row.note}
                         disabled={!canEdit}
-                        onChange={(e) => setDraftNotes((prev) => ({ ...prev, [row.id]: e.target.value }))}
+                        onChange={(html) => setDraftNotes((prev) => ({ ...prev, [row.id]: html }))}
                       />
                       {canEdit && (
                         <div className="mt-3.5 flex justify-end gap-2.5">

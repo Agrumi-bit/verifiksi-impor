@@ -467,6 +467,12 @@ export const machineVerificationEntrySchema = z.object({
   photoPath: z.string().trim().optional(),
   /** Additional photos the verifikator has taken/uploaded for this machine — the applicant's original `photoMesinPath` is always shown alongside these, not duplicated in here. */
   photoPaths: z.array(z.string().trim()).optional(),
+  /** On-site findings, distinct from `payload.machines[].jumlah` (what the applicant claimed in
+   * the application) — how many of this machine verifikator actually found installed/running
+   * vs. present but not active, plus a remark (typically explaining the inactive count). */
+  jumlahTerpasang: z.string().trim().optional(),
+  jumlahTidakAktif: z.string().trim().optional(),
+  keteranganJumlah: z.string().trim().optional(),
   verifiedAt: z.string().trim().optional(),
 });
 export type MachineVerificationEntry = z.infer<typeof machineVerificationEntrySchema>;
@@ -494,6 +500,9 @@ export type MachineChecklistItem = {
   waktuBeroperasi: string;
   /** waktuBeroperasi × kapasitas (kapasitas = jumlah × kapasitasJam) — only computed when all three parse as numbers, otherwise "" (never guessed). */
   kapasitasPerHari: string;
+  hariEfektifPerTahun: string;
+  /** kapasitasPerHari × hariEfektifPerTahun — only computed when both parse as numbers, otherwise "" (never guessed). */
+  kapasitasPerTahun: string;
   kondisi: MachineKondisiValue | "";
   power: string;
   powerSatuan: string;
@@ -519,6 +528,12 @@ export function buildMachineChecklist(payload: ApplicationWizardValues): Machine
       Number.isFinite(waktuBeroperasiNum)
         ? String(jumlahNum * kapasitasJamNum * waktuBeroperasiNum)
         : "";
+    // Kapasitas per Tahun = Kapasitas per Hari × jumlah hari efektif per tahun.
+    const hariEfektifNum = Number(m.hariEfektifPerTahun);
+    const kapasitasPerTahun =
+      kapasitasPerHari && m.hariEfektifPerTahun && Number.isFinite(hariEfektifNum)
+        ? String(Number(kapasitasPerHari) * hariEfektifNum)
+        : "";
     return {
       id: m.id,
       nama: m.nama ?? "",
@@ -534,6 +549,8 @@ export function buildMachineChecklist(payload: ApplicationWizardValues): Machine
       kapasitasJamSatuan: m.kapasitasJamSatuan ?? "",
       waktuBeroperasi: m.waktuBeroperasi ?? "",
       kapasitasPerHari,
+      hariEfektifPerTahun: m.hariEfektifPerTahun ?? "",
+      kapasitasPerTahun,
       kondisi: m.kondisi ?? "",
       power: m.power ?? "",
       powerSatuan: m.powerSatuan ?? "",

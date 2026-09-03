@@ -273,6 +273,7 @@ export const machineItemSchema = z.object({
   kapasitasJam: z.string().trim().optional(),
   kapasitasJamSatuan: z.string().trim().optional(),
   waktuBeroperasi: z.string().trim().optional(),
+  hariEfektifPerTahun: z.string().trim().optional(),
   kondisi: z.enum(MACHINE_KONDISI_VALUES).optional(),
   power: z.string().trim().optional(),
   powerSatuan: z.string().trim().optional(),

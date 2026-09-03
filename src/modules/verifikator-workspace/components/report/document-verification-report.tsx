@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import DOMPurify from "dompurify";
 
 import { MaterialIcon } from "../material-icon";
 import { DOC_VERIFICATION_STATUS_LABELS, type DocVerificationStatusValue } from "../../status";
@@ -117,12 +118,15 @@ export type MachineRow = {
   model: string;
   tahun: string;
   quantity: string;
+  quantitySatuan: string;
   kapasitas: string;
   kapasitasSatuan: string;
   kapasitasJam: string;
   kapasitasJamSatuan: string;
   waktuBeroperasi: string;
   kapasitasPerHari: string;
+  hariEfektifPerTahun: string;
+  kapasitasPerTahun: string;
   kondisi: MachineKondisiValue | "";
   power: string;
   input: string;
@@ -130,6 +134,12 @@ export type MachineRow = {
   photoMesinPath: string | null;
   photoMesinPaths: string[];
   status: "PENDING" | "APPROVED" | "REJECTED";
+  /** Verifikator's own free-text observation (rich-text HTML from RichTextEditor) — distinct
+   * from `machineUraian()`'s auto-generated summary below; rendered in full, never truncated. */
+  note: string;
+  jumlahTerpasang: string;
+  jumlahTidakAktif: string;
+  keteranganJumlah: string;
 };
 
 export type CapacityRow = {
@@ -582,7 +592,10 @@ function FieldRow({ label, value, ok, pending }: { label: string; value: string;
 }
 
 const MACHINE_STATUS_META: Record<MachineRow["status"], { bg: string; color: string; label: string }> = {
-  PENDING: { bg: "#f0e6d4", color: "#8a7455", label: "Belum Diperiksa" },
+  // PENDING's text used to be a medium tan (#8a7455) on a light tan background (#f0e6d4) —
+  // too little contrast to read comfortably at report font sizes. Darkened to match the
+  // dark-on-pastel pattern already used by APPROVED/REJECTED.
+  PENDING: { bg: "#f0e6d4", color: "#5c4419", label: "Belum Diperiksa" },
   APPROVED: { bg: "#d2f6dd", color: "#0e3d24", label: "Approved" },
   REJECTED: { bg: "#ffe0dc", color: "#7a1f14", label: "Rejected" },
 };
@@ -590,7 +603,8 @@ const MACHINE_STATUS_META: Record<MachineRow["status"], { bg: string; color: str
 export function MiniField({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ background: CREAM, borderRadius: 8, padding: "8px 12px" }}>
-      <div style={{ fontSize: 8.5, letterSpacing: "0.04em", color: MUTED_2, marginBottom: 3 }}>{label}</div>
+      {/* Label used MUTED_2 (#a89b85) on CREAM (#f9f3eb) — near-invisible at 8.5px. MUTED reads clearly while staying visually secondary to the bold INK value below. */}
+      <div style={{ fontSize: 8.5, letterSpacing: "0.04em", color: MUTED, fontWeight: 700, marginBottom: 3 }}>{label}</div>
       <div style={{ fontSize: 11, fontWeight: 700, color: INK }}>{value || "—"}</div>
     </div>
   );
@@ -639,7 +653,10 @@ function MachineChapter({
 }) {
   const approved = machines.filter((m) => m.status === "APPROVED").length;
   const babLabel = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"][chapterIdx + 1] ?? String(chapterIdx + 1);
-  const photoPages = chunk(machines, 2);
+  // One machine per page — each card now carries enough fields (application/installed/inactive
+  // counts, kapasitas per tahun, plus a potentially long free-text observation) that two per
+  // page crowded or overflowed.
+  const photoPages = chunk(machines, 1);
 
   return (
     <>
@@ -752,11 +769,38 @@ function MachineChapter({
                 <MiniField label="INPUT / RAW MATERIAL" value={m.input} />
                 <MiniField label="OUTPUT / PRODUK" value={m.output} />
               </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+                <MiniField label="HARI EFEKTIF / TAHUN" value={m.hariEfektifPerTahun ? `${m.hariEfektifPerTahun} hari` : ""} />
+                <MiniField label="KAPASITAS PRODUKSI / TAHUN" value={m.kapasitasPerTahun ? `${m.kapasitasPerTahun} ${m.kapasitasJamSatuan}`.trim() : ""} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 8 }}>
+                <MiniField label="JUMLAH MESIN PADA PERMOHONAN" value={m.quantity ? `${m.quantity} ${m.quantitySatuan}`.trim() : ""} />
+                <MiniField label="JUMLAH MESIN TERPASANG" value={m.jumlahTerpasang} />
+                <MiniField label="JUMLAH MESIN TIDAK AKTIF" value={m.jumlahTidakAktif} />
+              </div>
+              {m.keteranganJumlah && (
+                <div style={{ marginTop: 8 }}>
+                  <MiniField label="KETERANGAN JUMLAH MESIN" value={m.keteranganJumlah} />
+                </div>
+              )}
               <div style={{ border: "1px dashed #b8ab90", borderLeft: "4px solid #1a9850", borderRadius: 6, padding: "9px 12px", marginTop: 10, background: "#fff" }}>
                 <p style={{ fontSize: 9.5, lineHeight: 1.5, color: INK, margin: 0 }}>
                   <strong>Uraian observasi:</strong> {machineUraian(m, company)}
                 </p>
               </div>
+              {/* Verifikator's own free-text note (rich HTML) — a separate block from the
+                  auto-generated paragraph above, rendered in full: no max-height/line-clamp, so a
+                  long observation is never cut off. */}
+              {m.note && (
+                <div style={{ border: "1px dashed #b8ab90", borderLeft: "4px solid #2f6fe0", borderRadius: 6, padding: "9px 12px", marginTop: 8, background: "#fff" }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: "#2f6fe0", marginBottom: 4 }}>CATATAN VERIFIKATOR</div>
+                  <div
+                    className="rte-html"
+                    style={{ fontSize: 9.5, lineHeight: 1.5, color: INK }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(m.note, { ADD_ATTR: ["target"] }) }}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </PageShell>
@@ -1015,9 +1059,9 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   // "Data Mesin dan Peralatan Produksi" — VKI-only, not a document-checklist
   // category (machines are technical spec rows, not upload/verify documents),
   // so it's appended as its own fixed chapter after all document categories:
-  // 1 divider + 1 "Data Mesin" table + 1 "Photo Mesin" page per 2 machines.
+  // 1 divider + 1 "Data Mesin" table + 1 "Photo Mesin" page per machine.
   const machines = data.machines;
-  const machineChapterPageCount = machines.length > 0 ? 2 + Math.ceil(machines.length / 2) : 0;
+  const machineChapterPageCount = machines.length > 0 ? 2 + machines.length : 0;
   const machineChapterStartPage = cursor;
   cursor += machineChapterPageCount;
 

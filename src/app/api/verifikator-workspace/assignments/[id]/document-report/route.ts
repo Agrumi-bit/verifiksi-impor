@@ -98,6 +98,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     // above) is shown alongside these in the Lampiran Foto appendix, not repeated in here.
     photoMesinPaths: machineDecisions[item.id]?.photoPaths ?? [],
     status: machineDecisions[item.id]?.status ?? "PENDING",
+    note: machineDecisions[item.id]?.note ?? "",
+    jumlahTerpasang: machineDecisions[item.id]?.jumlahTerpasang ?? "",
+    jumlahTidakAktif: machineDecisions[item.id]?.jumlahTidakAktif ?? "",
+    keteranganJumlah: machineDecisions[item.id]?.keteranganJumlah ?? "",
   }));
 
   const productDecisions = productVerificationsSchema.parse(assignment.productVerifications ?? {});

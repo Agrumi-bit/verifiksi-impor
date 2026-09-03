@@ -92,6 +92,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     ...item,
     photoMesinPath: machineDecisions[item.id]?.photoPath || item.photoMesinPath,
     status: machineDecisions[item.id]?.status ?? "PENDING",
+    note: machineDecisions[item.id]?.note ?? "",
+    jumlahTerpasang: machineDecisions[item.id]?.jumlahTerpasang ?? "",
+    jumlahTidakAktif: machineDecisions[item.id]?.jumlahTidakAktif ?? "",
+    keteranganJumlah: machineDecisions[item.id]?.keteranganJumlah ?? "",
   }));
 
   const productDecisions = productVerificationsSchema.parse(assignment.productVerifications ?? {});
