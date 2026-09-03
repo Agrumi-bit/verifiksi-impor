@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
+import { updateApplicationPayload } from "@/lib/application-payload";
 import { MACHINE_KONDISI_VALUES, type ApplicationWizardValues } from "@/modules/applications/schema";
 import { MACHINE_VERIFICATION_STATUSES } from "@/modules/verifikator-workspace/status";
 import { buildMachineChecklist, machineVerificationsSchema } from "@/modules/verifikator-workspace/schema";
@@ -128,12 +129,15 @@ export async function PATCH(
   }
 
   if (parsed.data.machineData) {
-    const machines = (payload.machines ?? []).map((m) =>
-      m.id === parsed.data.id ? { ...m, ...parsed.data.machineData } : m,
-    );
-    await db.application.update({
-      where: { id: assignment.applicationId },
-      data: { payload: { ...payload, machines } },
+    // Read-modify-write under a row lock — two "Simpan Data Mesin ke Aplikasi" clicks (different
+    // machines, or racing an add/delete/reorder) landing within milliseconds of each other used
+    // to silently clobber one another: whichever write committed last overwrote the whole
+    // payload.machines array from its own stale read, discarding the other's change.
+    await updateApplicationPayload(assignment.applicationId, (freshPayload) => {
+      const machines = (freshPayload.machines ?? []).map((m) =>
+        m.id === parsed.data.id ? { ...m, ...parsed.data.machineData } : m,
+      );
+      return { payload: { ...freshPayload, machines }, result: undefined };
     });
   }
 
@@ -194,20 +198,21 @@ export async function PUT(
     return NextResponse.json({ error: "Data tidak valid" }, { status: 400 });
   }
 
-  const payload = assignment.application.payload as ApplicationWizardValues;
-  const machines = payload.machines ?? [];
-  const byId = new Map(machines.map((m) => [m.id, m]));
   const { orderedIds } = parsed.data;
-  // Must be a full permutation of the current machine ids — never silently drop or invent one.
-  if (orderedIds.length !== machines.length || !orderedIds.every((mid) => byId.has(mid))) {
+  const reorderResult = await updateApplicationPayload<{ ok: boolean }>(assignment.applicationId, (freshPayload) => {
+    const machines = freshPayload.machines ?? [];
+    const byId = new Map(machines.map((m) => [m.id, m]));
+    // Must be a full permutation of the current (fresh, not the pre-lock snapshot) machine ids —
+    // never silently drop or invent one.
+    if (orderedIds.length !== machines.length || !orderedIds.every((mid) => byId.has(mid))) {
+      return { payload: freshPayload, result: { ok: false as const } };
+    }
+    const reordered = orderedIds.map((mid) => byId.get(mid)!);
+    return { payload: { ...freshPayload, machines: reordered }, result: { ok: true as const } };
+  });
+  if (!reorderResult.ok) {
     return NextResponse.json({ error: "Urutan mesin tidak valid" }, { status: 400 });
   }
-
-  const reordered = orderedIds.map((mid) => byId.get(mid)!);
-  await db.application.update({
-    where: { id: assignment.applicationId },
-    data: { payload: { ...payload, machines: reordered } },
-  });
 
   return NextResponse.json({ data: { orderedIds } });
 }
@@ -244,13 +249,10 @@ export async function POST(
     return NextResponse.json({ error: "Data tidak valid" }, { status: 400 });
   }
 
-  const payload = assignment.application.payload as ApplicationWizardValues;
   const newMachine = { id: randomUUID(), ...parsed.data };
-  const machines = [...(payload.machines ?? []), newMachine];
-
-  await db.application.update({
-    where: { id: assignment.applicationId },
-    data: { payload: { ...payload, machines } },
+  await updateApplicationPayload(assignment.applicationId, (freshPayload) => {
+    const machines = [...(freshPayload.machines ?? []), newMachine];
+    return { payload: { ...freshPayload, machines }, result: undefined };
   });
 
   return NextResponse.json({ data: newMachine }, { status: 201 });
@@ -284,17 +286,15 @@ export async function DELETE(
     return NextResponse.json({ error: "machineId wajib diisi" }, { status: 400 });
   }
 
-  const payload = assignment.application.payload as ApplicationWizardValues;
-  const machineExists = (payload.machines ?? []).some((m) => m.id === machineId);
-  if (!machineExists) {
+  const deleteResult = await updateApplicationPayload<{ ok: boolean }>(assignment.applicationId, (freshPayload) => {
+    const exists = (freshPayload.machines ?? []).some((m) => m.id === machineId);
+    if (!exists) return { payload: freshPayload, result: { ok: false as const } };
+    const machines = (freshPayload.machines ?? []).filter((m) => m.id !== machineId);
+    return { payload: { ...freshPayload, machines }, result: { ok: true as const } };
+  });
+  if (!deleteResult.ok) {
     return NextResponse.json({ error: "Mesin tidak ditemukan" }, { status: 404 });
   }
-
-  const machines = (payload.machines ?? []).filter((m) => m.id !== machineId);
-  await db.application.update({
-    where: { id: assignment.applicationId },
-    data: { payload: { ...payload, machines } },
-  });
 
   const decisions = machineVerificationsSchema.parse(assignment.machineVerifications ?? {});
   delete decisions[machineId];
