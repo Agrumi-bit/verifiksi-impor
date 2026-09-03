@@ -1,5 +1,5 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { createReadStream, existsSync } from "node:fs";
 import path from "node:path";
 
 import type { StorageNamespace, StorageService } from "./types";
@@ -28,6 +28,18 @@ export const localStorageService: StorageService = {
 
   async read(relativePath: string) {
     return readFile(resolveSafePath(relativePath));
+  },
+
+  async stat(relativePath: string) {
+    const stats = await stat(resolveSafePath(relativePath));
+    return { size: stats.size, mtimeMs: stats.mtimeMs };
+  },
+
+  createReadStream(relativePath: string, range) {
+    return createReadStream(
+      resolveSafePath(relativePath),
+      range ? { start: range.start, end: range.end } : undefined,
+    );
   },
 
   async delete(relativePath: string) {
