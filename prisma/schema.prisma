@@ -803,6 +803,10 @@ model BrandingSettings {
   sidebarBrandTitle    String  @default("VKI & VIU")
   sidebarBrandSubtitle String  @default("Admin Portal")
   logoPath             String?
+  // Separate from `logoPath` (login/sidebar) — the letterhead mark printed on generated
+  // reports. Reports are a different surface (often shared outside the app, printed) so the
+  // brand mark used there is deliberately its own admin-managed asset, not forced to match.
+  reportLogoPath       String?
   primaryColor           String @default("#e0662e")
   primaryColorForeground String @default("#ffffff")
 

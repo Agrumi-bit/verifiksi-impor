@@ -13,6 +13,7 @@ const FALLBACK_BRANDING = {
   sidebarBrandTitle: "VKI & VIU",
   sidebarBrandSubtitle: "Admin Portal",
   logoPath: null as string | null,
+  reportLogoPath: null as string | null,
   primaryColor: "#e0662e",
   primaryColorForeground: "#ffffff",
   updatedAt: new Date(),

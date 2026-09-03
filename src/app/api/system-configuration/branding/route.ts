@@ -22,6 +22,7 @@ const patchSchema = z.object({
   sidebarBrandTitle: z.string().trim().min(1),
   sidebarBrandSubtitle: z.string().trim().min(1),
   logoPath: z.string().trim().min(1).nullable(),
+  reportLogoPath: z.string().trim().min(1).nullable(),
   primaryColor: hexColor,
   primaryColorForeground: hexColor,
 });

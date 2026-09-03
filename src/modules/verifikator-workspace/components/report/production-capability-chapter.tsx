@@ -15,6 +15,7 @@ import {
   DocImage,
   PageHead,
   PageFoot,
+  BrandMark,
   type CapacityRow,
   type MachineRow,
   type ProductRow,
@@ -54,12 +55,7 @@ const PRODUCTION_QTY_STATUS_META: Record<ProductionQtyRow["status"], { bg: strin
 function ChapterHead() {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 22, height: 22, background: NAVY, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#fff", borderRadius: 6 }}>
-          IV
-        </div>
-        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em" }}>INDUSTRIALVERIFY</div>
-      </div>
+      <BrandMark />
       <div style={{ border: `1px solid ${ORANGE_LIGHT}`, color: ORANGE_TEXT, padding: "5px 12px", fontSize: 11, letterSpacing: "0.05em", borderRadius: 20 }}>
         INTERNAL — TERBATAS
       </div>

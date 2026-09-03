@@ -5,9 +5,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { FileUploadField } from "@/components/form/file-upload-field";
-import { useBranding, BRANDING_LOGO_URL, type BrandingData } from "@/modules/branding/use-branding";
+import { useBranding, BRANDING_LOGO_URL, BRANDING_REPORT_LOGO_URL, type BrandingData } from "@/modules/branding/use-branding";
 
-const TEXT_FIELDS: { key: keyof Omit<BrandingData, "logoPath" | "primaryColor" | "primaryColorForeground">; label: string; hint?: string }[] = [
+const TEXT_FIELDS: {
+  key: keyof Omit<BrandingData, "logoPath" | "reportLogoPath" | "primaryColor" | "primaryColorForeground">;
+  label: string;
+  hint?: string;
+}[] = [
   { key: "appName", label: "Nama Aplikasi", hint: "Tampil di tab browser dan halaman login." },
   { key: "appSubtitle", label: "Sub-judul Aplikasi", hint: "Tampil di bawah nama pada halaman login." },
   { key: "sidebarBrandTitle", label: "Nama di Sidebar", hint: "Judul singkat di sidebar admin & workspace perusahaan." },
@@ -82,6 +86,34 @@ function BrandingFormBody({ branding }: { branding: BrandingData }) {
             accept=".jpg,.jpeg,.png,image/jpeg,image/png"
             label="Unggah Logo"
             onChange={(path) => setDraft((prev) => ({ ...prev, logoPath: path ?? null }))}
+          />
+        )}
+      </div>
+
+      <div className="rounded-[10px] border border-[#f0ded0] bg-white p-5">
+        <div className="mb-1 text-[13.5px] font-extrabold text-[#2b2420]">Logo Laporan</div>
+        <p className="mb-3.5 text-[11.5px] text-[#a68f80]">
+          Logo letterhead yang dicetak di setiap halaman laporan (verifikasi dokumen, mesin, dll) — terpisah dari logo di atas, karena
+          laporan sering dicetak/dibagikan di luar aplikasi. Kalau kosong, laporan pakai tanda &quot;IV&quot; bawaan.
+        </p>
+        {draft.reportLogoPath ? (
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={BRANDING_REPORT_LOGO_URL} alt="Logo Laporan" className="h-16 w-auto max-w-40 rounded-lg border border-[#e8dccd] object-contain p-1.5" />
+            <button
+              type="button"
+              onClick={() => setDraft((prev) => ({ ...prev, reportLogoPath: null }))}
+              className="rounded-lg border border-[#e15241] px-3 py-1.5 text-[11.5px] font-semibold text-[#e15241]"
+            >
+              Hapus Logo Laporan
+            </button>
+          </div>
+        ) : (
+          <FileUploadField
+            namespace="templates"
+            accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+            label="Unggah Logo Laporan"
+            onChange={(path) => setDraft((prev) => ({ ...prev, reportLogoPath: path ?? null }))}
           />
         )}
       </div>

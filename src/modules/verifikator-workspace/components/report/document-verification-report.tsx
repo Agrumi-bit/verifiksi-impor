@@ -25,6 +25,7 @@ import type { LocationValues } from "@/modules/shared/schema";
 import type { CompanyLegalContext } from "../../company-context";
 import type { ChecklistPartnerContext } from "../../schema";
 import { useHsCodeOptions } from "@/modules/applications/hooks/use-hs-code-options";
+import { useBranding, BRANDING_REPORT_LOGO_URL } from "@/modules/branding/use-branding";
 import { ProductionCapabilityChapter, PRODUCTION_CAPABILITY_CHAPTER_PAGE_COUNT } from "./production-capability-chapter";
 import "@/modules/surveyor-workspace/components/report/office-report-preview.css";
 
@@ -418,26 +419,7 @@ const STATUS_BADGE: Record<DocVerificationStatusValue, { bg: string; color: stri
 export function PageHead({ dark }: { dark?: boolean }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div
-          style={{
-            width: 22,
-            height: 22,
-            background: dark ? "#0a3a3a" : NAVY,
-            border: dark ? `1px solid ${ORANGE_LIGHT}` : "none",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 10,
-            fontWeight: 800,
-            color: dark ? ORANGE_LIGHT : "#fff",
-            borderRadius: 6,
-          }}
-        >
-          IV
-        </div>
-        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", color: dark ? "#fff" : INK }}>INDUSTRIALVERIFY</div>
-      </div>
+      <BrandMark dark={dark} />
       <div
         style={{
           border: `1px solid ${dark ? "#4a5568" : ORANGE_LIGHT}`,
@@ -450,6 +432,47 @@ export function PageHead({ dark }: { dark?: boolean }) {
       >
         INTERNAL — TERBATAS
       </div>
+    </div>
+  );
+}
+
+/**
+ * Report letterhead mark — the admin-uploaded report logo (System Configuration > Branding >
+ * "Logo Laporan", deliberately separate from the login/sidebar logo) when set, sized to a fixed
+ * height with the width free to follow the image's own aspect ratio (never stretched/distorted,
+ * never allowed to blow up the header past a sane max width). Falls back to the original "IV"
+ * monogram + wordmark when no report logo has been uploaded yet.
+ */
+export function BrandMark({ dark }: { dark?: boolean }) {
+  const { data: branding } = useBranding();
+
+  if (branding?.reportLogoPath) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={BRANDING_REPORT_LOGO_URL} alt="Logo" style={{ height: 22, width: "auto", maxWidth: 120, objectFit: "contain" }} />
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div
+        style={{
+          width: 22,
+          height: 22,
+          background: dark ? "#0a3a3a" : NAVY,
+          border: dark ? `1px solid ${ORANGE_LIGHT}` : "none",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 10,
+          fontWeight: 800,
+          color: dark ? ORANGE_LIGHT : "#fff",
+          borderRadius: 6,
+        }}
+      >
+        IV
+      </div>
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", color: dark ? "#fff" : INK }}>INDUSTRIALVERIFY</div>
     </div>
   );
 }
