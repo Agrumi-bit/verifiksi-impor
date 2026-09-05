@@ -51,7 +51,8 @@ export type ImportType = (typeof IMPORT_TYPES)[number];
 
 const requiredString = (message: string) => z.string().trim().min(1, message);
 
-export const step1Schema = z.object({
+/** Verification type, application category, and import types — Application Information step. */
+export const applicationMetaSchema = z.object({
   verificationType: z.enum(VERIFICATION_TYPES, {
     message: "Pilih tipe verifikasi",
   }),
@@ -61,7 +62,8 @@ export const step1Schema = z.object({
   importTypes: z.array(z.enum(IMPORT_TYPES)),
 });
 
-export const step2Schema = companyProfileSchema.extend({
+/** Company identity and contact info — Company Information step. */
+export const companySchema = companyProfileSchema.extend({
   companyId: requiredString("Pilih perusahaan terdaftar"),
   companyApiType: z.string().trim().optional(),
 });
@@ -69,8 +71,6 @@ export const kbliEntrySchema = z.object({
   code: requiredString("Kode KBLI wajib diisi"),
   description: requiredString("Deskripsi KBLI wajib diisi"),
 });
-export const step3Schema = legalInformationSchema;
-export const step4Schema = locationsSchema;
 
 /**
  * VKI-only extras not covered by the shared legalInformationSchema/companyProfileSchema —
@@ -215,11 +215,20 @@ export function createEmptyNonIndustriDocuments(): NonIndustriDocumentValues[] {
   return NON_INDUSTRI_SUPPORT_DOC_DEFS.map((def) => ({ key: def.key, enabled: false }));
 }
 
-export const step5Schema = z.object({
+/** Import-type-specific supporting documents (Partner Industri financing proof, Non-Industri
+ * modal proof, Konsumsi supporting docs) — Support Document step. */
+export const importSupportDocumentsSchema = z.object({
   partnerIndustriEntries: z.array(partnerIndustriEntrySchema).default([]),
   nonIndustriDocuments: z.array(nonIndustriDocumentSchema).default([]),
   konsumsiDocuments: z.array(supportDocumentSchema),
 });
+
+/** Every document-shaped field on the application: company legal/tax proof (auto-filled,
+ * read-only) plus the import-type-specific support documents above. One import for "the
+ * documents part" of the payload instead of three. */
+export const documentsSchema = companyLegalExtraSchema
+  .extend(taxSupportDocumentsSchema.shape)
+  .extend(importSupportDocumentsSchema.shape);
 
 export const productItemSchema = z.object({
   id: z.string(),
@@ -238,11 +247,13 @@ export const productItemSchema = z.object({
   partnerIndustriId: z.string().trim().optional(),
 });
 
-export const step6Schema = z.object({
+/** Product list — Product Information step. */
+export const productsSchema = z.object({
   products: z.array(productItemSchema).min(1, "Tambahkan minimal satu produk"),
 });
 
-export const step8Schema = z.object({
+/** VIU submission declaration checkbox — Submit step. */
+export const declarationSchema = z.object({
   declarationAccepted: z.boolean().default(false),
 });
 // Declaration checkbox is a VIU-only gate (checked via superRefine below) — the VKI
@@ -394,31 +405,48 @@ export const tenagaKerjaEntrySchema = z.object({
 });
 export type TenagaKerjaEntryValues = z.infer<typeof tenagaKerjaEntrySchema>;
 
-export const vkiStepsSchema = z.object({
+/** Machine/equipment inventory — VKI Data Mesin step. */
+export const machinesSchema = z.object({
+  machines: z.array(machineItemSchema).default([]),
+});
+
+/** Raw material inventory, product-material conversion ratios, and planned usage — VKI Bahan
+ * Baku steps. */
+export const rawMaterialsSchema = z.object({
+  rawMaterials: z.array(rawMaterialItemSchema).default([]),
+  rawMaterialConversions: z.array(rawMaterialConversionEntrySchema).default([]),
+  rawMaterialUsage: z.array(rawMaterialUsageItemSchema).default([]),
+});
+
+/** Licensed production capacity, planned production quantity, and sales split — VKI
+ * Kapasitas/Produksi/Penjualan steps. */
+export const productionCapacitySchema = z.object({
+  capacity: z.array(capacityItemSchema).default([]),
+  capacityDocumentPath: z.string().trim().optional(),
+  productionQty: z.array(productionQtyItemSchema).default([]),
+  sales: z.array(salesItemSchema).default([]),
+});
+
+/** VKI's fixed Support Document checklist plus its two repeatable-shape entries (electricity
+ * bills, tenaga kerja headcount). */
+export const vkiSupportSchema = z.object({
   vkiSupportDocs: z.array(vkiSupportDocEntrySchema).default([]),
   electricityMonths: z.array(electricityMonthSchema).default([]),
   tenagaKerjaEntries: z.array(tenagaKerjaEntrySchema).default([]),
   tenagaKerjaDocumentPath: z.string().trim().optional(),
-  machines: z.array(machineItemSchema).default([]),
-  rawMaterials: z.array(rawMaterialItemSchema).default([]),
-  rawMaterialConversions: z.array(rawMaterialConversionEntrySchema).default([]),
-  capacity: z.array(capacityItemSchema).default([]),
-  capacityDocumentPath: z.string().trim().optional(),
-  productionQty: z.array(productionQtyItemSchema).default([]),
-  rawMaterialUsage: z.array(rawMaterialUsageItemSchema).default([]),
-  sales: z.array(salesItemSchema).default([]),
 });
 
-export const applicationWizardSchema = step1Schema
-  .extend(step2Schema.shape)
-  .extend(step3Schema.shape)
-  .extend(step4Schema.shape)
-  .extend(companyLegalExtraSchema.shape)
-  .extend(taxSupportDocumentsSchema.shape)
-  .extend(step5Schema.shape)
-  .extend(step6Schema.shape)
-  .extend(step8Schema.shape)
-  .extend(vkiStepsSchema.shape)
+export const applicationWizardSchema = applicationMetaSchema
+  .extend(companySchema.shape)
+  .extend(legalInformationSchema.shape)
+  .extend(locationsSchema.shape)
+  .extend(documentsSchema.shape)
+  .extend(productsSchema.shape)
+  .extend(declarationSchema.shape)
+  .extend(machinesSchema.shape)
+  .extend(rawMaterialsSchema.shape)
+  .extend(productionCapacitySchema.shape)
+  .extend(vkiSupportSchema.shape)
   .superRefine((data, ctx) => {
     if (data.verificationType === "VIU" && data.declarationAccepted !== true) {
       ctx.addIssue({
@@ -464,12 +492,6 @@ export const applicationWizardSchema = step1Schema
     }
   });
 
-export type Step1Values = z.infer<typeof step1Schema>;
-export type Step2Values = z.infer<typeof step2Schema>;
-export type Step3Values = z.infer<typeof step3Schema>;
-export type Step4Values = z.infer<typeof step4Schema>;
-export type Step5Values = z.infer<typeof step5Schema>;
-export type Step6Values = z.infer<typeof step6Schema>;
 export type SupportDocumentValues = z.infer<typeof supportDocumentSchema>;
 export type ProductItemValues = z.infer<typeof productItemSchema>;
 export type ApplicationWizardValues = z.infer<typeof applicationWizardSchema>;
