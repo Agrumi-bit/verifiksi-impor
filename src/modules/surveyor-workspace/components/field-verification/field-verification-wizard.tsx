@@ -63,6 +63,7 @@ type LocationDetail = {
   locationType: string;
   address: string;
   city: string | null;
+  scheduledDate: string | null;
   warehouseVerification: FieldVerificationValues | null;
   factoryVerification: FieldVerificationValues | null;
   company: {
@@ -126,18 +127,22 @@ export function FieldVerificationWizard({ kind, assignmentId, locationId }: Prop
 
   if (data && data.id !== loadedForId) {
     setLoadedForId(data.id);
-    setValues(
-      data[dataField]
-        ? // Re-parsed instead of used as-is: records saved before a schema field existed (e.g.
-          // documentationOther) come back from the DB without it, and this is the one place that
-          // matters — `fieldVerificationSchema.parse` fills in every `.default(...)` so the rest
-          // of the wizard never has to guard against a legacy shape.
-          fieldVerificationSchema.parse(data[dataField])
-        : {
-            ...emptyFieldVerification(),
-            section1Docs: buildDefaultSection1Docs(data.company, data.payloadLocation),
-          },
-    );
+    const base = data[dataField]
+      ? // Re-parsed instead of used as-is: records saved before a schema field existed (e.g.
+        // documentationOther) come back from the DB without it, and this is the one place that
+        // matters — `fieldVerificationSchema.parse` fills in every `.default(...)` so the rest
+        // of the wizard never has to guard against a legacy shape.
+        fieldVerificationSchema.parse(data[dataField])
+      : {
+          ...emptyFieldVerification(),
+          section1Docs: buildDefaultSection1Docs(data.company, data.payloadLocation),
+        };
+    setValues({
+      ...base,
+      // Pre-fill from Customer Relation's actual assignment date (synced regardless of Surat
+      // Tugas draft/approval status) whenever the surveyor hasn't already set one themselves.
+      assignedDate: base.assignedDate || data.scheduledDate?.slice(0, 10) || "",
+    });
   }
 
   const isCompleted = data?.status === "COMPLETED";

@@ -93,6 +93,9 @@ export async function GET(
       applicationNumber: application.applicationNumber,
       verificationType: application.verificationType,
       surveyorName: visit.assignment.surveyor?.name ?? null,
+      // CR's actual assigned date, regardless of Surat Tugas letterStatus (DRAFT/PENDING/APPROVED)
+      // — Section 0's "Tanggal Ditugaskan" pre-fills from this so it never drifts from what CR set.
+      scheduledDate: visit.assignment.scheduledDate,
       documentMeta,
       company: {
         companyName: payload.companyName ?? "—",
