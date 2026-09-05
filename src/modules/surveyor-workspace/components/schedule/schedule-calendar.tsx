@@ -38,7 +38,7 @@ function buildMonthGrid(year: number, month: number): Date[] {
   });
 }
 
-type Event = { company: string; time: string | null; status: ScheduleStatusValue };
+type Event = { company: string; time: string | null; status: ScheduleStatusValue; letterStatus: ScheduleItem["letterStatus"] };
 
 export function ScheduleCalendarView({ items }: { items: ScheduleItem[] }) {
   const today = useMemo(() => new Date(), []);
@@ -51,7 +51,12 @@ export function ScheduleCalendarView({ items }: { items: ScheduleItem[] }) {
       if (!item.scheduledDate) continue;
       const key = dateKey(new Date(item.scheduledDate));
       const events = map.get(key) ?? [];
-      events.push({ company: item.companyName, time: item.scheduledTime, status: mapToScheduleStatus(item.status) });
+      events.push({
+        company: item.companyName,
+        time: item.scheduledTime,
+        status: mapToScheduleStatus(item.status),
+        letterStatus: item.letterStatus,
+      });
       map.set(key, events);
     }
     return map;
@@ -159,8 +164,12 @@ export function ScheduleCalendarView({ items }: { items: ScheduleItem[] }) {
                       <div
                         key={i}
                         className="mb-[3px] truncate rounded px-1.5 py-[3px] text-[10.5px] font-bold"
-                        style={{ background: `${meta.bg}1a`, color: meta.bg, borderLeft: `2px solid ${meta.bg}` }}
-                        title={ev.company}
+                        style={{
+                          background: `${meta.bg}1a`,
+                          color: meta.bg,
+                          borderLeft: `2px ${ev.letterStatus === "DRAFT" ? "dashed" : "solid"} ${meta.bg}`,
+                        }}
+                        title={ev.letterStatus === "DRAFT" ? `${ev.company} (Draft Surat Tugas)` : ev.company}
                       >
                         {ev.company}
                       </div>
@@ -195,11 +204,19 @@ export function ScheduleCalendarView({ items }: { items: ScheduleItem[] }) {
                     <div
                       key={idx}
                       className="mb-1.5 rounded px-2 py-1.5 text-[11px] font-semibold text-[#261813]"
-                      style={{ background: `${meta.bg}1a`, borderLeft: `2px solid ${meta.bg}` }}
+                      style={{
+                        background: `${meta.bg}1a`,
+                        borderLeft: `2px ${ev.letterStatus === "DRAFT" ? "dashed" : "solid"} ${meta.bg}`,
+                      }}
                     >
                       <div>{ev.company}</div>
-                      <div className="mt-0.5 text-[10px] font-bold" style={{ color: meta.bg }}>
+                      <div className="mt-0.5 flex items-center gap-1 text-[10px] font-bold" style={{ color: meta.bg }}>
                         {ev.time ?? "—"}
+                        {ev.letterStatus === "DRAFT" && (
+                          <span className="rounded-full px-1.5 py-px text-[9px] font-bold" style={{ background: "#f2ece5", color: "#6b5b4c" }}>
+                            Draft ST
+                          </span>
+                        )}
                       </div>
                     </div>
                   );

@@ -25,6 +25,11 @@ export async function GET() {
       companyName: payload?.companyName ?? "—",
       verificationType: assignment.application.verificationType,
       status: assignment.status,
+      // Surveyors need to see a schedule the moment CR saves it — Surat Tugas approval (PM's
+      // letterStatus) is a separate, slower-moving workflow layered on top, not a gate on
+      // whether the assignment shows up here. Threaded through so the UI can flag it as still
+      // a draft letter, rather than silently looking identical to a PM-approved one.
+      letterStatus: assignment.letterStatus,
       scheduledDate: assignment.scheduledDate,
       scheduledTime: assignment.scheduledTime,
       location: assignment.location,

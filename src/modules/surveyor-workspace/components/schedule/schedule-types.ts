@@ -7,6 +7,7 @@ export type ScheduleItem = {
   companyName: string;
   verificationType: string;
   status: AssignmentStatusValue;
+  letterStatus: "DRAFT" | "PENDING" | "APPROVED";
   scheduledDate: string | null;
   scheduledTime: string | null;
   location: string | null;

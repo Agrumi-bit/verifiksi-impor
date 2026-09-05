@@ -81,7 +81,7 @@ export function ScheduleListView({ items }: { items: ScheduleItem[] }) {
                 </div>
               </div>
 
-              <div>
+              <div className="flex flex-col items-start gap-1">
                 <span
                   className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11.5px] font-bold text-white"
                   style={{ background: meta.bg }}
@@ -89,6 +89,16 @@ export function ScheduleListView({ items }: { items: ScheduleItem[] }) {
                   <MaterialIcon name={meta.icon} className="text-[13px]" />
                   {meta.label}
                 </span>
+                {item.letterStatus === "DRAFT" && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10.5px] font-bold"
+                    style={{ background: "#f2ece5", color: "#6b5b4c" }}
+                    title="Surat Tugas masih draft, menunggu diajukan/disetujui Project Manager"
+                  >
+                    <MaterialIcon name="description" className="text-[12px]" />
+                    Draft Surat Tugas
+                  </span>
+                )}
               </div>
 
               <div>
