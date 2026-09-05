@@ -23,6 +23,21 @@ import { ProductsTab } from "./detail/products-tab";
 import { OnSiteTab } from "./detail/onsite-tab";
 import { ReportTab } from "./detail/report-tab";
 
+export type TeamMemberSummary = {
+  name: string;
+  date: string | null;
+  assignmentId: string;
+  letterNumber: string | null;
+  letterStatus: string;
+} | null;
+
+export type TeamSummary = {
+  surveyor: TeamMemberSummary;
+  verifikator: TeamMemberSummary;
+  technicalReviewer: TeamMemberSummary;
+  teamMembers: { name: string; role?: string }[];
+};
+
 export type AssignmentDetailData = {
   id: string;
   assignmentNumber: string;
@@ -32,7 +47,7 @@ export type AssignmentDetailData = {
   scheduledTime: string | null;
   dueDate: string | null;
   location: string | null;
-  teamMembers: { name: string; role: string }[] | null;
+  team: TeamSummary;
   createdAt: string;
   application: {
     applicationNumber: string;
@@ -190,7 +205,9 @@ export function AssignmentDetail({ id }: Props) {
         {activeTab === "Location" && <LocationTab payload={payload} />}
         {activeTab === "Scope" && <ScopeTab />}
         {activeTab === "Schedule" && <ScheduleTab assignmentId={id} payload={payload} />}
-        {activeTab === "Team" && <TeamTab teamMembers={data.teamMembers} status={data.status} />}
+        {activeTab === "Team" && (
+          <TeamTab team={data.team} status={data.status} companyName={payload.companyName} applicationNumber={data.application.applicationNumber} />
+        )}
         {activeTab === "Documents" && <DocumentsTab payload={payload} />}
         {activeTab === "Products" && <ProductsTab payload={payload} />}
         {activeTab === "On Site Verification" && <OnSiteTab assignmentId={id} />}

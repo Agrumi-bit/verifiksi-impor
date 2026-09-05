@@ -1,5 +1,11 @@
+"use client";
+
+import { useState } from "react";
+
 import { MaterialIcon } from "../material-icon";
 import type { AssignmentStatusValue } from "../../status";
+import type { TeamMemberSummary, TeamSummary } from "../assignment-detail";
+import { SuratTugasViewModal } from "./surat-tugas-view-modal";
 
 const WORKFLOW_STEPS = [
   { name: "Surveyor", stage: 0 },
@@ -9,16 +15,27 @@ const WORKFLOW_STEPS = [
   { name: "Approval", stage: 4 },
 ];
 
+const ROLE_META: { key: "surveyor" | "verifikator" | "technicalReviewer"; label: string; roleLabel: string }[] = [
+  { key: "surveyor", label: "Surveyor", roleLabel: "Survey Lokasi - Fasilitas" },
+  { key: "verifikator", label: "Verifikator", roleLabel: "Verifikasi Dokumen" },
+  { key: "technicalReviewer", label: "Technical Reviewer", roleLabel: "Technical" },
+];
+
 type Props = {
-  teamMembers: { name: string; role: string }[] | null;
+  team: TeamSummary;
   status: AssignmentStatusValue;
+  companyName: string;
+  applicationNumber: string;
 };
 
-export function TeamTab({ teamMembers, status }: Props) {
+export function TeamTab({ team, status, companyName, applicationNumber }: Props) {
+  const [viewing, setViewing] = useState<{ member: NonNullable<TeamMemberSummary>; roleLabel: string } | null>(null);
   const currentStage = status === "ASSIGNED" || status === "SCHEDULED" ? 0 : status === "IN_PROGRESS" ? 0 : 1;
-  const members = teamMembers ?? [];
-  const done = members.length > 0 && (status === "SUBMITTED" || status === "COMPLETED") ? members.length : 0;
-  const progressPct = members.length > 0 ? Math.round((done / members.length) * 100) : 0;
+
+  const roleRows = ROLE_META.map((role) => ({ ...role, member: team[role.key] }));
+  const assignedCount = roleRows.filter((row) => row.member).length + team.teamMembers.length;
+  const done = assignedCount > 0 && (status === "SUBMITTED" || status === "COMPLETED") ? assignedCount : 0;
+  const progressPct = assignedCount > 0 ? Math.round((done / assignedCount) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -69,40 +86,79 @@ export function TeamTab({ teamMembers, status }: Props) {
           <div className="h-full rounded-full bg-[#261813]" style={{ width: `${progressPct}%` }} />
         </div>
         <div className="text-[13px] text-[#8a7565]">
-          {done} / {members.length} team members completed their tasks
+          {done} / {assignedCount} team members completed their tasks
         </div>
       </div>
 
       <div className="overflow-x-auto rounded-[14px] border border-[#e8d5c5] bg-white p-7 shadow-sm">
         <h3 className="mb-1 font-sv-headline-lg text-[16.5px] font-bold">Team Assignment</h3>
         <div className="mb-5 text-sm text-[#8a7565]">
-          Anggota tim verifikasi beserta status pekerjaan dan approval
+          Anggota tim verifikasi (disinkronkan dari penugasan Customer Relation) beserta Surat Tugas masing-masing
         </div>
-        {members.length === 0 ? (
-          <p className="text-sm text-[#8a7565]">Belum ada tim yang ditetapkan.</p>
-        ) : (
-          <div className="min-w-[600px]">
-            <div className="grid grid-cols-[1.6fr_1.4fr] gap-3 border-b border-[#f0ded0] px-1 pb-3 text-[11.5px] uppercase tracking-wide text-[#a68f80]">
-              <div>Nama</div>
-              <div>Peran</div>
-            </div>
-            {members.map((member, index) => (
-              <div
-                key={index}
-                className="grid grid-cols-[1.6fr_1.4fr] items-center gap-3 border-b border-[#f5ebe1] px-1 py-4"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#e2f7ea]">
-                    <MaterialIcon name="person" className="text-[17px] text-[#027a48]" />
-                  </div>
-                  <span className="text-sm font-bold">{member.name}</span>
-                </div>
-                <div className="text-[13px] text-[#594138]">{member.role}</div>
-              </div>
-            ))}
+        <div className="min-w-[600px]">
+          <div className="grid grid-cols-[1.6fr_1.4fr_1.2fr] gap-3 border-b border-[#f0ded0] px-1 pb-3 text-[11.5px] uppercase tracking-wide text-[#a68f80]">
+            <div>Nama</div>
+            <div>Peran</div>
+            <div>Surat Tugas</div>
           </div>
-        )}
+          {roleRows.map((row) => (
+            <div
+              key={row.key}
+              className="grid grid-cols-[1.6fr_1.4fr_1.2fr] items-center gap-3 border-b border-[#f5ebe1] px-1 py-4"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#e2f7ea]">
+                  <MaterialIcon name="person" className="text-[17px] text-[#027a48]" />
+                </div>
+                <span className="text-sm font-bold">{row.member?.name ?? "Belum ditugaskan"}</span>
+              </div>
+              <div className="text-[13px] text-[#594138]">{row.label}</div>
+              <div>
+                {row.member ? (
+                  <button
+                    type="button"
+                    onClick={() => setViewing({ member: row.member!, roleLabel: row.roleLabel })}
+                    className="flex items-center gap-1.5 text-[12px] font-bold text-[#2f6fe0]"
+                  >
+                    <MaterialIcon name="description" className="text-[14px]" />
+                    Lihat Surat Tugas
+                  </button>
+                ) : (
+                  <span className="text-[12px] text-[#c9b9ae]">—</span>
+                )}
+              </div>
+            </div>
+          ))}
+          {team.teamMembers.map((member, index) => (
+            <div
+              key={`extra-${index}`}
+              className="grid grid-cols-[1.6fr_1.4fr_1.2fr] items-center gap-3 border-b border-[#f5ebe1] px-1 py-4"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#e2f7ea]">
+                  <MaterialIcon name="person" className="text-[17px] text-[#027a48]" />
+                </div>
+                <span className="text-sm font-bold">{member.name}</span>
+              </div>
+              <div className="text-[13px] text-[#594138]">{member.role ?? "—"}</div>
+              <div className="text-[12px] text-[#c9b9ae]">—</div>
+            </div>
+          ))}
+        </div>
       </div>
+
+      {viewing && (
+        <SuratTugasViewModal
+          roleLabel={viewing.roleLabel}
+          personName={viewing.member.name}
+          date={viewing.member.date}
+          letterNumber={viewing.member.letterNumber}
+          letterStatus={viewing.member.letterStatus}
+          companyName={companyName}
+          applicationNumber={applicationNumber}
+          onClose={() => setViewing(null)}
+        />
+      )}
     </div>
   );
 }
