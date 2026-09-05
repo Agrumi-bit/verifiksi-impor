@@ -38,6 +38,14 @@ export type TeamSummary = {
   teamMembers: { name: string; role?: string }[];
 };
 
+export type DocumentChecklistItem = {
+  key: string;
+  label: string;
+  category: string;
+  documentPath: string | null;
+  status: "PENDING" | "VALID" | "NEED_REVISION" | "REJECTED" | "NOT_APPLICABLE";
+};
+
 export type AssignmentDetailData = {
   id: string;
   assignmentNumber: string;
@@ -48,6 +56,7 @@ export type AssignmentDetailData = {
   dueDate: string | null;
   location: string | null;
   team: TeamSummary;
+  documentChecklist: DocumentChecklistItem[];
   createdAt: string;
   application: {
     applicationNumber: string;
@@ -208,7 +217,9 @@ export function AssignmentDetail({ id }: Props) {
         {activeTab === "Team" && (
           <TeamTab team={data.team} status={data.status} companyName={payload.companyName} applicationNumber={data.application.applicationNumber} />
         )}
-        {activeTab === "Documents" && <DocumentsTab payload={payload} />}
+        {activeTab === "Documents" && (
+          <DocumentsTab verificationType={payload.verificationType} documentChecklist={data.documentChecklist} />
+        )}
         {activeTab === "Products" && <ProductsTab payload={payload} />}
         {activeTab === "On Site Verification" && <OnSiteTab assignmentId={id} />}
         {activeTab === "Report" && <ReportTab assignmentId={id} />}
