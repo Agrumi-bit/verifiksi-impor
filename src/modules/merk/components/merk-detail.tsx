@@ -16,6 +16,9 @@ type MerkDetailData = {
   productCategory: string;
   countryOfOrigin: string;
   registrationNumber: string;
+  registrationIssuer: string | null;
+  registrationDate: string | null;
+  registrationExpiryDate: string | null;
   ownershipType: string;
   brandOwnerName: string;
   licenseAgreementNumber: string | null;
@@ -129,6 +132,23 @@ export function MerkDetail({ id, surface }: Props) {
           <DetailItem label="Kategori Produk" value={data.productCategory} />
           <DetailItem label="Negara Asal" value={data.countryOfOrigin} />
           <DetailItem label="Nomor Registrasi" value={data.registrationNumber} />
+          <DetailItem label="Lembaga Penerbit" value={data.registrationIssuer} />
+          <DetailItem
+            label="Tanggal Terdaftar"
+            value={
+              data.registrationDate
+                ? new Date(data.registrationDate).toLocaleDateString("id-ID")
+                : undefined
+            }
+          />
+          <DetailItem
+            label="Tanggal Kadaluarsa"
+            value={
+              data.registrationExpiryDate
+                ? new Date(data.registrationExpiryDate).toLocaleDateString("id-ID")
+                : undefined
+            }
+          />
         </dl>
       </section>
 

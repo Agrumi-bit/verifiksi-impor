@@ -387,6 +387,12 @@ model Merk {
   registrationNumber       String
   registrationDocumentPath String
 
+  // Nullable: predate this change on already-populated environments; the wizard
+  // schema makes all three required for new rows.
+  registrationIssuer     String?
+  registrationDate       DateTime?
+  registrationExpiryDate DateTime?
+
   ownershipType  MerkOwnershipType
   brandOwnerName String
 

@@ -20,6 +20,9 @@ export const merkBrandInfoSchema = z.object({
   registrationNumber: requiredString(
     "Nomor pendaftaran/sertifikat merek wajib diisi",
   ),
+  registrationIssuer: requiredString("Lembaga penerbit wajib diisi"),
+  registrationDate: requiredString("Tanggal terdaftar wajib diisi"),
+  registrationExpiryDate: requiredString("Tanggal kadaluarsa wajib diisi"),
   registrationDocumentPath: requiredString(
     "Dokumen sertifikat merek wajib diunggah",
   ),
@@ -78,6 +81,9 @@ export const MERK_STEP_FIELD_NAMES: Record<number, (keyof MerkWizardValues)[]> =
     "productCategory",
     "countryOfOrigin",
     "registrationNumber",
+    "registrationIssuer",
+    "registrationDate",
+    "registrationExpiryDate",
     "registrationDocumentPath",
   ],
   2: [

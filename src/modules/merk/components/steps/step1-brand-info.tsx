@@ -5,6 +5,8 @@ import { Controller, type UseFormReturn } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/form/form-field";
 import { FileUploadField } from "@/components/form/file-upload-field";
+import { SearchSelectInput } from "@/components/form/search-select-input";
+import { useActiveCountries } from "@/modules/master-data/use-active-countries";
 import type { MerkWizardValues } from "../../schema";
 
 type Props = {
@@ -17,6 +19,7 @@ export function Step1BrandInfo({ form }: Props) {
     register,
     formState: { errors },
   } = form;
+  const { options: countryOptions, isLoading: isLoadingCountries } = useActiveCountries();
 
   return (
     <div className="flex flex-col gap-4">
@@ -35,13 +38,27 @@ export function Step1BrandInfo({ form }: Props) {
             {...register("productCategory")}
           />
         </FormField>
-        <FormField
-          label="Negara Asal Merek"
-          required
-          error={errors.countryOfOrigin?.message}
-        >
-          <Input placeholder="e.g. Indonesia" {...register("countryOfOrigin")} />
-        </FormField>
+        <Controller
+          control={control}
+          name="countryOfOrigin"
+          render={({ field }) => (
+            <FormField
+              label="Negara Asal Merek"
+              required
+              error={errors.countryOfOrigin?.message}
+            >
+              <SearchSelectInput
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                options={countryOptions}
+                allowFreeText={false}
+                placeholder={
+                  isLoadingCountries ? "Memuat negara..." : "Cari negara asal..."
+                }
+              />
+            </FormField>
+          )}
+        />
       </div>
 
       <FormField
@@ -55,6 +72,35 @@ export function Step1BrandInfo({ form }: Props) {
           {...register("registrationNumber")}
         />
       </FormField>
+
+      <FormField
+        label="Lembaga Penerbit"
+        required
+        error={errors.registrationIssuer?.message}
+        hint="Otoritas yang menerbitkan sertifikat merek, mis. DJKI Kemenkumham."
+      >
+        <Input
+          placeholder="e.g. DJKI Kemenkumham"
+          {...register("registrationIssuer")}
+        />
+      </FormField>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField
+          label="Tanggal Terdaftar"
+          required
+          error={errors.registrationDate?.message}
+        >
+          <Input type="date" {...register("registrationDate")} />
+        </FormField>
+        <FormField
+          label="Tanggal Kadaluarsa"
+          required
+          error={errors.registrationExpiryDate?.message}
+        >
+          <Input type="date" {...register("registrationExpiryDate")} />
+        </FormField>
+      </div>
 
       <Controller
         control={control}
