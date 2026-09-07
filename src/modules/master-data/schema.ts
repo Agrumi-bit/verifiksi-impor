@@ -30,6 +30,11 @@ export const industryGroupSchema = z.object({
   description: z.string().trim().optional(),
 });
 
+export const countryMasterDataSchema = z.object({
+  name: requiredString("Nama negara wajib diisi"),
+  code: requiredString("Kode negara wajib diisi"),
+});
+
 export const commodityGroupSchema = z.object({
   name: requiredString("Nama kelompok komoditas wajib diisi"),
   code: requiredString("Kode kelompok wajib diisi"),
@@ -79,6 +84,8 @@ export const electricityTariffMasterDataUpdateSchema =
   electricityTariffMasterDataSchema.extend(statusSchema.shape);
 export const industryGroupUpdateSchema =
   industryGroupSchema.extend(statusSchema.shape);
+export const countryMasterDataUpdateSchema =
+  countryMasterDataSchema.extend(statusSchema.shape);
 export const commodityGroupUpdateSchema =
   commodityGroupSchema.extend(statusSchema.shape);
 export const commoditySubGroupUpdateSchema =

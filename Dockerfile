@@ -19,9 +19,9 @@ COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
 COPY scripts ./scripts
 RUN npx prisma generate
-# The region seed script skips itself once the table has rows, so it's safe to run on
-# every deploy — see scripts/seed-regions.mjs.
-CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx scripts/seed-regions.mjs"]
+# The seed scripts are idempotent (region seed skips once the table has rows; country
+# seed uses skipDuplicates on the unique code), so they're safe to run on every deploy.
+CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx scripts/seed-regions.mjs && npx tsx scripts/seed-countries.mjs"]
 
 FROM base AS runner
 WORKDIR /app

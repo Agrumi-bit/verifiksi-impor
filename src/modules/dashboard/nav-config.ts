@@ -115,6 +115,10 @@ export const NAV_SECTIONS: NavSection[] = [
         href: "/system-configuration/smtp",
       },
       {
+        label: "Data Negara",
+        href: "/system-configuration/country",
+      },
+      {
         label: "Data Wilayah",
         href: "/system-configuration/regions",
       },
