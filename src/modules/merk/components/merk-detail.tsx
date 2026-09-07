@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { MerkStatusValue } from "@/modules/merk/schema";
+import type { MerkSurface } from "@/modules/merk/surface";
 
 type MerkDetailData = {
   id: string;
@@ -34,16 +37,43 @@ function DetailItem({ label, value }: { label: string; value?: string | null }) 
   );
 }
 
-type Props = { id: string };
+type Props = { id: string; surface: MerkSurface };
 
-export function MerkDetail({ id }: Props) {
+export function MerkDetail({ id, surface }: Props) {
+  const queryClient = useQueryClient();
+  const detailKey = ["merk-surface", surface.apiBase, id];
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["merk", "detail", id],
+    queryKey: detailKey,
     queryFn: async () => {
-      const response = await fetch(`/api/merk/${id}`);
+      const response = await fetch(`${surface.apiBase}/${id}`);
       if (!response.ok) throw new Error("Merek tidak ditemukan");
       const json = (await response.json()) as { data: MerkDetailData };
       return json.data;
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: async (status: MerkStatusValue) => {
+      const response = await fetch(`${surface.apiBase}/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error ?? "Gagal memperbarui status merek");
+      }
+      return response.json();
+    },
+    onSuccess: (_result, status) => {
+      queryClient.invalidateQueries({ queryKey: detailKey });
+      queryClient.invalidateQueries({ queryKey: ["merk-surface", surface.apiBase] });
+      toast.success(
+        status === "ACTIVE" ? "Merek diaktifkan." : "Merek dinonaktifkan.",
+      );
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Gagal memperbarui status merek");
     },
   });
 
@@ -67,7 +97,7 @@ export function MerkDetail({ id }: Props) {
           </p>
           <h1 className="text-lg font-semibold">{data.brandName}</h1>
         </div>
-        <Button variant="outline" nativeButton={false} render={<Link href="/mitra/merk" />}>
+        <Button variant="outline" nativeButton={false} render={<Link href={surface.listHref} />}>
           Kembali ke Daftar
         </Button>
       </div>
@@ -75,9 +105,25 @@ export function MerkDetail({ id }: Props) {
       <section className="flex flex-col gap-3 rounded-xl border border-border p-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">Informasi Merek</h2>
-          <Badge variant={data.status === "ACTIVE" ? "default" : "secondary"}>
-            {data.status}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={data.status === "ACTIVE" ? "default" : "secondary"}>
+              {data.status}
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={statusMutation.isPending}
+              onClick={() =>
+                statusMutation.mutate(data.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")
+              }
+            >
+              {statusMutation.isPending
+                ? "Menyimpan..."
+                : data.status === "ACTIVE"
+                  ? "Nonaktifkan"
+                  : "Aktifkan"}
+            </Button>
+          </div>
         </div>
         <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
           <DetailItem label="Kategori Produk" value={data.productCategory} />

@@ -2,29 +2,24 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
+import { getServerSession } from "@/lib/get-session";
 import { merkStatusUpdateSchema } from "@/modules/merk/schema";
-
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id } = await params;
-  const merk = await db.merk.findUnique({ where: { id } });
-
-  if (!merk) {
-    return NextResponse.json({ error: "Merek tidak ditemukan" }, { status: 404 });
-  }
-
-  return NextResponse.json({ data: merk });
-}
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
-  const existing = await db.merk.findUnique({ where: { id } });
+  const session = await getServerSession();
+  const companyId = session?.user.companyId;
+  if (!companyId) {
+    return NextResponse.json(
+      { error: "Akun Anda belum terhubung dengan perusahaan manapun." },
+      { status: 404 },
+    );
+  }
 
+  const { id } = await params;
+  const existing = await db.merk.findFirst({ where: { id, companyId } });
   if (!existing) {
     return NextResponse.json({ error: "Merek tidak ditemukan" }, { status: 404 });
   }
@@ -37,10 +32,10 @@ export async function PATCH(
     );
   }
 
-  const merk = await db.merk.update({
+  const brand = await db.merk.update({
     where: { id },
     data: { status: parsed.data.status },
   });
 
-  return NextResponse.json({ data: merk });
+  return NextResponse.json({ data: brand });
 }

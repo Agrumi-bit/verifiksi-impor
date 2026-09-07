@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 
-import { CompanyBrandTable } from "@/modules/company-workspace/components/brand-table";
+import { MerkTable } from "@/modules/merk/components/merk-table";
+import { COMPANY_BRAND_SURFACE } from "@/modules/merk/surface";
 
 export const metadata: Metadata = {
   title: "Brand Management — Company Workspace",
 };
 
 export default function BrandsPage() {
-  return <CompanyBrandTable />;
+  return <MerkTable surface={COMPANY_BRAND_SURFACE} />;
 }

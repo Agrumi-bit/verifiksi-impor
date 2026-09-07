@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { StepIndicator } from "@/components/wizard/step-indicator";
+import type { MerkSurface } from "@/modules/merk/surface";
 import {
   merkWizardSchema,
   MERK_STEP_FIELD_NAMES,
@@ -19,7 +20,7 @@ import { Step2Ownership } from "./steps/step2-ownership";
 const STEP_TITLES = ["Informasi Merek", "Kepemilikan"];
 const TOTAL_STEPS = STEP_TITLES.length;
 
-export function MerkWizard() {
+export function MerkWizard({ surface }: { surface: MerkSurface }) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,7 +44,7 @@ export function MerkWizard() {
   async function handleSubmit(values: MerkWizardValues) {
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/merk", {
+      const response = await fetch(surface.apiBase, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
@@ -53,8 +54,12 @@ export function MerkWizard() {
         throw new Error(body?.error ?? "Gagal menyimpan merek");
       }
       const { data } = await response.json();
-      toast.success(`Merek "${data.brandName}" berhasil ditambahkan.`);
-      router.push(`/mitra/merk/${data.id}`);
+      toast.success(`Merek "${data.brandName}" berhasil disimpan.`);
+      router.push(
+        surface.detailHrefBase
+          ? `${surface.detailHrefBase}/${data.id}`
+          : surface.listHref,
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal menyimpan merek");
     } finally {
@@ -70,7 +75,7 @@ export function MerkWizard() {
             Step {currentStep} of {TOTAL_STEPS}
           </p>
           <h1 className="text-lg font-semibold">{STEP_TITLES[currentStep - 1]}</h1>
-          <p className="text-sm text-muted-foreground">Tambah Merek Baru</p>
+          <p className="text-sm text-muted-foreground">{surface.wizardSubtitle}</p>
         </div>
         <StepIndicator current={currentStep} total={TOTAL_STEPS} />
       </div>

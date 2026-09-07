@@ -3,6 +3,14 @@ import { z } from "zod";
 export const MERK_OWNERSHIP_TYPES = ["MILIK_SENDIRI", "LISENSI"] as const;
 export type MerkOwnershipType = (typeof MERK_OWNERSHIP_TYPES)[number];
 
+export const MERK_STATUS_VALUES = ["ACTIVE", "INACTIVE"] as const;
+export type MerkStatusValue = (typeof MERK_STATUS_VALUES)[number];
+
+export const merkStatusUpdateSchema = z.object({
+  status: z.enum(MERK_STATUS_VALUES, { message: "Status merek tidak valid" }),
+});
+export type MerkStatusUpdateValues = z.infer<typeof merkStatusUpdateSchema>;
+
 const requiredString = (message: string) => z.string().trim().min(1, message);
 
 export const merkBrandInfoSchema = z.object({
