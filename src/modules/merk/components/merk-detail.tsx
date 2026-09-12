@@ -40,6 +40,7 @@ type MerkDetailData = {
   countryOfOrigin: string;
   certificateType: MerkEvidenceType | null;
   registrationNumber: string | null;
+  registrationIssuer: string | null;
   registrationDate: string | null;
   trademarkClass: string | null;
   merekStatusLabel: string | null;
@@ -349,6 +350,7 @@ export function MerkDetail({ id, surface }: Props) {
               value={data.certificateType ? MERK_EVIDENCE_TYPE_LABELS[data.certificateType] : undefined}
             />
             <DetailItem label="Registration / Certificate Number" value={data.registrationNumber ?? undefined} />
+            <DetailItem label="Issuing Authority" value={data.registrationIssuer ?? undefined} />
             <DetailItem label="Registration Date" value={formatDate(data.registrationDate)} />
             <DetailItem label="Trademark Class" value={data.trademarkClass ?? undefined} />
             <DetailItem label="Trademark Status" value={data.merekStatusLabel ?? undefined} />

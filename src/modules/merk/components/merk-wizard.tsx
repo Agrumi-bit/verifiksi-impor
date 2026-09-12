@@ -38,6 +38,7 @@ const DEFAULT_VALUES: Partial<MerkWizardValues> = {
   brandName: "",
   countryOfOrigin: "",
   registrationNumber: "",
+  registrationIssuer: "",
   registrationDate: "",
   trademarkClass: "",
   merekStatusLabel: "",

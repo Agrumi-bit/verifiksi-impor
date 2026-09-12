@@ -186,6 +186,7 @@ export async function buildMerkCreateData(values: MerkWizardValues, ownerCompany
     hasCertificate: true,
     certificateType: values.evidenceType,
     registrationNumber: values.registrationNumber,
+    registrationIssuer: values.registrationIssuer,
     registrationDate: toDate(values.registrationDate),
     // Legacy single-document bridge — Step 4 now stores every document as its
     // own BrandDocument row; this mirrors the trademark evidence file so old
@@ -235,6 +236,7 @@ export async function buildMerkDraftData(values: MerkDraftValues, ownerCompanyNa
     hasCertificate: true,
     certificateType: values.evidenceType,
     registrationNumber: values.registrationNumber || null,
+    registrationIssuer: values.registrationIssuer || null,
     registrationDate: toDate(values.registrationDate),
     registrationDocumentPath: values.documents?.trademark_evidence?.filePath ?? null,
     trademarkClass: values.trademarkClass || null,

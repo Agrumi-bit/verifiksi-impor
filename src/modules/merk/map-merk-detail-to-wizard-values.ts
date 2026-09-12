@@ -9,6 +9,7 @@ export type MerkDetailForResume = {
   countryOfOrigin: string;
   certificateType: string | null;
   registrationNumber: string | null;
+  registrationIssuer: string | null;
   registrationDate: string | null;
   trademarkClass: string | null;
   merekStatusLabel: string | null;
@@ -126,6 +127,7 @@ export function mapMerkDetailToWizardValues(detail: MerkDetailForResume): Partia
     countryOfOrigin: detail.countryOfOrigin,
     evidenceType,
     registrationNumber: detail.registrationNumber ?? "",
+    registrationIssuer: detail.registrationIssuer ?? "",
     registrationDate: toDateInputValue(detail.registrationDate) ?? "",
     trademarkClass: detail.trademarkClass ?? "",
     merekStatusLabel: detail.merekStatusLabel ?? "",

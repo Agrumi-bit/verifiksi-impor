@@ -32,6 +32,7 @@ export function BrandInformationReview({ form, onEdit }: Props) {
   const countryOfOrigin = useWatch({ control, name: "countryOfOrigin" });
   const evidenceType = useWatch({ control, name: "evidenceType" }) as MerkEvidenceType | undefined;
   const registrationNumber = useWatch({ control, name: "registrationNumber" });
+  const registrationIssuer = useWatch({ control, name: "registrationIssuer" });
   const registrationDate = useWatch({ control, name: "registrationDate" });
   const trademarkClass = useWatch({ control, name: "trademarkClass" });
   const merekStatusLabel = useWatch({ control, name: "merekStatusLabel" });
@@ -58,6 +59,7 @@ export function BrandInformationReview({ form, onEdit }: Props) {
         <ReviewRow label="Negara Pemilik Merek" value={countryLabel} />
         <ReviewRow label="Jenis Bukti Merek" value={evidenceType && MERK_EVIDENCE_TYPE_LABELS[evidenceType]} />
         <ReviewRow label="Nomor Sertifikat / Pendaftaran" value={registrationNumber} />
+        <ReviewRow label="Lembaga Penerbit" value={registrationIssuer} />
         <ReviewRow
           label={dateLabel}
           value={registrationDate ? new Date(registrationDate).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" }) : undefined}

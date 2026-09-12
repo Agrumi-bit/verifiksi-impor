@@ -45,6 +45,11 @@ const DATE_FIELD_LABEL: Record<MerkEvidenceType, string> = {
   TANDA_DAFTAR_MEREK: "Tanggal Registrasi",
   SERTIFIKAT_INTERNASIONAL: "Tanggal Notifikasi / Pendaftaran",
 };
+const ISSUER_PLACEHOLDER_BY_EVIDENCE: Record<MerkEvidenceType, string> = {
+  SERTIFIKAT_MEREK_TERDAFTAR: "e.g. DJKI Kementerian Hukum dan HAM",
+  TANDA_DAFTAR_MEREK: "e.g. DJKI Kementerian Hukum dan HAM",
+  SERTIFIKAT_INTERNASIONAL: "e.g. WIPO (Madrid System)",
+};
 
 type ExistingBrand = { brandName: string };
 
@@ -225,6 +230,16 @@ export function Step1BrandInfo({ form, surface }: Props) {
                   className="font-mono"
                   placeholder="e.g. IDM000123456"
                   {...register("registrationNumber")}
+                />
+              </FormField>
+              <FormField
+                label="Lembaga Penerbit"
+                required
+                error={errors.registrationIssuer?.message}
+              >
+                <Input
+                  placeholder={ISSUER_PLACEHOLDER_BY_EVIDENCE[evidenceType]}
+                  {...register("registrationIssuer")}
                 />
               </FormField>
               <FormField

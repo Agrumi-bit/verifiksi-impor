@@ -33,6 +33,7 @@ export function Step4DokumenPendukung({ form }: Props) {
   const appointmentSource = useWatch({ control, name: "appointmentSource" });
   const agreementType = useWatch({ control, name: "agreementType" });
   const registrationNumber = useWatch({ control, name: "registrationNumber" });
+  const registrationIssuer = useWatch({ control, name: "registrationIssuer" });
   const trademarkClass = useWatch({ control, name: "trademarkClass" });
   const documents = useWatch({ control, name: "documents" }) ?? {};
   const productLabelDocumentation = useWatch({ control, name: "productLabelDocumentation" }) ?? [];
@@ -97,6 +98,7 @@ export function Step4DokumenPendukung({ form }: Props) {
         requirement={requirements.find((r) => r.code === "trademark_evidence")!}
         evidenceType={evidenceType}
         registrationNumber={registrationNumber}
+        registrationIssuer={registrationIssuer}
         trademarkClass={trademarkClass}
         value={documents.trademark_evidence}
         onChange={(value) => updateDocument("trademark_evidence", value)}
