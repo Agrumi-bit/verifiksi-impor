@@ -22,6 +22,13 @@ export type MerkSurface = {
   description: string | null;
   newLabel: string;
   wizardSubtitle: string;
+  /** Gates Brand Detail's "Audit" tab — permission-based, not a second RBAC
+   * system: platform staff can see field-level change history, a company
+   * user cannot. */
+  showAudit: boolean;
+  /** Shows the "Perusahaan" column on the brand list — meaningless on the
+   * Company surface, where every row is already the caller's own company. */
+  showCompanyColumn: boolean;
 };
 
 export const INTERNAL_MERK_SURFACE: MerkSurface = {
@@ -33,16 +40,22 @@ export const INTERNAL_MERK_SURFACE: MerkSurface = {
   description: null,
   newLabel: "+ Tambah Merek",
   wizardSubtitle: "Tambah Merek Baru",
+  showAudit: true,
+  showCompanyColumn: true,
 };
 
 export const COMPANY_BRAND_SURFACE: MerkSurface = {
   apiBase: "/api/company-workspace/brands",
   listHref: "/company-workspace/supporting/brands",
   newHref: "/company-workspace/supporting/brands/new",
-  detailHrefBase: null,
+  // Company users may view their own brand's detail (read-only sections plus
+  // permitted edit actions) — the Audit tab there hides itself, admin-only.
+  detailHrefBase: "/company-workspace/supporting/brands",
   title: "Brand Management",
   description:
     "Daftar merek produk tekstil yang terdaftar untuk perusahaan Anda.",
   newLabel: "+ Register New Brand",
   wizardSubtitle: "Register New Brand",
+  showAudit: false,
+  showCompanyColumn: false,
 };

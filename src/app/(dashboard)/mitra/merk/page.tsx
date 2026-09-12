@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 
-import { MerkTable } from "@/modules/merk/components/merk-table";
-import { INTERNAL_MERK_SURFACE } from "@/modules/merk/surface";
+import { AdminBrandList } from "@/modules/merk/components/management/admin-brand-list";
 
 export const metadata: Metadata = {
-  title: "Merk — Verifikasi Impor",
+  title: "Semua Merek — Verifikasi Impor",
 };
 
 export default function MerkPage() {
-  return <MerkTable surface={INTERNAL_MERK_SURFACE} />;
+  return <AdminBrandList />;
 }

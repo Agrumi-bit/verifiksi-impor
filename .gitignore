@@ -46,3 +46,8 @@ next-env.d.ts
 # local file storage (see AGENTS.md Storage Strategy) — keep the tree, ignore uploaded content
 /storage/*/*
 !/storage/*/.gitkeep
+
+# Local tooling state — not part of the app, machine/session-specific
+.claude/
+.graphify/
+src/.graphify/

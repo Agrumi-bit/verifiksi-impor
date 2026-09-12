@@ -52,7 +52,19 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   { label: "Partner Management", icon: Handshake, href: "/partners" },
-  { label: "Merk", icon: Tag, href: "/mitra/merk" },
+  {
+    label: "Merk Management",
+    icon: Tag,
+    children: [
+      { label: "Dashboard", href: "/mitra/merk/dashboard" },
+      { label: "Semua Merek", href: "/mitra/merk" },
+      { label: "Pemilik & Perwakilan", href: "/mitra/merk/relationships" },
+      { label: "Dokumen & Monitoring", href: "/mitra/merk/documents" },
+      { label: "Hasil Uji Mutu", href: "/mitra/merk/quality-tests" },
+      { label: "Draft", href: "/mitra/merk/drafts" },
+      { label: "Audit Trail", href: "/mitra/merk/audit" },
+    ],
+  },
   {
     label: "Company Management",
     icon: Building2,
@@ -117,6 +129,10 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         label: "Data Negara",
         href: "/system-configuration/country",
+      },
+      {
+        label: "Pemilik Merek",
+        href: "/system-configuration/brand-owner",
       },
       {
         label: "Data Wilayah",

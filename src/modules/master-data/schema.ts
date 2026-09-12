@@ -30,6 +30,14 @@ export const industryGroupSchema = z.object({
   description: z.string().trim().optional(),
 });
 
+export const brandOwnerSchema = z.object({
+  name: requiredString("Nama perusahaan pemilik merek wajib diisi"),
+  city: z.string().trim().optional(),
+  contactPerson: z.string().trim().optional(),
+  contactEmail: z.string().trim().optional(),
+  contactPhone: z.string().trim().optional(),
+});
+
 export const countryMasterDataSchema = z.object({
   name: requiredString("Nama negara wajib diisi"),
   code: requiredString("Kode negara wajib diisi"),
@@ -86,6 +94,8 @@ export const industryGroupUpdateSchema =
   industryGroupSchema.extend(statusSchema.shape);
 export const countryMasterDataUpdateSchema =
   countryMasterDataSchema.extend(statusSchema.shape);
+export const brandOwnerUpdateSchema =
+  brandOwnerSchema.extend(statusSchema.shape);
 export const commodityGroupUpdateSchema =
   commodityGroupSchema.extend(statusSchema.shape);
 export const commoditySubGroupUpdateSchema =

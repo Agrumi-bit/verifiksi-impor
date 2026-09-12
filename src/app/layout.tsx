@@ -1,56 +1,43 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Hanken_Grotesk, Inter, JetBrains_Mono, Source_Serif_4, IBM_Plex_Sans, Archivo } from "next/font/google";
+// Self-hosted — no build-time network fetch to Google Fonts (next/font/google downloads font
+// metadata from fonts.gstatic.com even in dev, which breaks the build entirely on any network
+// that can't reach it). `geist` ships Vercel's own font as local files behind the exact same
+// next/font/local API (same .variable names, drop-in). The rest are @fontsource CSS imports
+// (static @font-face files bundled in node_modules, zero network) — their --font-* custom
+// properties are declared once in globals.css instead of via a generated .variable string.
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
+// Surveyor/Technical-Analyst/Verifikator workspace typography (surveyor-theme.css `font-sv-*`
+// tokens) — ported from a Stitch export that originally loaded these via raw <link> tags per
+// workspace layout.
+import "@fontsource/hanken-grotesk/400.css";
+import "@fontsource/hanken-grotesk/600.css";
+import "@fontsource/hanken-grotesk/700.css";
+import "@fontsource/hanken-grotesk/800.css";
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
+import "@fontsource/jetbrains-mono/600.css";
+// Surveyor office/field report print previews.
+import "@fontsource/source-serif-4/400.css";
+import "@fontsource/source-serif-4/600.css";
+import "@fontsource/source-serif-4/700.css";
+import "@fontsource/source-serif-4/800.css";
+import "@fontsource/ibm-plex-sans/400.css";
+import "@fontsource/ibm-plex-sans/500.css";
+import "@fontsource/ibm-plex-sans/600.css";
+import "@fontsource/ibm-plex-sans/700.css";
+// Verifikator document verification report print preview.
+import "@fontsource/archivo/400.css";
+import "@fontsource/archivo/500.css";
+import "@fontsource/archivo/600.css";
+import "@fontsource/archivo/700.css";
 import "./globals.css";
 import { Providers } from "./providers";
 import { getBrandingSettings } from "@/lib/get-branding";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-// Surveyor/Technical-Analyst/Verifikator workspace typography (surveyor-theme.css `font-sv-*`
-// tokens) — ported from a Stitch export that originally loaded these via raw <link> tags per
-// workspace layout.
-const hankenGrotesk = Hanken_Grotesk({
-  variable: "--font-hanken-grotesk",
-  weight: ["400", "600", "700", "800"],
-  subsets: ["latin"],
-});
-const inter = Inter({
-  variable: "--font-inter",
-  weight: ["400", "500", "600"],
-  subsets: ["latin"],
-});
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  weight: ["600"],
-  subsets: ["latin"],
-});
-
-// Surveyor office/field report print previews.
-const sourceSerif4 = Source_Serif_4({
-  variable: "--font-source-serif-4",
-  weight: ["400", "600", "700", "800"],
-  subsets: ["latin"],
-});
-const ibmPlexSans = IBM_Plex_Sans({
-  variable: "--font-ibm-plex-sans",
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
-});
-
-// Verifikator document verification report print preview.
-const archivo = Archivo({
-  variable: "--font-archivo",
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
-});
+const geistSans = GeistSans;
+const geistMono = GeistMono;
 
 export async function generateMetadata(): Promise<Metadata> {
   const branding = await getBrandingSettings();
@@ -73,7 +60,7 @@ export default async function RootLayout({
   return (
     <html
       lang="id"
-      className={`${geistSans.variable} ${geistMono.variable} ${hankenGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable} ${sourceSerif4.variable} ${ibmPlexSans.variable} ${archivo.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
         {/* Material Symbols Outlined — an icon glyph font, not a typeface, so it can't move to

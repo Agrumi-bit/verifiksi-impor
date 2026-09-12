@@ -375,6 +375,78 @@ enum MerkOwnershipType {
 enum MerkStatus {
   ACTIVE
   INACTIVE
+  // Saved via "Simpan Draft" mid-wizard — skips full validation, only
+  // brandName is guaranteed. Never set by the ACTIVE/INACTIVE toggle.
+  DRAFT
+}
+
+// Step 1 "Jenis Impor" — mirrors the Application wizard's own Barang Konsumsi /
+// Bahan Baku split, reused here to drive which documents Step 5 requires.
+enum MerkImportGoodsType {
+  BARANG_KONSUMSI
+  BAHAN_BAKU
+}
+
+// Step 2 "Jenis Sertifikat" — TANDA_DAFTAR_MEREK takes a single registration
+// date (registrationDate); the others take a validity range (registrationDate
+// as start, registrationExpiryDate as end).
+enum MerkCertificateType {
+  TANDA_DAFTAR_MEREK
+  SERTIFIKAT_MEREK_TERDAFTAR
+  SERTIFIKAT_INTERNASIONAL
+  LAINNYA
+}
+
+// Step 4 — whether the registering company (the importer) is itself the brand
+// owner, or the brand owner is a separate company and one or more distinct
+// importers are named instead (see MerkImporter).
+enum MerkImporterRelation {
+  BRAND_OWNER_IS_IMPORTER
+  SEPARATE_IMPORTERS
+}
+
+// --- Step 2 "Kepemilikan & Perwakilan" (ownership/representation redesign) ---
+
+enum MerkOwnerLocation {
+  DOMESTIC
+  FOREIGN
+}
+
+enum MerkOwnerType {
+  COMPANY
+  INDIVIDUAL
+}
+
+enum MerkForeignEntityType {
+  COMPANY
+  ORGANIZATION
+  INDIVIDUAL
+  OTHER
+}
+
+// Domestic-owner scenario: how the applicant API-U company relates to the
+// (Indonesian) brand owner.
+enum MerkApiuRelationship {
+  APIU_IS_OWNER
+  APIU_IS_IMPORTER
+}
+
+// Foreign-owner scenario: how the brand is represented in Indonesia.
+enum MerkRepresentationType {
+  APIU_OFFICIAL_REPRESENTATIVE
+  OTHER_OFFICIAL_REPRESENTATIVE
+  APPOINTED_IMPORTER
+}
+
+enum MerkAgreementType {
+  LISENSI
+  SUBLISENSI
+}
+
+// Who issued the importer appointment letter (Surat Penunjukan Importir).
+enum MerkAppointmentSource {
+  BRAND_OWNER
+  OFFICIAL_REPRESENTATIVE
 }
 
 model Merk {
@@ -384,8 +456,10 @@ model Merk {
   brandName                String
   productCategory          String
   countryOfOrigin          String
-  registrationNumber       String
-  registrationDocumentPath String
+  // Nullable: Step 2's "Tidak mempunyai sertifikat" path (hasCertificate = false)
+  // legitimately has no certificate number/document.
+  registrationNumber       String?
+  registrationDocumentPath String?
 
   // Nullable: predate this change on already-populated environments; the wizard
   // schema makes all three required for new rows.
@@ -393,13 +467,58 @@ model Merk {
   registrationDate       DateTime?
   registrationExpiryDate DateTime?
 
+  // Step 1 additions — nullable: predate this change on already-populated environments.
+  importGoodsType  MerkImportGoodsType?
+  brandType        String?
+  brandCategory    String?
+  officialWebsite  String?
+  contactEmail     String?
+  brandDescription String?
+
+  // Step 1 (drawer redesign) — hasCertificate/certificateType classify the
+  // registrationNumber/Issuer/Date/DocumentPath fields above ("Jenis Bukti
+  // Merek": SERTIFIKAT_MEREK_TERDAFTAR / TANDA_DAFTAR_MEREK /
+  // SERTIFIKAT_INTERNASIONAL — LAINNYA stays a valid DB value but the
+  // wizard no longer offers it). registrationExpiryDate/Issuer are unused by
+  // this flow (single date, no issuing authority field) but kept for rows
+  // written by the pre-drawer wizard.
+  hasCertificate  Boolean              @default(true)
+  certificateType MerkCertificateType?
+  trademarkClass    String?
+  merekStatusLabel  String?
+  logoPath          String?
+
+  // ownershipType/brandOwnerName are legacy (pre-BrandOwner) fields, kept for
+  // existing rows and still written by the API — derived from
+  // importerRelation/brandOwnerId so old readers of this row keep working.
   ownershipType  MerkOwnershipType
   brandOwnerName String
+
+  // Step 3 — nullable: legacy rows predate BrandOwner and only have brandOwnerName.
+  brandOwnerId String?
+  brandOwner   BrandOwner? @relation(fields: [brandOwnerId], references: [id])
 
   licenseAgreementNumber String?
   licenseStartDate       DateTime?
   licenseEndDate         DateTime?
   licenseDocumentPath    String?
+
+  // Step 4/5 — legacy multi-importer model, superseded by MerkOwnership for
+  // rows created by the current wizard; left non-destructively in place.
+  importerRelation      MerkImporterRelation?
+  importers             MerkImporter[]
+  supportingDocuments   Json?
+
+  // Step 2 (current wizard) — 1:1, see MerkOwnership.
+  ownership MerkOwnership?
+
+  // Step 3 (current wizard) — one row per uploaded requirement slot (see
+  // getRequiredBrandDocuments) plus the repeatable Quality Test records.
+  documents    BrandDocument[]
+  qualityTests BrandQualityTest[]
+
+  // Step 6 — when the submitter accepted the mandatory legal declaration.
+  declarationAcceptedAt DateTime?
 
   companyId String?
   company   Company? @relation(fields: [companyId], references: [id])
@@ -408,12 +527,161 @@ model Merk {
   updatedAt DateTime @updatedAt
 
   @@index([companyId])
+  @@index([brandOwnerId])
   @@map("merk")
+}
+
+// One row per importer named in Step 4 when importerRelation is
+// SEPARATE_IMPORTERS — each carries its own authorization document (surat
+// kuasa/penunjukan dari pemilik merek), matching Step 5/6's "N importir
+// dengan dokumen masing-masing".
+model MerkImporter {
+  id                        String   @id @default(cuid())
+  merkId                    String
+  merk                      Merk     @relation(fields: [merkId], references: [id], onDelete: Cascade)
+  companyName               String
+  authorizationDocumentPath String
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  @@index([merkId])
+  @@map("merk_importer")
+}
+
+// Step 2 "Kepemilikan & Perwakilan" — one row per Merk, holding whichever
+// subset of fields the selected scenario needs (see MERK_STEP_FIELD rules in
+// src/modules/merk/schema.ts; unused fields for a given scenario stay null).
+model MerkOwnership {
+  id     String @id @default(cuid())
+  merkId String @unique
+  merk   Merk   @relation(fields: [merkId], references: [id], onDelete: Cascade)
+
+  ownerLocation MerkOwnerLocation
+
+  // --- Domestic owner (ownerLocation = DOMESTIC) ---
+  ownerType      MerkOwnerType?
+  ownerCompanyId String?
+  ownerCompany   BrandOwner?    @relation("MerkOwnershipOwnerCompany", fields: [ownerCompanyId], references: [id])
+  // ownerName/ownerAddress double as the domestic-individual owner's name/address
+  // and the foreign owner's name/address — same concept, different scenario.
+  ownerName      String?
+  ownerAddress   String?
+
+  relationshipWithApiu MerkApiuRelationship?
+
+  // --- Foreign owner (ownerLocation = FOREIGN) ---
+  foreignEntityType         MerkForeignEntityType?
+  // Stored as a plain country name (matches countryOfOrigin's convention
+  // elsewhere in this schema) despite the "CountryCode" name carried over
+  // from the wizard's field naming.
+  ownerCountryCode          String?
+  foreignRegistrationNumber String?
+
+  representationType              MerkRepresentationType?
+  officialRepresentativeId         String?
+  officialRepresentative           BrandOwner?             @relation("MerkOwnershipOfficialRepresentative", fields: [officialRepresentativeId], references: [id])
+
+  // --- Lisensi/Sublisensi (representationType = APIU_OFFICIAL_REPRESENTATIVE) ---
+  agreementType      MerkAgreementType?
+  agreementNumber    String?
+  agreementStartDate DateTime?
+  agreementEndDate   DateTime?
+
+  // --- Surat Penunjukan Importir (domestic apiu_is_importer, OTHER_OFFICIAL_REPRESENTATIVE, APPOINTED_IMPORTER) ---
+  appointmentSource       MerkAppointmentSource?
+  appointmentLetterNumber String?
+  appointmentStartDate    DateTime?
+  appointmentEndDate      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerCompanyId])
+  @@index([officialRepresentativeId])
+  @@map("merk_ownership")
+}
+
+// Step 3 "Dokumen Pendukung" — one row per uploaded requirement slot.
+// `documentType` is a getRequiredBrandDocuments() requirement code (e.g.
+// "trademark_evidence", "official_representative_appointment"); `category`
+// mirrors that requirement's BrandDocumentRequirement.category. No DB-level
+// uniqueness on (merkId, documentType): every slot is single-file by
+// convention except "product_label_documentation", which the UI allows
+// multiple rows for.
+model BrandDocument {
+  id             String    @id @default(cuid())
+  merkId         String
+  merk           Merk      @relation(fields: [merkId], references: [id], onDelete: Cascade)
+  documentType   String
+  category       String
+  filePath       String
+  fileName       String
+  fileSize       Int
+  documentNumber String?
+  issueDate      DateTime?
+  expiryDate     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([merkId])
+  @@index([merkId, documentType])
+  @@map("brand_document")
+}
+
+// Step 3 "Hasil Uji Mutu" — structured, repeatable (not a generic
+// attachment). Links into the existing Commodity master data rather than
+// duplicating a commodity picker.
+model BrandQualityTest {
+  id                  String             @id @default(cuid())
+  merkId              String
+  merk                Merk               @relation(fields: [merkId], references: [id], onDelete: Cascade)
+  commodityGroupId    String
+  commodityGroup      CommodityGroup     @relation(fields: [commodityGroupId], references: [id])
+  commoditySubGroupId String?
+  commoditySubGroup   CommoditySubGroup? @relation(fields: [commoditySubGroupId], references: [id])
+  certificateNumber   String
+  laboratoryName      String
+  issueDate           DateTime
+  expiryDate          DateTime?
+  filePath            String
+  fileName            String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([merkId])
+  @@index([commodityGroupId])
+  @@index([commoditySubGroupId])
+  @@map("brand_quality_test")
 }
 
 enum MasterDataStatus {
   ACTIVE
   INACTIVE
+}
+
+// "Mitra Pemilik Merek" registry searched in the Merk wizard's Step 3 — a
+// standalone list (not the Company table) since a brand owner is frequently a
+// foreign or unaffiliated company with no Company Workspace account of its own.
+model BrandOwner {
+  id            String           @id @default(cuid())
+  status        MasterDataStatus @default(ACTIVE)
+  name          String
+  city          String?
+  contactPerson String?
+  contactEmail  String?
+  contactPhone  String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  merks Merk[]
+
+  // Step 2 (current wizard) — a BrandOwner row can be picked as the domestic
+  // owner company, the foreign owner's official representative, or both
+  // across different Merk registrations.
+  ownershipAsOwnerCompany          MerkOwnership[] @relation("MerkOwnershipOwnerCompany")
+  ownershipAsOfficialRepresentative MerkOwnership[] @relation("MerkOwnershipOfficialRepresentative")
+
+  @@map("brand_owner")
 }
 
 model UnitOfMeasurement {
@@ -475,6 +743,7 @@ model CommodityGroup {
   updatedAt       DateTime            @updatedAt
   subGroups       CommoditySubGroup[]
   hsCodes         HsCodeMasterData[]
+  brandQualityTests BrandQualityTest[]
 
   @@index([industryGroupId])
   @@map("commodity_group")
@@ -491,6 +760,7 @@ model CommoditySubGroup {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   hsCodes          HsCodeMasterData[]
+  brandQualityTests BrandQualityTest[]
 
   @@index([commodityGroupId])
   @@map("commodity_sub_group")

@@ -5,6 +5,18 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Self-hosted via @fontsource (see src/app/layout.tsx) — geist/font/sans and geist/font/mono
+   still declare --font-geist-sans/--font-geist-mono themselves via next/font/local's generated
+   className, so only the @fontsource-backed families need their --font-* declared here. */
+:root {
+  --font-hanken-grotesk: "Hanken Grotesk", sans-serif;
+  --font-inter: "Inter", sans-serif;
+  --font-jetbrains-mono: "JetBrains Mono", monospace;
+  --font-source-serif-4: "Source Serif 4", serif;
+  --font-ibm-plex-sans: "IBM Plex Sans", sans-serif;
+  --font-archivo: "Archivo", sans-serif;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

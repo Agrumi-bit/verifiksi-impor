@@ -5,6 +5,7 @@ import {
   BarChart3,
   UserCircle,
   Building2,
+  Tag,
 } from "lucide-react";
 
 import type { NavSection } from "@/components/layout/sidebar";
@@ -27,11 +28,22 @@ export const COMPANY_WORKSPACE_NAV: NavSection[] = [
     href: `${BASE}/profile`,
   },
   {
+    label: "Merek",
+    icon: Tag,
+    children: [
+      { label: "Dashboard", href: `${BASE}/supporting/brands/dashboard` },
+      { label: "Daftar Merek", href: `${BASE}/supporting/brands` },
+      { label: "Draft", href: `${BASE}/supporting/brands/drafts` },
+      { label: "Dokumen", href: `${BASE}/supporting/brands/documents` },
+      { label: "Hasil Uji Mutu", href: `${BASE}/supporting/brands/quality-tests` },
+      { label: "Riwayat Aktivitas", href: `${BASE}/supporting/brands/activity` },
+    ],
+  },
+  {
     label: "Supporting",
     icon: Folder,
     children: [
       { label: "Partner Companies", href: `${BASE}/supporting/partners` },
-      { label: "Brand Management", href: `${BASE}/supporting/brands` },
       { label: "Supporting Documents", href: `${BASE}/supporting/documents` },
       { label: "Media Library", href: `${BASE}/supporting/media` },
     ],
