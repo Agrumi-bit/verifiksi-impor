@@ -54,12 +54,27 @@ const merkBrandInfoBaseSchema = z.object({
   registrationNumber: requiredString("Nomor wajib diisi"),
   registrationIssuer: requiredString("Lembaga penerbit wajib diisi"),
   registrationDate: z.string().trim().optional(),
-  trademarkClass: requiredString("Kelas merek wajib dipilih"),
-  trademarkClassDescription: requiredString("Uraian kelas merek wajib diisi"),
+  // A brand can be registered in more than one Nice class ("+ Tambah Kelas
+  // Merek") — each entry carries its own applicant-written uraian, since
+  // that's specific to what THIS brand covers within that class, not a
+  // generic class heading (see TrademarkClassMasterData).
+  trademarkClasses: z
+    .array(
+      z.object({
+        trademarkClass: requiredString("Kelas merek wajib dipilih"),
+        trademarkClassDescription: requiredString("Uraian kelas merek wajib diisi"),
+      }),
+    )
+    .min(1, "Tambahkan minimal satu kelas merek"),
   merekStatusLabel: z.string().trim().optional(),
   logoPath: z.string().trim().optional(),
 });
 export type MerkBrandInfoValues = z.infer<typeof merkBrandInfoBaseSchema>;
+export type TrademarkClassEntryValues = MerkBrandInfoValues["trademarkClasses"][number];
+
+export function createEmptyTrademarkClassEntry(): TrademarkClassEntryValues {
+  return { trademarkClass: "", trademarkClassDescription: "" };
+}
 
 function validateEvidenceStep(data: MerkBrandInfoValues, ctx: z.RefinementCtx) {
   const dateOptional = MERK_EVIDENCE_TYPES_WITH_OPTIONAL_DATE.includes(data.evidenceType);
@@ -78,14 +93,16 @@ function validateEvidenceStep(data: MerkBrandInfoValues, ctx: z.RefinementCtx) {
 export const merkBrandInfoSchema = merkBrandInfoBaseSchema.superRefine(validateEvidenceStep);
 
 // ---------------------------------------------------------------------------
-// Step 2 — Kepemilikan / Step 3 — Perwakilan
-//
-// One schema/superRefine still covers both wizard steps — "Siapa pemilik
-// merek ini (Step 2), bagaimana merek diwakili di Indonesia, dan apa
-// hubungan hukum antara Pemilik Merek, Perwakilan Resmi, dan API-U (Step
-// 3)?" MERK_STEP_FIELD_NAMES below is what actually splits which fields
-// each step's "Lanjutkan" validates; validateOwnershipStep validates the
-// whole shape either way.
+// Step 2 — Kepemilikan: "Siapa pemilik merek ini?" The Perwakilan question
+// ("bagaimana merek diwakili di Indonesia, dan apa hubungan hukum antara
+// Pemilik Merek, Perwakilan Resmi, dan API-U?") used to be a Step 3 here but
+// was removed — every field it collected
+// (relationshipWithApiu/representationType/appointmentSource/
+// officialRepresentativeCompanyId/agreementType/agreement*/appointment*)
+// stays in MerkOwnershipValues below (optional, unvalidated) purely so rows
+// written by the old wizard keep loading, but this wizard no longer asks
+// for or requires any of it — that relationship is now captured per VIU
+// Application instead (modules/applications/viu-brand-relationship-rules.ts).
 //
 // Legacy note: this replaces the earlier brandOwnerId + importerRelation +
 // importers[] model (still on the Merk/MerkImporter tables, non-destructively
@@ -200,6 +217,15 @@ function issue(ctx: z.RefinementCtx, path: string | string[], message: string) {
   ctx.addIssue({ code: "custom", path: Array.isArray(path) ? path : [path], message });
 }
 
+// Perwakilan (relationshipWithApiu / representationType / appointmentSource /
+// officialRepresentativeCompanyId / agreementType) is no longer collected by
+// this wizard — that step was removed; the legal relationship between a
+// Brand and an applicant API-U is now captured per VIU Application instead
+// (see modules/applications/viu-brand-relationship-rules.ts), not at Brand
+// registration time. The fields themselves stay in the schema (optional,
+// unvalidated) so existing rows written by the old wizard keep working and
+// nothing downstream (build-create-data.ts, document-requirements.ts) needs
+// to change shape.
 function validateOwnershipStep(data: MerkOwnershipValues, ctx: z.RefinementCtx) {
   if (data.ownerLocation === "domestic") {
     if (!data.ownerType) {
@@ -210,11 +236,6 @@ function validateOwnershipStep(data: MerkOwnershipValues, ctx: z.RefinementCtx) 
       if (!data.ownerName) issue(ctx, "ownerName", "Nama pemilik merek wajib diisi");
       if (!data.ownerAddress) issue(ctx, "ownerAddress", "Alamat wajib diisi");
     }
-    if (!data.relationshipWithApiu) {
-      issue(ctx, "relationshipWithApiu", "Pilih hubungan dengan perusahaan API-U");
-    } else if (data.relationshipWithApiu === "apiu_is_importer" && !data.appointmentLetterNumber) {
-      issue(ctx, "appointmentLetterNumber", "Nomor surat penunjukan wajib diisi");
-    }
     return;
   }
 
@@ -222,37 +243,18 @@ function validateOwnershipStep(data: MerkOwnershipValues, ctx: z.RefinementCtx) 
   if (!data.ownerName) issue(ctx, "ownerName", "Nama pemilik merek wajib diisi");
   if (!data.ownerCountryCode) issue(ctx, "ownerCountryCode", "Negara pemilik merek wajib diisi");
   if (!data.ownerAddress) issue(ctx, "ownerAddress", "Alamat wajib diisi");
-
-  if (!data.representationType) {
-    issue(ctx, "representationType", "Pilih bagaimana merek ini diwakili di Indonesia");
-    return;
-  }
-  if (data.representationType === "apiu_official_representative" && !data.agreementType) {
-    issue(ctx, "agreementType", "Pilih jenis perjanjian");
-  }
-  if (data.representationType === "other_official_representative" && !data.officialRepresentativeCompanyId) {
-    issue(ctx, "officialRepresentativeCompanyId", "Pilih perwakilan resmi di Indonesia");
-  }
-  if (data.representationType === "appointed_importer") {
-    if (!data.appointmentSource) {
-      issue(ctx, "appointmentSource", "Pilih asal penunjukan importir");
-    } else if (data.appointmentSource === "official_representative" && !data.officialRepresentativeCompanyId) {
-      issue(ctx, "officialRepresentativeCompanyId", "Pilih perwakilan resmi di Indonesia");
-    }
-  }
 }
 
 export const merkOwnershipSchema = merkOwnershipBaseSchema.superRefine(validateOwnershipStep);
 
 // ---------------------------------------------------------------------------
-// Step 4 — Dokumen Pendukung
-//
-// "Dokumen apa yang membuktikan merek, hubungan kepemilikan/perwakilan,
-// penunjukan importir, dan pemenuhan persyaratan produk?"
-//
-// Which slots are required is computed by getRequiredBrandDocuments() in
-// document-requirements.ts from Step 1/2's data — this file only validates
-// that whatever the engine says is required has actually been uploaded.
+// Dokumen — no dedicated wizard step anymore (the standalone "Dokumen
+// Pendukung" step was removed alongside Perwakilan; see the note above
+// validateOwnershipStep). Step 1's own upload card is still the one place
+// this wizard writes into `documents` (keyed "trademark_evidence"); the
+// broader per-scenario document set getRequiredBrandDocuments() computes is
+// used by VIU Application creation and admin "Kelengkapan" monitoring, not
+// gated by this wizard's own validation.
 // ---------------------------------------------------------------------------
 
 export const brandDocumentEntrySchema = z.object({
@@ -335,8 +337,14 @@ export const merkDraftSchema = z.object({
   registrationNumber: z.string().trim().optional(),
   registrationIssuer: z.string().trim().optional(),
   registrationDate: z.string().trim().optional(),
-  trademarkClass: z.string().trim().optional(),
-  trademarkClassDescription: z.string().trim().optional(),
+  trademarkClasses: z
+    .array(
+      z.object({
+        trademarkClass: z.string().trim().optional(),
+        trademarkClassDescription: z.string().trim().optional(),
+      }),
+    )
+    .optional(),
   merekStatusLabel: z.string().trim().optional(),
   logoPath: z.string().trim().optional(),
 
@@ -374,19 +382,18 @@ export const MERK_STEP_FIELD_NAMES: Record<number, (keyof MerkWizardValues)[]> =
     "registrationNumber",
     "registrationIssuer",
     "registrationDate",
-    "trademarkClass",
-    "trademarkClassDescription",
+    "trademarkClasses",
     "merekStatusLabel",
     "logoPath",
   ],
   // Step 2 — Kepemilikan: who owns the brand (domestic/foreign, company/
-  // individual/entity details). Step 3 — Perwakilan: the legal relationship
-  // that follows from that owner (API-U relationship for domestic,
-  // representation/agreement/appointment for foreign). Both subsets are
-  // still validated together by the one validateOwnershipStep superRefine in
-  // this file — form.trigger(fields) only surfaces errors for the field
-  // names passed to it, so splitting the trigger list here is enough to
-  // split the step without splitting the validation itself.
+  // individual/entity details). The Perwakilan step (relationshipWithApiu/
+  // representationType/appointmentSource/officialRepresentativeCompanyId/
+  // agreementType) and the standalone Dokumen Pendukung step were both
+  // removed — that legal relationship is now captured per VIU Application
+  // instead (see modules/applications/viu-brand-relationship-rules.ts), and
+  // Step 1's own upload card already covers the one document this wizard
+  // still collects (trademark_evidence).
   2: [
     "ownerLocation",
     "ownerType",
@@ -397,20 +404,6 @@ export const MERK_STEP_FIELD_NAMES: Record<number, (keyof MerkWizardValues)[]> =
     "ownerCountryCode",
     "foreignRegistrationNumber",
   ],
-  3: [
-    "relationshipWithApiu",
-    "representationType",
-    "officialRepresentativeCompanyId",
-    "agreementType",
-    "agreementNumber",
-    "agreementStartDate",
-    "agreementEndDate",
-    "appointmentSource",
-    "appointmentLetterNumber",
-    "appointmentStartDate",
-    "appointmentEndDate",
-  ],
-  4: ["documents", "productLabelDocumentation", "qualityTests"],
-  // Step 5 (Review) owns the final declaration — Step 4 is documents-only.
-  5: ["declarationAccepted"],
+  // Step 3 (Review) owns the final declaration.
+  3: ["declarationAccepted"],
 };

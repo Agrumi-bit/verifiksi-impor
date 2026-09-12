@@ -5,6 +5,7 @@ import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type ExistingBrandMatch = {
+  id: string;
   brandName: string;
   brandOwnerName: string;
   registrationNumber: string | null;

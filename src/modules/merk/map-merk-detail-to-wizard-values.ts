@@ -11,8 +11,12 @@ export type MerkDetailForResume = {
   registrationNumber: string | null;
   registrationIssuer: string | null;
   registrationDate: string | null;
+  // Legacy scalar bridge — kept here only as a fallback for rows somehow
+  // missing trademarkClassEntries (see that field's own comment on the Merk
+  // model); the array below is the actual source for resuming Step 1.
   trademarkClass: string | null;
   trademarkClassDescription: string | null;
+  trademarkClassEntries: { trademarkClass: string; trademarkClassDescription: string }[];
   merekStatusLabel: string | null;
   logoPath: string | null;
   ownership: {
@@ -123,6 +127,21 @@ export function mapMerkDetailToWizardValues(detail: MerkDetailForResume): Partia
 
   const ownership = detail.ownership;
 
+  // Resume the full multi-class list; fall back to synthesizing one entry
+  // from the legacy scalar columns for the rare row that somehow has a
+  // class but no trademarkClassEntries row (shouldn't happen after the
+  // backfill migration, but resuming shouldn't silently drop data either
+  // way).
+  const trademarkClasses =
+    detail.trademarkClassEntries.length > 0
+      ? detail.trademarkClassEntries.map((entry) => ({
+          trademarkClass: entry.trademarkClass,
+          trademarkClassDescription: entry.trademarkClassDescription,
+        }))
+      : detail.trademarkClass
+        ? [{ trademarkClass: detail.trademarkClass, trademarkClassDescription: detail.trademarkClassDescription ?? "" }]
+        : [];
+
   return {
     brandName: detail.brandName,
     countryOfOrigin: detail.countryOfOrigin,
@@ -130,8 +149,7 @@ export function mapMerkDetailToWizardValues(detail: MerkDetailForResume): Partia
     registrationNumber: detail.registrationNumber ?? "",
     registrationIssuer: detail.registrationIssuer ?? "",
     registrationDate: toDateInputValue(detail.registrationDate) ?? "",
-    trademarkClass: detail.trademarkClass ?? "",
-    trademarkClassDescription: detail.trademarkClassDescription ?? "",
+    trademarkClasses,
     merekStatusLabel: detail.merekStatusLabel ?? "",
     logoPath: detail.logoPath ?? "",
 

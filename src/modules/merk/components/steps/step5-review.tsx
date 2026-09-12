@@ -10,10 +10,6 @@ import { BrandReadinessSummary } from "./step5/brand-readiness-summary";
 import { CompletionProgress } from "./step5/completion-progress";
 import { BrandInformationReview } from "./step5/brand-information-review";
 import { OwnershipReview } from "./step5/ownership-review";
-import { RepresentationReview } from "./step5/representation-review";
-import { BrandRelationshipSummary } from "./step2/brand-relationship-summary";
-import { SupportingDocumentsReview } from "./step5/supporting-documents-review";
-import { QualityTestReview } from "./step5/quality-test-review";
 import { DuplicateCheckSummary } from "./step5/duplicate-check-summary";
 import { FinalDeclaration } from "./step5/final-declaration";
 
@@ -26,7 +22,6 @@ export type ReviewReadiness = {
   classLabel?: string;
   countryLabel?: string;
   ownerTitle?: string;
-  representativeTitle?: string;
   importerTitle?: string;
   documentsCompleteCount: number;
   documentsTotalCount: number;
@@ -42,10 +37,12 @@ type Props = {
 };
 
 /**
- * Step 5 — read-only review of everything Steps 1-4 collected, plus the
- * final declaration. No new data-entry fields: every value here already
- * lives in the shared wizard form state (see MerkWizard) and every "Edit"
- * button just calls onGoToStep to jump back without losing anything.
+ * Step 3 (Review) — read-only review of Informasi Merek + Kepemilikan, plus
+ * the final declaration. Perwakilan and Dokumen Pendukung no longer exist as
+ * wizard steps, so there's nothing left here to review for them. No new
+ * data-entry fields: every value here already lives in the shared wizard
+ * form state (see MerkWizard) and every "Edit" button just calls
+ * onGoToStep to jump back without losing anything.
  */
 export function Step5BrandReview({
   form,
@@ -62,7 +59,6 @@ export function Step5BrandReview({
         classLabel={readiness.classLabel}
         countryLabel={readiness.countryLabel}
         ownerTitle={readiness.ownerTitle}
-        representativeTitle={readiness.representativeTitle}
         importerTitle={readiness.importerTitle}
         documentsCompleteCount={readiness.documentsCompleteCount}
         documentsTotalCount={readiness.documentsTotalCount}
@@ -74,11 +70,6 @@ export function Step5BrandReview({
       <BrandInformationReview form={form} onEdit={() => onGoToStep(1)} />
 
       <OwnershipReview form={form} onEdit={() => onGoToStep(2)} />
-      <RepresentationReview form={form} onEdit={() => onGoToStep(3)} />
-      <BrandRelationshipSummary form={form} />
-
-      <SupportingDocumentsReview form={form} onEdit={() => onGoToStep(4)} />
-      <QualityTestReview form={form} />
 
       <CompletionProgress rows={readiness.completionRows} percent={readiness.completionPercent} />
 

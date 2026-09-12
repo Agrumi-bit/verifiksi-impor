@@ -163,12 +163,14 @@ export function computeTrademarkEvidenceValidity(
 
 /** Structural validity of this application's own applicantRole/appointmentSource
  * choice for the brand — independent of, and layered on top of, whatever the
- * brand's own Brand Master ownership record already allows. A foreign-owned
- * brand's Merk Ownership record permits "appointed_importer" +
- * appointmentSource "brand_owner" (see foreign-owner-representation.tsx) —
- * VIU still refuses it, since a foreign brand owner has no standing under
- * Indonesian law to directly appoint an importer without going through an
- * Official Representative. */
+ * brand's own Brand Master ownership record already allows (the Add Brand
+ * wizard no longer even collects a Perwakilan/appointment choice at
+ * registration time — see the note above validateOwnershipStep in
+ * modules/merk/schema.ts). Historically, a foreign-owned brand's
+ * MerkOwnership record could permit "appointed_importer" + appointmentSource
+ * "brand_owner" — VIU still refuses it here, since a foreign brand owner has
+ * no standing under Indonesian law to directly appoint an importer without
+ * going through an Official Representative. */
 function validateRelationship(input: VIUBrandRuleInput): { valid: boolean; issue: string | null } {
   if (!input.applicantRole) {
     return { valid: false, issue: "Pilih peran perusahaan pemohon terhadap merek ini." };
@@ -207,8 +209,8 @@ function toDocumentRequirementInput(input: VIUBrandRuleInput) {
   // IMPORTER_ONLY
   if (domestic) {
     // Brand Master's own domestic model only ever sources an importer
-    // appointment from the brand owner (see domestic-owner-relationship.tsx)
-    // — there is no "official representative" concept for a domestic owner.
+    // appointment from the brand owner — there is no "official
+    // representative" concept for a domestic owner.
     return { relationshipWithApiu: "apiu_is_importer" as const };
   }
   if (input.appointmentSource === "OFFICIAL_REPRESENTATIVE") {

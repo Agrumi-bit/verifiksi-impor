@@ -19,6 +19,7 @@ export async function GET(
       ownership: { include: { ownerCompany: true, officialRepresentative: true } },
       documents: true,
       qualityTests: { include: { commodityGroup: true, commoditySubGroup: true } },
+      trademarkClassEntries: true,
     },
   });
 

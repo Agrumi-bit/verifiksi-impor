@@ -19,9 +19,10 @@ const OWNER_TYPE_OPTIONS = MERK_OWNER_TYPES.map((value) => ({
 
 type Props = { form: UseFormReturn<MerkWizardValues> };
 
-/** Step 2 (Kepemilikan) — domestic branch. Just "who owns the brand"; the
- * API-U relationship this owner has (previously bundled into the same
- * section) now lives in Step 3 — see DomesticOwnerRelationship. */
+/** Step 2 (Kepemilikan) — domestic branch. Just "who owns the brand" — the
+ * API-U relationship this owner has (formerly a dedicated Perwakilan step)
+ * is no longer collected here; it's captured per VIU Application instead
+ * (see modules/applications/viu-brand-relationship-rules.ts). */
 export function DomesticOwnerOwnership({ form }: Props) {
   const {
     control,

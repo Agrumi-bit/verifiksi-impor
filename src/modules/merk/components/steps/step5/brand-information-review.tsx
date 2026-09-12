@@ -34,15 +34,13 @@ export function BrandInformationReview({ form, onEdit }: Props) {
   const registrationNumber = useWatch({ control, name: "registrationNumber" });
   const registrationIssuer = useWatch({ control, name: "registrationIssuer" });
   const registrationDate = useWatch({ control, name: "registrationDate" });
-  const trademarkClass = useWatch({ control, name: "trademarkClass" });
-  const trademarkClassDescription = useWatch({ control, name: "trademarkClassDescription" });
+  const trademarkClasses = useWatch({ control, name: "trademarkClasses" }) ?? [];
   const merekStatusLabel = useWatch({ control, name: "merekStatusLabel" });
   const logoPath = useWatch({ control, name: "logoPath" });
 
   const { options: countryOptions } = useActiveCountries();
   const { options: trademarkClassOptions } = useActiveTrademarkClasses();
   const countryLabel = countryOptions.find((o) => o.value === countryOfOrigin)?.label ?? countryOfOrigin;
-  const classInfo = trademarkClassOptions.find((c) => c.value === trademarkClass);
   const dateLabel = evidenceType && MERK_EVIDENCE_TYPES_WITH_OPTIONAL_DATE.includes(evidenceType)
     ? "Tanggal Penerbitan"
     : "Tanggal Registrasi / Notifikasi";
@@ -65,13 +63,27 @@ export function BrandInformationReview({ form, onEdit }: Props) {
           label={dateLabel}
           value={registrationDate ? new Date(registrationDate).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" }) : undefined}
         />
-        <ReviewRow label="Kelas Merek" value={trademarkClass ? `${trademarkClass} — ${classInfo?.hint ?? ""}` : undefined} />
         <ReviewRow label="Status Merek" value={merekStatusLabel} />
         <ReviewRow label="Logo Merek" value={logoPath ? logoPath.split("/").pop() : "Tidak diunggah"} />
-        <div className="sm:col-span-2">
-          <ReviewRow label="Uraian Kelas Merek" value={trademarkClassDescription} />
-        </div>
       </dl>
+      {trademarkClasses.length > 0 && (
+        <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3">
+          {trademarkClasses.map((entry, index) => {
+            const classInfo = trademarkClassOptions.find((c) => c.value === entry?.trademarkClass);
+            return (
+              <dl key={index} className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                <ReviewRow
+                  label="Kelas Merek"
+                  value={entry?.trademarkClass ? `${entry.trademarkClass} — ${classInfo?.hint ?? ""}` : undefined}
+                />
+                <div className="sm:col-span-2">
+                  <ReviewRow label="Uraian Kelas Merek" value={entry?.trademarkClassDescription} />
+                </div>
+              </dl>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }

@@ -21,8 +21,8 @@ function ReviewRow({ label, value }: { label: string; value?: string | null }) {
 }
 
 /** Step 2 (Kepemilikan) review card — who owns the brand. The legal
- * relationship that follows from this owner is reviewed separately by
- * RepresentationReview (Step 3). */
+ * relationship that follows from this owner (Perwakilan) is no longer
+ * collected by this wizard — it's captured per VIU Application instead. */
 export function OwnershipReview({ form, onEdit }: Props) {
   const { control } = form;
   const ownerLocation = useWatch({ control, name: "ownerLocation" });

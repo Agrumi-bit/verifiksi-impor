@@ -6,6 +6,7 @@ import type {
   MerkOwnershipType,
   MerkWizardValues,
   QualityTestEntryValues,
+  TrademarkClassEntryValues,
 } from "./schema";
 
 /** `trademarkClass` is now backed by the TrademarkClassMasterData table (see
@@ -16,6 +17,23 @@ import type {
 async function trademarkClassLabel(classCode: string): Promise<string> {
   const row = await db.trademarkClassMasterData.findUnique({ where: { classNumber: classCode } });
   return row?.title ?? classCode;
+}
+
+type TrademarkClassEntryInput = Partial<TrademarkClassEntryValues>[] | undefined;
+
+/** Step 1's "+ Tambah Kelas Merek" — one row per Nice class the brand is
+ * registered in. Entries missing a class (a draft mid-fill) are dropped
+ * rather than written as empty rows; description falls back to "" so a
+ * class picked but not yet described in a saved Draft doesn't crash the
+ * NOT NULL column. */
+function buildTrademarkClassEntriesData(entries: TrademarkClassEntryInput) {
+  const rows = (entries ?? [])
+    .filter((entry): entry is TrademarkClassEntryValues => Boolean(entry.trademarkClass))
+    .map((entry) => ({
+      trademarkClass: entry.trademarkClass,
+      trademarkClassDescription: entry.trademarkClassDescription || "",
+    }));
+  return rows.length > 0 ? { create: rows } : undefined;
 }
 
 function toDate(value: string | undefined): Date | null {
@@ -174,13 +192,14 @@ function buildQualityTestsData(qualityTests: QualityTestEntryValues[] | undefine
 
 export async function buildMerkCreateData(values: MerkWizardValues, ownerCompanyName: string | null) {
   const { ownershipType, brandOwnerName } = legacyOwnershipBridge(values, ownerCompanyName);
+  const primaryClass = values.trademarkClasses[0];
 
   return {
     brandName: values.brandName,
     // Legacy free-text column, no longer collected directly — bridged from
-    // the trademark class so existing readers of `productCategory` still see
-    // something meaningful instead of null.
-    productCategory: await trademarkClassLabel(values.trademarkClass),
+    // the first trademark class so existing readers of `productCategory`
+    // still see something meaningful instead of null.
+    productCategory: await trademarkClassLabel(primaryClass.trademarkClass),
     countryOfOrigin: values.countryOfOrigin,
 
     hasCertificate: true,
@@ -192,8 +211,12 @@ export async function buildMerkCreateData(values: MerkWizardValues, ownerCompany
     // own BrandDocument row; this mirrors the trademark evidence file so old
     // readers of this column still see something.
     registrationDocumentPath: values.documents.trademark_evidence?.filePath ?? null,
-    trademarkClass: values.trademarkClass,
-    trademarkClassDescription: values.trademarkClassDescription,
+    // Legacy scalar bridge — always mirrors the FIRST entry in
+    // trademarkClassEntries (the actual multi-class list); see that field's
+    // own comment on the Merk model.
+    trademarkClass: primaryClass.trademarkClass,
+    trademarkClassDescription: primaryClass.trademarkClassDescription,
+    trademarkClassEntries: buildTrademarkClassEntriesData(values.trademarkClasses),
     merekStatusLabel: values.merekStatusLabel || null,
     logoPath: values.logoPath || null,
 
@@ -229,9 +252,13 @@ export async function buildMerkDraftData(values: MerkDraftValues, ownerCompanyNa
     ownerCompanyName,
   );
 
+  const primaryClass = values.trademarkClasses?.[0];
+
   return {
     brandName: values.brandName,
-    productCategory: values.trademarkClass ? await trademarkClassLabel(values.trademarkClass) : "Belum ditentukan",
+    productCategory: primaryClass?.trademarkClass
+      ? await trademarkClassLabel(primaryClass.trademarkClass)
+      : "Belum ditentukan",
     countryOfOrigin: values.countryOfOrigin || "Belum ditentukan",
 
     hasCertificate: true,
@@ -240,8 +267,9 @@ export async function buildMerkDraftData(values: MerkDraftValues, ownerCompanyNa
     registrationIssuer: values.registrationIssuer || null,
     registrationDate: toDate(values.registrationDate),
     registrationDocumentPath: values.documents?.trademark_evidence?.filePath ?? null,
-    trademarkClass: values.trademarkClass || null,
-    trademarkClassDescription: values.trademarkClassDescription || null,
+    trademarkClass: primaryClass?.trademarkClass || null,
+    trademarkClassDescription: primaryClass?.trademarkClassDescription || null,
+    trademarkClassEntries: buildTrademarkClassEntriesData(values.trademarkClasses),
     merekStatusLabel: values.merekStatusLabel || null,
     logoPath: values.logoPath || null,
 
@@ -274,12 +302,16 @@ export async function buildMerkDraftData(values: MerkDraftValues, ownerCompanyNa
 // the data itself.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toUpdateRelations(created: any) {
-  const { ownership, documents, qualityTests, ...rest } = created;
+  const { ownership, documents, qualityTests, trademarkClassEntries, ...rest } = created;
   return {
     ...rest,
     ownership: ownership ? { upsert: { create: ownership.create, update: ownership.create } } : undefined,
     documents: { deleteMany: {}, ...(documents ? { create: documents.create } : {}) },
     qualityTests: { deleteMany: {}, ...(qualityTests ? { create: qualityTests.create } : {}) },
+    trademarkClassEntries: {
+      deleteMany: {},
+      ...(trademarkClassEntries ? { create: trademarkClassEntries.create } : {}),
+    },
   };
 }
 

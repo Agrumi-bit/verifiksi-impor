@@ -17,7 +17,6 @@ type Props = {
   classLabel?: string;
   countryLabel?: string;
   ownerTitle?: string;
-  representativeTitle?: string;
   importerTitle?: string;
   documentsCompleteCount: number;
   documentsTotalCount: number;
@@ -31,7 +30,6 @@ export function BrandReadinessSummary({
   classLabel,
   countryLabel,
   ownerTitle,
-  representativeTitle,
   importerTitle,
   documentsCompleteCount,
   documentsTotalCount,
@@ -49,14 +47,10 @@ export function BrandReadinessSummary({
           <p className="text-lg font-bold">{brandName || "Merek belum diberi nama"}</p>
           {classLabel && <p className="text-xs text-muted-foreground">{classLabel}</p>}
           {countryLabel && <p className="text-xs text-muted-foreground">{countryLabel}</p>}
-          <dl className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs sm:grid-cols-4">
+          <dl className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs sm:grid-cols-3">
             <div>
               <dt className="text-muted-foreground">Pemilik Merek</dt>
               <dd className="truncate font-medium">{ownerTitle || "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Perwakilan</dt>
-              <dd className="truncate font-medium">{representativeTitle || "—"}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Importir</dt>

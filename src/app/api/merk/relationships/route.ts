@@ -28,11 +28,13 @@ export type OwnershipRow = {
   appointmentEndDate: Date | null;
 } | null;
 
-/** Same classification the wizard's own Step 4 review / relationship
- * summary uses (see ownership-representation-review.tsx) — kept in one
- * place here since this route is the only other spot that needs to bucket
- * a raw MerkOwnership row into one of the 5 relationship "shapes" for
- * platform-wide monitoring. */
+/** Classifies a raw MerkOwnership row into one of the 5 relationship
+ * "shapes" for platform-wide monitoring. The Add Brand wizard no longer
+ * collects relationshipWithApiu/representationType at all (Perwakilan was
+ * removed as a dedicated step — see the note above validateOwnershipStep in
+ * modules/merk/schema.ts), so a brand created after that change always
+ * falls through to the "pemilik_merek" bucket here; only legacy rows
+ * written before the change resolve to the other 4 buckets. */
 export function relationshipBucket(o: OwnershipRow): RelationshipBucket {
   if (!o) return "pemilik_merek";
   if (o.ownerLocation === "DOMESTIC") {

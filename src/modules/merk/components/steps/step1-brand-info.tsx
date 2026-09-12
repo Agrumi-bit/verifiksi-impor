@@ -1,9 +1,10 @@
 "use client";
 
-import { Controller, useWatch, type UseFormReturn } from "react-hook-form";
+import { Controller, useFieldArray, useWatch, type UseFormReturn } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Plus, Trash2 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,7 @@ import {
   MERK_EVIDENCE_TYPE_LABELS,
   MERK_EVIDENCE_TYPE_DESCRIPTIONS,
   MERK_EVIDENCE_TYPES_WITH_OPTIONAL_DATE,
+  createEmptyTrademarkClassEntry,
   type BrandDocumentEntryValues,
   type MerkEvidenceType,
   type MerkWizardValues,
@@ -28,6 +30,9 @@ import { BrandDocumentUploadCard } from "./step4/brand-document-upload-card";
 type Props = {
   form: UseFormReturn<MerkWizardValues>;
   surface: MerkSurface;
+  /** The brand row currently being resumed (Draft/edit) — excluded from its
+   * own duplicate-name check below. */
+  draftId?: string;
 };
 
 const STATUS_OPTIONS_BY_EVIDENCE: Record<MerkEvidenceType, string[]> = {
@@ -52,9 +57,9 @@ const ISSUER_PLACEHOLDER_BY_EVIDENCE: Record<MerkEvidenceType, string> = {
   SERTIFIKAT_INTERNASIONAL: "e.g. WIPO (Madrid System)",
 };
 
-type ExistingBrand = { brandName: string };
+type ExistingBrand = { id: string; brandName: string };
 
-export function Step1BrandInfo({ form, surface }: Props) {
+export function Step1BrandInfo({ form, surface, draftId }: Props) {
   const {
     control,
     register,
@@ -68,16 +73,17 @@ export function Step1BrandInfo({ form, surface }: Props) {
   const brandName = useWatch({ control, name: "brandName" });
   const countryValue = useWatch({ control, name: "countryOfOrigin" });
   const evidenceType = useWatch({ control, name: "evidenceType" }) as MerkEvidenceType | undefined;
-  const trademarkClass = useWatch({ control, name: "trademarkClass" });
+  const trademarkClasses = useWatch({ control, name: "trademarkClasses" }) ?? [];
   const registrationNumber = useWatch({ control, name: "registrationNumber" });
   const logoPath = useWatch({ control, name: "logoPath" });
   const documents = useWatch({ control, name: "documents" }) ?? {};
+  const { fields: trademarkClassFields, append: appendTrademarkClass, remove: removeTrademarkClass } =
+    useFieldArray({ control, name: "trademarkClasses" });
 
   // Same requirement code regardless of which card is picked — only the
   // label/description change per evidence type (see trademarkRequirement in
-  // document-requirements.ts) — so this is the identical `documents`
-  // field Step 4's TrademarkDocumentSection reads/writes; uploading here
-  // just lets the user attach it earlier instead of waiting for Step 4.
+  // document-requirements.ts). This is the one document upload this wizard
+  // still collects, now that the standalone Dokumen Pendukung step is gone.
   const trademarkRequirement = getRequiredBrandDocuments({ evidenceType })[0];
 
   function updateTrademarkEvidence(value: BrandDocumentEntryValues | undefined) {
@@ -98,12 +104,20 @@ export function Step1BrandInfo({ form, surface }: Props) {
       return json.data;
     },
   });
+  // Excludes the row currently being resumed — see merk-wizard.tsx's own
+  // duplicate check for why (a resumed Draft/edit always "matches itself"
+  // otherwise).
   const duplicate = (existingBrands ?? []).find(
-    (b) => b.brandName.trim().toLowerCase() === brandName?.trim().toLowerCase(),
+    (b) => b.id !== draftId && b.brandName.trim().toLowerCase() === brandName?.trim().toLowerCase(),
   );
 
   const countryLabel = countryOptions.find((o) => o.value === countryValue)?.label;
-  const classLabel = trademarkClassOptions.find((o) => o.value === trademarkClass)?.label;
+  // "Kelas 09, 25" — every selected class's number, comma-joined; empty
+  // entries (still being filled in) are skipped rather than showing "Kelas ".
+  const classesSummary = trademarkClasses
+    .map((entry) => entry.trademarkClass)
+    .filter((value): value is string => Boolean(value))
+    .join(", ");
   const statusOptions = evidenceType ? STATUS_OPTIONS_BY_EVIDENCE[evidenceType] : [];
   const isDateOptional = evidenceType
     ? MERK_EVIDENCE_TYPES_WITH_OPTIONAL_DATE.includes(evidenceType)
@@ -164,7 +178,7 @@ export function Step1BrandInfo({ form, surface }: Props) {
         />
         <p className="mt-1 text-xs text-muted-foreground">
           Pilih negara tempat pemilik merek berkedudukan. Detail pemilik merek dilengkapi pada
-          Step 2 — Kepemilikan &amp; Perwakilan.
+          Step 2 — Kepemilikan.
         </p>
       </section>
 
@@ -252,64 +266,112 @@ export function Step1BrandInfo({ form, surface }: Props) {
               </FormField>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Controller
-                control={control}
-                name="trademarkClass"
-                render={({ field }) => (
-                  <FormField
-                    label="Kelas Merek"
-                    required
-                    error={errors.trademarkClass?.message}
-                    hint="Penomoran Klasifikasi Nice yang dipakai DJKI untuk mengelompokkan jenis barang/jasa merek."
-                  >
-                    <SearchSelectInput
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                      options={trademarkClassOptions}
-                      allowFreeText={false}
-                      placeholder="Pilih kelas"
-                    />
-                  </FormField>
-                )}
-              />
+            {statusOptions.length > 0 ? (
+              <FormField label="Status Merek" error={errors.merekStatusLabel?.message}>
+                <select
+                  className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none"
+                  {...register("merekStatusLabel")}
+                  defaultValue={statusOptions[0]}
+                >
+                  {statusOptions.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            ) : (
+              <FormField label="Status" error={errors.merekStatusLabel?.message}>
+                <Input
+                  placeholder="Contoh: Sedang diperiksa WIPO"
+                  {...register("merekStatusLabel")}
+                />
+              </FormField>
+            )}
 
-              {statusOptions.length > 0 ? (
-                <FormField label="Status Merek" error={errors.merekStatusLabel?.message}>
-                  <select
-                    className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none"
-                    {...register("merekStatusLabel")}
-                    defaultValue={statusOptions[0]}
-                  >
-                    {statusOptions.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
-              ) : (
-                <FormField label="Status" error={errors.merekStatusLabel?.message}>
-                  <Input
-                    placeholder="Contoh: Sedang diperiksa WIPO"
-                    {...register("merekStatusLabel")}
-                  />
-                </FormField>
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-semibold">
+                  Kelas Merek <span className="text-destructive">*</span>
+                </p>
+              </div>
+              <p className="-mt-1 mb-3 text-xs text-muted-foreground">
+                Merek bisa didaftarkan pada lebih dari satu kelas — tambahkan satu blok per kelas,
+                masing-masing dengan uraian barang/jasanya sendiri.
+              </p>
+
+              <div className="flex flex-col gap-3">
+                {trademarkClassFields.map((field, index) => {
+                  const entryErrors = errors.trademarkClasses?.[index];
+                  return (
+                    <div key={field.id} className="rounded-lg border border-border p-3.5">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1">
+                          <Controller
+                            control={control}
+                            name={`trademarkClasses.${index}.trademarkClass`}
+                            render={({ field: classField }) => (
+                              <FormField
+                                label="Kelas"
+                                required
+                                error={entryErrors?.trademarkClass?.message}
+                                hint="Penomoran Klasifikasi Nice yang dipakai DJKI untuk mengelompokkan jenis barang/jasa merek."
+                              >
+                                <SearchSelectInput
+                                  value={classField.value ?? ""}
+                                  onChange={classField.onChange}
+                                  options={trademarkClassOptions}
+                                  allowFreeText={false}
+                                  placeholder="Pilih kelas"
+                                />
+                              </FormField>
+                            )}
+                          />
+                        </div>
+                        {trademarkClassFields.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeTrademarkClass(index)}
+                            aria-label={`Hapus kelas ${index + 1}`}
+                            className="mt-6 shrink-0 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="mt-3">
+                        <FormField
+                          label="Uraian Kelas Merek"
+                          required
+                          error={entryErrors?.trademarkClassDescription?.message}
+                          hint="Uraian barang/jasa spesifik merek ini pada kelas terpilih, sesuai yang akan didaftarkan ke DJKI — bukan judul kelas Nice secara umum."
+                        >
+                          <Textarea
+                            placeholder="Contoh: Kemeja pria, celana panjang, dan jaket dari bahan katun"
+                            rows={3}
+                            {...register(`trademarkClasses.${index}.trademarkClassDescription`)}
+                          />
+                        </FormField>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {errors.trademarkClasses?.message && (
+                <p className="mt-1.5 text-xs text-destructive">{errors.trademarkClasses.message}</p>
               )}
-            </div>
 
-            <FormField
-              label="Uraian Kelas Merek"
-              required
-              error={errors.trademarkClassDescription?.message}
-              hint="Uraian barang/jasa spesifik merek ini pada kelas terpilih, sesuai yang akan didaftarkan ke DJKI — bukan judul kelas Nice secara umum."
-            >
-              <Textarea
-                placeholder="Contoh: Kemeja pria, celana panjang, dan jaket dari bahan katun"
-                rows={3}
-                {...register("trademarkClassDescription")}
-              />
-            </FormField>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-3 border-dashed"
+                onClick={() => appendTrademarkClass(createEmptyTrademarkClassEntry())}
+              >
+                <Plus className="size-4" />
+                Tambah Kelas Merek
+              </Button>
+            </div>
 
             <BrandDocumentUploadCard
               label={trademarkRequirement.label}
@@ -345,7 +407,7 @@ export function Step1BrandInfo({ form, surface }: Props) {
         />
         <p className="mt-2 text-xs text-muted-foreground">
           Logo digunakan untuk memudahkan identifikasi merek pada platform, bukan sebagai bukti
-          hukum merek. Bukti hukum dilengkapi pada Step 4 — Dokumen Pendukung.
+          hukum merek.
         </p>
       </section>
 
@@ -363,7 +425,7 @@ export function Step1BrandInfo({ form, surface }: Props) {
               <p className="truncate text-sm font-bold">{brandName || "Nama merek belum diisi"}</p>
               <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                 {countryLabel && <span>{countryLabel}</span>}
-                {classLabel && <span>Kelas {trademarkClass}</span>}
+                {classesSummary && <span>Kelas {classesSummary}</span>}
                 {registrationNumber && <span className="font-mono">{registrationNumber}</span>}
               </div>
             </div>

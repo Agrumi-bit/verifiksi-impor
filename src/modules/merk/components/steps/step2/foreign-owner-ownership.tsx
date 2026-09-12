@@ -16,8 +16,9 @@ import {
 type Props = { form: UseFormReturn<MerkWizardValues> };
 
 /** Step 2 (Kepemilikan) — foreign branch. How this owner is represented in
- * Indonesia (previously bundled into the same section) now lives in Step 3
- * — see ForeignOwnerRepresentation. */
+ * Indonesia (formerly a dedicated Perwakilan step) is no longer collected
+ * here; it's captured per VIU Application instead (see
+ * modules/applications/viu-brand-relationship-rules.ts). */
 export function ForeignOwnerOwnership({ form }: Props) {
   const {
     control,

@@ -485,6 +485,13 @@ model Merk {
   // wizard.
   hasCertificate  Boolean              @default(true)
   certificateType MerkCertificateType?
+  // Legacy scalar bridge — a brand can be registered in more than one Nice
+  // class (see MerkTrademarkClassEntry below, the actual multi-class list
+  // Step 1 now collects). These two always mirror the FIRST entry in that
+  // list, kept in sync at write time so every existing reader of a single
+  // "trademarkClass"/"trademarkClassDescription" (list/filter/export/
+  // monitoring views) keeps working unchanged rather than needing to join
+  // and re-aggregate the full list for a compact column.
   trademarkClass    String?
   // Free-text goods/services description specific to this brand's own
   // application ("Uraian Kelas Merek") — distinct from
@@ -492,6 +499,11 @@ model Merk {
   // class heading. DJKI applications require the applicant's own wording,
   // so this is manually entered rather than derived from master data.
   trademarkClassDescription String?
+  // The full multi-class list — one row per Nice class the brand is
+  // registered in, each with its own applicant-written uraian. Wipe-and-
+  // recreate on every save (see toUpdateRelations in build-create-data.ts),
+  // same pattern as `documents`/`qualityTests` below.
+  trademarkClassEntries MerkTrademarkClassEntry[]
   merekStatusLabel  String?
   logoPath          String?
 
@@ -615,6 +627,23 @@ model MerkOwnership {
 // uniqueness on (merkId, documentType): every slot is single-file by
 // convention except "product_label_documentation", which the UI allows
 // multiple rows for.
+// Step 1 "Kelas Merek" — a brand can be registered in more than one Nice
+// class ("+ Tambah Kelas Merek"), each with its own applicant-written
+// uraian (see trademarkClassDescription's own comment on Merk above for why
+// that's free text rather than sourced from TrademarkClassMasterData).
+model MerkTrademarkClassEntry {
+  id                        String   @id @default(cuid())
+  merkId                    String
+  merk                      Merk     @relation(fields: [merkId], references: [id], onDelete: Cascade)
+  trademarkClass            String
+  trademarkClassDescription String
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  @@index([merkId])
+  @@map("merk_trademark_class_entry")
+}
+
 model BrandDocument {
   id             String    @id @default(cuid())
   merkId         String

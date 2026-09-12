@@ -17,21 +17,24 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useActiveCountries } from "@/modules/master-data/use-active-countries";
-import { useActiveBrandOwners } from "@/modules/master-data/use-active-brand-owners";
-import { useActiveTrademarkClasses } from "@/modules/master-data/use-active-trademark-classes";
 import type { MerkSurface } from "@/modules/merk/surface";
-import { getRequiredBrandDocuments } from "../document-requirements";
+import { getRequiredBrandDocuments, isRequirementComplete } from "../document-requirements";
 import { mapMerkDetailToWizardValues, type MerkDetailForResume } from "../map-merk-detail-to-wizard-values";
-import { merkWizardSchema, MERK_STEP_FIELD_NAMES, type MerkWizardValues } from "../schema";
+import {
+  merkWizardSchema,
+  MERK_STEP_FIELD_NAMES,
+  createEmptyTrademarkClassEntry,
+  type MerkWizardValues,
+} from "../schema";
 import { Step1BrandInfo } from "./steps/step1-brand-info";
 import { Step2Kepemilikan } from "./steps/step2-kepemilikan";
-import { Step3Perwakilan } from "./steps/step3-perwakilan";
-import { Step4DokumenPendukung } from "./steps/step4-dokumen-pendukung";
 import { Step5BrandReview } from "./steps/step5-review";
-import { isRequirementComplete } from "./steps/step4/document-completeness-summary";
 import type { ExistingBrandMatch } from "./steps/step5/duplicate-check-summary";
 
-const STEP_TITLES = ["Informasi Merek", "Kepemilikan", "Perwakilan", "Dokumen Pendukung", "Review"];
+// Perwakilan and the standalone Dokumen Pendukung step were both removed —
+// see the note above validateOwnershipStep in schema.ts. Add Merek is now
+// Informasi Merek -> Kepemilikan -> Review.
+const STEP_TITLES = ["Informasi Merek", "Kepemilikan", "Review"];
 const TOTAL_STEPS = STEP_TITLES.length;
 
 const DEFAULT_VALUES: Partial<MerkWizardValues> = {
@@ -40,8 +43,7 @@ const DEFAULT_VALUES: Partial<MerkWizardValues> = {
   registrationNumber: "",
   registrationIssuer: "",
   registrationDate: "",
-  trademarkClass: "",
-  trademarkClassDescription: "",
+  trademarkClasses: [createEmptyTrademarkClassEntry()],
   merekStatusLabel: "",
   logoPath: "",
   documents: {},
@@ -50,12 +52,8 @@ const DEFAULT_VALUES: Partial<MerkWizardValues> = {
   declarationAccepted: false,
 };
 
-// Step 2's own field list bundles ownership + representation together; these
-// two subsets exist only so the readiness checklist can report on them as
-// the two separate lines the spec asks for ("Data kepemilikan lengkap" /
-// "Hubungan perwakilan lengkap") without a second source of truth for what
-// "valid" means — both still resolve to the same MERK_STEP_FIELD_NAMES[2]
-// entries validated by validateOwnershipStep.
+// Mirrors MERK_STEP_FIELD_NAMES[2] — kept as its own list only so the
+// readiness checklist has a single named source for "is Kepemilikan done".
 const OWNERSHIP_CORE_FIELDS = [
   "ownerLocation",
   "ownerType",
@@ -65,19 +63,6 @@ const OWNERSHIP_CORE_FIELDS = [
   "foreignEntityType",
   "ownerCountryCode",
   "foreignRegistrationNumber",
-] as const;
-const REPRESENTATION_FIELDS = [
-  "relationshipWithApiu",
-  "representationType",
-  "officialRepresentativeCompanyId",
-  "agreementType",
-  "agreementNumber",
-  "agreementStartDate",
-  "agreementEndDate",
-  "appointmentSource",
-  "appointmentLetterNumber",
-  "appointmentStartDate",
-  "appointmentEndDate",
 ] as const;
 
 const APIU_PLACEHOLDER_NAME = "Perusahaan API-U (Aplikasi VIU)";
@@ -143,23 +128,15 @@ export function MerkWizard({ surface, onClose, draftId, contextBanner, onBrandSa
 
   const brandName = useWatch({ control, name: "brandName" });
   const countryOfOrigin = useWatch({ control, name: "countryOfOrigin" });
-  const trademarkClass = useWatch({ control, name: "trademarkClass" });
+  const trademarkClasses = useWatch({ control, name: "trademarkClasses" }) ?? [];
   const evidenceType = useWatch({ control, name: "evidenceType" });
   const ownerLocation = useWatch({ control, name: "ownerLocation" });
   const ownerName = useWatch({ control, name: "ownerName" });
-  const relationshipWithApiu = useWatch({ control, name: "relationshipWithApiu" });
-  const representationType = useWatch({ control, name: "representationType" });
-  const officialRepresentativeCompanyId = useWatch({ control, name: "officialRepresentativeCompanyId" });
-  const appointmentSource = useWatch({ control, name: "appointmentSource" });
-  const agreementType = useWatch({ control, name: "agreementType" });
   const documents = useWatch({ control, name: "documents" }) ?? {};
   const productLabelDocumentation = useWatch({ control, name: "productLabelDocumentation" }) ?? [];
-  const qualityTests = useWatch({ control, name: "qualityTests" }) ?? [];
   const declarationAccepted = useWatch({ control, name: "declarationAccepted" });
 
   const { options: countryOptions } = useActiveCountries();
-  const { options: brandOwnerOptions } = useActiveBrandOwners();
-  const { options: trademarkClassOptions } = useActiveTrademarkClasses();
 
   const { data: existingBrands } = useQuery({
     queryKey: ["merk-surface", surface.apiBase],
@@ -170,25 +147,20 @@ export function MerkWizard({ surface, onClose, draftId, contextBanner, onBrandSa
       return json.data;
     },
   });
+  // Excludes the row currently being resumed — otherwise every resumed
+  // Draft/edit trivially "conflicts" with itself, permanently blocking
+  // submission with a duplicate warning it can never resolve.
   const duplicate = (existingBrands ?? []).find(
-    (b) => b.brandName.trim().toLowerCase() === brandName?.trim().toLowerCase(),
+    (b) => b.id !== draftId && b.brandName.trim().toLowerCase() === brandName?.trim().toLowerCase(),
   );
 
-  // Required-document completeness — same rule engine Step 4 uses for its
-  // "Wajib"/"Opsional" badges, reused here for the top summary's "X / Y
-  // Lengkap" count and the completion progress bar. Informational only: a
-  // missing "wajib" document no longer blocks Step 4 or final submission —
-  // that enforcement moves to "Create Application VIU Konsumsi" (BR-003, not
-  // yet built), which is when the brand is actually submitted for
-  // verification rather than just registered.
-  const documentRequirements = getRequiredBrandDocuments({
-    evidenceType,
-    ownerLocation,
-    relationshipWithApiu,
-    representationType,
-    appointmentSource,
-    agreementType,
-  });
+  // Only the trademark evidence doc remains collectible in this wizard
+  // (Step 1's own upload card) — the fuller per-scenario document set
+  // getRequiredBrandDocuments() can compute is used by VIU Application
+  // creation instead, now that Perwakilan/Dokumen Pendukung are gone.
+  const documentRequirements = getRequiredBrandDocuments({ evidenceType }).filter(
+    (r) => r.category === "trademark",
+  );
   const requiredDocuments = documentRequirements.filter((r) => r.required);
   const missingRequiredDocuments = requiredDocuments.filter(
     (r) => !isRequirementComplete(r, documents, productLabelDocumentation),
@@ -197,45 +169,29 @@ export function MerkWizard({ surface, onClose, draftId, contextBanner, onBrandSa
   const step1HasErrors = MERK_STEP_FIELD_NAMES[1].some((field) => Boolean(formState.errors[field]));
   const isStep1Complete = !step1HasErrors && Boolean(brandName?.trim());
   const ownershipHasErrors = OWNERSHIP_CORE_FIELDS.some((field) => Boolean(formState.errors[field]));
-  const representationHasErrors = REPRESENTATION_FIELDS.some((field) => Boolean(formState.errors[field]));
   const isOwnershipComplete = Boolean(ownerLocation) && !ownershipHasErrors;
-  const isRepresentationComplete = Boolean(ownerLocation) && !representationHasErrors;
   const isDuplicateResolved = !duplicate || isDuplicateAcknowledged;
 
   // Documents intentionally do NOT gate readiness — see the
   // documentRequirements comment above.
   const isReviewReady =
-    isStep1Complete &&
-    isOwnershipComplete &&
-    isRepresentationComplete &&
-    isDuplicateResolved &&
-    declarationAccepted === true;
+    isStep1Complete && isOwnershipComplete && isDuplicateResolved && declarationAccepted === true;
 
-  // Display-only derivations for the top summary / relationship rows —
-  // duplicated in spirit from OwnershipReview/RepresentationReview/
-  // BrandRelationshipSummary (same source data, different components); kept
-  // separate since these three only need short one-off strings, not shared
-  // state.
-  const representativeName = brandOwnerOptions.find((o) => o.value === officialRepresentativeCompanyId)?.label;
+  // Display-only derivations for the top summary — duplicated in spirit
+  // from OwnershipReview (same source data, different component); kept
+  // separate since this only needs a short one-off string, not shared state.
   const countryLabel = countryOptions.find((o) => o.value === countryOfOrigin)?.label ?? countryOfOrigin;
-  const classInfo = trademarkClassOptions.find((c) => c.value === trademarkClass);
+  // "Kelas 09, 25" — every selected class's number, comma-joined.
+  const classesLabel = trademarkClasses
+    .map((entry) => entry.trademarkClass)
+    .filter((value): value is string => Boolean(value))
+    .join(", ");
   const ownerTitle = ownerName;
-  const representativeTitle =
-    ownerLocation === "foreign"
-      ? representationType === "apiu_official_representative"
-        ? APIU_PLACEHOLDER_NAME
-        : representationType === "other_official_representative"
-          ? representativeName
-          : appointmentSource === "official_representative"
-            ? representativeName
-            : undefined
-      : undefined;
   const importerTitle = ownerLocation ? APIU_PLACEHOLDER_NAME : undefined;
 
   const checklist = [
     { key: "step1", label: "Informasi merek lengkap", ok: isStep1Complete, step: 1, issueLabel: "Informasi merek belum lengkap." },
     { key: "ownership", label: "Data kepemilikan lengkap", ok: isOwnershipComplete, step: 2, issueLabel: "Data kepemilikan belum lengkap." },
-    { key: "representation", label: "Hubungan perwakilan lengkap", ok: isRepresentationComplete, step: 3, issueLabel: "Hubungan perwakilan belum lengkap." },
     // Documents are informational only here (see documentRequirements
     // comment) — no checklist entry, so a missing "wajib" document never
     // shows as a blocker in BrandReadinessSummary. Status still visible via
@@ -253,36 +209,19 @@ export function MerkWizard({ surface, onClose, draftId, contextBanner, onBrandSa
     { key: "uploads", label: "Semua upload selesai", ok: true },
   ];
 
-  const representationDocsRequired = documentRequirements.some(
-    (r) => r.category === "representation" || r.category === "official_representative_legal" || r.category === "import_authorization",
+  const isTrademarkDocComplete = !requiredDocuments.some(
+    (r) => !isRequirementComplete(r, documents, productLabelDocumentation),
   );
-  const isTrademarkDocComplete = !documentRequirements
-    .filter((r) => r.category === "trademark" && r.required)
-    .some((r) => !isRequirementComplete(r, documents, productLabelDocumentation));
-  const isRepresentationDocsComplete = !documentRequirements
-    .filter(
-      (r) =>
-        (r.category === "representation" || r.category === "official_representative_legal" || r.category === "import_authorization") &&
-        r.required,
-    )
-    .some((r) => !isRequirementComplete(r, documents, productLabelDocumentation));
-  const isLabelDocsComplete = !documentRequirements
-    .filter((r) => r.category === "product_compliance" && r.required)
-    .some((r) => !isRequirementComplete(r, documents, productLabelDocumentation));
 
   const completionRows = [
     { label: "Informasi Merek", complete: isStep1Complete },
-    { label: "Kepemilikan & Perwakilan", complete: isOwnershipComplete && isRepresentationComplete },
+    { label: "Kepemilikan", complete: isOwnershipComplete },
     { label: "Dokumen Merek", complete: isTrademarkDocComplete },
-    ...(representationDocsRequired ? [{ label: "Dokumen Perwakilan", complete: isRepresentationDocsComplete }] : []),
-    { label: "Dokumen Label", complete: isLabelDocsComplete },
-    { label: "Hasil Uji Mutu", complete: true, detail: `${qualityTests.length} records` },
   ];
-  const gatingRows = completionRows.filter((r) => r.detail === undefined);
   const completionPercent =
-    gatingRows.length === 0
+    completionRows.length === 0
       ? 100
-      : Math.round((gatingRows.filter((r) => r.complete).length / gatingRows.length) * 100);
+      : Math.round((completionRows.filter((r) => r.complete).length / completionRows.length) * 100);
 
   function close() {
     if (onClose) onClose();
@@ -388,7 +327,7 @@ export function MerkWizard({ surface, onClose, draftId, contextBanner, onBrandSa
               <h1 className="text-lg font-bold">{currentStep === TOTAL_STEPS ? "Review Merek" : "Tambah Merek"}</h1>
               <p className="mt-1 max-w-[46ch] text-sm text-muted-foreground">
                 {currentStep === TOTAL_STEPS
-                  ? "Periksa kembali seluruh informasi merek, hubungan kepemilikan dan perwakilan, serta dokumen pendukung sebelum menambahkan merek ke permohonan."
+                  ? "Periksa kembali seluruh informasi merek dan hubungan kepemilikan sebelum menambahkan merek ke permohonan."
                   : "Tambahkan informasi dasar merek yang terkait dengan produk yang akan diimpor."}
               </p>
             </div>
@@ -445,11 +384,9 @@ export function MerkWizard({ surface, onClose, draftId, contextBanner, onBrandSa
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex-1 overflow-y-auto px-8 py-5">
             {contextBanner && <div className="mb-5">{contextBanner}</div>}
-            {currentStep === 1 && <Step1BrandInfo form={form} surface={surface} />}
+            {currentStep === 1 && <Step1BrandInfo form={form} surface={surface} draftId={draftId} />}
             {currentStep === 2 && <Step2Kepemilikan form={form} />}
-            {currentStep === 3 && <Step3Perwakilan form={form} />}
-            {currentStep === 4 && <Step4DokumenPendukung form={form} />}
-            {currentStep === 5 && (
+            {currentStep === 3 && (
               <Step5BrandReview
                 form={form}
                 onGoToStep={goToStep}
@@ -462,10 +399,9 @@ export function MerkWizard({ surface, onClose, draftId, contextBanner, onBrandSa
                   completionRows,
                   completionPercent,
                   brandTitle: brandName || "Merek belum diberi nama",
-                  classLabel: trademarkClass ? `Kelas ${trademarkClass} — ${classInfo?.hint ?? ""}` : undefined,
+                  classLabel: classesLabel ? `Kelas ${classesLabel}` : undefined,
                   countryLabel,
                   ownerTitle,
-                  representativeTitle,
                   importerTitle,
                   documentsCompleteCount: requiredDocuments.length - missingRequiredDocuments.length,
                   documentsTotalCount: requiredDocuments.length,
