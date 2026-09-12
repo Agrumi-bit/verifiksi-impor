@@ -15,7 +15,10 @@ import { useApplicationBrandOptions, type ApplicationBrandOption } from "../../.
 import { MERK_EVIDENCE_TYPE_LABELS } from "@/modules/merk/schema";
 
 type Props = {
-  companyId: string | undefined;
+  /** Admin (generic wizard entry point) — dialog lists every registered
+   * Brand instead of just the applying company's own; only changes the
+   * copy here, scoping itself happens server-side. */
+  isAdminSurface: boolean;
   /** brandIds already added to this application — shown as "Sudah Dipilih", disabled. */
   selectedBrandIds: Set<string>;
   onClose: () => void;
@@ -31,19 +34,20 @@ function eligibility(brand: ApplicationBrandOption, isSelected: boolean): { disa
   return { disabled: false };
 }
 
-/** "Pilih Merek" — search + filter over the applying company's own Brand
- * Master, reusing the same drawer pattern as
+/** "Pilih Merek" — search + filter over Brand Master (the applying company's
+ * own for Company Workspace, every registered Brand for admin — see
+ * useApplicationBrandOptions), reusing the same drawer pattern as
  * modules/merk/components/management/add-relationship-drawer.tsx. Only
  * ACTIVE, not-yet-selected Brands are actually selectable; DRAFT/INACTIVE/
  * already-selected rows stay visible but disabled per spec, so the user
  * understands why a Brand they expected to see can't be picked instead of
  * it silently vanishing from the list. */
-export function SelectBrandDialog({ companyId, selectedBrandIds, onClose, onSelect }: Props) {
+export function SelectBrandDialog({ isAdminSurface, selectedBrandIds, onClose, onSelect }: Props) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [evidenceFilter, setEvidenceFilter] = useState<string>("");
 
-  const { data, isLoading, isError } = useApplicationBrandOptions(companyId);
+  const { data, isLoading, isError } = useApplicationBrandOptions();
 
   const results = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -66,7 +70,9 @@ export function SelectBrandDialog({ companyId, selectedBrandIds, onClose, onSele
         <div className="flex flex-none items-center justify-between gap-3 border-b border-border px-5 py-4">
           <div>
             <h2 className="text-sm font-bold">Pilih Merek</h2>
-            <p className="text-xs text-muted-foreground">Referensi Brand Master milik perusahaan Anda</p>
+            <p className="text-xs text-muted-foreground">
+              {isAdminSurface ? "Referensi seluruh Brand Master terdaftar" : "Referensi Brand Master milik perusahaan Anda"}
+            </p>
           </div>
           <button type="button" onClick={onClose} aria-label="Tutup" className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted">
             <X className="size-4" />

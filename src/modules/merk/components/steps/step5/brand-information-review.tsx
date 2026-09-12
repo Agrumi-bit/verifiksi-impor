@@ -17,6 +17,12 @@ type Props = {
   onEdit: () => void;
 };
 
+function formatDate(value?: string | null): string | undefined {
+  return value
+    ? new Date(value).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })
+    : undefined;
+}
+
 function ReviewRow({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -34,6 +40,7 @@ export function BrandInformationReview({ form, onEdit }: Props) {
   const registrationNumber = useWatch({ control, name: "registrationNumber" });
   const registrationIssuer = useWatch({ control, name: "registrationIssuer" });
   const registrationDate = useWatch({ control, name: "registrationDate" });
+  const registrationExpiryDate = useWatch({ control, name: "registrationExpiryDate" });
   const trademarkClasses = useWatch({ control, name: "trademarkClasses" }) ?? [];
   const merekStatusLabel = useWatch({ control, name: "merekStatusLabel" });
   const logoPath = useWatch({ control, name: "logoPath" });
@@ -59,10 +66,8 @@ export function BrandInformationReview({ form, onEdit }: Props) {
         <ReviewRow label="Jenis Bukti Merek" value={evidenceType && MERK_EVIDENCE_TYPE_LABELS[evidenceType]} />
         <ReviewRow label="Nomor Sertifikat / Pendaftaran" value={registrationNumber} />
         <ReviewRow label="Lembaga Penerbit" value={registrationIssuer} />
-        <ReviewRow
-          label={dateLabel}
-          value={registrationDate ? new Date(registrationDate).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" }) : undefined}
-        />
+        <ReviewRow label={dateLabel} value={formatDate(registrationDate)} />
+        <ReviewRow label="Tanggal Kadaluarsa Sertifikat" value={formatDate(registrationExpiryDate)} />
         <ReviewRow label="Status Merek" value={merekStatusLabel} />
         <ReviewRow label="Logo Merek" value={logoPath ? logoPath.split("/").pop() : "Tidak diunggah"} />
       </dl>

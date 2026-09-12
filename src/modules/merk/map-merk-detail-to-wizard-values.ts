@@ -11,6 +11,7 @@ export type MerkDetailForResume = {
   registrationNumber: string | null;
   registrationIssuer: string | null;
   registrationDate: string | null;
+  registrationExpiryDate: string | null;
   // Legacy scalar bridge — kept here only as a fallback for rows somehow
   // missing trademarkClassEntries (see that field's own comment on the Merk
   // model); the array below is the actual source for resuming Step 1.
@@ -149,6 +150,7 @@ export function mapMerkDetailToWizardValues(detail: MerkDetailForResume): Partia
     registrationNumber: detail.registrationNumber ?? "",
     registrationIssuer: detail.registrationIssuer ?? "",
     registrationDate: toDateInputValue(detail.registrationDate) ?? "",
+    registrationExpiryDate: toDateInputValue(detail.registrationExpiryDate) ?? "",
     trademarkClasses,
     merekStatusLabel: detail.merekStatusLabel ?? "",
     logoPath: detail.logoPath ?? "",

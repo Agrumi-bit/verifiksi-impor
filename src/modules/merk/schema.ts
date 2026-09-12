@@ -54,6 +54,10 @@ const merkBrandInfoBaseSchema = z.object({
   registrationNumber: requiredString("Nomor wajib diisi"),
   registrationIssuer: requiredString("Lembaga penerbit wajib diisi"),
   registrationDate: z.string().trim().optional(),
+  // "Tanggal Kadaluarsa Sertifikat" — optional: not every evidence type has a
+  // known expiry yet (e.g. a still-pending TANDA_DAFTAR_MEREK application),
+  // and older certificates on file may not state one either.
+  registrationExpiryDate: z.string().trim().optional(),
   // A brand can be registered in more than one Nice class ("+ Tambah Kelas
   // Merek") — each entry carries its own applicant-written uraian, since
   // that's specific to what THIS brand covers within that class, not a
@@ -337,6 +341,7 @@ export const merkDraftSchema = z.object({
   registrationNumber: z.string().trim().optional(),
   registrationIssuer: z.string().trim().optional(),
   registrationDate: z.string().trim().optional(),
+  registrationExpiryDate: z.string().trim().optional(),
   trademarkClasses: z
     .array(
       z.object({
@@ -382,6 +387,7 @@ export const MERK_STEP_FIELD_NAMES: Record<number, (keyof MerkWizardValues)[]> =
     "registrationNumber",
     "registrationIssuer",
     "registrationDate",
+    "registrationExpiryDate",
     "trademarkClasses",
     "merekStatusLabel",
     "logoPath",

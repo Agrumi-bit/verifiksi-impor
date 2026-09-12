@@ -43,6 +43,7 @@ const DEFAULT_VALUES: Partial<MerkWizardValues> = {
   registrationNumber: "",
   registrationIssuer: "",
   registrationDate: "",
+  registrationExpiryDate: "",
   trademarkClasses: [createEmptyTrademarkClassEntry()],
   merekStatusLabel: "",
   logoPath: "",

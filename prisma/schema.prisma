@@ -479,10 +479,9 @@ model Merk {
   // registrationNumber/Issuer/Date/DocumentPath fields above ("Jenis Bukti
   // Merek": SERTIFIKAT_MEREK_TERDAFTAR / TANDA_DAFTAR_MEREK /
   // SERTIFIKAT_INTERNASIONAL — LAINNYA stays a valid DB value but the
-  // wizard no longer offers it). registrationIssuer ("Lembaga Penerbit") is
-  // collected again by this flow; registrationExpiryDate remains unused
-  // (single date, no expiry) but kept for rows written by the pre-drawer
-  // wizard.
+  // wizard no longer offers it). registrationIssuer ("Lembaga Penerbit") and
+  // registrationExpiryDate ("Tanggal Kadaluarsa Sertifikat") are collected
+  // again by this flow.
   hasCertificate  Boolean              @default(true)
   certificateType MerkCertificateType?
   // Legacy scalar bridge — a brand can be registered in more than one Nice

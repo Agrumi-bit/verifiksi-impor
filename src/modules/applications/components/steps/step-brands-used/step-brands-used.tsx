@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useFieldArray, useWatch, type UseFormReturn } from "react-hook-form";
 import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -38,16 +38,37 @@ const TABLE_COLUMNS = [
 ];
 
 /** One row's readiness, computed the exact same way `ApplicationBrandRow`
- * computes its own (same hook, same cached brand-detail query) — called
- * once per entry so the 4 summary metrics and the Continue-rule warning
- * below never disagree with what each row actually shows. */
-function useRowReadiness(apiBase: string, entry: BrandEntry): BrandApplicationReadiness {
+ * computes its own (same hook, same cached brand-detail query) — reported up
+ * to the parent's readinessMap via `onChange` so the 4 summary metrics and
+ * the Continue-rule warning below never disagree with what each row
+ * actually shows.
+ *
+ * Rendered once per entry as its own component instance (not called as a
+ * hook inside a `.map()` in the parent) — `entries.length` changes on every
+ * add/remove, and calling a variable number of hooks in one component
+ * violates the Rules of Hooks. Mounting/unmounting a component per array
+ * item is what React actually supports for a per-item hook. */
+function RowReadinessTracker({
+  apiBase,
+  entry,
+  onChange,
+}: {
+  apiBase: string;
+  entry: BrandEntry;
+  onChange: (brandId: string, readiness: BrandApplicationReadiness) => void;
+}) {
   const { requirements } = useBrandApplicationDetail(apiBase, entry.brandId, {
     applicantRole: entry.applicantRole ?? null,
     appointmentSource: entry.appointmentSource ?? null,
     officialRepresentativeCompanyId: entry.officialRepresentativeCompanyId ?? null,
   });
-  return requirements?.readiness ?? "NOT_ELIGIBLE";
+  const readiness = requirements?.readiness ?? "NOT_ELIGIBLE";
+
+  useEffect(() => {
+    onChange(entry.brandId, readiness);
+  }, [entry.brandId, readiness, onChange]);
+
+  return null;
 }
 
 /**
@@ -60,25 +81,28 @@ function useRowReadiness(apiBase: string, entry: BrandEntry): BrandApplicationRe
 export function StepBrandsUsed({ form, apiBase, brandDetailHrefBase, applicationNumber }: Props) {
   const { control } = form;
   const importTypes = useWatch({ control, name: "importTypes" }) ?? [];
-  const companyId = useWatch({ control, name: "companyId" });
   const { fields, append, remove } = useFieldArray({ control, name: "applicationBrands" });
   const entries = useWatch({ control, name: "applicationBrands" }) ?? [];
   const [isSelectOpen, setIsSelectOpen] = useState(false);
+  // Admin (generic wizard entry point) sees every registered Brand, not just
+  // the applying company's own — see useApplicationBrandOptions.
+  const isAdminSurface = apiBase === "/api/merk";
 
-  const { data: brandOptions } = useApplicationBrandOptions(companyId);
+  const { data: brandOptions } = useApplicationBrandOptions();
   // Plain (not memoized): `entries` is already a fresh array from useWatch
   // every render, so memoizing on it buys nothing and only trips
   // exhaustive-deps — building this Set is cheap for a per-application
   // brand list.
   const selectedBrandIds = new Set(entries.map((e) => e.brandId));
 
-  // Fixed-per-render hook list: `entries` only grows/shrinks through the
-  // explicit add/remove actions below, never reorders in place, so calling
-  // one hook per entry here is safe across renders.
-  const readinessList = entries.map((entry) => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks -- see comment above
-    return useRowReadiness(apiBase, entry);
-  });
+  // Keyed by brandId, filled in by each entry's own <RowReadinessTracker>
+  // instance (see its own comment on why this isn't a hook called in a
+  // `.map()` here instead).
+  const [readinessMap, setReadinessMap] = useState<Record<string, BrandApplicationReadiness>>({});
+  const handleReadinessChange = useCallback((brandId: string, readiness: BrandApplicationReadiness) => {
+    setReadinessMap((prev) => (prev[brandId] === readiness ? prev : { ...prev, [brandId]: readiness }));
+  }, []);
+  const readinessList = entries.map((entry) => readinessMap[entry.brandId] ?? "NOT_ELIGIBLE");
 
   if (!importTypes.includes("BARANG_KONSUMSI")) {
     return (
@@ -112,6 +136,10 @@ export function StepBrandsUsed({ form, apiBase, brandDetailHrefBase, application
 
   return (
     <div className="flex flex-col gap-5">
+      {entries.map((entry) => (
+        <RowReadinessTracker key={entry.brandId} apiBase={apiBase} entry={entry} onChange={handleReadinessChange} />
+      ))}
+
       <div>
         <h2 className="text-lg font-bold">Merek yang Digunakan</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -201,13 +229,15 @@ export function StepBrandsUsed({ form, apiBase, brandDetailHrefBase, application
 
       {brandOptions?.length === 0 && (
         <p className="text-xs text-muted-foreground">
-          Belum ada merek terdaftar untuk perusahaan ini di Brand Management.
+          {isAdminSurface
+            ? "Belum ada merek terdaftar di Brand Management."
+            : "Belum ada merek terdaftar untuk perusahaan ini di Brand Management."}
         </p>
       )}
 
       {isSelectOpen && (
         <SelectBrandDialog
-          companyId={companyId}
+          isAdminSurface={isAdminSurface}
           selectedBrandIds={selectedBrandIds}
           onClose={() => setIsSelectOpen(false)}
           onSelect={handleSelectBrand}

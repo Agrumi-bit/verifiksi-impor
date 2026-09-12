@@ -28,6 +28,7 @@ type DetailData = {
   certificateType: MerkEvidenceType | null;
   registrationNumber: string | null;
   registrationDate: string | null;
+  registrationExpiryDate: string | null;
   trademarkClass: string | null;
   ownership: {
     ownerLocation: string;
@@ -231,6 +232,10 @@ export function BrandDetailDrawer({ id, apiBase, detailHref, onClose, onEdit, de
                     <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 flex items-center justify-between">
                       <span className="text-muted-foreground">Tanggal</span>
                       <span className="font-semibold">{formatDate(data.registrationDate)}</span>
+                    </div>
+                    <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 flex items-center justify-between">
+                      <span className="text-muted-foreground">Kadaluarsa</span>
+                      <span className="font-semibold">{formatDate(data.registrationExpiryDate)}</span>
                     </div>
                     <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 flex items-center justify-between">
                       <span className="text-muted-foreground">Kelas</span>

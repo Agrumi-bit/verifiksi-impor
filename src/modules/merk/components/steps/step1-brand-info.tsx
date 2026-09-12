@@ -264,6 +264,13 @@ export function Step1BrandInfo({ form, surface, draftId }: Props) {
               >
                 <Input type="date" className="font-mono" {...register("registrationDate")} />
               </FormField>
+              <FormField
+                label="Tanggal Kadaluarsa Sertifikat"
+                error={errors.registrationExpiryDate?.message}
+                hint="Kosongkan apabila belum diketahui atau sertifikat belum diterbitkan."
+              >
+                <Input type="date" className="font-mono" {...register("registrationExpiryDate")} />
+              </FormField>
             </div>
 
             {statusOptions.length > 0 ? (

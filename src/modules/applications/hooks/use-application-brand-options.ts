@@ -14,21 +14,23 @@ export type ApplicationBrandOption = {
 };
 
 /**
- * Brand Master rows available to the applying company — same shape
- * `toMerkListItem` already produces for "Semua Merek"/"Daftar Merek", reused
- * here for the "Pilih Merek" dialog in Step "Merek yang Digunakan" instead
- * of building a second Brand list projection.
+ * Brand Master rows available for the "Pilih Merek" dialog in Step "Merek
+ * yang Digunakan" — same shape `toMerkListItem` already produces for "Semua
+ * Merek"/"Daftar Merek", reused here instead of a second Brand list
+ * projection.
  *
- * @param companyId Only needed for the generic/admin wizard entry point
- * (a signed-in company user is scoped server-side from their own session
- * regardless of this param — see /api/applications/brand-options).
+ * Scoping happens entirely server-side from the session (see
+ * /api/applications/brand-options): a company-workspace user only ever gets
+ * their own company's Brands, while staff (the generic/admin wizard entry
+ * point) get every registered Brand regardless of which company is picked in
+ * Step 1 — Brand Master rows are registered by admin, not necessarily tied
+ * to whichever company ends up applying.
  */
-export function useApplicationBrandOptions(companyId?: string) {
+export function useApplicationBrandOptions() {
   return useQuery({
-    queryKey: ["applications", "brand-options", companyId ?? null],
+    queryKey: ["applications", "brand-options"],
     queryFn: async () => {
-      const params = companyId ? `?companyId=${encodeURIComponent(companyId)}` : "";
-      const response = await fetch(`/api/applications/brand-options${params}`);
+      const response = await fetch("/api/applications/brand-options");
       if (!response.ok) throw new Error("Gagal memuat data merek");
       const json = (await response.json()) as { data: ApplicationBrandOption[] };
       return json.data;

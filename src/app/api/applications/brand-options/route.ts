@@ -7,26 +7,22 @@ import { MERK_LIST_INCLUDE, toMerkListItem } from "@/modules/merk/list-projectio
 /**
  * Brand Master options for the VIU Barang Konsumsi wizard's "Pilih Merek"
  * dialog (Step "Merek yang Digunakan"). A signed-in company user is always
- * scoped to their own session `companyId`, ignoring any `companyId` query
- * param a client might send — the same trust boundary
- * `/api/company-workspace/brands` already enforces. Staff without a
- * `companyId` (the generic/admin wizard entry point, where a company is
- * picked mid-form rather than implied by the session) may pass `companyId`
- * explicitly to scope the list to whichever company is selected in Step 1.
+ * scoped to their own session `companyId` — a hard trust boundary, never
+ * overridable by the client (same boundary `/api/company-workspace/brands`
+ * already enforces).
+ *
+ * Staff (the generic/admin wizard entry point) get every registered Brand
+ * regardless of which company is picked in Step 1: Brand Master rows are
+ * registered by admin directly and aren't necessarily tied to whichever
+ * company ends up applying, so the applicant may legitimately have zero
+ * Brands of its own yet still need to attach one to the application.
  */
-export async function GET(request: Request) {
+export async function GET() {
   const session = await getServerSession();
-  const sessionCompanyId = session?.user.companyId;
-  const { searchParams } = new URL(request.url);
-  const requestedCompanyId = searchParams.get("companyId");
-  const companyId = sessionCompanyId ?? requestedCompanyId;
-
-  if (!companyId) {
-    return NextResponse.json({ data: [] });
-  }
+  const companyId = session?.user.companyId;
 
   const brands = await db.merk.findMany({
-    where: { companyId },
+    where: companyId ? { companyId } : undefined,
     orderBy: { createdAt: "desc" },
     include: MERK_LIST_INCLUDE,
   });
