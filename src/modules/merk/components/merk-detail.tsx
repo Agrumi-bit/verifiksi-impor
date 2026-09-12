@@ -43,6 +43,7 @@ type MerkDetailData = {
   registrationIssuer: string | null;
   registrationDate: string | null;
   trademarkClass: string | null;
+  trademarkClassDescription: string | null;
   merekStatusLabel: string | null;
   ownership: {
     ownerLocation: string;
@@ -355,6 +356,9 @@ export function MerkDetail({ id, surface }: Props) {
             <DetailItem label="Trademark Class" value={data.trademarkClass ?? undefined} />
             <DetailItem label="Trademark Status" value={data.merekStatusLabel ?? undefined} />
             <DetailItem label="Country" value={data.countryOfOrigin} />
+            <div className="sm:col-span-2">
+              <DetailItem label="Uraian Kelas Merek" value={data.trademarkClassDescription ?? undefined} />
+            </div>
           </DetailSection>
         </TabsPanel>
 

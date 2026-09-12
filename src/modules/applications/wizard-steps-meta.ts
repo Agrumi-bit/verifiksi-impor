@@ -1,5 +1,6 @@
 import {
   Banknote,
+  BadgeCheck,
   Building2,
   Cog,
   Eye,
@@ -28,8 +29,9 @@ export type WizardStepMeta = {
 /** VIU now mirrors VKI's Legal/Tax/Location step format (read-only company-data display,
  * followed by the locked+add-new location editor), plus its own dedicated Partner Industri
  * step (split out of Support Document — see StepPartnerIndustri) for the
- * "Bahan Baku dan/atau Penolong — Perusahaan Industri" import type — 10 steps instead of
- * the original 8. */
+ * "Bahan Baku dan/atau Penolong — Perusahaan Industri" import type, and its own dedicated
+ * Merek yang Digunakan step (see StepBrandsUsed) for the "Barang Konsumsi" import type —
+ * 11 steps instead of the original 8. */
 export const VIU_WIZARD_STEPS: WizardStepMeta[] = [
   {
     step: 1,
@@ -68,34 +70,41 @@ export const VIU_WIZARD_STEPS: WizardStepMeta[] = [
   },
   {
     step: 6,
+    title: "Merek yang Digunakan",
+    subtitle: "Impor barang konsumsi — hubungan hukum merek",
+    icon: BadgeCheck,
+    implemented: true,
+  },
+  {
+    step: 7,
     title: "Partner Industri",
     subtitle: "Impor bahan baku — perusahaan industri",
     icon: Handshake,
     implemented: true,
   },
   {
-    step: 7,
+    step: 8,
     title: "Support Document",
     subtitle: "Upload dokumen pendukung",
     icon: FileStack,
     implemented: true,
   },
   {
-    step: 8,
+    step: 9,
     title: "Product Information",
     subtitle: "Detail produk & material",
     icon: Package,
     implemented: true,
   },
   {
-    step: 9,
+    step: 10,
     title: "Preview",
     subtitle: "Tinjau sebelum submit",
     icon: Eye,
     implemented: true,
   },
   {
-    step: 10,
+    step: 11,
     title: "Submit",
     subtitle: "Kirim permohonan",
     icon: Send,

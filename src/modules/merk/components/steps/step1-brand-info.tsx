@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { FormField } from "@/components/form/form-field";
 import { FileUploadField } from "@/components/form/file-upload-field";
@@ -296,6 +297,19 @@ export function Step1BrandInfo({ form, surface }: Props) {
                 </FormField>
               )}
             </div>
+
+            <FormField
+              label="Uraian Kelas Merek"
+              required
+              error={errors.trademarkClassDescription?.message}
+              hint="Uraian barang/jasa spesifik merek ini pada kelas terpilih, sesuai yang akan didaftarkan ke DJKI — bukan judul kelas Nice secara umum."
+            >
+              <Textarea
+                placeholder="Contoh: Kemeja pria, celana panjang, dan jaket dari bahan katun"
+                rows={3}
+                {...register("trademarkClassDescription")}
+              />
+            </FormField>
 
             <BrandDocumentUploadCard
               label={trademarkRequirement.label}

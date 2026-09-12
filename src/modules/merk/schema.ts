@@ -1,10 +1,5 @@
 import { z } from "zod";
 
-import {
-  getRequiredBrandDocuments,
-  type BrandDocumentRequirementInput,
-} from "./document-requirements";
-
 export const MERK_STATUS_VALUES = ["ACTIVE", "INACTIVE"] as const;
 export type MerkStatusValue = (typeof MERK_STATUS_VALUES)[number];
 
@@ -60,6 +55,7 @@ const merkBrandInfoBaseSchema = z.object({
   registrationIssuer: requiredString("Lembaga penerbit wajib diisi"),
   registrationDate: z.string().trim().optional(),
   trademarkClass: requiredString("Kelas merek wajib dipilih"),
+  trademarkClassDescription: requiredString("Uraian kelas merek wajib diisi"),
   merekStatusLabel: z.string().trim().optional(),
   logoPath: z.string().trim().optional(),
 });
@@ -294,27 +290,6 @@ const merkDocumentsBaseSchema = z.object({
 });
 export type MerkDocumentsValues = z.infer<typeof merkDocumentsBaseSchema>;
 
-function validateDocumentsStep(
-  data: BrandDocumentRequirementInput & MerkDocumentsValues,
-  ctx: z.RefinementCtx,
-) {
-  for (const requirement of getRequiredBrandDocuments(data)) {
-    if (!requirement.required) continue;
-    if (requirement.multiple) {
-      if (data.productLabelDocumentation.length === 0) {
-        issue(ctx, "productLabelDocumentation", `${requirement.label} wajib diunggah`);
-      }
-      continue;
-    }
-    if (!data.documents[requirement.code]) {
-      issue(ctx, ["documents", requirement.code], `${requirement.label} wajib diunggah`);
-    }
-  }
-  // Quality Test completeness is intentionally NOT gated here — whether it's
-  // required depends on the selected commodity/subcommodity, and this app
-  // has no business-rule service yet to answer that; see Step 4 report.
-}
-
 function validateDeclaration(
   data: { declarationAccepted: boolean },
   ctx: z.RefinementCtx,
@@ -337,10 +312,17 @@ const merkWizardBaseSchema = merkBrandInfoBaseSchema
   .extend(merkOwnershipBaseSchema.shape)
   .extend(merkDocumentsBaseSchema.shape);
 
+// Document requirements (getRequiredBrandDocuments) are deliberately NOT
+// validated here — uploading them is no longer mandatory to finish Add
+// Merek. `requirement.required` still describes what a given scenario needs
+// and still drives the "Wajib"/"Opsional" badges and completeness UI in Step
+// 4, but a missing one no longer blocks Step 4 or final submission: that
+// enforcement moves to "Create Application VIU Konsumsi" (BR-003, not yet
+// built), which is when the brand is actually submitted for verification
+// rather than just registered.
 export const merkWizardSchema = merkWizardBaseSchema
   .superRefine(validateEvidenceStep)
   .superRefine(validateOwnershipStep)
-  .superRefine(validateDocumentsStep)
   .superRefine(validateDeclaration);
 export type MerkWizardValues = z.infer<typeof merkWizardSchema>;
 
@@ -354,6 +336,7 @@ export const merkDraftSchema = z.object({
   registrationIssuer: z.string().trim().optional(),
   registrationDate: z.string().trim().optional(),
   trademarkClass: z.string().trim().optional(),
+  trademarkClassDescription: z.string().trim().optional(),
   merekStatusLabel: z.string().trim().optional(),
   logoPath: z.string().trim().optional(),
 
@@ -392,6 +375,7 @@ export const MERK_STEP_FIELD_NAMES: Record<number, (keyof MerkWizardValues)[]> =
     "registrationIssuer",
     "registrationDate",
     "trademarkClass",
+    "trademarkClassDescription",
     "merekStatusLabel",
     "logoPath",
   ],

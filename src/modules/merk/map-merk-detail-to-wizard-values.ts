@@ -12,6 +12,7 @@ export type MerkDetailForResume = {
   registrationIssuer: string | null;
   registrationDate: string | null;
   trademarkClass: string | null;
+  trademarkClassDescription: string | null;
   merekStatusLabel: string | null;
   logoPath: string | null;
   ownership: {
@@ -130,6 +131,7 @@ export function mapMerkDetailToWizardValues(detail: MerkDetailForResume): Partia
     registrationIssuer: detail.registrationIssuer ?? "",
     registrationDate: toDateInputValue(detail.registrationDate) ?? "",
     trademarkClass: detail.trademarkClass ?? "",
+    trademarkClassDescription: detail.trademarkClassDescription ?? "",
     merekStatusLabel: detail.merekStatusLabel ?? "",
     logoPath: detail.logoPath ?? "",
 

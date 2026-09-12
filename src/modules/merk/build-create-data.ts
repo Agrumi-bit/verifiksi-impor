@@ -193,6 +193,7 @@ export async function buildMerkCreateData(values: MerkWizardValues, ownerCompany
     // readers of this column still see something.
     registrationDocumentPath: values.documents.trademark_evidence?.filePath ?? null,
     trademarkClass: values.trademarkClass,
+    trademarkClassDescription: values.trademarkClassDescription,
     merekStatusLabel: values.merekStatusLabel || null,
     logoPath: values.logoPath || null,
 
@@ -240,6 +241,7 @@ export async function buildMerkDraftData(values: MerkDraftValues, ownerCompanyNa
     registrationDate: toDate(values.registrationDate),
     registrationDocumentPath: values.documents?.trademark_evidence?.filePath ?? null,
     trademarkClass: values.trademarkClass || null,
+    trademarkClassDescription: values.trademarkClassDescription || null,
     merekStatusLabel: values.merekStatusLabel || null,
     logoPath: values.logoPath || null,
 

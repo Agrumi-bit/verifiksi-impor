@@ -16,6 +16,7 @@ import {
   type WarehouseRegistrationType,
 } from "@/modules/shared/schema";
 import { taxProofEntrySchema, COMPANY_AGES } from "@/modules/company/schema";
+import { APPLICANT_BRAND_ROLES, IMPORT_APPOINTMENT_SOURCES } from "./viu-brand-relationship-rules";
 
 export {
   companyProfileSchema,
@@ -128,6 +129,35 @@ export const partnerIndustriEntrySchema = z.object({
   lhvkiDocumentPath: z.string().trim().optional(),
 });
 export type PartnerIndustriEntryValues = z.infer<typeof partnerIndustriEntrySchema>;
+
+export { APPLICANT_BRAND_ROLES, IMPORT_APPOINTMENT_SOURCES };
+export type { ApplicantBrandRole, ImportAppointmentSource } from "./viu-brand-relationship-rules";
+
+/**
+ * One Brand used in this VIU Barang Konsumsi application (Step "Merek yang
+ * Digunakan"). `brandId` references an existing Merk row — Brand identity
+ * itself (name, owner, evidence, class, documents) is never duplicated here;
+ * only this application's own legal-relationship choice is. See
+ * viu-brand-relationship-rules.ts for how these three fields turn into a
+ * document checklist and readiness state.
+ */
+export const applicationBrandEntrySchema = z.object({
+  brandId: requiredString("Merek wajib dipilih"),
+  applicantRole: z.enum(APPLICANT_BRAND_ROLES, { message: "Pilih peran pemohon" }),
+  appointmentSource: z.enum(IMPORT_APPOINTMENT_SOURCES).optional(),
+  officialRepresentativeCompanyId: z.string().trim().optional(),
+});
+export type ApplicationBrandEntryValues = z.infer<typeof applicationBrandEntrySchema>;
+
+/** Step "Merek yang Digunakan" — only meaningful when Jenis Impor includes
+ * BARANG_KONSUMSI (see step-brands-used.tsx's own empty state otherwise). */
+export const brandsUsedSchema = z.object({
+  applicationBrands: z.array(applicationBrandEntrySchema).default([]),
+});
+
+export function createEmptyApplicationBrand(brandId: string): ApplicationBrandEntryValues {
+  return { brandId, applicantRole: "OFFICIAL_REPRESENTATIVE" };
+}
 
 export type NonIndustriDocPriority = "UTAMA" | "PENDUKUNG";
 
@@ -441,6 +471,7 @@ export const applicationWizardSchema = applicationMetaSchema
   .extend(legalInformationSchema.shape)
   .extend(locationsSchema.shape)
   .extend(documentsSchema.shape)
+  .extend(brandsUsedSchema.shape)
   .extend(productsSchema.shape)
   .extend(declarationSchema.shape)
   .extend(machinesSchema.shape)
@@ -490,6 +521,38 @@ export const applicationWizardSchema = applicationMetaSchema
         message: "Tambahkan minimal satu dokumen pendukung",
       });
     }
+    // Step "Merek yang Digunakan" — structural validity only (at least one
+    // Brand, and each entry's own role/appointment/representative shape).
+    // Readiness (evidence validity, relationship rules, document
+    // completeness — see viu-brand-relationship-rules.ts) is deliberately
+    // NOT enforced here: an INCOMPLETE Brand may still continue to Step 5
+    // per the Continue Rule; only Submit is expected to block on it, and
+    // that block happens via the server-side brand validator, not this
+    // schema (recalculating readiness needs a DB read this sync validator
+    // can't do).
+    if (data.importTypes.includes("BARANG_KONSUMSI") && data.applicationBrands.length < 1) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["applicationBrands"],
+        message: "Pilih atau tambahkan minimal satu merek yang digunakan",
+      });
+    }
+    data.applicationBrands.forEach((entry, index) => {
+      if (entry.applicantRole === "IMPORTER_ONLY" && !entry.appointmentSource) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["applicationBrands", index, "appointmentSource"],
+          message: "Pilih sumber penunjukan importir",
+        });
+      }
+      if (entry.appointmentSource === "OFFICIAL_REPRESENTATIVE" && !entry.officialRepresentativeCompanyId) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["applicationBrands", index, "officialRepresentativeCompanyId"],
+          message: "Pilih Perwakilan Resmi",
+        });
+      }
+    });
   });
 
 export type SupportDocumentValues = z.infer<typeof supportDocumentSchema>;
@@ -609,11 +672,12 @@ export const VIU_STEP_FIELD_NAMES: Record<number, (keyof ApplicationWizardValues
   3: [],
   4: [],
   5: [],
-  6: ["partnerIndustriEntries"],
-  7: ["nonIndustriDocuments", "konsumsiDocuments"],
-  8: ["products"],
-  9: [],
-  10: ["declarationAccepted"],
+  6: ["applicationBrands"],
+  7: ["partnerIndustriEntries"],
+  8: ["nonIndustriDocuments", "konsumsiDocuments"],
+  9: ["products"],
+  10: [],
+  11: ["declarationAccepted"],
 };
 
 /**

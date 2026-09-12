@@ -486,6 +486,12 @@ model Merk {
   hasCertificate  Boolean              @default(true)
   certificateType MerkCertificateType?
   trademarkClass    String?
+  // Free-text goods/services description specific to this brand's own
+  // application ("Uraian Kelas Merek") — distinct from
+  // TrademarkClassMasterData.description, which is only the generic Nice
+  // class heading. DJKI applications require the applicant's own wording,
+  // so this is manually entered rather than derived from master data.
+  trademarkClassDescription String?
   merekStatusLabel  String?
   logoPath          String?
 

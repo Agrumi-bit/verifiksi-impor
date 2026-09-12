@@ -34,6 +34,7 @@ export function useApplicationWizard() {
       companyWebsite: "",
       kbliEntries: [],
       locations: [createEmptyLocation()],
+      applicationBrands: [],
       partnerIndustriEntries: [],
       nonIndustriDocuments: createEmptyNonIndustriDocuments(),
       konsumsiDocuments: [],

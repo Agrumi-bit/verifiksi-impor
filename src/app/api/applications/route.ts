@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { db } from "@/lib/db";
 import { applicationWizardSchema, type LocationValues } from "@/modules/applications/schema";
+import { validateApplicationBrands } from "@/modules/applications/server/validate-application-brands";
 
 function generateApplicationNumber(verificationType: string): string {
   const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -69,6 +70,11 @@ export async function POST(request: Request) {
   }
 
   const values = parsed.data;
+
+  const brandValidation = await validateApplicationBrands(values);
+  if ("error" in brandValidation) {
+    return NextResponse.json({ error: brandValidation.error }, { status: 400 });
+  }
 
   // Promote the draft row saved during the wizard instead of creating a
   // second, orphaned Application — same applicationNumber carries over.

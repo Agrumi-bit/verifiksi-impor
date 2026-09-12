@@ -14,6 +14,7 @@ import { LockedCompanyField } from "./locked-company-field";
 import type { CompanyAddressValues } from "@/components/wizard/locations-field";
 import { LOCATION_TYPES } from "@/modules/shared/schema";
 import { Step1ApplicationInformation } from "./steps/step1-application-information";
+import { StepBrandsUsed } from "./steps/step-brands-used/step-brands-used";
 import { StepPartnerIndustri } from "./steps/step-partner-industri";
 import { Step5SupportDocument } from "./steps/step5-support-document";
 import { Step6ProductInformation } from "./steps/step6-product-information";
@@ -80,6 +81,10 @@ export function ApplicationWizard({
   // singleton — this tracks the row so repeat saves (and the final submit)
   // update it in place instead of creating duplicates.
   const [companyDraftApplicationId, setCompanyDraftApplicationId] = useState<string | null>(null);
+  // Display-only, for Step "Merek yang Digunakan"'s "+ Tambah Merek Baru"
+  // context banner — never sent anywhere, just lets the user see which
+  // application they're attaching the new Brand to.
+  const [applicationNumber, setApplicationNumber] = useState<string | null>(null);
 
   useEffect(() => {
     if (hideCompanyPicker) return;
@@ -223,8 +228,12 @@ export function ApplicationWizard({
           }),
         });
         if (!response.ok) throw new Error("Gagal menyimpan draft");
-        const { id } = (await response.json()) as { id: string; applicationNumber: string };
+        const { id, applicationNumber: savedApplicationNumber } = (await response.json()) as {
+          id: string;
+          applicationNumber: string;
+        };
         setCompanyDraftApplicationId(id);
+        setApplicationNumber(savedApplicationNumber);
       } else {
         const response = await fetch("/api/applications/drafts", {
           method: "POST",
@@ -359,6 +368,16 @@ export function ApplicationWizard({
                 />
               )}
               {!isVki && currentStep === 6 && (
+                <StepBrandsUsed
+                  form={form}
+                  apiBase={hideCompanyPicker ? "/api/company-workspace/brands" : "/api/merk"}
+                  brandDetailHrefBase={
+                    hideCompanyPicker ? "/company-workspace/supporting/brands" : "/mitra/merk"
+                  }
+                  applicationNumber={applicationNumber ?? undefined}
+                />
+              )}
+              {!isVki && currentStep === 7 && (
                 <StepPartnerIndustri
                   form={form}
                   partnerManagementHref={
@@ -366,10 +385,10 @@ export function ApplicationWizard({
                   }
                 />
               )}
-              {!isVki && currentStep === 7 && <Step5SupportDocument form={form} />}
-              {!isVki && currentStep === 8 && <Step6ProductInformation form={form} />}
-              {!isVki && currentStep === 9 && <Step7Preview form={form} onEditStep={goToStep} />}
-              {!isVki && currentStep === 10 && <Step8Submit form={form} />}
+              {!isVki && currentStep === 8 && <Step5SupportDocument form={form} />}
+              {!isVki && currentStep === 9 && <Step6ProductInformation form={form} />}
+              {!isVki && currentStep === 10 && <Step7Preview form={form} onEditStep={goToStep} />}
+              {!isVki && currentStep === 11 && <Step8Submit form={form} />}
 
               {isVki && currentStep === 3 && <VkiStep3Legal form={form} />}
               {isVki && currentStep === 4 && <VkiStep4Tax form={form} />}

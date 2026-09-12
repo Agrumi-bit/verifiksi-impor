@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -41,6 +41,7 @@ const DEFAULT_VALUES: Partial<MerkWizardValues> = {
   registrationIssuer: "",
   registrationDate: "",
   trademarkClass: "",
+  trademarkClassDescription: "",
   merekStatusLabel: "",
   logoPath: "",
   documents: {},
@@ -91,9 +92,19 @@ type Props = {
    * Draft/submit PATCH the existing row instead of creating a new one. See
    * BR-002 in the Add Brand review. */
   draftId?: string;
+  /** Rendered above the step content — e.g. "Merek ini akan digunakan untuk
+   * Permohonan VIU Barang Konsumsi" when launched from that wizard's own
+   * "+ Tambah Merek Baru" action. */
+  contextBanner?: ReactNode;
+  /** Fired after a successful create/update (draft save OR final submit) —
+   * lets a caller like the VIU wizard auto-select the resulting Brand
+   * (ACTIVE) or offer "Lanjutkan Pengisian Merek" instead (DRAFT) without
+   * this component knowing anything about VIU applications itself. Distinct
+   * from `onClose`, which also fires on a plain cancel. */
+  onBrandSaved?: (result: { id: string; status: "ACTIVE" | "DRAFT" }) => void;
 };
 
-export function MerkWizard({ surface, onClose, draftId }: Props) {
+export function MerkWizard({ surface, onClose, draftId, contextBanner, onBrandSaved }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(1);
@@ -163,8 +174,13 @@ export function MerkWizard({ surface, onClose, draftId }: Props) {
     (b) => b.brandName.trim().toLowerCase() === brandName?.trim().toLowerCase(),
   );
 
-  // Required-document completeness — same rule engine Step 4 uses to gate
-  // its own upload cards, reused here for the checklist and the top summary.
+  // Required-document completeness — same rule engine Step 4 uses for its
+  // "Wajib"/"Opsional" badges, reused here for the top summary's "X / Y
+  // Lengkap" count and the completion progress bar. Informational only: a
+  // missing "wajib" document no longer blocks Step 4 or final submission —
+  // that enforcement moves to "Create Application VIU Konsumsi" (BR-003, not
+  // yet built), which is when the brand is actually submitted for
+  // verification rather than just registered.
   const documentRequirements = getRequiredBrandDocuments({
     evidenceType,
     ownerLocation,
@@ -177,7 +193,6 @@ export function MerkWizard({ surface, onClose, draftId }: Props) {
   const missingRequiredDocuments = requiredDocuments.filter(
     (r) => !isRequirementComplete(r, documents, productLabelDocumentation),
   );
-  const isDocumentsComplete = missingRequiredDocuments.length === 0;
 
   const step1HasErrors = MERK_STEP_FIELD_NAMES[1].some((field) => Boolean(formState.errors[field]));
   const isStep1Complete = !step1HasErrors && Boolean(brandName?.trim());
@@ -187,11 +202,12 @@ export function MerkWizard({ surface, onClose, draftId }: Props) {
   const isRepresentationComplete = Boolean(ownerLocation) && !representationHasErrors;
   const isDuplicateResolved = !duplicate || isDuplicateAcknowledged;
 
+  // Documents intentionally do NOT gate readiness — see the
+  // documentRequirements comment above.
   const isReviewReady =
     isStep1Complete &&
     isOwnershipComplete &&
     isRepresentationComplete &&
-    isDocumentsComplete &&
     isDuplicateResolved &&
     declarationAccepted === true;
 
@@ -220,16 +236,10 @@ export function MerkWizard({ surface, onClose, draftId }: Props) {
     { key: "step1", label: "Informasi merek lengkap", ok: isStep1Complete, step: 1, issueLabel: "Informasi merek belum lengkap." },
     { key: "ownership", label: "Data kepemilikan lengkap", ok: isOwnershipComplete, step: 2, issueLabel: "Data kepemilikan belum lengkap." },
     { key: "representation", label: "Hubungan perwakilan lengkap", ok: isRepresentationComplete, step: 3, issueLabel: "Hubungan perwakilan belum lengkap." },
-    {
-      key: "documents",
-      label: "Dokumen wajib lengkap",
-      ok: isDocumentsComplete,
-      step: 4,
-      issueLabel:
-        missingRequiredDocuments.length > 0
-          ? `${missingRequiredDocuments[0].label} belum diunggah.`
-          : undefined,
-    },
+    // Documents are informational only here (see documentRequirements
+    // comment) — no checklist entry, so a missing "wajib" document never
+    // shows as a blocker in BrandReadinessSummary. Status still visible via
+    // the "X / Y Lengkap" count and the completion progress bar below.
     {
       key: "duplicate",
       label: "Tidak ada konflik duplikasi",
@@ -316,9 +326,11 @@ export function MerkWizard({ surface, onClose, draftId }: Props) {
         const body = await response.json().catch(() => null);
         throw new Error(body?.error ?? "Gagal menyimpan draft merek");
       }
+      const { data } = await response.json();
       queryClient.invalidateQueries({ queryKey: ["merk-surface", surface.apiBase] });
       form.reset(values); // clears isDirty against the just-saved snapshot
       toast.success("Draft merek berhasil disimpan.");
+      onBrandSaved?.({ id: data.id, status: "DRAFT" });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal menyimpan draft merek");
     } finally {
@@ -343,6 +355,7 @@ export function MerkWizard({ surface, onClose, draftId }: Props) {
       const { data } = await response.json();
       queryClient.invalidateQueries({ queryKey: ["merk-surface", surface.apiBase] });
       toast.success("Merek berhasil ditambahkan.");
+      onBrandSaved?.({ id: data.id, status: "ACTIVE" });
       if (onClose) onClose();
       else if (surface.detailHrefBase) router.push(`${surface.detailHrefBase}/${data.id}`);
       else router.push(surface.listHref);
@@ -423,11 +436,15 @@ export function MerkWizard({ surface, onClose, draftId }: Props) {
           </nav>
         </div>
 
-        <form
-          onSubmit={(event) => event.preventDefault()}
-          className="flex min-h-0 flex-1 flex-col"
-        >
+        {/* A plain div, not <form> — this wizard has no native-submit button
+            (every action is an explicit onClick), and MerkWizard can now be
+            mounted inside another wizard's own <form> (e.g. VIU's "+ Tambah
+            Merek Baru" — see step-brands-used/add-brand-launcher.tsx); a
+            nested <form> there is invalid HTML and triggers a hydration
+            error. */}
+        <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex-1 overflow-y-auto px-8 py-5">
+            {contextBanner && <div className="mb-5">{contextBanner}</div>}
             {currentStep === 1 && <Step1BrandInfo form={form} surface={surface} />}
             {currentStep === 2 && <Step2Kepemilikan form={form} />}
             {currentStep === 3 && <Step3Perwakilan form={form} />}
@@ -500,7 +517,7 @@ export function MerkWizard({ surface, onClose, draftId }: Props) {
               )}
             </div>
           </div>
-        </form>
+        </div>
       </aside>
 
       <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>

@@ -35,6 +35,7 @@ export function BrandInformationReview({ form, onEdit }: Props) {
   const registrationIssuer = useWatch({ control, name: "registrationIssuer" });
   const registrationDate = useWatch({ control, name: "registrationDate" });
   const trademarkClass = useWatch({ control, name: "trademarkClass" });
+  const trademarkClassDescription = useWatch({ control, name: "trademarkClassDescription" });
   const merekStatusLabel = useWatch({ control, name: "merekStatusLabel" });
   const logoPath = useWatch({ control, name: "logoPath" });
 
@@ -67,6 +68,9 @@ export function BrandInformationReview({ form, onEdit }: Props) {
         <ReviewRow label="Kelas Merek" value={trademarkClass ? `${trademarkClass} — ${classInfo?.hint ?? ""}` : undefined} />
         <ReviewRow label="Status Merek" value={merekStatusLabel} />
         <ReviewRow label="Logo Merek" value={logoPath ? logoPath.split("/").pop() : "Tidak diunggah"} />
+        <div className="sm:col-span-2">
+          <ReviewRow label="Uraian Kelas Merek" value={trademarkClassDescription} />
+        </div>
       </dl>
     </section>
   );

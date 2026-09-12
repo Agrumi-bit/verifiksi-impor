@@ -15,6 +15,7 @@ type Props = {
   registrationNumber: string | undefined;
   registrationIssuer: string | undefined;
   trademarkClass: string | undefined;
+  trademarkClassDescription: string | undefined;
   value: BrandDocumentEntryValues | undefined;
   onChange: (value: BrandDocumentEntryValues | undefined) => void;
   error?: string;
@@ -28,6 +29,7 @@ export function TrademarkDocumentSection({
   registrationNumber,
   registrationIssuer,
   trademarkClass,
+  trademarkClassDescription,
   value,
   onChange,
   error,
@@ -57,6 +59,10 @@ export function TrademarkDocumentSection({
             <dd className="font-semibold">
               {trademarkClass ? `${trademarkClass} — ${classInfo?.hint ?? ""}` : "—"}
             </dd>
+          </div>
+          <div className="col-span-2 sm:col-span-4">
+            <dt className="text-muted-foreground">Uraian Kelas Merek</dt>
+            <dd className="font-semibold">{trademarkClassDescription || "—"}</dd>
           </div>
         </dl>
 

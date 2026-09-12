@@ -28,7 +28,8 @@ export function DocumentCompletenessSummary({ requirements, documents, productLa
         <span className="text-sm font-bold text-primary">{percent}%</span>
       </div>
       <p className="mt-0.5 text-xs text-muted-foreground">
-        {uploadedCount} dari {required.length} dokumen wajib telah diunggah
+        {uploadedCount} dari {required.length} dokumen wajib telah diunggah. Dokumen belum wajib
+        untuk menambahkan merek — kelengkapan ini baru diwajibkan saat pengajuan Aplikasi VIU.
       </p>
       <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-muted">
         <div

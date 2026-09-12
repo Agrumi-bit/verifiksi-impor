@@ -35,6 +35,7 @@ export function Step4DokumenPendukung({ form }: Props) {
   const registrationNumber = useWatch({ control, name: "registrationNumber" });
   const registrationIssuer = useWatch({ control, name: "registrationIssuer" });
   const trademarkClass = useWatch({ control, name: "trademarkClass" });
+  const trademarkClassDescription = useWatch({ control, name: "trademarkClassDescription" });
   const documents = useWatch({ control, name: "documents" }) ?? {};
   const productLabelDocumentation = useWatch({ control, name: "productLabelDocumentation" }) ?? [];
   const appointmentLetterNumber = useWatch({ control, name: "appointmentLetterNumber" });
@@ -100,6 +101,7 @@ export function Step4DokumenPendukung({ form }: Props) {
         registrationNumber={registrationNumber}
         registrationIssuer={registrationIssuer}
         trademarkClass={trademarkClass}
+        trademarkClassDescription={trademarkClassDescription}
         value={documents.trademark_evidence}
         onChange={(value) => updateDocument("trademark_evidence", value)}
         error={(formState.errors.documents as Record<string, { message?: string }> | undefined)?.trademark_evidence?.message}
