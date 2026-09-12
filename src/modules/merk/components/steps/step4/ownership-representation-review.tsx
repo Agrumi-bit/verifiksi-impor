@@ -45,7 +45,6 @@ export function OwnershipRepresentationReview({ form, onEdit }: Props) {
   const values = {
     ownerLocation: useWatch({ control, name: "ownerLocation" }),
     ownerType: useWatch({ control, name: "ownerType" }),
-    ownerCompanyId: useWatch({ control, name: "ownerCompanyId" }),
     ownerName: useWatch({ control, name: "ownerName" }),
     ownerCountryCode: useWatch({ control, name: "ownerCountryCode" }),
     relationshipWithApiu: useWatch({ control, name: "relationshipWithApiu" }) as
@@ -66,19 +65,13 @@ export function OwnershipRepresentationReview({ form, onEdit }: Props) {
 
   const { options: countryOptions } = useActiveCountries();
   const { options: brandOwnerOptions } = useActiveBrandOwners();
-  const ownerCompanyName = brandOwnerOptions.find((o) => o.value === values.ownerCompanyId)?.label;
   const representativeName = brandOwnerOptions.find(
     (o) => o.value === values.officialRepresentativeCompanyId,
   )?.label;
   const countryLabel =
     countryOptions.find((o) => o.value === values.ownerCountryCode)?.label ?? values.ownerCountryCode;
 
-  const ownerTitle =
-    values.ownerLocation === "domestic"
-      ? values.ownerType === "company"
-        ? ownerCompanyName
-        : values.ownerName
-      : values.ownerName;
+  const ownerTitle = values.ownerName;
 
   return (
     <section className="rounded-xl border border-border p-4">

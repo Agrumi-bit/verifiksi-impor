@@ -1,6 +1,6 @@
 "use client";
 
-import { Controller, useWatch, type UseFormReturn } from "react-hook-form";
+import { useWatch, type UseFormReturn } from "react-hook-form";
 
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/form/form-field";
@@ -15,7 +15,6 @@ import {
   type MerkWizardValues,
 } from "../../../schema";
 import { RadioCardGroup } from "./radio-card-group";
-import { CompanySearchSelect } from "./company-search-select";
 import { ApiuPlaceholderCard } from "./apiu-placeholder-card";
 
 const OWNER_TYPE_OPTIONS = MERK_OWNER_TYPES.map((value) => ({
@@ -42,12 +41,10 @@ export function DomesticOwnerSection({ form }: Props) {
     | undefined;
 
   function selectOwnerType(next: MerkOwnerType) {
-    if (next === "company") {
-      setValue("ownerName", "");
-      setValue("ownerAddress", "");
-    } else {
-      setValue("ownerCompanyId", "");
-    }
+    // ownerCompanyId is a legacy field — Pemilik Merek is manual free text
+    // for both "company" and "individual" now, so ownerName/ownerAddress
+    // carry over across the switch instead of being cleared.
+    setValue("ownerCompanyId", "");
     setValue("ownerType", next, { shouldValidate: true });
   }
 
@@ -78,20 +75,22 @@ export function DomesticOwnerSection({ form }: Props) {
         </FormField>
 
         {ownerType === "company" && (
-          <div className="mt-4">
-            <Controller
-              control={control}
-              name="ownerCompanyId"
-              render={({ field }) => (
-                <CompanySearchSelect
-                  label="Nama Perusahaan / Pemilik Merek"
-                  required
-                  error={errors.ownerCompanyId?.message}
-                  value={field.value}
-                  onChange={field.onChange}
-                />
-              )}
-            />
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <FormField
+              label="Nama Perusahaan / Pemilik Merek"
+              required
+              error={errors.ownerName?.message}
+            >
+              <Input placeholder="Nama perusahaan pemilik merek" {...register("ownerName")} />
+            </FormField>
+            <FormField label="Negara">
+              <Input value="Indonesia" disabled readOnly />
+            </FormField>
+            <div className="sm:col-span-2">
+              <FormField label="Alamat" required error={errors.ownerAddress?.message}>
+                <Input placeholder="Alamat perusahaan" {...register("ownerAddress")} />
+              </FormField>
+            </div>
           </div>
         )}
 

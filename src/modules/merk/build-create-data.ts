@@ -18,14 +18,18 @@ function toDate(value: string | undefined): Date | null {
 
 /** Legacy bridge — Merk.ownershipType/brandOwnerName predate MerkOwnership and
  * are still NOT NULL, so every create path derives them from the new Step 2
- * shape instead. ownerCompanyName is a pre-resolved BrandOwner.name lookup
- * (the caller already fetched it to 404 on a missing id), kept out of this
- * function so it stays synchronous and DB-free. */
+ * shape instead. `ownerCompanyName` is accepted (and ignored) only so its two
+ * callers — which still get it from `resolveOwnershipReferences`, threaded in
+ * from `buildMerkCreateData`/`buildMerkDraftData` — don't need their own
+ * signatures to change: Nama Perusahaan/Pemilik Merek is manual free text for
+ * every scenario now, domestic company included, so `ownerName` alone is
+ * always the source. */
 function legacyOwnershipBridge(
   values: Pick<
     MerkWizardValues,
     "ownerLocation" | "ownerType" | "ownerName" | "relationshipWithApiu"
   >,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ownerCompanyName: string | null,
 ): { ownershipType: MerkOwnershipType; brandOwnerName: string } {
   const ownershipType: MerkOwnershipType =
@@ -33,10 +37,7 @@ function legacyOwnershipBridge(
       ? "MILIK_SENDIRI"
       : "LISENSI";
 
-  const brandOwnerName =
-    values.ownerLocation === "domestic" && values.ownerType === "company"
-      ? (ownerCompanyName ?? "Belum ditentukan")
-      : (values.ownerName || "Belum ditentukan");
+  const brandOwnerName = values.ownerName || "Belum ditentukan";
 
   return { ownershipType, brandOwnerName };
 }

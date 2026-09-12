@@ -1,31 +1,19 @@
 import { db } from "@/lib/db";
 
-/** Resolves the two optional BrandOwner references Step 2 can point at
- * (domestic owner company, foreign representative) and 404s if either was
- * given but doesn't exist. Returns the owner company's name for the legacy
- * ownershipType/brandOwnerName bridge.
+/** Resolves the optional BrandOwner reference Step 2 can point at (the
+ * foreign-owner "Perwakilan Resmi" selector) and 404s if it was given but
+ * doesn't exist. Domestic "Nama Perusahaan / Pemilik Merek" is manual free
+ * text (`ownerName`), not a BrandOwner reference, so it needs no lookup —
+ * `ownerCompanyName` always resolves to `null` and the legacy
+ * ownershipType/brandOwnerName bridge falls back to `ownerName` instead (see
+ * build-create-data.ts).
  *
  * Shared by every route that creates or updates a Merk row (`/api/merk`,
  * `/api/company-workspace/brands`, and both `[id]` PATCH handlers) — kept in
  * one place so a future validation rule change can't drift between them. */
 export async function resolveOwnershipReferences(values: {
-  ownerLocation?: string;
-  ownerType?: string;
-  ownerCompanyId?: string;
   officialRepresentativeCompanyId?: string;
 }) {
-  if (values.ownerLocation === "domestic" && values.ownerType === "company") {
-    if (!values.ownerCompanyId) return { error: "Pilih perusahaan pemilik merek" as const };
-    const owner = await db.brandOwner.findUnique({ where: { id: values.ownerCompanyId } });
-    if (!owner) return { error: "Perusahaan pemilik merek tidak ditemukan" as const };
-    if (values.officialRepresentativeCompanyId) {
-      const rep = await db.brandOwner.findUnique({
-        where: { id: values.officialRepresentativeCompanyId },
-      });
-      if (!rep) return { error: "Perwakilan resmi tidak ditemukan" as const };
-    }
-    return { ownerCompanyName: owner.name };
-  }
   if (values.officialRepresentativeCompanyId) {
     const rep = await db.brandOwner.findUnique({
       where: { id: values.officialRepresentativeCompanyId },

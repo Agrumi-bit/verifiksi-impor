@@ -137,8 +137,6 @@ export function MerkWizard({ surface, onClose, draftId }: Props) {
   const trademarkClass = useWatch({ control, name: "trademarkClass" });
   const evidenceType = useWatch({ control, name: "evidenceType" });
   const ownerLocation = useWatch({ control, name: "ownerLocation" });
-  const ownerType = useWatch({ control, name: "ownerType" });
-  const ownerCompanyId = useWatch({ control, name: "ownerCompanyId" });
   const ownerName = useWatch({ control, name: "ownerName" });
   const relationshipWithApiu = useWatch({ control, name: "relationshipWithApiu" });
   const representationType = useWatch({ control, name: "representationType" });
@@ -203,12 +201,10 @@ export function MerkWizard({ surface, onClose, draftId }: Props) {
   // BrandRelationshipSummary (same source data, different components); kept
   // separate since these three only need short one-off strings, not shared
   // state.
-  const ownerCompanyName = brandOwnerOptions.find((o) => o.value === ownerCompanyId)?.label;
   const representativeName = brandOwnerOptions.find((o) => o.value === officialRepresentativeCompanyId)?.label;
   const countryLabel = countryOptions.find((o) => o.value === countryOfOrigin)?.label ?? countryOfOrigin;
   const classInfo = MERK_TRADEMARK_CLASSES.find((c) => c.value === trademarkClass);
-  const ownerTitle =
-    ownerLocation === "domestic" ? (ownerType === "company" ? ownerCompanyName : ownerName) : ownerName;
+  const ownerTitle = ownerName;
   const representativeTitle =
     ownerLocation === "foreign"
       ? representationType === "apiu_official_representative"

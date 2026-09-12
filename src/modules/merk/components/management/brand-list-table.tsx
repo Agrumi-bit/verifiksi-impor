@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/form/native-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "./expiry-status";
-import { countryCodeToFlag } from "./country-flag";
+import { countryCodeToFlag } from "@/modules/master-data/country-flag";
 
 export type BrandRow = {
   id: string;

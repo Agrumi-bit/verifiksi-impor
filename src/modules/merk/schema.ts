@@ -216,10 +216,7 @@ function validateOwnershipStep(data: MerkOwnershipValues, ctx: z.RefinementCtx) 
       issue(ctx, "ownerType", "Pilih jenis pemilik merek");
       return;
     }
-    if (data.ownerType === "company" && !data.ownerCompanyId) {
-      issue(ctx, "ownerCompanyId", "Pilih perusahaan pemilik merek");
-    }
-    if (data.ownerType === "individual") {
+    if (data.ownerType === "company" || data.ownerType === "individual") {
       if (!data.ownerName) issue(ctx, "ownerName", "Nama pemilik merek wajib diisi");
       if (!data.ownerAddress) issue(ctx, "ownerAddress", "Alamat wajib diisi");
     }

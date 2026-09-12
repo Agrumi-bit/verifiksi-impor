@@ -45,7 +45,6 @@ export function BrandRelationshipSummary({ form }: Props) {
 
   if (!values.ownerLocation) return null;
 
-  const ownerCompanyName = brandOwnerOptions.find((o) => o.value === values.ownerCompanyId)?.label;
   const representativeName = brandOwnerOptions.find(
     (o) => o.value === values.officialRepresentativeCompanyId,
   )?.label;
@@ -54,12 +53,7 @@ export function BrandRelationshipSummary({ form }: Props) {
     ? MERK_AGREEMENT_TYPE_LABELS[values.agreementType as MerkAgreementType]
     : "Lisensi";
 
-  const ownerTitle =
-    values.ownerLocation === "domestic"
-      ? values.ownerType === "company"
-        ? ownerCompanyName || "Pemilik merek belum dipilih"
-        : values.ownerName || "Pemilik merek belum diisi"
-      : values.ownerName || "Pemilik merek belum diisi";
+  const ownerTitle = values.ownerName || "Pemilik merek belum diisi";
   const ownerCountryLabel = values.ownerLocation === "domestic" ? "Indonesia" : foreignCountryLabel;
 
   return (
