@@ -82,7 +82,7 @@ export async function PATCH(
       }
       const brand = await db.merk.update({
         where: { id },
-        data: buildMerkUpdateDraftData(parsed.data, resolved.ownerCompanyName),
+        data: await buildMerkUpdateDraftData(parsed.data, resolved.ownerCompanyName),
       });
       return NextResponse.json({ data: brand });
     }
@@ -104,7 +104,7 @@ export async function PATCH(
     }
     const brand = await db.merk.update({
       where: { id },
-      data: buildMerkUpdateData(parsed.data, resolved.ownerCompanyName),
+      data: await buildMerkUpdateData(parsed.data, resolved.ownerCompanyName),
     });
     return NextResponse.json({ data: brand });
   }

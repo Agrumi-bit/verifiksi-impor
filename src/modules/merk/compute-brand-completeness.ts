@@ -32,7 +32,7 @@ function lower(value: string | null | undefined): string | undefined {
   return value ? value.toLowerCase() : undefined;
 }
 
-/** Server-side counterpart to Step 3/4's client-side completeness UI — same
+/** Server-side counterpart to Step 4/5's client-side completeness UI — same
  * two functions (`getRequiredBrandDocuments`/`isRequirementComplete`), fed
  * from a Prisma row instead of `useWatch`. Used by the Admin/Company brand
  * lists, Monitoring, and Drafts pages so "Kelengkapan" never disagrees with

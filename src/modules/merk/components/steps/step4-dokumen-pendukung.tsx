@@ -7,10 +7,10 @@ import {
   BRAND_DOCUMENT_CATEGORY_LABELS,
 } from "../../document-requirements";
 import type { MerkWizardValues } from "../../schema";
-import { DocumentCompletenessSummary } from "./step3/document-completeness-summary";
-import { TrademarkDocumentSection } from "./step3/trademark-document-section";
-import { DocumentGroupSection } from "./step3/document-group-section";
-import { QualityTestManager } from "./step3/quality-test-manager";
+import { DocumentCompletenessSummary } from "./step4/document-completeness-summary";
+import { TrademarkDocumentSection } from "./step4/trademark-document-section";
+import { DocumentGroupSection } from "./step4/document-group-section";
+import { QualityTestManager } from "./step4/quality-test-manager";
 
 type Props = { form: UseFormReturn<MerkWizardValues> };
 
@@ -19,7 +19,7 @@ function formatDate(value: string | undefined): string {
   return new Date(value).toLocaleDateString("id-ID");
 }
 
-export function Step3DokumenPendukung({ form }: Props) {
+export function Step4DokumenPendukung({ form }: Props) {
   const { control, setValue, formState } = form;
 
   // Named useWatch calls (rather than a whole-object useWatch) keep each

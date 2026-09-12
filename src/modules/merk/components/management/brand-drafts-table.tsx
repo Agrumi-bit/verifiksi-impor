@@ -29,7 +29,7 @@ type Props = {
  * reopens the existing Add Brand Wizard with the Draft's data restored
  * (`MerkWizard`'s `draftId` prop) — there is intentionally no "Complete" →
  * direct ACTIVE shortcut; a Draft only becomes ACTIVE by finishing the
- * wizard through Step 4's declaration. Delete Draft is not implemented —
+ * wizard through Step 5's declaration. Delete Draft is not implemented —
  * there is no delete endpoint for a Merk row (see the navigation report). */
 export function BrandDraftsTable({ surface, fetchUrl, showCompanyColumn = true }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);

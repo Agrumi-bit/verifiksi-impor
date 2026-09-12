@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: qualityTestError }, { status: 400 });
     }
     const brand = await db.merk.create({
-      data: { ...buildMerkDraftData(values, resolved.ownerCompanyName), companyId },
+      data: { ...(await buildMerkDraftData(values, resolved.ownerCompanyName)), companyId },
     });
     return NextResponse.json({ data: brand }, { status: 201 });
   }
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
   }
 
   const brand = await db.merk.create({
-    data: { ...buildMerkCreateData(values, resolved.ownerCompanyName), companyId },
+    data: { ...(await buildMerkCreateData(values, resolved.ownerCompanyName)), companyId },
   });
 
   return NextResponse.json({ data: brand }, { status: 201 });

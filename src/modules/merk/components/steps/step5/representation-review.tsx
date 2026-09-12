@@ -3,7 +3,6 @@
 import { useWatch, type UseFormReturn } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
-import { useActiveCountries } from "@/modules/master-data/use-active-countries";
 import { useActiveBrandOwners } from "@/modules/master-data/use-active-brand-owners";
 import {
   MERK_APIU_RELATIONSHIP_LABELS,
@@ -14,7 +13,7 @@ import {
   type MerkWizardValues,
 } from "../../../schema";
 
-// Placeholder pending the VIU Application integration (see the Step 2
+// Placeholder pending the VIU Application integration (see the Step 3
 // ApiuPlaceholderCard note) — there is no real applicant-company record to
 // show as "Importir"/"API-U" yet.
 const APIU_PLACEHOLDER_NAME = "Perusahaan API-U (Aplikasi VIU)";
@@ -40,13 +39,13 @@ function dateRangeLabel(start: string | undefined, end: string | undefined): str
   return `${fmt(start)} — ${fmt(end)}`;
 }
 
-export function OwnershipRepresentationReview({ form, onEdit }: Props) {
+/** Step 3 (Perwakilan) review card — the legal relationship that follows
+ * from the owner OwnershipReview (Step 2) already covered. */
+export function RepresentationReview({ form, onEdit }: Props) {
   const { control } = form;
   const values = {
     ownerLocation: useWatch({ control, name: "ownerLocation" }),
-    ownerType: useWatch({ control, name: "ownerType" }),
     ownerName: useWatch({ control, name: "ownerName" }),
-    ownerCountryCode: useWatch({ control, name: "ownerCountryCode" }),
     relationshipWithApiu: useWatch({ control, name: "relationshipWithApiu" }) as
       | MerkApiuRelationship
       | undefined,
@@ -63,29 +62,21 @@ export function OwnershipRepresentationReview({ form, onEdit }: Props) {
     appointmentEndDate: useWatch({ control, name: "appointmentEndDate" }),
   };
 
-  const { options: countryOptions } = useActiveCountries();
   const { options: brandOwnerOptions } = useActiveBrandOwners();
   const representativeName = brandOwnerOptions.find(
     (o) => o.value === values.officialRepresentativeCompanyId,
   )?.label;
-  const countryLabel =
-    countryOptions.find((o) => o.value === values.ownerCountryCode)?.label ?? values.ownerCountryCode;
-
-  const ownerTitle = values.ownerName;
 
   return (
     <section className="rounded-xl border border-border p-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold">Kepemilikan &amp; Perwakilan</p>
-        <Button type="button" variant="ghost" size="sm" onClick={onEdit} aria-label="Edit Kepemilikan & Perwakilan">
+        <p className="text-sm font-semibold">Perwakilan</p>
+        <Button type="button" variant="ghost" size="sm" onClick={onEdit} aria-label="Edit Perwakilan">
           Edit
         </Button>
       </div>
 
       <dl className="mt-3 grid gap-x-6 gap-y-3 sm:grid-cols-2">
-        <ReviewRow label="Pemilik Merek" value={ownerTitle} />
-        <ReviewRow label={values.ownerLocation === "domestic" ? "Lokasi" : "Negara"} value={values.ownerLocation === "domestic" ? "Indonesia" : countryLabel} />
-
         {values.ownerLocation === "domestic" && (
           <>
             <ReviewRow

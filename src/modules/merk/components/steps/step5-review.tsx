@@ -3,18 +3,19 @@
 import type { UseFormReturn } from "react-hook-form";
 
 import type { MerkWizardValues } from "../../schema";
-import type { ReadinessChecklistItem } from "./step4/brand-readiness-summary";
-import type { CompletionRow } from "./step4/completion-progress";
-import type { ExistingBrandMatch } from "./step4/duplicate-check-summary";
-import { BrandReadinessSummary } from "./step4/brand-readiness-summary";
-import { CompletionProgress } from "./step4/completion-progress";
-import { BrandInformationReview } from "./step4/brand-information-review";
-import { OwnershipRepresentationReview } from "./step4/ownership-representation-review";
+import type { ReadinessChecklistItem } from "./step5/brand-readiness-summary";
+import type { CompletionRow } from "./step5/completion-progress";
+import type { ExistingBrandMatch } from "./step5/duplicate-check-summary";
+import { BrandReadinessSummary } from "./step5/brand-readiness-summary";
+import { CompletionProgress } from "./step5/completion-progress";
+import { BrandInformationReview } from "./step5/brand-information-review";
+import { OwnershipReview } from "./step5/ownership-review";
+import { RepresentationReview } from "./step5/representation-review";
 import { BrandRelationshipSummary } from "./step2/brand-relationship-summary";
-import { SupportingDocumentsReview } from "./step4/supporting-documents-review";
-import { QualityTestReview } from "./step4/quality-test-review";
-import { DuplicateCheckSummary } from "./step4/duplicate-check-summary";
-import { FinalDeclaration } from "./step4/final-declaration";
+import { SupportingDocumentsReview } from "./step5/supporting-documents-review";
+import { QualityTestReview } from "./step5/quality-test-review";
+import { DuplicateCheckSummary } from "./step5/duplicate-check-summary";
+import { FinalDeclaration } from "./step5/final-declaration";
 
 export type ReviewReadiness = {
   isReady: boolean;
@@ -41,12 +42,12 @@ type Props = {
 };
 
 /**
- * Step 4 — read-only review of everything Steps 1-3 collected, plus the
+ * Step 5 — read-only review of everything Steps 1-4 collected, plus the
  * final declaration. No new data-entry fields: every value here already
  * lives in the shared wizard form state (see MerkWizard) and every "Edit"
  * button just calls onGoToStep to jump back without losing anything.
  */
-export function Step4BrandReview({
+export function Step5BrandReview({
   form,
   onGoToStep,
   readiness,
@@ -72,10 +73,11 @@ export function Step4BrandReview({
 
       <BrandInformationReview form={form} onEdit={() => onGoToStep(1)} />
 
-      <OwnershipRepresentationReview form={form} onEdit={() => onGoToStep(2)} />
+      <OwnershipReview form={form} onEdit={() => onGoToStep(2)} />
+      <RepresentationReview form={form} onEdit={() => onGoToStep(3)} />
       <BrandRelationshipSummary form={form} />
 
-      <SupportingDocumentsReview form={form} onEdit={() => onGoToStep(3)} />
+      <SupportingDocumentsReview form={form} onEdit={() => onGoToStep(4)} />
       <QualityTestReview form={form} />
 
       <CompletionProgress rows={readiness.completionRows} percent={readiness.completionPercent} />

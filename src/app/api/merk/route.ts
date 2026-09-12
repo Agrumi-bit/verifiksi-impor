@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: qualityTestError }, { status: 400 });
     }
     const merk = await db.merk.create({
-      data: buildMerkDraftData(values, resolved.ownerCompanyName),
+      data: await buildMerkDraftData(values, resolved.ownerCompanyName),
     });
     return NextResponse.json({ data: merk }, { status: 201 });
   }
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
   }
 
   const merk = await db.merk.create({
-    data: buildMerkCreateData(values, resolved.ownerCompanyName),
+    data: await buildMerkCreateData(values, resolved.ownerCompanyName),
   });
 
   return NextResponse.json({ data: merk }, { status: 201 });

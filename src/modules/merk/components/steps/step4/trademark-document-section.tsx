@@ -1,8 +1,8 @@
 "use client";
 
+import { useActiveTrademarkClasses } from "@/modules/master-data/use-active-trademark-classes";
 import {
   MERK_EVIDENCE_TYPE_LABELS,
-  MERK_TRADEMARK_CLASSES,
   type MerkEvidenceType,
   type BrandDocumentEntryValues,
 } from "../../../schema";
@@ -30,7 +30,8 @@ export function TrademarkDocumentSection({
   onChange,
   error,
 }: Props) {
-  const classInfo = MERK_TRADEMARK_CLASSES.find((c) => c.value === trademarkClass);
+  const { options: trademarkClassOptions } = useActiveTrademarkClasses();
+  const classInfo = trademarkClassOptions.find((c) => c.value === trademarkClass);
 
   return (
     <details open className="rounded-xl border border-border p-4">

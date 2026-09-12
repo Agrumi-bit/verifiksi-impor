@@ -23,7 +23,7 @@ export async function resolveOwnershipReferences(values: {
   return { ownerCompanyName: null };
 }
 
-/** Step 3's Quality Test records reference real Commodity master data —
+/** Step 4's Quality Test records reference real Commodity master data —
  * confirm every id actually exists rather than trusting the client. */
 export async function validateQualityTestReferences(
   qualityTests: { commodityGroupId: string; commoditySubGroupId?: string }[] | undefined,

@@ -115,7 +115,10 @@ export const companyTaxSchema = z.object({
   npwpNumber: requiredString("Nomor NPWP wajib diisi"),
   npwpIssuer: requiredString("Lembaga penerbit NPWP wajib diisi"),
   npwpDocumentPath: requiredString("Dokumen NPWP wajib diunggah"),
-  companyAge: z.enum(COMPANY_AGES, { message: "Pilih usia perusahaan" }),
+  // Only relevant for API-U (Angka Pengenal Impor Umum) — API-P companies
+  // never see this question, so it can't be a plain required enum; see the
+  // superRefine below companyWizardSchema.
+  companyAge: z.enum(COMPANY_AGES).optional(),
   taxProofs: z.array(taxProofEntrySchema).default([]),
   sktNumber: z.string().trim().optional(),
   sktIssuer: z.string().trim().optional(),
@@ -128,7 +131,14 @@ export const companyWizardSchema = companyDataSchema
   .extend(companyContactsSchema.shape)
   .extend(companyLegalSchema.shape)
   .extend(companyTaxSchema.shape)
-  .extend(locationsSchema.shape);
+  .extend(locationsSchema.shape)
+  .superRefine((data, ctx) => {
+    // Usia Perusahaan (and the Bukti Pembayaran Pajak / SKT it drives) only
+    // applies to API-U — API-P companies skip the whole question.
+    if (data.apiType === "API-U" && !data.companyAge) {
+      ctx.addIssue({ code: "custom", path: ["companyAge"], message: "Pilih usia perusahaan" });
+    }
+  });
 
 export type CompanyWizardValues = z.infer<typeof companyWizardSchema>;
 

@@ -155,7 +155,7 @@ export function mapMerkDetailToWizardValues(detail: MerkDetailForResume): Partia
     productLabelDocumentation,
     qualityTests,
     // Re-declared every time a Draft is reopened — resuming a draft must
-    // never carry a previously-checked declaration forward (Step 4 spec:
+    // never carry a previously-checked declaration forward (Step 5 spec:
     // the declaration always starts unchecked).
     declarationAccepted: false,
   };

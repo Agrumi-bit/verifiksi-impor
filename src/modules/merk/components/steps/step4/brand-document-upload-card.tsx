@@ -37,10 +37,12 @@ function formatFileSize(bytes: number): string {
 const DEFAULT_ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp";
 
 /**
- * Reusable Step 3 upload card — richer than the generic FileUploadField
- * (file size, upload timestamp, Lihat/Ganti/Hapus, an explicit upload
- * status). Upload status is NOT verification status: this card only ever
- * shows "Berhasil Diunggah", never "Verified" — see the Step 3 report.
+ * Reusable upload card — richer than the generic FileUploadField (file
+ * size, upload timestamp, Lihat/Ganti/Hapus, an explicit upload status).
+ * Used by Step 1's early trademark-evidence upload and by every document
+ * card in Step 4 — same card, same field, two entry points. Upload status
+ * is NOT verification status: this card only ever shows "Berhasil
+ * Diunggah", never "Verified" — see the Step 4 report.
  */
 export function BrandDocumentUploadCard({
   label,

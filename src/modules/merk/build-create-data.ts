@@ -1,5 +1,5 @@
+import { db } from "@/lib/db";
 import { getRequiredBrandDocuments } from "./document-requirements";
-import { MERK_TRADEMARK_CLASSES } from "./schema";
 import type {
   BrandDocumentEntryValues,
   MerkDraftValues,
@@ -8,8 +8,14 @@ import type {
   QualityTestEntryValues,
 } from "./schema";
 
-function trademarkClassLabel(classCode: string): string {
-  return MERK_TRADEMARK_CLASSES.find((c) => c.value === classCode)?.hint ?? classCode;
+/** `trademarkClass` is now backed by the TrademarkClassMasterData table (see
+ * /system-configuration/trademark-class) rather than a hardcoded list, so
+ * this legacy `productCategory` bridge needs one lookup to get a human label
+ * — falls back to the bare class code if the class was since deactivated or
+ * removed from master data. */
+async function trademarkClassLabel(classCode: string): Promise<string> {
+  const row = await db.trademarkClassMasterData.findUnique({ where: { classNumber: classCode } });
+  return row?.title ?? classCode;
 }
 
 function toDate(value: string | undefined): Date | null {
@@ -104,7 +110,7 @@ type DocumentsInput = {
   productLabelDocumentation?: BrandDocumentEntryValues[];
 };
 
-/** Step 3's BrandDocument nested-create payload. `category` for each slot
+/** Step 4's BrandDocument nested-create payload. `category` for each slot
  * comes from the same requirement engine that decided the slot was required
  * in the first place, so a document's stored category always matches the
  * grouping it was uploaded under. */
@@ -166,7 +172,7 @@ function buildQualityTestsData(qualityTests: QualityTestEntryValues[] | undefine
   };
 }
 
-export function buildMerkCreateData(values: MerkWizardValues, ownerCompanyName: string | null) {
+export async function buildMerkCreateData(values: MerkWizardValues, ownerCompanyName: string | null) {
   const { ownershipType, brandOwnerName } = legacyOwnershipBridge(values, ownerCompanyName);
 
   return {
@@ -174,14 +180,14 @@ export function buildMerkCreateData(values: MerkWizardValues, ownerCompanyName: 
     // Legacy free-text column, no longer collected directly — bridged from
     // the trademark class so existing readers of `productCategory` still see
     // something meaningful instead of null.
-    productCategory: trademarkClassLabel(values.trademarkClass),
+    productCategory: await trademarkClassLabel(values.trademarkClass),
     countryOfOrigin: values.countryOfOrigin,
 
     hasCertificate: true,
     certificateType: values.evidenceType,
     registrationNumber: values.registrationNumber,
     registrationDate: toDate(values.registrationDate),
-    // Legacy single-document bridge — Step 3 now stores every document as its
+    // Legacy single-document bridge — Step 4 now stores every document as its
     // own BrandDocument row; this mirrors the trademark evidence file so old
     // readers of this column still see something.
     registrationDocumentPath: values.documents.trademark_evidence?.filePath ?? null,
@@ -210,7 +216,7 @@ export function buildMerkCreateData(values: MerkWizardValues, ownerCompanyName: 
  * far. DB columns that are NOT NULL with no default (ownershipType,
  * brandOwnerName, productCategory) get placeholder values; the wizard
  * schema's own validation is what keeps a *final* submission complete. */
-export function buildMerkDraftData(values: MerkDraftValues, ownerCompanyName: string | null) {
+export async function buildMerkDraftData(values: MerkDraftValues, ownerCompanyName: string | null) {
   const { ownershipType, brandOwnerName } = legacyOwnershipBridge(
     {
       ownerLocation: values.ownerLocation ?? "domestic",
@@ -223,7 +229,7 @@ export function buildMerkDraftData(values: MerkDraftValues, ownerCompanyName: st
 
   return {
     brandName: values.brandName,
-    productCategory: values.trademarkClass ? trademarkClassLabel(values.trademarkClass) : "Belum ditentukan",
+    productCategory: values.trademarkClass ? await trademarkClassLabel(values.trademarkClass) : "Belum ditentukan",
     countryOfOrigin: values.countryOfOrigin || "Belum ditentukan",
 
     hasCertificate: true,
@@ -279,9 +285,9 @@ function toUpdateRelations(created: any) {
  * the record to ACTIVE and refreshes `declarationAcceptedAt` to when the
  * user actually re-confirmed the declaration, not when the row was first
  * created. See BR-001/BR-002 in the Add Brand review. */
-export function buildMerkUpdateData(values: MerkWizardValues, ownerCompanyName: string | null) {
+export async function buildMerkUpdateData(values: MerkWizardValues, ownerCompanyName: string | null) {
   return {
-    ...toUpdateRelations(buildMerkCreateData(values, ownerCompanyName)),
+    ...toUpdateRelations(await buildMerkCreateData(values, ownerCompanyName)),
     status: "ACTIVE" as const,
   };
 }
@@ -289,6 +295,6 @@ export function buildMerkUpdateData(values: MerkWizardValues, ownerCompanyName: 
 /** Re-saves a resumed Draft as a Draft — same "wipe and recreate" nested
  * relations as buildMerkUpdateData, but keeps `status: "DRAFT"` (already set
  * by buildMerkDraftData) and skips full validation upstream. */
-export function buildMerkUpdateDraftData(values: MerkDraftValues, ownerCompanyName: string | null) {
-  return toUpdateRelations(buildMerkDraftData(values, ownerCompanyName));
+export async function buildMerkUpdateDraftData(values: MerkDraftValues, ownerCompanyName: string | null) {
+  return toUpdateRelations(await buildMerkDraftData(values, ownerCompanyName));
 }

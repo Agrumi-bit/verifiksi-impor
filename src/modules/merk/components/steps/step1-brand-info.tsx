@@ -10,27 +10,24 @@ import { FormField } from "@/components/form/form-field";
 import { FileUploadField } from "@/components/form/file-upload-field";
 import { SearchSelectInput } from "@/components/form/search-select-input";
 import { useActiveCountries } from "@/modules/master-data/use-active-countries";
+import { useActiveTrademarkClasses } from "@/modules/master-data/use-active-trademark-classes";
 import type { MerkSurface } from "@/modules/merk/surface";
+import { getRequiredBrandDocuments } from "../../document-requirements";
 import {
   MERK_EVIDENCE_TYPES,
   MERK_EVIDENCE_TYPE_LABELS,
   MERK_EVIDENCE_TYPE_DESCRIPTIONS,
   MERK_EVIDENCE_TYPES_WITH_OPTIONAL_DATE,
-  MERK_TRADEMARK_CLASSES,
+  type BrandDocumentEntryValues,
   type MerkEvidenceType,
   type MerkWizardValues,
 } from "../../schema";
+import { BrandDocumentUploadCard } from "./step4/brand-document-upload-card";
 
 type Props = {
   form: UseFormReturn<MerkWizardValues>;
   surface: MerkSurface;
 };
-
-const TRADEMARK_CLASS_OPTIONS = MERK_TRADEMARK_CLASSES.map((c) => ({
-  value: c.value,
-  label: `${c.label} — ${c.hint}`,
-  hint: c.hint,
-}));
 
 const STATUS_OPTIONS_BY_EVIDENCE: Record<MerkEvidenceType, string[]> = {
   SERTIFIKAT_MEREK_TERDAFTAR: ["Terdaftar", "Dalam Proses", "Ditolak"],
@@ -55,9 +52,12 @@ export function Step1BrandInfo({ form, surface }: Props) {
   const {
     control,
     register,
+    setValue,
+    getValues,
     formState: { errors },
   } = form;
   const { options: countryOptions, isLoading: isLoadingCountries } = useActiveCountries();
+  const { options: trademarkClassOptions } = useActiveTrademarkClasses();
 
   const brandName = useWatch({ control, name: "brandName" });
   const countryValue = useWatch({ control, name: "countryOfOrigin" });
@@ -65,6 +65,21 @@ export function Step1BrandInfo({ form, surface }: Props) {
   const trademarkClass = useWatch({ control, name: "trademarkClass" });
   const registrationNumber = useWatch({ control, name: "registrationNumber" });
   const logoPath = useWatch({ control, name: "logoPath" });
+  const documents = useWatch({ control, name: "documents" }) ?? {};
+
+  // Same requirement code regardless of which card is picked — only the
+  // label/description change per evidence type (see trademarkRequirement in
+  // document-requirements.ts) — so this is the identical `documents`
+  // field Step 4's TrademarkDocumentSection reads/writes; uploading here
+  // just lets the user attach it earlier instead of waiting for Step 4.
+  const trademarkRequirement = getRequiredBrandDocuments({ evidenceType })[0];
+
+  function updateTrademarkEvidence(value: BrandDocumentEntryValues | undefined) {
+    const next = { ...getValues("documents") };
+    if (value) next.trademark_evidence = value;
+    else delete next.trademark_evidence;
+    setValue("documents", next, { shouldValidate: true });
+  }
 
   // Duplicate-brand check — shares the list query MerkTable already caches
   // for this surface, so entering a name doesn't cost an extra request.
@@ -82,7 +97,7 @@ export function Step1BrandInfo({ form, surface }: Props) {
   );
 
   const countryLabel = countryOptions.find((o) => o.value === countryValue)?.label;
-  const classLabel = TRADEMARK_CLASS_OPTIONS.find((o) => o.value === trademarkClass)?.label;
+  const classLabel = trademarkClassOptions.find((o) => o.value === trademarkClass)?.label;
   const statusOptions = evidenceType ? STATUS_OPTIONS_BY_EVIDENCE[evidenceType] : [];
   const isDateOptional = evidenceType
     ? MERK_EVIDENCE_TYPES_WITH_OPTIONAL_DATE.includes(evidenceType)
@@ -235,7 +250,7 @@ export function Step1BrandInfo({ form, surface }: Props) {
                     <SearchSelectInput
                       value={field.value ?? ""}
                       onChange={field.onChange}
-                      options={TRADEMARK_CLASS_OPTIONS}
+                      options={trademarkClassOptions}
                       allowFreeText={false}
                       placeholder="Pilih kelas"
                     />
@@ -266,6 +281,19 @@ export function Step1BrandInfo({ form, surface }: Props) {
                 </FormField>
               )}
             </div>
+
+            <BrandDocumentUploadCard
+              label={trademarkRequirement.label}
+              description={trademarkRequirement.description}
+              required={trademarkRequirement.required}
+              value={documents.trademark_evidence}
+              onChange={updateTrademarkEvidence}
+              namespace="documents"
+              error={
+                (errors.documents as Record<string, { message?: string }> | undefined)
+                  ?.trademark_evidence?.message
+              }
+            />
           </div>
         )}
       </section>
@@ -288,7 +316,7 @@ export function Step1BrandInfo({ form, surface }: Props) {
         />
         <p className="mt-2 text-xs text-muted-foreground">
           Logo digunakan untuk memudahkan identifikasi merek pada platform, bukan sebagai bukti
-          hukum merek. Bukti hukum dilengkapi pada Step 3 — Dokumen Pendukung.
+          hukum merek. Bukti hukum dilengkapi pada Step 4 — Dokumen Pendukung.
         </p>
       </section>
 

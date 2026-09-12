@@ -19,9 +19,10 @@ COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
 COPY scripts ./scripts
 RUN npx prisma generate
-# The seed scripts are idempotent (region seed skips once the table has rows; country
-# seed uses skipDuplicates on the unique code), so they're safe to run on every deploy.
-CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx scripts/seed-regions.mjs && npx tsx scripts/seed-countries.mjs"]
+# The seed scripts are idempotent (region seed skips once the table has rows; country/
+# trademark-class seeds use skipDuplicates on their unique key), so they're safe to run
+# on every deploy.
+CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx scripts/seed-regions.mjs && npx tsx scripts/seed-countries.mjs && npx tsx scripts/seed-trademark-classes.mjs"]
 
 FROM base AS runner
 WORKDIR /app

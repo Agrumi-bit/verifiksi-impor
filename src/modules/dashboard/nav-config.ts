@@ -135,6 +135,10 @@ export const NAV_SECTIONS: NavSection[] = [
         href: "/system-configuration/brand-owner",
       },
       {
+        label: "Klasifikasi Merek",
+        href: "/system-configuration/trademark-class",
+      },
+      {
         label: "Data Wilayah",
         href: "/system-configuration/regions",
       },

@@ -12,9 +12,8 @@ import {
   type MerkWizardValues,
 } from "../../schema";
 import { RadioCardGroup } from "./step2/radio-card-group";
-import { DomesticOwnerSection } from "./step2/domestic-owner-section";
-import { ForeignOwnerSection } from "./step2/foreign-owner-section";
-import { BrandRelationshipSummary } from "./step2/brand-relationship-summary";
+import { DomesticOwnerOwnership } from "./step2/domestic-owner-ownership";
+import { ForeignOwnerOwnership } from "./step2/foreign-owner-ownership";
 
 type Props = { form: UseFormReturn<MerkWizardValues> };
 
@@ -26,7 +25,9 @@ const OWNER_LOCATION_OPTIONS = MERK_OWNER_LOCATIONS.map((value) => ({
 
 // Every field that only belongs to one of the two ownerLocation branches —
 // cleared on the branch that's no longer selected so a stale value from a
-// scenario the user backed out of never reaches the submit payload.
+// scenario the user backed out of never reaches the submit payload. Spans
+// both this step's own fields and Step 3 (Perwakilan)'s, since switching
+// ownerLocation invalidates that whole downstream branch too.
 const DOMESTIC_ONLY_FIELDS = ["ownerType", "ownerCompanyId", "relationshipWithApiu"] as const;
 const FOREIGN_ONLY_FIELDS = [
   "foreignEntityType",
@@ -43,7 +44,7 @@ const FOREIGN_ONLY_FIELDS = [
 // they're shared concepts (see schema.ts) that stay meaningful across a
 // domestic↔foreign switch for an individual/foreign owner.
 
-export function Step2OwnershipRepresentation({ form }: Props) {
+export function Step2Kepemilikan({ form }: Props) {
   const { control, setValue } = form;
   const ownerLocation = useWatch({ control, name: "ownerLocation" }) as MerkOwnerLocation | undefined;
   const countryOfOrigin = useWatch({ control, name: "countryOfOrigin" });
@@ -77,8 +78,8 @@ export function Step2OwnershipRepresentation({ form }: Props) {
       <section className="rounded-xl border border-border p-4">
         <p className="text-sm font-semibold">Lokasi Pemilik Merek</p>
         <p className="mb-4 text-xs text-muted-foreground">
-          Tentukan pemilik merek dan hubungan hukum antara pemilik merek, Perwakilan Resmi, dan
-          perusahaan API-U.
+          Tentukan pemilik merek. Hubungan hukum dengan Perwakilan Resmi dan perusahaan API-U
+          dilengkapi pada Step 3 — Perwakilan.
         </p>
         <FormField
           label="Lokasi Pemilik Merek"
@@ -96,16 +97,14 @@ export function Step2OwnershipRepresentation({ form }: Props) {
 
       {ownerLocation === "domestic" && (
         <div className="rounded-xl border border-border p-4">
-          <DomesticOwnerSection form={form} />
+          <DomesticOwnerOwnership form={form} />
         </div>
       )}
       {ownerLocation === "foreign" && (
         <div className="rounded-xl border border-border p-4">
-          <ForeignOwnerSection form={form} />
+          <ForeignOwnerOwnership form={form} />
         </div>
       )}
-
-      <BrandRelationshipSummary form={form} />
     </div>
   );
 }

@@ -43,6 +43,15 @@ export const countryMasterDataSchema = z.object({
   code: requiredString("Kode negara wajib diisi"),
 });
 
+export const TRADEMARK_CLASS_CATEGORIES = ["Barang", "Jasa"] as const;
+
+export const trademarkClassMasterDataSchema = z.object({
+  classNumber: requiredString("Nomor kelas wajib diisi"),
+  title: requiredString("Nama kelas wajib diisi"),
+  category: z.enum(TRADEMARK_CLASS_CATEGORIES, { message: "Pilih kategori kelas" }),
+  description: requiredString("Uraian kelas wajib diisi"),
+});
+
 export const commodityGroupSchema = z.object({
   name: requiredString("Nama kelompok komoditas wajib diisi"),
   code: requiredString("Kode kelompok wajib diisi"),
@@ -94,6 +103,8 @@ export const industryGroupUpdateSchema =
   industryGroupSchema.extend(statusSchema.shape);
 export const countryMasterDataUpdateSchema =
   countryMasterDataSchema.extend(statusSchema.shape);
+export const trademarkClassMasterDataUpdateSchema =
+  trademarkClassMasterDataSchema.extend(statusSchema.shape);
 export const brandOwnerUpdateSchema =
   brandOwnerSchema.extend(statusSchema.shape);
 export const commodityGroupUpdateSchema =

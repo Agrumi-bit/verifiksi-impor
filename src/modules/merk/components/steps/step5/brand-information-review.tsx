@@ -4,9 +4,9 @@ import { useWatch, type UseFormReturn } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { useActiveCountries } from "@/modules/master-data/use-active-countries";
+import { useActiveTrademarkClasses } from "@/modules/master-data/use-active-trademark-classes";
 import {
   MERK_EVIDENCE_TYPE_LABELS,
-  MERK_TRADEMARK_CLASSES,
   MERK_EVIDENCE_TYPES_WITH_OPTIONAL_DATE,
   type MerkEvidenceType,
   type MerkWizardValues,
@@ -38,8 +38,9 @@ export function BrandInformationReview({ form, onEdit }: Props) {
   const logoPath = useWatch({ control, name: "logoPath" });
 
   const { options: countryOptions } = useActiveCountries();
+  const { options: trademarkClassOptions } = useActiveTrademarkClasses();
   const countryLabel = countryOptions.find((o) => o.value === countryOfOrigin)?.label ?? countryOfOrigin;
-  const classInfo = MERK_TRADEMARK_CLASSES.find((c) => c.value === trademarkClass);
+  const classInfo = trademarkClassOptions.find((c) => c.value === trademarkClass);
   const dateLabel = evidenceType && MERK_EVIDENCE_TYPES_WITH_OPTIONAL_DATE.includes(evidenceType)
     ? "Tanggal Penerbitan"
     : "Tanggal Registrasi / Notifikasi";

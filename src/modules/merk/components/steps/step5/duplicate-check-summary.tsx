@@ -20,7 +20,7 @@ type Props = {
 /** Presentational — the actual existing-brand-name lookup (same lightweight
  * check Step 1 runs while typing) lives once in MerkWizard so the footer's
  * submit-gating and this summary never disagree about whether a duplicate
- * exists. See the Step 4 report for why "Gunakan Merek yang Ada" only
+ * exists. See the Step 5 report for why "Gunakan Merek yang Ada" only
  * acknowledges the duplicate rather than linking/merging records. */
 export function DuplicateCheckSummary({ duplicate, isAcknowledged, onAcknowledge, onGoToStep }: Props) {
   if (!duplicate) {

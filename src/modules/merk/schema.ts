@@ -52,17 +52,6 @@ export const MERK_EVIDENCE_TYPES_WITH_OPTIONAL_DATE: readonly MerkEvidenceType[]
   "SERTIFIKAT_MEREK_TERDAFTAR",
 ];
 
-// Placeholder Nice Classification subset — swap for the full 45-class DJKI
-// master list when available. value = class number (stored as-is), hint =
-// short scope description (kept out of the field itself per the "no long
-// legal classification inline" note; surfaced via the ⓘ tooltip instead).
-export const MERK_TRADEMARK_CLASSES = [
-  { value: "09", label: "Kelas 09", hint: "Perangkat Elektronik dan Ilmiah" },
-  { value: "18", label: "Kelas 18", hint: "Kulit dan Barang dari Kulit Imitasi" },
-  { value: "25", label: "Kelas 25", hint: "Pakaian, Alas Kaki, dan Tutup Kepala" },
-  { value: "35", label: "Kelas 35", hint: "Periklanan dan Manajemen Usaha" },
-] as const;
-
 const merkBrandInfoBaseSchema = z.object({
   brandName: requiredString("Nama merek wajib diisi"),
   countryOfOrigin: requiredString("Negara merek/pemilik merek wajib diisi"),
@@ -92,10 +81,14 @@ function validateEvidenceStep(data: MerkBrandInfoValues, ctx: z.RefinementCtx) {
 export const merkBrandInfoSchema = merkBrandInfoBaseSchema.superRefine(validateEvidenceStep);
 
 // ---------------------------------------------------------------------------
-// Step 2 — Kepemilikan & Perwakilan
+// Step 2 — Kepemilikan / Step 3 — Perwakilan
 //
-// "Siapa pemilik merek ini, bagaimana merek diwakili di Indonesia, dan apa
-// hubungan hukum antara Pemilik Merek, Perwakilan Resmi, dan API-U?"
+// One schema/superRefine still covers both wizard steps — "Siapa pemilik
+// merek ini (Step 2), bagaimana merek diwakili di Indonesia, dan apa
+// hubungan hukum antara Pemilik Merek, Perwakilan Resmi, dan API-U (Step
+// 3)?" MERK_STEP_FIELD_NAMES below is what actually splits which fields
+// each step's "Lanjutkan" validates; validateOwnershipStep validates the
+// whole shape either way.
 //
 // Legacy note: this replaces the earlier brandOwnerId + importerRelation +
 // importers[] model (still on the Merk/MerkImporter tables, non-destructively
@@ -255,7 +248,7 @@ function validateOwnershipStep(data: MerkOwnershipValues, ctx: z.RefinementCtx) 
 export const merkOwnershipSchema = merkOwnershipBaseSchema.superRefine(validateOwnershipStep);
 
 // ---------------------------------------------------------------------------
-// Step 3 — Dokumen Pendukung
+// Step 4 — Dokumen Pendukung
 //
 // "Dokumen apa yang membuktikan merek, hubungan kepemilikan/perwakilan,
 // penunjukan importir, dan pemenuhan persyaratan produk?"
@@ -318,7 +311,7 @@ function validateDocumentsStep(
   }
   // Quality Test completeness is intentionally NOT gated here — whether it's
   // required depends on the selected commodity/subcommodity, and this app
-  // has no business-rule service yet to answer that; see Step 3 report.
+  // has no business-rule service yet to answer that; see Step 4 report.
 }
 
 function validateDeclaration(
@@ -399,16 +392,26 @@ export const MERK_STEP_FIELD_NAMES: Record<number, (keyof MerkWizardValues)[]> =
     "merekStatusLabel",
     "logoPath",
   ],
+  // Step 2 — Kepemilikan: who owns the brand (domestic/foreign, company/
+  // individual/entity details). Step 3 — Perwakilan: the legal relationship
+  // that follows from that owner (API-U relationship for domestic,
+  // representation/agreement/appointment for foreign). Both subsets are
+  // still validated together by the one validateOwnershipStep superRefine in
+  // this file — form.trigger(fields) only surfaces errors for the field
+  // names passed to it, so splitting the trigger list here is enough to
+  // split the step without splitting the validation itself.
   2: [
     "ownerLocation",
     "ownerType",
     "ownerCompanyId",
     "ownerName",
     "ownerAddress",
-    "relationshipWithApiu",
     "foreignEntityType",
     "ownerCountryCode",
     "foreignRegistrationNumber",
+  ],
+  3: [
+    "relationshipWithApiu",
     "representationType",
     "officialRepresentativeCompanyId",
     "agreementType",
@@ -420,7 +423,7 @@ export const MERK_STEP_FIELD_NAMES: Record<number, (keyof MerkWizardValues)[]> =
     "appointmentStartDate",
     "appointmentEndDate",
   ],
-  3: ["documents", "productLabelDocumentation", "qualityTests"],
-  // Step 4 (Review) owns the final declaration — Step 3 is documents-only.
-  4: ["declarationAccepted"],
+  4: ["documents", "productLabelDocumentation", "qualityTests"],
+  // Step 5 (Review) owns the final declaration — Step 4 is documents-only.
+  5: ["declarationAccepted"],
 };

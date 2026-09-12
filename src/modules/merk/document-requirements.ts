@@ -147,19 +147,20 @@ const PRODUCT_COMPLIANCE_REQUIREMENTS: BrandDocumentRequirement[] = [
 ];
 
 /**
- * Derives which documents Step 3 must ask for from Step 1 (evidenceType) and
- * Step 2 (ownerLocation/relationshipWithApiu for domestic owners,
- * representationType/appointmentSource/agreementType for foreign owners).
+ * Derives which documents Step 4 must ask for from Step 1 (evidenceType),
+ * Step 2 (ownerLocation), and Step 3 (relationshipWithApiu for domestic
+ * owners, representationType/appointmentSource/agreementType for foreign
+ * owners).
  *
  * Gap-fill beyond the literal spec: the domestic "API-U adalah Importir yang
  * Ditunjuk" branch (relationshipWithApiu === "apiu_is_importer") collects an
- * appointment letter number/dates in Step 2 but the spec's own dependency
+ * appointment letter number/dates in Step 3 but the spec's own dependency
  * list never named `relationshipWithApiu`, so it never generates a document
  * requirement for that data. Requiring "Surat Penunjukan Importir" there too
- * keeps every Step 2 metadata block backed by an actual document — see the
- * Step 3 report for this call-out.
+ * keeps every Step 3 metadata block backed by an actual document — see the
+ * Step 4 report for this call-out.
  */
-/** Shared by client upload UI (Step 3/4) and server-side completeness
+/** Shared by client upload UI (Step 4/5) and server-side completeness
  * calculations (Admin monitoring/list pages) — kept here rather than in a
  * "use client" component so both sides import the same plain function. */
 export function isRequirementComplete<T extends { filePath: string }>(
