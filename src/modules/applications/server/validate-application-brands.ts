@@ -95,6 +95,12 @@ export async function validateApplicationBrands(
           return { error: `Perwakilan Resmi untuk merek "${brand.brandName}" tidak ditemukan.` };
         }
       }
+    } else if (entry.applicantRole === "OWNER") {
+      if (ownerLocation !== "domestic") {
+        return {
+          error: `Pemohon hanya dapat berperan sebagai Pemilik Merek untuk "${brand.brandName}" apabila pemilik merek berkedudukan di Indonesia.`,
+        };
+      }
     } else if (entry.applicantRole !== "OFFICIAL_REPRESENTATIVE") {
       return { error: `Pilih peran perusahaan pemohon terhadap merek "${brand.brandName}".` };
     }

@@ -231,7 +231,14 @@ export function ApplicationBrandRow({ form, index, apiBase, brandDetailHrefBase,
                   value={entry.applicantRole}
                   onChange={setRole}
                   columns={2}
-                  options={APPLICANT_BRAND_ROLES.map((value) => ({ value, label: APPLICANT_BRAND_ROLE_LABELS[value] }))}
+                  options={APPLICANT_BRAND_ROLES.map((value) => ({
+                    value,
+                    label: APPLICANT_BRAND_ROLE_LABELS[value],
+                    description:
+                      value === "OWNER" && !isDomestic
+                        ? "Hanya berlaku apabila pemilik merek berkedudukan di Indonesia."
+                        : undefined,
+                  }))}
                 />
                 {entryErrors?.applicantRole?.message && (
                   <p className="mt-1.5 text-xs text-destructive">{entryErrors.applicantRole.message}</p>
@@ -291,6 +298,12 @@ export function ApplicationBrandRow({ form, index, apiBase, brandDetailHrefBase,
               {entry.applicantRole === "OFFICIAL_REPRESENTATIVE" && (
                 <section className="rounded-lg border border-border bg-background p-3.5 text-xs text-muted-foreground">
                   Perusahaan Pemohon (Perwakilan Resmi): <span className="font-semibold text-foreground">{watch("companyName") || "—"}</span>
+                </section>
+              )}
+
+              {entry.applicantRole === "OWNER" && (
+                <section className="rounded-lg border border-border bg-background p-3.5 text-xs text-muted-foreground">
+                  Perusahaan Pemohon (Pemilik Merek): <span className="font-semibold text-foreground">{watch("companyName") || "—"}</span>
                 </section>
               )}
 
@@ -393,6 +406,20 @@ function RelationshipChain({
   representativeName?: string;
   applicantCompanyName?: string;
 }) {
+  // OWNER collapses to a single node — the applicant IS the Brand Owner, so
+  // showing them as two separate chain entries would misrepresent them as
+  // different parties.
+  if (applicantRole === "OWNER") {
+    return (
+      <div className="flex flex-col gap-1.5 rounded-xl border border-border p-3.5">
+        <div className="rounded-lg border border-border bg-background px-3.5 py-2.5">
+          <p className="text-sm font-bold">{applicantCompanyName || ownerTitle || "Pemilik Merek"}</p>
+          <p className="text-xs text-muted-foreground">Pemilik Merek · Pemohon VIU Konsumsi · Indonesia</p>
+        </div>
+      </div>
+    );
+  }
+
   const nodes: { title: string; subtitle: string }[] = [
     { title: ownerTitle || "Pemilik Merek", subtitle: `Pemilik Merek · ${ownerLocation === "domestic" ? "Indonesia" : "Luar Negeri"}` },
   ];

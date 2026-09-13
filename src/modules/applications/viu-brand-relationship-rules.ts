@@ -22,11 +22,12 @@ import type { MerkEvidenceType, MerkOwnerLocation } from "@/modules/merk/schema"
  * engine expects.
  */
 
-export const APPLICANT_BRAND_ROLES = ["OFFICIAL_REPRESENTATIVE", "IMPORTER_ONLY"] as const;
+export const APPLICANT_BRAND_ROLES = ["OFFICIAL_REPRESENTATIVE", "IMPORTER_ONLY", "OWNER"] as const;
 export type ApplicantBrandRole = (typeof APPLICANT_BRAND_ROLES)[number];
 export const APPLICANT_BRAND_ROLE_LABELS: Record<ApplicantBrandRole, string> = {
   OFFICIAL_REPRESENTATIVE: "Perwakilan Resmi",
   IMPORTER_ONLY: "Hanya Bertindak sebagai Importir",
+  OWNER: "Pemohon VIU Konsumsi sebagai Pemilik Merek",
 };
 
 export const IMPORT_APPOINTMENT_SOURCES = ["BRAND_OWNER", "OFFICIAL_REPRESENTATIVE"] as const;
@@ -175,6 +176,13 @@ function validateRelationship(input: VIUBrandRuleInput): { valid: boolean; issue
   if (!input.applicantRole) {
     return { valid: false, issue: "Pilih peran perusahaan pemohon terhadap merek ini." };
   }
+  if (input.applicantRole === "OWNER" && input.ownerLocation !== "domestic") {
+    return {
+      valid: false,
+      issue:
+        "Pemohon hanya dapat berperan sebagai Pemilik Merek apabila pemilik merek berkedudukan di Indonesia.",
+    };
+  }
   if (input.applicantRole === "IMPORTER_ONLY") {
     if (!input.appointmentSource) {
       return { valid: false, issue: "Pilih sumber penunjukan importir." };
@@ -199,6 +207,17 @@ function validateRelationship(input: VIUBrandRuleInput): { valid: boolean; issue
  * that function's docstring for what each combination produces. */
 function toDocumentRequirementInput(input: VIUBrandRuleInput) {
   const domestic = input.ownerLocation === "domestic";
+
+  // Pemohon VIU Konsumsi is itself the registered Brand Owner — no
+  // representation/import-authorization document exists to ask for, same as
+  // the "MILIK_SENDIRI" scenario Brand Master's own domestic model already
+  // covers. Only valid for a domestic-owned brand (see validateRelationship)
+  // — a domestic applicant can't literally be a foreign owner.
+  if (input.applicantRole === "OWNER") {
+    return domestic
+      ? { relationshipWithApiu: "apiu_is_owner" as const }
+      : { representationType: "apiu_official_representative" as const };
+  }
 
   if (input.applicantRole === "OFFICIAL_REPRESENTATIVE") {
     return domestic
