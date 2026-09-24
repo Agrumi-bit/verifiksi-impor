@@ -26,8 +26,12 @@ function toEvidenceType(value: string | null): MerkEvidenceType | null {
  * `getVIUConsumptionBrandRequirements` applies client-side.
  */
 export async function validateApplicationBrands(
-  values: Pick<ApplicationWizardValues, "importTypes" | "companyId" | "applicationBrands">,
+  values: Pick<ApplicationWizardValues, "verificationType" | "importTypes" | "companyId" | "applicationBrands">,
 ): Promise<{ error: string } | { ok: true }> {
+  // Merek yang Digunakan is a VIU Barang Konsumsi concept only — never VKI, regardless of
+  // whatever `importTypes` a payload happens to carry (see the same guard on
+  // applicationWizardSchema's superRefine for why stale importTypes can't be trusted alone).
+  if (values.verificationType !== "VIU") return { ok: true };
   if (!values.importTypes.includes("BARANG_KONSUMSI")) return { ok: true };
   if (values.applicationBrands.length === 0) {
     return { error: "Pilih atau tambahkan minimal satu merek yang digunakan." };

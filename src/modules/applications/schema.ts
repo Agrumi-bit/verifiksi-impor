@@ -522,87 +522,98 @@ export const applicationWizardSchema = applicationMetaSchema
         message: "Anda harus menyetujui pernyataan ini sebelum submit",
       });
     }
-    if (
-      data.importTypes.includes("BAHAN_BAKU_INDUSTRI") &&
-      !data.partnerIndustriEntries.some((entry) => entry.enabled)
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["partnerIndustriEntries"],
-        message: "Aktifkan minimal satu Partner Industri tujuan",
-      });
-    }
-    if (
-      data.importTypes.includes("BAHAN_BAKU_INDUSTRI") ||
-      data.importTypes.includes("BAHAN_BAKU_NON_INDUSTRI")
-    ) {
-      // Not every document applies to every applicant (toggled on/off per case) — just require
-      // at least one enabled document to actually have a file uploaded, not every def.
-      const hasUploadedDoc = data.nonIndustriDocuments.some((doc) => doc.enabled && doc.documentPath);
-      if (!hasUploadedDoc) {
+    // Everything below (Jenis Impor / Partner Industri / Merek yang Digunakan / Hasil Uji
+    // Mutu / Support Document Konsumsi) is exclusively a VIU Barang Konsumsi concept — VKI
+    // has no `importTypes` field in its own wizard UI at all (see
+    // step1-application-information.tsx's `verificationType === "VIU"` gate). Without this
+    // guard, a VKI submission that happens to carry stale `importTypes`/`applicationBrands`
+    // state (e.g. the user picked VIU first, filled some of it in, then switched to VKI —
+    // nothing resets those fields on that switch) would incorrectly get flagged for VIU-only
+    // requirements it was never shown and can't fix from its own steps. Never mix VKI and VIU
+    // validation.
+    if (data.verificationType === "VIU") {
+      if (
+        data.importTypes.includes("BAHAN_BAKU_INDUSTRI") &&
+        !data.partnerIndustriEntries.some((entry) => entry.enabled)
+      ) {
         ctx.addIssue({
           code: "custom",
-          path: ["nonIndustriDocuments"],
-          message: "Aktifkan dan unggah minimal satu Dokumen Modal",
+          path: ["partnerIndustriEntries"],
+          message: "Aktifkan minimal satu Partner Industri tujuan",
         });
       }
-    }
-    if (
-      data.importTypes.includes("BARANG_KONSUMSI") &&
-      data.konsumsiDocuments.length < 1
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["konsumsiDocuments"],
-        message: "Tambahkan minimal satu dokumen pendukung",
-      });
-    }
-    // Step "Merek yang Digunakan" — structural validity only (at least one
-    // Brand, and each entry's own role/appointment/representative shape).
-    // Readiness (evidence validity, relationship rules, document
-    // completeness — see viu-brand-relationship-rules.ts) is deliberately
-    // NOT enforced here: an INCOMPLETE Brand may still continue to Step 5
-    // per the Continue Rule; only Submit is expected to block on it, and
-    // that block happens via the server-side brand validator, not this
-    // schema (recalculating readiness needs a DB read this sync validator
-    // can't do).
-    if (data.importTypes.includes("BARANG_KONSUMSI") && data.applicationBrands.length < 1) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["applicationBrands"],
-        message: "Pilih atau tambahkan minimal satu merek yang digunakan",
-      });
-    }
-    data.applicationBrands.forEach((entry, index) => {
-      if (entry.applicantRole === "IMPORTER_ONLY" && !entry.appointmentSource) {
+      if (
+        data.importTypes.includes("BAHAN_BAKU_INDUSTRI") ||
+        data.importTypes.includes("BAHAN_BAKU_NON_INDUSTRI")
+      ) {
+        // Not every document applies to every applicant (toggled on/off per case) — just require
+        // at least one enabled document to actually have a file uploaded, not every def.
+        const hasUploadedDoc = data.nonIndustriDocuments.some((doc) => doc.enabled && doc.documentPath);
+        if (!hasUploadedDoc) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["nonIndustriDocuments"],
+            message: "Aktifkan dan unggah minimal satu Dokumen Modal",
+          });
+        }
+      }
+      if (
+        data.importTypes.includes("BARANG_KONSUMSI") &&
+        data.konsumsiDocuments.length < 1
+      ) {
         ctx.addIssue({
           code: "custom",
-          path: ["applicationBrands", index, "appointmentSource"],
-          message: "Pilih sumber penunjukan importir",
+          path: ["konsumsiDocuments"],
+          message: "Tambahkan minimal satu dokumen pendukung",
         });
       }
-      if (entry.appointmentSource === "OFFICIAL_REPRESENTATIVE" && !entry.officialRepresentativeCompanyId) {
+      // Step "Merek yang Digunakan" — structural validity only (at least one
+      // Brand, and each entry's own role/appointment/representative shape).
+      // Readiness (evidence validity, relationship rules, document
+      // completeness — see viu-brand-relationship-rules.ts) is deliberately
+      // NOT enforced here: an INCOMPLETE Brand may still continue to Step 5
+      // per the Continue Rule; only Submit is expected to block on it, and
+      // that block happens via the server-side brand validator, not this
+      // schema (recalculating readiness needs a DB read this sync validator
+      // can't do).
+      if (data.importTypes.includes("BARANG_KONSUMSI") && data.applicationBrands.length < 1) {
         ctx.addIssue({
           code: "custom",
-          path: ["applicationBrands", index, "officialRepresentativeCompanyId"],
-          message: "Pilih Perwakilan Resmi",
+          path: ["applicationBrands"],
+          message: "Pilih atau tambahkan minimal satu merek yang digunakan",
         });
       }
-    });
-    // Step "Hasil Uji Mutu" — every Brand used in this application needs at
-    // least one quality-test certificate of its own (see
-    // brandQualityTestsSchema's own comment on why this isn't Merk's
-    // qualityTests reused as-is).
-    if (data.importTypes.includes("BARANG_KONSUMSI")) {
-      const brandIdsMissingQualityTest = data.applicationBrands
-        .map((entry) => entry.brandId)
-        .filter((brandId) => !data.brandQualityTests.some((qt) => qt.brandId === brandId));
-      if (brandIdsMissingQualityTest.length > 0) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["brandQualityTests"],
-          message: `${brandIdsMissingQualityTest.length} merek belum memiliki dokumen hasil uji mutu`,
-        });
+      data.applicationBrands.forEach((entry, index) => {
+        if (entry.applicantRole === "IMPORTER_ONLY" && !entry.appointmentSource) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["applicationBrands", index, "appointmentSource"],
+            message: "Pilih sumber penunjukan importir",
+          });
+        }
+        if (entry.appointmentSource === "OFFICIAL_REPRESENTATIVE" && !entry.officialRepresentativeCompanyId) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["applicationBrands", index, "officialRepresentativeCompanyId"],
+            message: "Pilih Perwakilan Resmi",
+          });
+        }
+      });
+      // Step "Hasil Uji Mutu" — every Brand used in this application needs at
+      // least one quality-test certificate of its own (see
+      // brandQualityTestsSchema's own comment on why this isn't Merk's
+      // qualityTests reused as-is).
+      if (data.importTypes.includes("BARANG_KONSUMSI")) {
+        const brandIdsMissingQualityTest = data.applicationBrands
+          .map((entry) => entry.brandId)
+          .filter((brandId) => !data.brandQualityTests.some((qt) => qt.brandId === brandId));
+        if (brandIdsMissingQualityTest.length > 0) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["brandQualityTests"],
+            message: `${brandIdsMissingQualityTest.length} merek belum memiliki dokumen hasil uji mutu`,
+          });
+        }
       }
     }
   });
