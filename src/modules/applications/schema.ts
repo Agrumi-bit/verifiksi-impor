@@ -16,6 +16,7 @@ import {
   type WarehouseRegistrationType,
 } from "@/modules/shared/schema";
 import { taxProofEntrySchema, COMPANY_AGES } from "@/modules/company/schema";
+import { qualityTestEntrySchema } from "@/modules/merk/schema";
 import { APPLICANT_BRAND_ROLES, IMPORT_APPOINTMENT_SOURCES } from "./viu-brand-relationship-rules";
 
 export {
@@ -158,6 +159,40 @@ export const brandsUsedSchema = z.object({
 export function createEmptyApplicationBrand(brandId: string): ApplicationBrandEntryValues {
   return { brandId, applicantRole: "OFFICIAL_REPRESENTATIVE" };
 }
+
+/**
+ * Step "Hasil Uji Mutu" — one entry per quality-test certificate uploaded
+ * for a Brand used in THIS application. Deliberately its own field on the
+ * Application payload rather than reusing Merk's own `qualityTests`: the
+ * same rich shape (`qualityTestEntrySchema` — commodity classification,
+ * lab, dates, file) applies, but this test result is specific to what's
+ * being imported under this application, not a permanent Brand Master
+ * record. `brandId` must match one of this application's own
+ * `applicationBrands` entries.
+ */
+export const applicationBrandQualityTestEntrySchema = qualityTestEntrySchema.extend({
+  brandId: requiredString("Merek wajib dipilih"),
+});
+export type ApplicationBrandQualityTestEntryValues = z.infer<typeof applicationBrandQualityTestEntrySchema>;
+
+export function createEmptyApplicationBrandQualityTest(brandId: string): ApplicationBrandQualityTestEntryValues {
+  return {
+    brandId,
+    commodityGroupId: "",
+    commodityName: "",
+    certificateNumber: "",
+    laboratoryName: "",
+    issueDate: "",
+    filePath: "",
+    fileName: "",
+  };
+}
+
+/** Step "Hasil Uji Mutu" — only meaningful when Jenis Impor includes
+ * BARANG_KONSUMSI, same gate as `brandsUsedSchema`. */
+export const brandQualityTestsSchema = z.object({
+  brandQualityTests: z.array(applicationBrandQualityTestEntrySchema).default([]),
+});
 
 export type NonIndustriDocPriority = "UTAMA" | "PENDUKUNG";
 
@@ -472,6 +507,7 @@ export const applicationWizardSchema = applicationMetaSchema
   .extend(locationsSchema.shape)
   .extend(documentsSchema.shape)
   .extend(brandsUsedSchema.shape)
+  .extend(brandQualityTestsSchema.shape)
   .extend(productsSchema.shape)
   .extend(declarationSchema.shape)
   .extend(machinesSchema.shape)
@@ -553,6 +589,22 @@ export const applicationWizardSchema = applicationMetaSchema
         });
       }
     });
+    // Step "Hasil Uji Mutu" — every Brand used in this application needs at
+    // least one quality-test certificate of its own (see
+    // brandQualityTestsSchema's own comment on why this isn't Merk's
+    // qualityTests reused as-is).
+    if (data.importTypes.includes("BARANG_KONSUMSI")) {
+      const brandIdsMissingQualityTest = data.applicationBrands
+        .map((entry) => entry.brandId)
+        .filter((brandId) => !data.brandQualityTests.some((qt) => qt.brandId === brandId));
+      if (brandIdsMissingQualityTest.length > 0) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["brandQualityTests"],
+          message: `${brandIdsMissingQualityTest.length} merek belum memiliki dokumen hasil uji mutu`,
+        });
+      }
+    }
   });
 
 export type SupportDocumentValues = z.infer<typeof supportDocumentSchema>;
@@ -649,11 +701,32 @@ export const VKI_SUPPORT_DOC_DEFS: VkiSupportDocDef[] = [
   },
 ];
 
-/**
- * VIU's Legal/Tax/Location steps (3-5) now mirror VKI's format: read-only displays pulled
- * from the selected Company (via `applyCompanyToForm`), same as VKI — nothing to validate
- * there, the data is always already present once a company is picked.
- */
+/** Step 3 "Legal Information" — read-only display pulled from the selected Company, but the
+ * company itself may not have every legal document on file yet (e.g. NIB never filled in),
+ * so these still need to be registered here for handleInvalidSubmit to route the user back
+ * to the right step (and name the right field) instead of falling through to a generic
+ * "periksa kembali step sebelumnya" toast. */
+const LEGAL_STEP_FIELDS: (keyof ApplicationWizardValues)[] = [
+  "nibNumber",
+  "nibIssueDate",
+  "nibDocumentPath",
+  "kbliEntries",
+  "kbliDocumentPath",
+  "notarialDeedNumber",
+  "notarialDeedIssueDate",
+  "notarialIssuingAuthority",
+  "notarialDocumentPath",
+];
+
+/** Step 4 "Tax Information" (NPWP) — every field here is currently optional at the schema
+ * level, so this never actually blocks Submit today; listed anyway so a future required
+ * field here is automatically covered without another silent gap like Step 3's. */
+const TAX_STEP_FIELDS: (keyof ApplicationWizardValues)[] = ["npwpNumber", "npwpDocumentPath"];
+
+/** Step 5 "Location Information" — user-editable in this wizard (unlike Legal/Tax), so this
+ * one was already reachable, just never wired into the step map. */
+const LOCATION_STEP_FIELDS: (keyof ApplicationWizardValues)[] = ["locations"];
+
 export const VIU_STEP_FIELD_NAMES: Record<number, (keyof ApplicationWizardValues)[]> = {
   1: [
     "companyId",
@@ -669,28 +742,30 @@ export const VIU_STEP_FIELD_NAMES: Record<number, (keyof ApplicationWizardValues
     "contactPhone",
   ],
   2: ["verificationType", "applicationCategory", "importTypes"],
-  3: [],
-  4: [],
-  5: [],
+  3: LEGAL_STEP_FIELDS,
+  4: TAX_STEP_FIELDS,
+  5: LOCATION_STEP_FIELDS,
   6: ["applicationBrands"],
-  7: ["partnerIndustriEntries"],
-  8: ["nonIndustriDocuments", "konsumsiDocuments"],
-  9: ["products"],
-  10: [],
-  11: ["declarationAccepted"],
+  7: ["brandQualityTests"],
+  8: ["partnerIndustriEntries"],
+  9: ["nonIndustriDocuments", "konsumsiDocuments"],
+  10: ["products"],
+  11: [],
+  12: ["declarationAccepted"],
 };
 
 /**
  * VKI's new 13-step flow (per the updated Claude Design). Steps 3-5 (Legal/Tax/
- * Location) are read-only displays pulled from the selected Company — nothing to
- * validate there, the data is always already present once a company is picked.
+ * Location) reuse the exact same read-only-from-Company (3-4) / editable (5)
+ * components as VIU — same field lists apply, see LEGAL_STEP_FIELDS /
+ * TAX_STEP_FIELDS / LOCATION_STEP_FIELDS above.
  */
 export const VKI_STEP_FIELD_NAMES: Record<number, (keyof ApplicationWizardValues)[]> = {
   1: VIU_STEP_FIELD_NAMES[1],
   2: VIU_STEP_FIELD_NAMES[2],
-  3: [],
-  4: [],
-  5: [],
+  3: LEGAL_STEP_FIELDS,
+  4: TAX_STEP_FIELDS,
+  5: LOCATION_STEP_FIELDS,
   6: ["vkiSupportDocs", "electricityMonths", "tenagaKerjaEntries", "tenagaKerjaDocumentPath"],
   7: ["machines"],
   8: ["products", "rawMaterials"],

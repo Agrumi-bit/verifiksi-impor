@@ -5,7 +5,7 @@ import type { FieldErrors } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, X } from "lucide-react";
 
 import { useApplicationWizard } from "../hooks/use-application-wizard";
 import { CompanyProfileFields } from "@/components/wizard/company-profile-fields";
@@ -15,6 +15,7 @@ import type { CompanyAddressValues } from "@/components/wizard/locations-field";
 import { LOCATION_TYPES } from "@/modules/shared/schema";
 import { Step1ApplicationInformation } from "./steps/step1-application-information";
 import { StepBrandsUsed } from "./steps/step-brands-used/step-brands-used";
+import { StepQualityTest } from "./steps/step-quality-test";
 import { StepPartnerIndustri } from "./steps/step-partner-industri";
 import { Step5SupportDocument } from "./steps/step5-support-document";
 import { Step6ProductInformation } from "./steps/step6-product-information";
@@ -38,10 +39,38 @@ type SubmitReceipt = {
   applicationNumber: string;
 };
 
+type StepValidationIssue = {
+  step: number;
+  title: string;
+  messages: string[];
+};
+
 const REQUIRED_API_TYPE: Record<VerificationType, string> = {
   VKI: "API-P",
   VIU: "API-U",
 };
+
+/** Walks one field's RHF error node (a plain object for a scalar field, or a
+ * nested object/array for a field-array like `locations`/`kbliEntries`) and
+ * collects every concrete `.message` string it finds — this is what turns
+ * "Step 3 (Legal Information) belum lengkap" into "...: Nomor NIB wajib
+ * diisi" instead of leaving the user to guess which field. `seen` dedupes
+ * the same message appearing on multiple array items (e.g. every location
+ * missing "Jalan wajib diisi"). */
+function collectErrorMessages(node: unknown, seen: Set<string> = new Set()): string[] {
+  if (!node || typeof node !== "object") return [];
+  const messages: string[] = [];
+  const record = node as Record<string, unknown>;
+  if (typeof record.message === "string" && !seen.has(record.message)) {
+    seen.add(record.message);
+    messages.push(record.message);
+  }
+  for (const key of Object.keys(record)) {
+    if (key === "message" || key === "type" || key === "ref") continue;
+    messages.push(...collectErrorMessages(record[key], seen));
+  }
+  return messages;
+}
 
 type Props = {
   lockedVerificationType?: VerificationType;
@@ -85,6 +114,11 @@ export function ApplicationWizard({
   // context banner — never sent anywhere, just lets the user see which
   // application they're attaching the new Brand to.
   const [applicationNumber, setApplicationNumber] = useState<string | null>(null);
+  // Every invalid step at once, not just the first — set on a failed final
+  // submit, cleared on a successful one or the user dismissing it. Lets the
+  // user see everything that needs fixing across the whole wizard instead of
+  // discovering one step at a time on repeated submit attempts.
+  const [validationIssues, setValidationIssues] = useState<StepValidationIssue[]>([]);
 
   useEffect(() => {
     if (hideCompanyPicker) return;
@@ -181,6 +215,7 @@ export function ApplicationWizard({
       const data = (await response.json()) as { applicationNumber: string };
       await fetch("/api/applications/drafts", { method: "DELETE" });
       setCompanyDraftApplicationId(null);
+      setValidationIssues([]);
       setReceipt({ applicationNumber: data.applicationNumber });
       toast.success(`Permohonan berhasil disubmit: ${data.applicationNumber}`);
     } catch (error) {
@@ -199,20 +234,45 @@ export function ApplicationWizard({
   }
 
   function handleInvalidSubmit(errors: FieldErrors<ApplicationWizardValues>) {
-    const invalidFields = new Set(Object.keys(errors));
-    const firstInvalidStep = activeSteps.find((meta) =>
-      (activeFieldNames[meta.step] ?? []).some((field) => invalidFields.has(field)),
-    );
+    const errorRecord = errors as Record<string, unknown>;
+    const invalidFields = new Set(Object.keys(errorRecord));
+    const claimedFields = new Set<string>();
 
-    if (firstInvalidStep) {
-      goToStep(firstInvalidStep.step);
-      toast.error(
-        `Step ${firstInvalidStep.step} (${firstInvalidStep.title}) belum lengkap atau tidak valid. Silakan periksa kembali.`,
-      );
-      return;
+    // Every step with at least one invalid field of its own — not just the first — so the
+    // summary panel below can show the user everything that needs fixing at once.
+    const issues: StepValidationIssue[] = activeSteps
+      .map((meta): StepValidationIssue | null => {
+        const stepFields = (activeFieldNames[meta.step] ?? []).filter((field) => invalidFields.has(field));
+        if (stepFields.length === 0) return null;
+        stepFields.forEach((field) => claimedFields.add(field));
+        const messages = stepFields.flatMap((field) => collectErrorMessages(errorRecord[field]));
+        return { step: meta.step, title: meta.title, messages };
+      })
+      .filter((issue): issue is StepValidationIssue => issue !== null);
+
+    // Invalid fields no step's map claims (a mapping gap) — still surface them rather than
+    // silently dropping the detail, grouped under a generic "Lainnya" bucket.
+    const unclaimedFields = [...invalidFields].filter((field) => !claimedFields.has(field));
+    if (unclaimedFields.length > 0) {
+      const messages = unclaimedFields.flatMap((field) => collectErrorMessages(errorRecord[field]));
+      issues.push({ step: 0, title: "Lainnya", messages });
     }
 
-    toast.error("Ada data yang belum lengkap atau tidak valid. Periksa kembali step sebelumnya.");
+    setValidationIssues(issues);
+
+    const firstIssue = issues.find((issue) => issue.step > 0) ?? issues[0];
+    if (firstIssue && firstIssue.step > 0) goToStep(firstIssue.step);
+
+    const totalMessages = issues.reduce((sum, issue) => sum + Math.max(issue.messages.length, 1), 0);
+    toast.error(
+      issues.length > 1
+        ? `${issues.length} step belum lengkap atau tidak valid (${totalMessages} hal). Lihat rincian di bawah.`
+        : firstIssue
+          ? `Step ${firstIssue.step} (${firstIssue.title}) belum lengkap atau tidak valid${
+              firstIssue.messages.length > 0 ? `: ${firstIssue.messages.slice(0, 4).join("; ")}` : ""
+            }`
+          : "Ada data yang belum lengkap atau tidak valid. Periksa kembali step sebelumnya.",
+    );
   }
 
   async function handleSaveDraft() {
@@ -341,6 +401,47 @@ export function ApplicationWizard({
           </div>
 
           <form onSubmit={form.handleSubmit(handleSubmitApplication, handleInvalidSubmit)} className="flex flex-col">
+            {validationIssues.length > 0 && (
+              <div className="mx-6.5 mt-5 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-[13px]">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="font-bold text-destructive">
+                    {validationIssues.length} bagian belum lengkap atau tidak valid — perbaiki sebelum submit:
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setValidationIssues([])}
+                    aria-label="Tutup ringkasan validasi"
+                    className="shrink-0 text-destructive/70 hover:text-destructive"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+                <ul className="mt-2.5 flex flex-col gap-2">
+                  {validationIssues.map((issue) => (
+                    <li key={issue.step}>
+                      {issue.step > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => goToStep(issue.step)}
+                          className="font-semibold text-destructive underline-offset-2 hover:underline"
+                        >
+                          Step {issue.step} ({issue.title})
+                        </button>
+                      ) : (
+                        <span className="font-semibold text-destructive">{issue.title}</span>
+                      )}
+                      {issue.messages.length > 0 && (
+                        <ul className="mt-1 list-disc pl-5 text-destructive/90">
+                          {issue.messages.map((message, index) => (
+                            <li key={`${issue.step}-${index}`}>{message}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="px-6.5 pb-6.5 pt-5">
               {currentStep === 1 && (
                 <div className="flex flex-col gap-8">
@@ -377,7 +478,8 @@ export function ApplicationWizard({
                   applicationNumber={applicationNumber ?? undefined}
                 />
               )}
-              {!isVki && currentStep === 7 && (
+              {!isVki && currentStep === 7 && <StepQualityTest form={form} />}
+              {!isVki && currentStep === 8 && (
                 <StepPartnerIndustri
                   form={form}
                   partnerManagementHref={
@@ -385,10 +487,10 @@ export function ApplicationWizard({
                   }
                 />
               )}
-              {!isVki && currentStep === 8 && <Step5SupportDocument form={form} />}
-              {!isVki && currentStep === 9 && <Step6ProductInformation form={form} />}
-              {!isVki && currentStep === 10 && <Step7Preview form={form} onEditStep={goToStep} />}
-              {!isVki && currentStep === 11 && <Step8Submit form={form} />}
+              {!isVki && currentStep === 9 && <Step5SupportDocument form={form} />}
+              {!isVki && currentStep === 10 && <Step6ProductInformation form={form} />}
+              {!isVki && currentStep === 11 && <Step7Preview form={form} onEditStep={goToStep} />}
+              {!isVki && currentStep === 12 && <Step8Submit form={form} />}
 
               {isVki && currentStep === 3 && <VkiStep3Legal form={form} />}
               {isVki && currentStep === 4 && <VkiStep4Tax form={form} />}

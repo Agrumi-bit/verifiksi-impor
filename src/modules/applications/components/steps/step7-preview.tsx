@@ -112,14 +112,28 @@ export function Step7Preview({ form, onEditStep }: Step7Props) {
         />
       </SummarySection>
 
-      <SummarySection title="Partner Industri" step={6} onEditStep={onEditStep}>
+      <SummarySection title="Merek yang Digunakan" step={6} onEditStep={onEditStep}>
+        <SummaryItem
+          label="Jumlah Merek"
+          value={values.applicationBrands?.length?.toString()}
+        />
+      </SummarySection>
+
+      <SummarySection title="Hasil Uji Mutu" step={7} onEditStep={onEditStep}>
+        <SummaryItem
+          label="Sertifikat Uji Mutu Terunggah"
+          value={values.brandQualityTests?.filter((qt) => qt?.filePath).length?.toString()}
+        />
+      </SummarySection>
+
+      <SummarySection title="Partner Industri" step={8} onEditStep={onEditStep}>
         <SummaryItem
           label="Partner Industri Aktif"
           value={values.partnerIndustriEntries?.filter((entry) => entry?.enabled).length?.toString()}
         />
       </SummarySection>
 
-      <SummarySection title="Support Document" step={7} onEditStep={onEditStep}>
+      <SummarySection title="Support Document" step={9} onEditStep={onEditStep}>
         <SummaryItem
           label="Dokumen Non Industri Terunggah"
           value={values.nonIndustriDocuments?.filter((doc) => doc?.documentPath).length?.toString()}
@@ -130,7 +144,7 @@ export function Step7Preview({ form, onEditStep }: Step7Props) {
         />
       </SummarySection>
 
-      <SummarySection title="Product Information" step={8} onEditStep={onEditStep}>
+      <SummarySection title="Product Information" step={10} onEditStep={onEditStep}>
         <SummaryItem
           label="Jumlah Produk"
           value={values.products?.length?.toString()}

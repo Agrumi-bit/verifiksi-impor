@@ -6,6 +6,7 @@ import {
   Eye,
   FileStack,
   FileText,
+  FlaskConical,
   Gauge,
   Handshake,
   Hash,
@@ -30,8 +31,8 @@ export type WizardStepMeta = {
  * followed by the locked+add-new location editor), plus its own dedicated Partner Industri
  * step (split out of Support Document — see StepPartnerIndustri) for the
  * "Bahan Baku dan/atau Penolong — Perusahaan Industri" import type, and its own dedicated
- * Merek yang Digunakan step (see StepBrandsUsed) for the "Barang Konsumsi" import type —
- * 11 steps instead of the original 8. */
+ * Merek yang Digunakan + Hasil Uji Mutu steps (see StepBrandsUsed / StepQualityTest) for the
+ * "Barang Konsumsi" import type — 12 steps instead of the original 8. */
 export const VIU_WIZARD_STEPS: WizardStepMeta[] = [
   {
     step: 1,
@@ -77,34 +78,41 @@ export const VIU_WIZARD_STEPS: WizardStepMeta[] = [
   },
   {
     step: 7,
+    title: "Hasil Uji Mutu",
+    subtitle: "Impor barang konsumsi — dokumen uji mutu per merek",
+    icon: FlaskConical,
+    implemented: true,
+  },
+  {
+    step: 8,
     title: "Partner Industri",
     subtitle: "Impor bahan baku — perusahaan industri",
     icon: Handshake,
     implemented: true,
   },
   {
-    step: 8,
+    step: 9,
     title: "Support Document",
     subtitle: "Upload dokumen pendukung",
     icon: FileStack,
     implemented: true,
   },
   {
-    step: 9,
+    step: 10,
     title: "Product Information",
     subtitle: "Detail produk & material",
     icon: Package,
     implemented: true,
   },
   {
-    step: 10,
+    step: 11,
     title: "Preview",
     subtitle: "Tinjau sebelum submit",
     icon: Eye,
     implemented: true,
   },
   {
-    step: 11,
+    step: 12,
     title: "Submit",
     subtitle: "Kirim permohonan",
     icon: Send,
