@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
+import { getAssignmentStatCounts } from "@/modules/verifikator-workspace/assignment-stats";
 import {
   ASSIGNMENT_PRIORITIES,
   ASSIGNMENT_STATUSES,
@@ -32,16 +33,7 @@ export async function GET(request: Request) {
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
   const pageSize = Math.min(50, Math.max(1, Number(searchParams.get("pageSize")) || 10));
 
-  const allForStats = await db.assignment.findMany({
-    where: { verifikatorId },
-    select: { status: true, priority: true },
-  });
-  const stats = {
-    total: allForStats.length,
-    submitted: allForStats.filter((a) => a.status === "SUBMITTED").length,
-    returned: allForStats.filter((a) => a.status === "RETURNED").length,
-    completed: allForStats.filter((a) => a.status === "COMPLETED").length,
-  };
+  const stats = await getAssignmentStatCounts(verifikatorId);
 
   const assignments = await db.assignment.findMany({
     where: {

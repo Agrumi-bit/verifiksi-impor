@@ -7,8 +7,8 @@ import { Building2, FileText, Handshake } from "lucide-react";
 type DashboardStats = {
   applications: number;
   companies: number;
-  mitraIndustri: number;
-  mitraNonIndustri: number;
+  partnerIndustri: number;
+  partnerNonIndustri: number;
 };
 
 function StatCard({
@@ -76,17 +76,17 @@ export function DashboardStatsGrid() {
         isLoading={isLoading}
       />
       <StatCard
-        label="Mitra Industri"
-        value={data?.mitraIndustri ?? 0}
+        label="Partner Industri"
+        value={data?.partnerIndustri ?? 0}
         icon={Handshake}
-        href="/mitra/industri"
+        href="/partners"
         isLoading={isLoading}
       />
       <StatCard
-        label="Mitra Non Industri"
-        value={data?.mitraNonIndustri ?? 0}
+        label="Partner Non Industri"
+        value={data?.partnerNonIndustri ?? 0}
         icon={Handshake}
-        href="/mitra/non-industri"
+        href="/partners"
         isLoading={isLoading}
       />
     </div>

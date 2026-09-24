@@ -5,6 +5,7 @@ import {
   Handshake,
   LayoutDashboard,
   Settings,
+  Tag,
   Users,
 } from "lucide-react";
 
@@ -41,6 +42,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "VKI Management",
     icon: ClipboardCheck,
     children: [
+      { label: "Tambah Application VKI", href: "/applications/new?type=VKI" },
       { label: "Verification Assignment" },
       { label: "Verification Schedule" },
       { label: "Verification Document" },
@@ -49,22 +51,14 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Report" },
     ],
   },
-  {
-    label: "Mitra Management",
-    icon: Handshake,
-    children: [
-      { label: "Mitra Industri", href: "/mitra/industri" },
-      { label: "Mitra Non Industri", href: "/mitra/non-industri" },
-      { label: "Mitra Verification" },
-      { label: "Merk", href: "/mitra/merk" },
-    ],
-  },
+  { label: "Partner Management", icon: Handshake, href: "/partners" },
+  { label: "Merk", icon: Tag, href: "/mitra/merk" },
   {
     label: "Company Management",
     icon: Building2,
     children: [
-      { label: "Company Registry", href: "/company" },
-      { label: "Add New Company", href: "/company/new" },
+      { label: "Company List", href: "/company" },
+      { label: "Tambah Perusahaan", href: "/company/new" },
     ],
   },
   {
@@ -82,6 +76,7 @@ export const NAV_SECTIONS: NavSection[] = [
     children: [
       { label: "HS Code Master Data", href: "/system-configuration/hs-code" },
       { label: "KBLI Master Data", href: "/system-configuration/kbli" },
+      { label: "Lartas", href: "/system-configuration/lartas" },
       {
         label: "Commodity Group",
         href: "/system-configuration/commodity-group",
@@ -91,7 +86,7 @@ export const NAV_SECTIONS: NavSection[] = [
         href: "/system-configuration/commodity-sub-group",
       },
       {
-        label: "Unit of Measurement",
+        label: "Satuan",
         href: "/system-configuration/unit-of-measurement",
       },
       { label: "Notification & Communication" },

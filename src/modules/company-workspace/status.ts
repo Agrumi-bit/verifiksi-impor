@@ -21,7 +21,7 @@ export const STATUS_LABELS: Record<ApplicationStatusValue, string> = {
   SUBMITTED: "Submitted",
   ADMINISTRATIVE_REVIEW: "Administrative Review",
   SURVEY_SCHEDULED: "Survey Scheduled",
-  FIELD_VERIFICATION: "Field Verification",
+  FIELD_VERIFICATION: "Survey Lapangan",
   VERIFICATION: "Verification",
   TECHNICAL_REVIEW: "Technical Review",
   COMPLIANCE_REVIEW: "Compliance Review",

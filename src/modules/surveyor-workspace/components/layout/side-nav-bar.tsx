@@ -12,7 +12,6 @@ const SIDE_NAV_LINKS = [
   { label: "My Assignments", href: "/surveyor-workspace/assignments", icon: "assignment" },
   { label: "My Schedule", href: "/surveyor-workspace/schedule", icon: "calendar_today" },
   { label: "Reports", href: "/surveyor-workspace/reports", icon: "description" },
-  { label: "Account", href: "/surveyor-workspace/account", icon: "person" },
 ];
 
 export function SideNavBar() {

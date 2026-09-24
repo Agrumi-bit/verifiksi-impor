@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
 import { MaterialIcon } from "./material-icon";
-import { ASSIGNMENT_PRIORITY_LABELS, type AssignmentPriorityValue } from "../status";
+import { ASSIGNMENT_PRIORITY_LABELS, ASSIGNMENT_PRIORITY_BADGE, type AssignmentPriorityValue } from "../status";
 
 type QueueItem = {
   id: string;
@@ -17,13 +17,6 @@ type QueueItem = {
   claimedByMe: boolean;
   submittedAt: string;
   dueDate: string | null;
-};
-
-const PRIORITY_BADGE_CLASS: Record<AssignmentPriorityValue, string> = {
-  LOW: "bg-[#8a95a5] text-white",
-  MEDIUM: "bg-[#b3650c] text-white",
-  HIGH: "bg-[#c1352b] text-white",
-  CRITICAL: "bg-[#c1352b] text-white",
 };
 
 function fmtDate(value: string | null): string {
@@ -103,7 +96,7 @@ export function ApprovalCenter() {
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2.5">
                 <span className="text-[15px] font-bold text-[#1f2437]">{item.companyName}</span>
-                <span className={`rounded px-2.5 py-0.5 text-[10.5px] font-bold ${PRIORITY_BADGE_CLASS[item.priority]}`}>
+                <span className={`rounded px-2.5 py-0.5 text-[10.5px] font-bold ${ASSIGNMENT_PRIORITY_BADGE[item.priority]}`}>
                   {ASSIGNMENT_PRIORITY_LABELS[item.priority].toUpperCase()}
                 </span>
                 {item.claimedByMe ? (

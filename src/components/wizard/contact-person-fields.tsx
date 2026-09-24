@@ -8,10 +8,12 @@ import type { ContactPersonValues } from "@/modules/shared/schema";
 
 type Props<T extends FieldValues & ContactPersonValues> = {
   form: UseFormReturn<T>;
+  readOnly?: boolean;
 };
 
 export function ContactPersonFields<T extends FieldValues & ContactPersonValues>({
   form,
+  readOnly = false,
 }: Props<T>) {
   const {
     register,
@@ -38,6 +40,7 @@ export function ContactPersonFields<T extends FieldValues & ContactPersonValues>
           <Input
             id="contactFullName"
             placeholder="e.g. Ahmad Fauzi"
+            disabled={readOnly}
             {...register("contactFullName" as Path<T>)}
           />
         </FormField>
@@ -51,6 +54,7 @@ export function ContactPersonFields<T extends FieldValues & ContactPersonValues>
           <Input
             id="contactDesignation"
             placeholder="Pilih atau ketik jabatan..."
+            disabled={readOnly}
             {...register("contactDesignation" as Path<T>)}
           />
         </FormField>
@@ -68,6 +72,7 @@ export function ContactPersonFields<T extends FieldValues & ContactPersonValues>
             id="contactEmail"
             type="email"
             placeholder="ahmad.fauzi@textileindonesia.co.id"
+            disabled={readOnly}
             {...register("contactEmail" as Path<T>)}
           />
         </FormField>
@@ -82,6 +87,7 @@ export function ContactPersonFields<T extends FieldValues & ContactPersonValues>
             id="contactPhone"
             type="tel"
             placeholder="+62 812 3456 7890"
+            disabled={readOnly}
             {...register("contactPhone" as Path<T>)}
           />
         </FormField>

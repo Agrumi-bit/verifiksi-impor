@@ -1,4 +1,4 @@
-export type MasterDataFieldType = "text" | "textarea" | "select";
+export type MasterDataFieldType = "text" | "textarea" | "select" | "searchselect" | "checkbox";
 
 export type MasterDataFieldOption = {
   value: string;

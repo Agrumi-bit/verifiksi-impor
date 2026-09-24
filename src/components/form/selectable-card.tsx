@@ -26,7 +26,7 @@ export function SelectableCard({
         disabled
           ? "cursor-not-allowed border-border opacity-60"
           : selected
-            ? "border-foreground bg-muted/60"
+            ? "border-[#e0662e] bg-[#fdeadd]"
             : "border-border hover:bg-muted/30",
         className,
       )}

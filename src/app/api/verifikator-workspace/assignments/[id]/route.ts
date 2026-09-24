@@ -1,20 +1,25 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import type { LocationVisit } from "@/generated/prisma/client";
 
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { computeFindings, type OfficeVerificationValues } from "@/modules/surveyor-workspace/components/office-verification/schema";
+import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
+import { getDocumentMeta } from "@/modules/company/document-versions";
 import {
   buildDocumentChecklist,
   buildProductChecklist,
-  documentVerificationsSchema,
+  COMPANY_MAPPED_DOCUMENT_KEYS,
   productVerificationsSchema,
 } from "@/modules/verifikator-workspace/schema";
+import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
 
 async function loadAssignment(assignmentNumber: string, verifikatorId: string) {
   const found = await db.assignment.findUnique({
     where: { assignmentNumber },
-    include: { application: true, surveyor: true, locationVisits: true },
+    include: { application: true, surveyor: true, verifikator: true, technicalReviewer: true, locationVisits: true },
   });
   if (!found) return null;
 
@@ -26,13 +31,64 @@ async function loadAssignment(assignmentNumber: string, verifikatorId: string) {
     const claimed = await db.assignment.update({
       where: { id: found.id },
       data: { verifikatorId },
-      include: { application: true, surveyor: true, locationVisits: true },
+      include: { application: true, surveyor: true, verifikator: true, technicalReviewer: true, locationVisits: true },
     });
     return claimed;
   }
 
   if (found.verifikatorId !== verifikatorId) return null;
   return found;
+}
+
+/**
+ * Survey Lapangan spans the whole application, not just this one assignment
+ * — a "dokumen"/"technical" assignment has none of its own location visits;
+ * they live on the sibling "survey" assignment for the same application. See
+ * the mirrored fix in `assignments/[id]/locations/route.ts`.
+ *
+ * The same sibling-row split applies to team membership: each Assignment row
+ * only ever carries ONE of surveyorId/verifikatorId/technicalReviewerId (set
+ * by Customer Relation Workspace based on scheduleType), so the surveyor and
+ * technical reviewer for this application live on separate sibling rows, not
+ * on the "dokumen" row the verifikator is viewing.
+ */
+/** Builds a Team tab row (name + Surat Tugas info) from a person's name and the assignment row that carries their letter. */
+function teamMemberSummary(
+  name: string | undefined,
+  source: { id: string; scheduledDate: Date | null; letterNumber: string | null; letterStatus: string } | null | undefined,
+) {
+  if (!name || !source) return null;
+  return {
+    name,
+    date: source.scheduledDate ? source.scheduledDate.toISOString() : null,
+    assignmentId: source.id,
+    letterNumber: source.letterNumber,
+    letterStatus: source.letterStatus,
+  };
+}
+
+async function loadApplicationSurveyData(applicationId: string, ownVisits: LocationVisit[]) {
+  const siblingAssignments = await db.assignment.findMany({
+    where: { applicationId },
+    include: { locationVisits: true, surveyor: true, technicalReviewer: true },
+  });
+  const allVisits = siblingAssignments.flatMap((a) => a.locationVisits);
+  const STATUS_RANK: Record<string, number> = { NOT_STARTED: 0, IN_PROGRESS: 1, COMPLETED: 2 };
+  const byLocationType = new Map<string, LocationVisit>();
+  for (const visit of [...ownVisits, ...allVisits]) {
+    const existing = byLocationType.get(visit.locationType);
+    if (!existing || STATUS_RANK[visit.status] > STATUS_RANK[existing.status]) {
+      byLocationType.set(visit.locationType, visit);
+    }
+  }
+  const surveyAssignment = siblingAssignments.find((a) => a.surveyorId) ?? null;
+  const technicalAssignment = siblingAssignments.find((a) => a.technicalReviewerId) ?? null;
+  return {
+    locationVisits: [...byLocationType.values()],
+    surveyorName: surveyAssignment?.surveyor?.name ?? null,
+    surveyAssignment,
+    technicalAssignment,
+  };
 }
 
 export async function GET(
@@ -52,20 +108,34 @@ export async function GET(
   }
 
   const payload = assignment.application.payload as ApplicationWizardValues;
-  const documentChecklist = buildDocumentChecklist(payload);
+  const company = assignment.application.companyId
+    ? await db.company.findUnique({ where: { id: assignment.application.companyId } })
+    : null;
+  const documentChecklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company));
   const productChecklist = buildProductChecklist(payload);
-  const documentVerifications = documentVerificationsSchema.parse(assignment.documentVerifications ?? {});
   const productVerifications = productVerificationsSchema.parse(assignment.productVerifications ?? {});
 
-  const documentsVerified = documentChecklist.filter(
-    (item) => documentVerifications[item.key]?.status && documentVerifications[item.key]?.status !== "PENDING",
-  ).length;
+  const companyKeys = documentChecklist.filter((item) => item.key in COMPANY_MAPPED_DOCUMENT_KEYS).map((item) => item.key);
+  const appOnlyKeys = documentChecklist.filter((item) => !(item.key in COMPANY_MAPPED_DOCUMENT_KEYS)).map((item) => item.key);
+  const companyDocMeta = company
+    ? await getDocumentMeta(company.id, companyKeys.map((key) => COMPANY_MAPPED_DOCUMENT_KEYS[key]), company.createdAt)
+    : {};
+  const appDocMeta = await getApplicationDocumentMeta(assignment.application.id, appOnlyKeys, assignment.application.createdAt);
+  const { locationVisits, surveyorName, surveyAssignment, technicalAssignment } = await loadApplicationSurveyData(
+    assignment.applicationId,
+    assignment.locationVisits,
+  );
+
+  const documentsVerified = documentChecklist.filter((item) => {
+    const meta = item.key in COMPANY_MAPPED_DOCUMENT_KEYS ? companyDocMeta[COMPANY_MAPPED_DOCUMENT_KEYS[item.key]] : appDocMeta[item.key];
+    return meta && meta.verificationStatus !== "NOT_YET_VERIFIED" && meta.verificationStatus !== "EXPIRED";
+  }).length;
   const productsVerified = productChecklist.filter(
     (item) => productVerifications[item.id]?.status && productVerifications[item.id]?.status !== "PENDING",
   ).length;
 
   let totalFindings = 0;
-  for (const visit of assignment.locationVisits) {
+  for (const visit of locationVisits) {
     if (visit.officeVerification) {
       totalFindings += computeFindings(visit.officeVerification as OfficeVerificationValues).length;
     } else if (Array.isArray(visit.findings)) {
@@ -73,7 +143,7 @@ export async function GET(
     }
   }
 
-  const completedVisits = assignment.locationVisits.filter((v) => v.status === "COMPLETED");
+  const completedVisits = locationVisits.filter((v) => v.status === "COMPLETED");
   const surveyCompletionDate = completedVisits.length
     ? completedVisits.reduce<Date | null>((latest, v) => {
         if (!v.submittedAt) return latest;
@@ -81,8 +151,8 @@ export async function GET(
       }, null)
     : null;
 
-  const surveyProgress = assignment.locationVisits.length
-    ? completedVisits.length / assignment.locationVisits.length
+  const surveyProgress = locationVisits.length
+    ? completedVisits.length / locationVisits.length
     : 0;
 
   let overallProgress: number;
@@ -144,6 +214,7 @@ export async function GET(
         applicationNumber: assignment.application.applicationNumber,
         verificationType: assignment.application.verificationType,
         applicationCategory: assignment.application.applicationCategory,
+        createdAt: assignment.application.createdAt,
         payload,
       },
       company: {
@@ -154,17 +225,26 @@ export async function GET(
           : null,
         kbliEntries: payload.kbliEntries ?? [],
         locations: payload.locations ?? [],
+        sktNumber: company?.sktNumber ?? null,
+        sktIssuer: company?.sktIssuer ?? null,
+        sktDate: company?.sktDate ? company.sktDate.toISOString() : null,
       },
       verificationProgram: {
         type: assignment.application.verificationType,
         importTypes: payload.importTypes ?? [],
         products: productChecklist,
       },
+      team: {
+        surveyor: teamMemberSummary(surveyAssignment?.surveyor?.name, surveyAssignment),
+        verifikator: teamMemberSummary(assignment.verifikator?.name, assignment),
+        technicalReviewer: teamMemberSummary(technicalAssignment?.technicalReviewer?.name, technicalAssignment),
+        teamMembers: (assignment.teamMembers as { name: string; role?: string }[] | null) ?? [],
+      },
       surveyInformation: {
-        surveyorName: assignment.surveyor.name,
+        surveyorName: assignment.surveyor?.name ?? surveyorName ?? "—",
         scheduledDate: assignment.scheduledDate,
         completionDate: surveyCompletionDate,
-        locationVisits: assignment.locationVisits.map((v) => ({
+        locationVisits: locationVisits.map((v) => ({
           id: v.id,
           locationType: v.locationType,
           address: v.address,
@@ -188,4 +268,36 @@ export async function GET(
       },
     },
   });
+}
+
+const draftNotesSchema = z.object({ validationNotes: z.string().trim() });
+
+/** Draft Report tab's "Save Draft" — writes the Kesimpulan Verifikator text without touching status/validatedAt (that only happens via the /decision endpoint). */
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await getServerSession();
+  const verifikatorId = session?.user.id;
+  if (!verifikatorId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const assignment = await db.assignment.findUnique({ where: { assignmentNumber: id } });
+  if (!assignment || assignment.verifikatorId !== verifikatorId) {
+    return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
+  }
+
+  const parsed = draftNotesSchema.safeParse(await request.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Data tidak valid" }, { status: 400 });
+  }
+
+  const updated = await db.assignment.update({
+    where: { id: assignment.id },
+    data: { validationNotes: parsed.data.validationNotes },
+  });
+
+  return NextResponse.json({ data: { validationNotes: updated.validationNotes } });
 }

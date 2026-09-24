@@ -60,22 +60,22 @@ export function Step7Preview({ form, onEditStep }: Step7Props) {
         kembali ke step terkait jika ada yang perlu diperbaiki.
       </p>
 
-      <SummarySection title="Application Information" step={1} onEditStep={onEditStep}>
-        <SummaryItem label="Verification Type" value={values.verificationType} />
-        <SummaryItem label="Application Category" value={values.applicationCategory} />
-        <SummaryItem
-          label="Jenis Impor"
-          value={values.importTypes?.join(", ")}
-        />
-      </SummarySection>
-
-      <SummarySection title="Company Information" step={2} onEditStep={onEditStep}>
+      <SummarySection title="Company Information" step={1} onEditStep={onEditStep}>
         <SummaryItem label="Company Name" value={values.companyName} />
         <SummaryItem label="Company Type" value={values.companyType} />
         <SummaryItem label="Investment Status" value={values.investmentStatus} />
         <SummaryItem label="Company Email" value={values.companyEmail} />
         <SummaryItem label="Contact Name" value={values.contactFullName} />
         <SummaryItem label="Contact Designation" value={values.contactDesignation} />
+      </SummarySection>
+
+      <SummarySection title="Application Information" step={2} onEditStep={onEditStep}>
+        <SummaryItem label="Verification Type" value={values.verificationType} />
+        <SummaryItem label="Application Category" value={values.applicationCategory} />
+        <SummaryItem
+          label="Jenis Impor"
+          value={values.importTypes?.join(", ")}
+        />
       </SummarySection>
 
       <SummarySection title="Legal Information" step={3} onEditStep={onEditStep}>

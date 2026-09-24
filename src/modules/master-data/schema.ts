@@ -6,6 +6,10 @@ const statusSchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
 });
 
+const statusWithReasonSchema = statusSchema.extend({
+  deactivationReason: z.string().trim().optional(),
+});
+
 export const unitOfMeasurementSchema = z.object({
   name: requiredString("Nama satuan wajib diisi"),
   symbol: requiredString("Simbol satuan wajib diisi"),
@@ -25,9 +29,13 @@ export const commoditySubGroupSchema = z.object({
   description: z.string().trim().optional(),
 });
 
+export const KBLI_VERSIONS = ["KBLI 2025", "KBLI 2020", "KBLI 2017"] as const;
+
 export const kbliMasterDataSchema = z.object({
   code: requiredString("Kode KBLI wajib diisi"),
   description: requiredString("Deskripsi kegiatan wajib diisi"),
+  category: z.string().trim().default("-"),
+  version: z.enum(KBLI_VERSIONS).default("KBLI 2020"),
 });
 
 export const hsCodeMasterDataSchema = z.object({
@@ -38,6 +46,18 @@ export const hsCodeMasterDataSchema = z.object({
   unitOfMeasurementId: requiredString("Satuan wajib dipilih"),
 });
 
+const checkboxBool = () => z.string().optional().transform((v) => v === "true");
+
+export const lartasImporSchema = z.object({
+  hsCodeId: requiredString("HS Code wajib dipilih"),
+  apiP: checkboxBool(),
+  apiUIndustri: checkboxBool(),
+  apiUNonIndustri: checkboxBool(),
+  barangKonsumsi: checkboxBool(),
+  ppbb: checkboxBool(),
+});
+export const lartasImporUpdateSchema = lartasImporSchema.extend(statusSchema.shape);
+
 export const unitOfMeasurementUpdateSchema =
   unitOfMeasurementSchema.extend(statusSchema.shape);
 export const commodityGroupUpdateSchema =
@@ -45,6 +65,6 @@ export const commodityGroupUpdateSchema =
 export const commoditySubGroupUpdateSchema =
   commoditySubGroupSchema.extend(statusSchema.shape);
 export const kbliMasterDataUpdateSchema =
-  kbliMasterDataSchema.extend(statusSchema.shape);
+  kbliMasterDataSchema.extend(statusWithReasonSchema.shape);
 export const hsCodeMasterDataUpdateSchema =
   hsCodeMasterDataSchema.extend(statusSchema.shape);

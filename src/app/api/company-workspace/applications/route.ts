@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
@@ -62,4 +64,62 @@ export async function GET(request: Request) {
   });
 
   return NextResponse.json({ data, total, page, pageSize });
+}
+
+function generateApplicationNumber(verificationType: string): string {
+  const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const suffix = randomUUID().split("-")[0].toUpperCase();
+  return `APP-${verificationType}-${datePart}-${suffix}`;
+}
+
+const draftSchema = z.object({
+  applicationId: z.string().optional(),
+  payload: z.record(z.string(), z.unknown()),
+});
+
+/**
+ * "Save as Draft" from the wizard. Unlike full submit, the payload is
+ * intentionally unvalidated — a draft can be missing any amount of data.
+ * Upserts a single Application row per draft session (`applicationId` once
+ * assigned) so re-saving updates in place instead of piling up duplicates.
+ */
+export async function POST(request: Request) {
+  const session = await getServerSession();
+  const companyId = session?.user.companyId;
+  if (!companyId) {
+    return NextResponse.json({ error: "Akun Anda belum terhubung dengan perusahaan manapun." }, { status: 404 });
+  }
+
+  const body = await request.json().catch(() => null);
+  const parsed = draftSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Data draft tidak valid" }, { status: 400 });
+  }
+  const { applicationId, payload } = parsed.data;
+
+  const verificationType = typeof payload.verificationType === "string" ? payload.verificationType : "VKI";
+  const applicationCategory = typeof payload.applicationCategory === "string" ? payload.applicationCategory : "";
+
+  if (applicationId) {
+    const existing = await db.application.findUnique({ where: { id: applicationId } });
+    if (existing && existing.companyId === companyId && existing.status === "DRAFT") {
+      const updated = await db.application.update({
+        where: { id: applicationId },
+        data: { verificationType, applicationCategory, payload: payload as object },
+      });
+      return NextResponse.json({ id: updated.id, applicationNumber: updated.applicationNumber });
+    }
+  }
+
+  const created = await db.application.create({
+    data: {
+      applicationNumber: generateApplicationNumber(verificationType),
+      verificationType,
+      applicationCategory,
+      payload: payload as object,
+      companyId,
+      status: "DRAFT",
+    },
+  });
+  return NextResponse.json({ id: created.id, applicationNumber: created.applicationNumber });
 }

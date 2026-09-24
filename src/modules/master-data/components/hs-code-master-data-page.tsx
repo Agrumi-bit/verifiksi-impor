@@ -55,6 +55,12 @@ export function HsCodeMasterDataPage() {
             (row.commodityGroup as NamedOption | undefined)?.name ?? "—",
         },
         {
+          key: "commoditySubGroup",
+          label: "Sub Kelompok Komoditas",
+          render: (row) =>
+            (row.commoditySubGroup as NamedOption | undefined)?.name ?? "—",
+        },
+        {
           key: "unitOfMeasurement",
           label: "Satuan",
           render: (row) =>

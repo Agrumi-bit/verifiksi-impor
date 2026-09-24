@@ -29,7 +29,7 @@ type DashboardData = {
   totalCount: number;
   activeCount: number;
   statusCounts: Record<string, number>;
-  requiredActions: { id: string; applicationNumber: string; status: string; message: string }[];
+  requiredActions: { id: string; applicationNumber: string; status: string; message: string; href: string }[];
   recentActivities: { id: string; applicationNumber: string; status: string; updatedAt: string }[];
   latestApplication: {
     id: string;
@@ -176,12 +176,14 @@ export function CompanyDashboard() {
               data.requiredActions.map((action) => (
                 <Link
                   key={action.id}
-                  href={`/company-workspace/applications/${action.id}`}
+                  href={action.href}
                   className="flex flex-col gap-0.5 rounded-lg border border-border p-2.5 text-sm hover:bg-muted/40"
                 >
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {action.applicationNumber}
-                  </span>
+                  {action.applicationNumber && (
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {action.applicationNumber}
+                    </span>
+                  )}
                   <span>{action.message}</span>
                 </Link>
               ))

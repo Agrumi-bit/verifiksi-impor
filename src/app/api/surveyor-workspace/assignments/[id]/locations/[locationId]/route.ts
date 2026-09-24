@@ -4,11 +4,12 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import { composeLocationAddress } from "@/modules/shared/schema";
 
 async function loadScopedLocation(assignmentNumber: string, locationId: string, surveyorId: string) {
   const visit = await db.locationVisit.findUnique({
     where: { id: locationId },
-    include: { assignment: { include: { application: true } } },
+    include: { assignment: { include: { application: true, surveyor: true } } },
   });
   if (
     !visit ||
@@ -38,7 +39,7 @@ export async function GET(
 
   const payload = visit.assignment.application.payload as ApplicationWizardValues;
   const payloadLocation = (payload.locations ?? []).find(
-    (loc) => loc.locationType === visit.locationType && loc.address === visit.address,
+    (loc) => loc.locationType === visit.locationType && composeLocationAddress(loc) === visit.address,
   );
 
   return NextResponse.json({
@@ -54,6 +55,7 @@ export async function GET(
       assignmentNumber: visit.assignment.assignmentNumber,
       applicationNumber: visit.assignment.application.applicationNumber,
       verificationType: visit.assignment.application.verificationType,
+      surveyorName: visit.assignment.surveyor?.name ?? null,
       company: {
         companyName: payload.companyName ?? "—",
         nibNumber: payload.nibNumber ?? null,

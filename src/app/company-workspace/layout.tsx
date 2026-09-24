@@ -1,3 +1,7 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 
@@ -6,6 +10,16 @@ export default function CompanyWorkspaceLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  // Survey report preview is a standalone, print-styled full page (shared with
+  // Surveyor/Verifikator Workspace via ReportRouter) — it doesn't sit inside the
+  // persistent Sidebar/Topbar chrome used by the rest of Company Workspace.
+  const isStandalonePage = /^\/company-workspace\/assignments\/[^/]+/.test(pathname ?? "");
+
+  if (isStandalonePage) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex h-screen">
       <Sidebar

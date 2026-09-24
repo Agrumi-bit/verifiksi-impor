@@ -2,45 +2,49 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
-import {
-  SURVEY_REPORT_STATUSES,
-  type SurveyReportStatusValue,
-} from "@/modules/surveyor-workspace/status";
+import { computeFindings as computeOfficeFindings, type OfficeVerificationValues } from "@/modules/surveyor-workspace/components/office-verification/schema";
+import { computeFindings as computeFieldFindings, type FieldKind, type FieldVerificationValues } from "@/modules/surveyor-workspace/components/field-verification/schema";
 
-export async function GET(request: Request) {
+export async function GET() {
   const session = await getServerSession();
   const surveyorId = session?.user.id;
   if (!surveyorId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { searchParams } = new URL(request.url);
-  const statusParam = searchParams.get("status");
-  const status =
-    statusParam && SURVEY_REPORT_STATUSES.includes(statusParam as SurveyReportStatusValue)
-      ? (statusParam as SurveyReportStatusValue)
-      : null;
-
-  const reports = await db.surveyReport.findMany({
-    where: {
-      assignment: { surveyorId },
-      ...(status ? { status } : {}),
-    },
+  const visits = await db.locationVisit.findMany({
+    where: { status: "COMPLETED", assignment: { surveyorId } },
     include: { assignment: { include: { application: true } } },
-    orderBy: { updatedAt: "desc" },
+    orderBy: { submittedAt: "desc" },
   });
 
-  const data = reports.map((report) => {
-    const payload = report.assignment.application.payload as { companyName?: string } | null;
+  const data = visits.map((visit) => {
+    const payload = visit.assignment.application.payload as { companyName?: string } | null;
+    const fieldKind: FieldKind | null =
+      visit.locationType === "GUDANG" ? "GUDANG" : visit.locationType === "PABRIK" ? "PABRIK" : null;
+    const officeVerification = visit.officeVerification as OfficeVerificationValues | null;
+    const fieldVerification = (
+      fieldKind === "GUDANG" ? visit.warehouseVerification : fieldKind === "PABRIK" ? visit.factoryVerification : null
+    ) as FieldVerificationValues | null;
+
+    const findings =
+      visit.locationType === "KANTOR" && officeVerification
+        ? computeOfficeFindings(officeVerification)
+        : fieldKind && fieldVerification
+          ? computeFieldFindings(fieldKind, fieldVerification)
+          : [];
+
     return {
-      id: report.id,
-      assignmentId: report.assignmentId,
-      status: report.status,
-      applicationNumber: report.assignment.application.applicationNumber,
+      id: visit.id,
+      assignmentNumber: visit.assignment.assignmentNumber,
+      applicationNumber: visit.assignment.application.applicationNumber,
       companyName: payload?.companyName ?? "—",
-      verificationType: report.assignment.application.verificationType,
-      submittedAt: report.submittedAt,
-      updatedAt: report.updatedAt,
+      verificationType: visit.assignment.application.verificationType,
+      locationType: visit.locationType,
+      address: visit.address,
+      city: visit.city,
+      submittedAt: visit.submittedAt,
+      needsRevision: findings.length > 0,
     };
   });
 

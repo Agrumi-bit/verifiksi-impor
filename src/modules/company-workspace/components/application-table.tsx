@@ -3,35 +3,15 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { Copy, Download, Eye, PenLine, Undo2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Search, ChevronDown } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   APPLICATION_STATUSES,
   STATUS_LABELS,
-  TERMINAL_STATUSES,
-  statusBadgeVariant,
   type ApplicationStatusValue,
 } from "../status";
+import { getApplicationStatusDisplay } from "../application-status-display";
 
 type ApplicationListItem = {
   id: string;
@@ -45,9 +25,12 @@ type ApplicationListItem = {
 
 const PAGE_SIZE = 10;
 
+function fmtDate(value: string): string {
+  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+}
+
 export function CompanyApplicationTable() {
   const router = useRouter();
-  const queryClient = useQueryClient();
 
   const [searchInput, setSearchInput] = useState("");
   const [q, setQ] = useState("");
@@ -83,240 +66,147 @@ export function CompanyApplicationTable() {
     },
   });
 
-  const withdrawMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/company-workspace/applications/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "withdraw" }),
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        throw new Error(body?.error ?? "Gagal menarik permohonan");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      toast.success("Permohonan berhasil ditarik.");
-      queryClient.invalidateQueries({ queryKey: ["company-workspace", "applications"] });
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Gagal menarik permohonan");
-    },
-  });
-
-  const duplicateMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/company-workspace/applications/${id}/duplicate`, {
-        method: "POST",
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        throw new Error(body?.error ?? "Gagal menduplikasi permohonan");
-      }
-      return response.json() as Promise<{ id: string; applicationNumber: string }>;
-    },
-    onSuccess: (result) => {
-      toast.success(`Draft baru dibuat: ${result.applicationNumber}`);
-      queryClient.invalidateQueries({ queryKey: ["company-workspace", "applications"] });
-      router.push(`/company-workspace/applications/${result.id}`);
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Gagal menduplikasi permohonan");
-    },
-  });
-
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
+  function goToApplication(application: ApplicationListItem) {
+    if (application.status === "DRAFT") {
+      router.push(`/company-workspace/applications/new?draftId=${application.id}`);
+    } else {
+      router.push(`/company-workspace/applications/${application.id}`);
+    }
+  }
+
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-7">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold">Application List</h1>
-          <p className="text-sm text-muted-foreground">
-            Daftar seluruh permohonan verifikasi perusahaan Anda.
-          </p>
+          <div className="text-[23px] font-bold tracking-tight text-[#20180f]">Applications</div>
+          <div className="mt-1 text-[13.5px] text-[#8a7565]">Semua pengajuan verifikasi perusahaan Anda.</div>
         </div>
-        <Button nativeButton={false} render={<Link href="/company-workspace/applications/new" />}>
+        <Link
+          href="/company-workspace/applications/new"
+          className="rounded-lg bg-[#e0662e] px-4 py-2.25 text-[13px] font-semibold text-white"
+        >
           + New Application
-        </Button>
+        </Link>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          placeholder="Cari nomor aplikasi, tipe, atau nama perusahaan..."
-          value={searchInput}
-          onChange={(event) => setSearchInput(event.target.value)}
-          className="max-w-xs"
-        />
-        <Select
-          value={status}
-          onValueChange={(value) => {
-            setStatus((value as ApplicationStatusValue | "ALL") ?? "ALL");
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue>
-              {(value: string | null) =>
-                value && value !== "ALL"
-                  ? STATUS_LABELS[value as ApplicationStatusValue]
-                  : "Semua Status"
-              }
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Semua Status</SelectItem>
+      <div className="flex flex-wrap items-center gap-5">
+        <div className="flex max-w-xs flex-1 items-center gap-2 rounded-lg border border-[#efe2d4] bg-white px-3.5 py-2.25 text-[#9c8a79]">
+          <Search className="size-4 shrink-0" />
+          <input
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="Cari application ID…"
+            className="w-full bg-transparent text-[12.5px] text-[#20180f] outline-none placeholder:text-[#9c8a79]"
+          />
+        </div>
+
+        <div className="relative">
+          <select
+            value={status}
+            onChange={(event) => {
+              setStatus((event.target.value as ApplicationStatusValue | "ALL") ?? "ALL");
+              setPage(1);
+            }}
+            className="appearance-none rounded-lg border-none bg-transparent py-1.5 pl-1 pr-6 text-[12.5px] font-medium text-[#4a4038] outline-none"
+          >
+            <option value="ALL">All Status</option>
             {APPLICATION_STATUSES.map((option) => (
-              <SelectItem key={option} value={option}>
+              <option key={option} value={option}>
                 {STATUS_LABELS[option]}
-              </SelectItem>
+              </option>
             ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={sort}
-          onValueChange={(value) => setSort((value as "newest" | "oldest") ?? "newest")}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue>
-              {(value: string | null) => (value === "oldest" ? "Terlama" : "Terbaru")}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="newest">Terbaru</SelectItem>
-            <SelectItem value="oldest">Terlama</SelectItem>
-          </SelectContent>
-        </Select>
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-0 top-1/2 size-4 -translate-y-1/2 text-[#9c8a79]" />
+        </div>
+
+        <div className="relative">
+          <select
+            value={sort}
+            onChange={(event) => setSort((event.target.value as "newest" | "oldest") ?? "newest")}
+            className="appearance-none rounded-lg border-none bg-transparent py-1.5 pl-1 pr-6 text-[12.5px] font-medium text-[#4a4038] outline-none"
+          >
+            <option value="newest">Terbaru</option>
+            <option value="oldest">Terlama</option>
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-0 top-1/2 size-4 -translate-y-1/2 text-[#9c8a79]" />
+        </div>
       </div>
 
-      <div className="rounded-lg border border-border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nomor Aplikasi</TableHead>
-              <TableHead>Perusahaan</TableHead>
-              <TableHead>Tipe</TableHead>
-              <TableHead>Kategori</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Tanggal</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
-                  Memuat...
-                </TableCell>
-              </TableRow>
-            )}
-            {isError && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-destructive">
-                  Gagal memuat data permohonan.
-                </TableCell>
-              </TableRow>
-            )}
-            {!isLoading && !isError && data?.data.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
-                  Belum ada permohonan yang sesuai.
-                </TableCell>
-              </TableRow>
-            )}
-            {data?.data.map((application) => {
-              const isTerminal = TERMINAL_STATUSES.includes(application.status);
-              const isDraft = application.status === "DRAFT";
-              return (
-                <TableRow key={application.id}>
-                  <TableCell className="font-mono text-xs">
-                    {application.applicationNumber}
-                  </TableCell>
-                  <TableCell className="font-medium">{application.companyName}</TableCell>
-                  <TableCell>{application.verificationType}</TableCell>
-                  <TableCell>{application.applicationCategory}</TableCell>
-                  <TableCell>
-                    <Badge variant={statusBadgeVariant(application.status)}>
-                      {STATUS_LABELS[application.status]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(application.createdAt).toLocaleDateString("id-ID")}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        title={isDraft ? "Continue Draft" : "View"}
-                        nativeButton={false}
-                        render={<Link href={`/company-workspace/applications/${application.id}`} />}
-                      >
-                        {isDraft ? <PenLine className="size-4" /> : <Eye className="size-4" />}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        title="Duplicate"
-                        disabled={duplicateMutation.isPending}
-                        onClick={() => duplicateMutation.mutate(application.id)}
-                      >
-                        <Copy className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        title="Withdraw"
-                        disabled={isTerminal || withdrawMutation.isPending}
-                        onClick={() => {
-                          if (confirm(`Tarik permohonan ${application.applicationNumber}?`)) {
-                            withdrawMutation.mutate(application.id);
-                          }
-                        }}
-                      >
-                        <Undo2 className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        title="Download Report — Segera hadir"
-                        onClick={() => toast.info("Download Report akan tersedia di iterasi berikutnya.")}
-                      >
-                        <Download className="size-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+      <div className="overflow-hidden rounded-xl border border-[#efe2d4] bg-white">
+        <div className="grid grid-cols-[1.3fr_0.7fr_1.4fr_1.6fr_1fr] gap-3 bg-[#fdf9f5] px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-[#9c8a79]">
+          <div>Application ID</div>
+          <div>Jenis</div>
+          <div>Tanggal Pengajuan</div>
+          <div>Progress</div>
+          <div>Status</div>
+        </div>
+
+        {isLoading && <div className="p-6 text-center text-[13px] text-[#a68f80]">Memuat...</div>}
+        {isError && <div className="p-6 text-center text-[13px] text-[#c1361f]">Gagal memuat data permohonan.</div>}
+        {!isLoading && !isError && data?.data.length === 0 && (
+          <div className="p-6 text-center text-[13px] text-[#a68f80]">Belum ada permohonan yang sesuai.</div>
+        )}
+
+        {data?.data.map((application) => {
+          const display = getApplicationStatusDisplay(application.status);
+          return (
+            <div
+              key={application.id}
+              onClick={() => goToApplication(application)}
+              className="grid cursor-pointer grid-cols-[1.3fr_0.7fr_1.4fr_1.6fr_1fr] items-center gap-3 border-t border-[#f3e9dd] px-5 py-4 hover:bg-[#fdf9f5]"
+            >
+              <div className="text-[13.5px] font-semibold text-[#20180f]">{application.applicationNumber}</div>
+              <div>
+                <span className="rounded-md bg-[#f2ece5] px-2.5 py-0.75 text-[11px] font-bold text-[#4a4038]">
+                  {application.verificationType}
+                </span>
+              </div>
+              <div className="text-[13px] text-[#594138]">{fmtDate(application.createdAt)}</div>
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#f2ece5]">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${display.progress}%`, background: display.color }}
+                  />
+                </div>
+                <span className="text-[11.5px] text-[#9c8a79]">{display.progress}%</span>
+              </div>
+              <div>
+                <span className="inline-flex items-center gap-1.25 text-[12px] font-semibold" style={{ color: display.color }}>
+                  <span className="inline-block size-1.5 rounded-full" style={{ background: display.color }} />
+                  {display.label}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm">
-          <p className="text-muted-foreground">
+        <div className="flex items-center justify-between text-[13px] text-[#8a7565]">
+          <p>
             Halaman {page} dari {totalPages} ({total} permohonan)
           </p>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
+            <button
+              type="button"
               disabled={page <= 1}
               onClick={() => setPage((current) => Math.max(1, current - 1))}
+              className="rounded-lg border border-[#e1bfb3] px-3.5 py-1.75 text-[12.5px] font-semibold text-[#261813] disabled:opacity-40"
             >
               Sebelumnya
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
+            </button>
+            <button
+              type="button"
               disabled={page >= totalPages}
               onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              className="rounded-lg border border-[#e1bfb3] px-3.5 py-1.75 text-[12.5px] font-semibold text-[#261813] disabled:opacity-40"
             >
               Selanjutnya
-            </Button>
+            </button>
           </div>
         </div>
       )}

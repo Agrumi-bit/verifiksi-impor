@@ -70,27 +70,3 @@ export function mapToScheduleStatus(status: AssignmentStatusValue): ScheduleStat
   if (status === "IN_PROGRESS" || status === "RETURNED") return "ON_PROGRESS";
   return "SCHEDULED";
 }
-
-export const SURVEY_REPORT_STATUSES = [
-  "DRAFT",
-  "SUBMITTED",
-  "RETURNED",
-  "APPROVED",
-] as const;
-export type SurveyReportStatusValue = (typeof SURVEY_REPORT_STATUSES)[number];
-
-export const SURVEY_REPORT_STATUS_LABELS: Record<SurveyReportStatusValue, string> = {
-  DRAFT: "Draft",
-  SUBMITTED: "Submitted",
-  RETURNED: "Returned",
-  APPROVED: "Approved",
-};
-
-export function surveyReportStatusBadgeVariant(
-  status: SurveyReportStatusValue,
-): "default" | "secondary" | "destructive" | "outline" {
-  if (status === "APPROVED") return "default";
-  if (status === "RETURNED") return "destructive";
-  if (status === "DRAFT") return "outline";
-  return "secondary";
-}

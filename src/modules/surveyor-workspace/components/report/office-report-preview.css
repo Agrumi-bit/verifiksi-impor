@@ -143,6 +143,23 @@
   break-after: page;
 }
 
+/* Landscape variant — used by pages with wide tables (e.g. Data Produk) that
+   don't fit portrait A4 comfortably. CSS Paged Media's named `page` lets a
+   single print job mix portrait and landscape sheets. */
+.report-doc .rd-sheet-landscape {
+  width: 297mm;
+  min-height: 210mm;
+}
+@media print {
+  .report-doc .rd-sheet-landscape {
+    page: landscape;
+  }
+}
+@page landscape {
+  size: A4 landscape;
+  margin: 0;
+}
+
 /* Shared page chrome: brand header row + footer */
 .report-doc .rd-pagehead {
   display: flex;

@@ -7,8 +7,8 @@ import { SurveyorNotes } from "./question-list";
 import { OWNERSHIP_QUESTION, SEWA_QUESTIONS, type AnswerValues } from "./schema";
 
 type PayloadLocation = {
-  ownershipDocumentPath?: string | null;
-  leaseDocumentPath?: string | null;
+  ownershipDocuments?: { type: string; documentPath?: string | null }[] | null;
+  leaseDocuments?: { type: string; documentPath?: string | null }[] | null;
   leaseOriginalOwnerName?: string | null;
   leaseStartDate?: string | null;
   leaseEndDate?: string | null;
@@ -108,7 +108,7 @@ export function Section3Ownership({
           <div>
             <div className="mb-1 text-sm font-bold text-[#1c2530]">Dokumen Kepemilikan</div>
             <div className="text-[13px] text-[#4a5568]">
-              {payloadLocation?.ownershipDocumentPath ? "Dokumen Kepemilikan" : "Belum diunggah"}
+              {(payloadLocation?.ownershipDocuments?.length ?? 0) > 0 ? "Dokumen Kepemilikan" : "Belum diunggah"}
             </div>
           </div>
           <button
@@ -134,7 +134,7 @@ export function Section3Ownership({
             <div>
               <div className="mb-1 text-sm font-bold text-[#1c2530]">Dokumen Sewa</div>
               <div className="text-[13px] text-[#4a5568]">
-                {payloadLocation?.leaseDocumentPath ? "Dokumen Sewa Menyewa" : "Belum diunggah"}
+                {(payloadLocation?.leaseDocuments?.length ?? 0) > 0 ? "Dokumen Sewa Menyewa" : "Belum diunggah"}
               </div>
             </div>
             <button

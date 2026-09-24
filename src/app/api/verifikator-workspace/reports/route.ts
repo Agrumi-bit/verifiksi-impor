@@ -32,6 +32,7 @@ export async function GET() {
       city: visit.city,
       submittedAt: visit.submittedAt,
       isOfficeReport: visit.locationType === "KANTOR" && visit.officeVerification !== null,
+      assignmentStatus: visit.assignment.status,
     };
   });
 

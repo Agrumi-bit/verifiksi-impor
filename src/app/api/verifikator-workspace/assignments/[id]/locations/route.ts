@@ -14,15 +14,37 @@ export async function GET(
   }
 
   const { id } = await params;
-  const assignment = await db.assignment.findUnique({
-    where: { assignmentNumber: id },
-    include: { locationVisits: true },
-  });
+  const assignment = await db.assignment.findUnique({ where: { assignmentNumber: id } });
   if (!assignment || assignment.verifikatorId !== verifikatorId) {
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
   }
 
-  const data = assignment.locationVisits.map((visit) => ({
+  // Survey Lapangan spans the whole application, not just this one
+  // assignment — an application can have a separate "survey" assignment
+  // (surveyor's field visit) alongside this "dokumen"/"technical" one, and
+  // the location visits live on that sibling assignment's own row. Pull
+  // every visit across every assignment tied to the same application so a
+  // document-only verifikator still sees the surveyor's completed report.
+  const siblingAssignments = await db.assignment.findMany({
+    where: { applicationId: assignment.applicationId },
+    include: { locationVisits: true },
+  });
+  const allVisits = siblingAssignments.flatMap((a) => a.locationVisits);
+
+  // If the same location ended up with more than one visit row (e.g. a
+  // survey re-assignment), keep the most advanced one per locationType so
+  // the tab shows one row per physical location, not one per assignment.
+  const STATUS_RANK: Record<string, number> = { NOT_STARTED: 0, IN_PROGRESS: 1, COMPLETED: 2 };
+  const byLocationType = new Map<string, (typeof allVisits)[number]>();
+  for (const visit of allVisits) {
+    const existing = byLocationType.get(visit.locationType);
+    if (!existing || STATUS_RANK[visit.status] > STATUS_RANK[existing.status]) {
+      byLocationType.set(visit.locationType, visit);
+    }
+  }
+  const locationVisits = [...byLocationType.values()];
+
+  const data = locationVisits.map((visit) => ({
     id: visit.id,
     locationType: visit.locationType,
     address: visit.address,

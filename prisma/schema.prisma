@@ -28,8 +28,19 @@ model User {
   companyId String?
   company   Company? @relation(fields: [companyId], references: [id])
 
-  assignments            Assignment[] @relation("SurveyorAssignments")
-  verifikatorAssignments Assignment[] @relation("VerifikatorAssignments")
+  username   String?   @unique
+  phone      String?
+  banned     Boolean?  @default(false)
+  banReason  String?
+  banExpires DateTime?
+
+  assignments                      Assignment[]                 @relation("SurveyorAssignments")
+  verifikatorAssignments           Assignment[]                 @relation("VerifikatorAssignments")
+  technicalReviewerAssignments     Assignment[]                 @relation("TechnicalReviewerAssignments")
+  documentUploads                  CompanyDocumentVersion[]
+  documentVerifications            CompanyDocumentVersion[]     @relation("DocumentVerifiedBy")
+  applicationDocumentUploads       ApplicationDocumentVersion[]
+  applicationDocumentVerifications ApplicationDocumentVersion[] @relation("ApplicationDocumentVerifiedBy")
 
   @@unique([email])
   @@map("user")
@@ -99,52 +110,68 @@ model Application {
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
-  assignments Assignment[]
+  assignments      Assignment[]
+  messages         ApplicationMessage[]
+  documentVersions ApplicationDocumentVersion[]
+
+  // Customer Relation Workspace's own operational tracking — intentionally
+  // separate from `status` (ApplicationStatus) above, which is driven by the
+  // company-facing withdraw flow and has different, narrower semantics.
+  crOutcome               String?
+  crDocumentVerifications Json?
+  crFollowUpDate          DateTime?
+  crNotes                 String?
 
   @@index([companyId])
   @@map("application")
 }
 
-enum MitraType {
+enum MessageDirection {
+  IN
+  OUT
+  SYSTEM
+}
+
+model ApplicationMessage {
+  id            String           @id @default(cuid())
+  applicationId String
+  application   Application      @relation(fields: [applicationId], references: [id])
+  direction     MessageDirection
+  text          String
+  createdAt     DateTime         @default(now())
+
+  @@index([applicationId])
+  @@map("application_message")
+}
+
+enum PartnerType {
   INDUSTRI
   NON_INDUSTRI
 }
 
-enum MitraStatus {
+enum PartnerStatus {
   ACTIVE
   INACTIVE
 }
 
-model Mitra {
-  id     String      @id @default(cuid())
-  type   MitraType
-  status MitraStatus @default(ACTIVE)
+model Partner {
+  id        String        @id @default(cuid())
+  companyId String
+  company   Company       @relation(fields: [companyId], references: [id])
+  type      PartnerType
+  status    PartnerStatus @default(ACTIVE)
 
-  name            String
-  nibNumber       String
-  nibDocumentPath String
-  address         String
-  city            String
-  province        String
-  contactName     String
-  contactPhone    String
-  contactEmail    String
-
-  // Mitra Industri only
-  lhvkiNumber       String?
-  lhvkiIssueDate    DateTime?
-  lhvkiDocumentPath String?
-
-  // Mitra Non Industri only
-  contractNumber       String?
-  contractDate         DateTime?
+  contractNumber       String
+  contractStartDate    DateTime
+  contractEndDate      DateTime
   contractDocumentPath String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([companyId])
   @@index([type])
-  @@map("mitra")
+  @@map("partner")
 }
 
 enum CompanyStatus {
@@ -156,6 +183,8 @@ model Company {
   id     String        @id @default(cuid())
   status CompanyStatus @default(ACTIVE)
 
+  logoPath           String?
+  apiType            String?
   companyName        String
   companyType        String
   investmentStatus   String
@@ -166,6 +195,14 @@ model Company {
   contactDesignation String
   contactEmail       String
   contactPhone       String
+  contacts           Json    @default("[]")
+
+  addressJalan     String?
+  addressDesa      String?
+  addressKecamatan String?
+  addressKota      String?
+  addressProvinsi  String?
+  addressKodePos   String?
 
   nibNumber                String
   nibIssueDate             DateTime
@@ -178,16 +215,132 @@ model Company {
   notarialAmendmentInfo    String?
   notarialDocumentPath     String
 
+  notarialAmendmentNumber    String?
+  notarialAmendmentDate      DateTime?
+  notarialAmendmentAuthority String?
+  notarialAmendmentDocPath   String?
+
+  skNumber       String?
+  skDate         DateTime?
+  skDocumentPath String?
+
+  npwpNumber       String?
+  npwpDocumentPath String?
+
+  companyAge      String?
+  taxProofs       Json      @default("[]")
+  sktNumber       String?
+  sktIssuer       String?
+  sktDate         DateTime?
+  sktDocumentPath String?
+
   locations Json
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users        User[]
-  applications Application[]
-  merks        Merk[]
+  users            User[]
+  applications     Application[]
+  merks            Merk[]
+  partners         Partner[]
+  documentVersions CompanyDocumentVersion[]
 
   @@map("company")
+}
+
+// Append-only — never updated or deleted. "Version" for a document field is
+// derived from the row count, "current" is the latest row. Two write paths
+// insert into this: POST /api/companies (initial creation) and PATCH
+// /api/company-workspace/profile (self-service legal/tax edits) — see
+// src/modules/company/document-versions.ts.
+enum DocumentVerificationStatus {
+  NOT_YET_VERIFIED
+  VERIFIED
+  NEED_REVISION
+  REJECTED
+  NOT_APPLICABLE
+  EXPIRED
+}
+
+model CompanyDocumentVersion {
+  id           String   @id @default(cuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id])
+  fieldKey     String
+  version      Int
+  path         String?
+  uploadedById String?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  verificationStatus DocumentVerificationStatus @default(NOT_YET_VERIFIED)
+  verifiedById       String?
+  verifiedBy         User?                      @relation("DocumentVerifiedBy", fields: [verifiedById], references: [id])
+  verifiedAt         DateTime?
+  // Which review stage actually set the current `verificationStatus` — "CR" (Customer Relation's
+  // administrative check) vs "VERIFIKATOR" (the authoritative technical review). Null on legacy rows
+  // predating this distinction, treated as "VERIFIKATOR" for display since that's all that existed then.
+  verifiedByRole     String?
+  rejectionNote      String?
+  checklistResult    Json?
+
+  @@unique([companyId, fieldKey, version])
+  @@index([companyId, fieldKey])
+  @@map("company_document_version")
+}
+
+// Structural mirror of CompanyDocumentVersion for documents that only exist
+// inside an Application's own payload (facility proofs, VKI surat
+// pernyataan, etc.) — see src/modules/applications/document-versions.ts.
+model ApplicationDocumentVersion {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+  fieldKey      String
+  version       Int
+  path          String?
+  uploadedById  String?
+  uploadedBy    User?       @relation(fields: [uploadedById], references: [id])
+  createdAt     DateTime    @default(now())
+
+  verificationStatus DocumentVerificationStatus @default(NOT_YET_VERIFIED)
+  verifiedById       String?
+  verifiedBy         User?                      @relation("ApplicationDocumentVerifiedBy", fields: [verifiedById], references: [id])
+  verifiedAt         DateTime?
+  // See CompanyDocumentVersion.verifiedByRole — same "CR" vs "VERIFIKATOR" distinction, mirrored here.
+  verifiedByRole     String?
+  rejectionNote      String?
+  checklistResult    Json?
+
+  @@unique([applicationId, fieldKey, version])
+  @@index([applicationId, fieldKey])
+  @@map("application_document_version")
+}
+
+model CompanyDraft {
+  id          String   @id @default(cuid())
+  createdById String
+  payload     Json
+  currentStep Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // An admin can have several "Tambah Perusahaan" wizards in progress at
+  // once — no longer one draft slot per user, so createdById is indexed for
+  // the drafts-list query instead of being a unique key.
+  @@index([createdById])
+  @@map("company_draft")
+}
+
+model ApplicationDraft {
+  id          String   @id @default(cuid())
+  createdById String   @unique
+  payload     Json
+  currentStep Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("application_draft")
 }
 
 enum MerkOwnershipType {
@@ -277,13 +430,17 @@ model CommoditySubGroup {
 }
 
 model KbliMasterData {
-  id          String           @id @default(cuid())
-  status      MasterDataStatus @default(ACTIVE)
-  code        String
-  description String
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id                 String           @id @default(cuid())
+  status             MasterDataStatus @default(ACTIVE)
+  code               String
+  description        String
+  category           String           @default("-")
+  version            String           @default("KBLI 2020")
+  deactivationReason String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
+  @@unique([code, version])
   @@map("kbli_master_data")
 }
 
@@ -300,11 +457,29 @@ model HsCodeMasterData {
   unitOfMeasurement   UnitOfMeasurement @relation(fields: [unitOfMeasurementId], references: [id])
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
+  lartasImpor         LartasImpor[]
 
   @@index([commodityGroupId])
   @@index([commoditySubGroupId])
   @@index([unitOfMeasurementId])
   @@map("hs_code_master_data")
+}
+
+model LartasImpor {
+  id              String           @id @default(cuid())
+  status          MasterDataStatus @default(ACTIVE)
+  hsCodeId        String
+  hsCode          HsCodeMasterData @relation(fields: [hsCodeId], references: [id])
+  apiP            Boolean          @default(false)
+  apiUIndustri    Boolean          @default(false)
+  apiUNonIndustri Boolean          @default(false)
+  barangKonsumsi  Boolean          @default(false)
+  ppbb            Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([hsCodeId])
+  @@map("lartas_impor")
 }
 
 enum AssignmentStatus {
@@ -332,11 +507,23 @@ model Assignment {
   applicationId String
   application   Application @relation(fields: [applicationId], references: [id])
 
-  surveyorId String
-  surveyor   User   @relation("SurveyorAssignments", fields: [surveyorId], references: [id])
+  surveyorId String?
+  surveyor   User?   @relation("SurveyorAssignments", fields: [surveyorId], references: [id])
 
   verifikatorId String?
   verifikator   User?   @relation("VerifikatorAssignments", fields: [verifikatorId], references: [id])
+
+  technicalReviewerId String?
+  technicalReviewer   User?   @relation("TechnicalReviewerAssignments", fields: [technicalReviewerId], references: [id])
+
+  // 'survey' | 'dokumen' | 'technical' — set by Customer Relation Workspace
+  // when scheduling; null for legacy rows created before this field existed.
+  scheduleType String?
+
+  // Surat Tugas (assignment letter) lifecycle — draft until Customer Relation
+  // submits it, pending Project Manager approval (no PM workspace exists yet).
+  letterNumber String?
+  letterStatus AssignmentLetterStatus @default(DRAFT)
 
   scheduledDate   DateTime?
   scheduledTime   String?
@@ -352,10 +539,20 @@ model Assignment {
   // in this schema rather than adding relational tables for what is
   // fundamentally a per-item decision map over the Application.payload
   // document/product lists.
-  documentVerifications Json?
-  productVerifications  Json?
-  validationNotes       String?
-  validatedAt           DateTime?
+  documentVerifications      Json?
+  productVerifications       Json?
+  machineVerifications       Json?
+  productionQtyVerifications Json?
+  validationNotes            String?
+  validatedAt                DateTime?
+
+  // Verifikator's online signature, captured when submitting the final report
+  // (Draft Report tab) — signatureDate is the verifikator-chosen date printed
+  // under "Disusun Oleh" on the report, distinct from validatedAt (the actual
+  // submission timestamp) since the printed date may be back/forward-dated to
+  // match a physical signing date.
+  signaturePath String?
+  signatureDate DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -366,7 +563,14 @@ model Assignment {
   @@index([applicationId])
   @@index([surveyorId])
   @@index([verifikatorId])
+  @@index([technicalReviewerId])
   @@map("assignment")
+}
+
+enum AssignmentLetterStatus {
+  DRAFT
+  PENDING
+  APPROVED
 }
 
 enum LocationVisitStatus {
@@ -390,19 +594,26 @@ model LocationVisit {
   scheduledDate DateTime?
   scheduledTime String?
 
-  checklist              Json?
-  fieldObservationNotes  String?
-  photos                 Json?
-  interviews             Json?
-  findings               Json?
-  reportSummary          String?
-  officeVerification     Json?
-  warehouseVerification  Json?
-  factoryVerification    Json?
+  checklist             Json?
+  fieldObservationNotes String?
+  photos                Json?
+  interviews            Json?
+  findings              Json?
+  reportSummary         String?
+  officeVerification    Json?
+  warehouseVerification Json?
+  factoryVerification   Json?
+
+  // Verifikator's own desk review of the surveyor's report for this
+  // location — separate from the surveyor's own checklist/findings above.
+  // One JSON blob (per-item results + the final Verified/Reject/Revisi
+  // decision) mirrors the existing convention for verifikator decision maps
+  // elsewhere in this schema (e.g. Assignment.documentVerifications).
+  reportVerification Json?
 
   submittedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([assignmentId])
   @@map("location_visit")

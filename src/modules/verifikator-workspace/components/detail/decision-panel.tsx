@@ -31,22 +31,22 @@ export function DecisionPanel({ assignmentId, status, quickStats }: Props) {
 
   if (status !== "SUBMITTED") {
     return (
-      <footer className="sticky bottom-0 flex flex-shrink-0 items-center justify-between gap-4 border-t border-[#e4e7f2] bg-white px-7 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
-        <div className="text-sm text-[#3d4258]">
+      <footer className="sticky bottom-0 flex flex-shrink-0 items-center justify-between gap-4 border-t border-[#f0ded0] bg-white px-7 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+        <div className="text-sm text-[#4a4038]">
           {status === "COMPLETED" && (
-            <span className="flex items-center gap-2 font-semibold text-[#0f7a4d]">
+            <span className="flex items-center gap-2 font-semibold text-[#1a9850]">
               <MaterialIcon name="task_alt" className="text-base" />
               Assignment ini telah disetujui.
             </span>
           )}
           {status === "RETURNED" && (
-            <span className="flex items-center gap-2 font-semibold text-[#c1352b]">
+            <span className="flex items-center gap-2 font-semibold text-[#c1361f]">
               <MaterialIcon name="undo" className="text-base" />
               Assignment ini telah dikembalikan untuk revisi.
             </span>
           )}
           {status !== "COMPLETED" && status !== "RETURNED" && (
-            <span className="text-[#8891ab]">Menunggu survey lapangan selesai sebelum dapat divalidasi.</span>
+            <span className="text-[#8a7565]">Menunggu survey lapangan selesai sebelum dapat divalidasi.</span>
           )}
         </div>
       </footer>
@@ -80,21 +80,21 @@ export function DecisionPanel({ assignmentId, status, quickStats }: Props) {
 
   return (
     <>
-      <footer className="sticky bottom-0 flex flex-shrink-0 flex-wrap items-center justify-between gap-4 border-t border-[#e4e7f2] bg-white px-7 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+      <footer className="sticky bottom-0 flex flex-shrink-0 flex-wrap items-center justify-between gap-4 border-t border-[#f0ded0] bg-white px-7 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
         <div>
-          <div className="text-base font-extrabold text-[#1f2437]">Siap Mengambil Keputusan?</div>
-          <div className="text-[13px] text-[#7d8398]">
+          <div className="text-base font-extrabold text-[#20180f]">Siap Mengambil Keputusan?</div>
+          <div className="text-[13px] text-[#8a7565]">
             {quickStats.pendingReview > 0
               ? `${quickStats.pendingReview} dokumen/produk masih menunggu review.`
               : "Seluruh dokumen dan produk telah direview."}
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button variant="outline" className="rounded-full" onClick={() => setDecision("RETURNED")}>
+          <Button variant="outline" className="rounded-full border-[#e1bfb3] text-[#261813]" onClick={() => setDecision("RETURNED")}>
             <MaterialIcon name="undo" className="text-base" />
             Return for Revision
           </Button>
-          <Button className="rounded-full bg-[#3454d1] hover:bg-[#2c46b3]" onClick={() => setDecision("COMPLETED")}>
+          <Button className="rounded-full bg-[#e0662e] hover:bg-[#c1361f]" onClick={() => setDecision("COMPLETED")}>
             <MaterialIcon name="task_alt" className="text-base" />
             Approve
           </Button>
@@ -124,7 +124,7 @@ export function DecisionPanel({ assignmentId, status, quickStats }: Props) {
             <Button variant="outline" onClick={() => setDecision(null)} disabled={isSubmitting}>
               Batal
             </Button>
-            <Button onClick={submitDecision} disabled={isSubmitting}>
+            <Button onClick={submitDecision} disabled={isSubmitting} className="bg-[#e0662e] text-white hover:bg-[#c1361f]">
               {isSubmitting ? "Menyimpan..." : "Konfirmasi"}
             </Button>
           </DialogFooter>

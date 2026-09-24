@@ -30,10 +30,12 @@ const INVESTMENT_STATUS_OPTIONS = [
 
 type Props<T extends FieldValues & GeneralInformationValues> = {
   form: UseFormReturn<T>;
+  readOnly?: boolean;
 };
 
 export function GeneralInformationFields<T extends FieldValues & GeneralInformationValues>({
   form,
+  readOnly = false,
 }: Props<T>) {
   const {
     control,
@@ -60,6 +62,7 @@ export function GeneralInformationFields<T extends FieldValues & GeneralInformat
         <Input
           id="companyName"
           placeholder="e.g. PT Textile Indonesia"
+          disabled={readOnly}
           {...register("companyName" as Path<T>)}
         />
       </FormField>
@@ -74,23 +77,26 @@ export function GeneralInformationFields<T extends FieldValues & GeneralInformat
           <Controller
             control={control}
             name={"companyType" as Path<T>}
-            render={({ field }) => (
-              <Select
-                value={(field.value as string) ?? ""}
-                onValueChange={field.onChange}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pilih jenis badan usaha..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {COMPANY_TYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            render={({ field }) =>
+              readOnly ? (
+                <div className="flex h-9 items-center rounded-md border border-input bg-muted px-3 text-sm text-muted-foreground">
+                  {(field.value as string) || "-"}
+                </div>
+              ) : (
+                <Select value={(field.value as string) ?? ""} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Pilih jenis badan usaha..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COMPANY_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )
+            }
           />
         </FormField>
 
@@ -109,6 +115,7 @@ export function GeneralInformationFields<T extends FieldValues & GeneralInformat
                     key={option.value}
                     selected={field.value === option.value}
                     onSelect={() => field.onChange(option.value)}
+                    disabled={readOnly}
                     className="flex-row items-center gap-2 py-2"
                   >
                     <span className="text-sm font-semibold">{option.label}</span>
@@ -134,6 +141,7 @@ export function GeneralInformationFields<T extends FieldValues & GeneralInformat
             id="companyEmail"
             type="email"
             placeholder="info@textileindonesia.co.id"
+            disabled={readOnly}
             {...register("companyEmail" as Path<T>)}
           />
         </FormField>
@@ -147,6 +155,7 @@ export function GeneralInformationFields<T extends FieldValues & GeneralInformat
             id="companyPhone"
             type="tel"
             placeholder="+62 22 1234567"
+            disabled={readOnly}
             {...register("companyPhone" as Path<T>)}
           />
         </FormField>
@@ -160,6 +169,7 @@ export function GeneralInformationFields<T extends FieldValues & GeneralInformat
         <Input
           id="companyWebsite"
           placeholder="www.textileindonesia.co.id"
+          disabled={readOnly}
           {...register("companyWebsite" as Path<T>)}
         />
       </FormField>

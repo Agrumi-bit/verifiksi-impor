@@ -24,10 +24,10 @@ export default function VerifikatorWorkspaceLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  // Assignment Detail is a standalone full-page workspace with its own header,
-  // mirroring the Surveyor Workspace convention — it doesn't sit inside the
-  // persistent Sidebar/TopNavBar chrome used by the rest of the workspace.
-  const isStandalonePage = /^\/verifikator-workspace\/assignments\/[^/]+/.test(pathname ?? "");
+  // Only the A4 print-style report preview is standalone (it mirrors the
+  // Surveyor Workspace's own report view and shouldn't carry sidebar chrome).
+  // Assignment Detail itself sits inside the normal Sidebar/TopNavBar shell.
+  const isStandalonePage = /^\/verifikator-workspace\/assignments\/[^/]+\/report\//.test(pathname ?? "");
 
   if (isStandalonePage) {
     return (
