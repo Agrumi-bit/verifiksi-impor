@@ -501,7 +501,13 @@ export const vkiSupportSchema = z.object({
   tenagaKerjaDocumentPath: z.string().trim().optional(),
 });
 
-export const applicationWizardSchema = applicationMetaSchema
+/** Every field both VKI and VIU wizards carry — no cross-field rules attached yet. The
+ * shared base for three different schemas below: the flat `applicationWizardSchema` the
+ * live wizard form actually uses (one react-hook-form instance, one `ApplicationWizardValues`
+ * type — splitting that into a union breaks RHF's generic field-path inference across every
+ * step component), plus the two `verificationType`-literal branches `applicationSubmitSchema`
+ * discriminates on. */
+const applicationWizardShape = applicationMetaSchema
   .extend(companySchema.shape)
   .extend(legalInformationSchema.shape)
   .extend(locationsSchema.shape)
@@ -513,110 +519,136 @@ export const applicationWizardSchema = applicationMetaSchema
   .extend(machinesSchema.shape)
   .extend(rawMaterialsSchema.shape)
   .extend(productionCapacitySchema.shape)
-  .extend(vkiSupportSchema.shape)
-  .superRefine((data, ctx) => {
-    if (data.verificationType === "VIU" && data.declarationAccepted !== true) {
+  .extend(vkiSupportSchema.shape);
+
+/**
+ * Every cross-field rule that only makes sense for VIU Barang Konsumsi (declaration
+ * checkbox, Partner Industri, Merek yang Digunakan, Hasil Uji Mutu, Support Document
+ * Konsumsi) — VKI has no `importTypes` field in its own wizard UI at all (see
+ * step1-application-information.tsx's `verificationType === "VIU"` gate) and no
+ * declaration checkbox (submission is gated by its own confirm modal instead). Pulled
+ * into its own function so it's the ONE place these rules live, called from both
+ * `applicationWizardSchema` (guarded below, for the live form) and `applicationSubmitSchema`'s
+ * own VIU branch (unguarded — the discriminated union only ever calls this for a VIU
+ * payload in the first place, so a future rule added here can never leak into a VKI
+ * submission by a forgotten if-guard).
+ */
+function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardShape>, ctx: z.RefinementCtx): void {
+  if (data.declarationAccepted !== true) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["declarationAccepted"],
+      message: "Anda harus menyetujui pernyataan ini sebelum submit",
+    });
+  }
+  if (
+    data.importTypes.includes("BAHAN_BAKU_INDUSTRI") &&
+    !data.partnerIndustriEntries.some((entry) => entry.enabled)
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["partnerIndustriEntries"],
+      message: "Aktifkan minimal satu Partner Industri tujuan",
+    });
+  }
+  if (
+    data.importTypes.includes("BAHAN_BAKU_INDUSTRI") ||
+    data.importTypes.includes("BAHAN_BAKU_NON_INDUSTRI")
+  ) {
+    // Not every document applies to every applicant (toggled on/off per case) — just require
+    // at least one enabled document to actually have a file uploaded, not every def.
+    const hasUploadedDoc = data.nonIndustriDocuments.some((doc) => doc.enabled && doc.documentPath);
+    if (!hasUploadedDoc) {
       ctx.addIssue({
         code: "custom",
-        path: ["declarationAccepted"],
-        message: "Anda harus menyetujui pernyataan ini sebelum submit",
+        path: ["nonIndustriDocuments"],
+        message: "Aktifkan dan unggah minimal satu Dokumen Modal",
       });
     }
-    // Everything below (Jenis Impor / Partner Industri / Merek yang Digunakan / Hasil Uji
-    // Mutu / Support Document Konsumsi) is exclusively a VIU Barang Konsumsi concept — VKI
-    // has no `importTypes` field in its own wizard UI at all (see
-    // step1-application-information.tsx's `verificationType === "VIU"` gate). Without this
-    // guard, a VKI submission that happens to carry stale `importTypes`/`applicationBrands`
-    // state (e.g. the user picked VIU first, filled some of it in, then switched to VKI —
-    // nothing resets those fields on that switch) would incorrectly get flagged for VIU-only
-    // requirements it was never shown and can't fix from its own steps. Never mix VKI and VIU
-    // validation.
-    if (data.verificationType === "VIU") {
-      if (
-        data.importTypes.includes("BAHAN_BAKU_INDUSTRI") &&
-        !data.partnerIndustriEntries.some((entry) => entry.enabled)
-      ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["partnerIndustriEntries"],
-          message: "Aktifkan minimal satu Partner Industri tujuan",
-        });
-      }
-      if (
-        data.importTypes.includes("BAHAN_BAKU_INDUSTRI") ||
-        data.importTypes.includes("BAHAN_BAKU_NON_INDUSTRI")
-      ) {
-        // Not every document applies to every applicant (toggled on/off per case) — just require
-        // at least one enabled document to actually have a file uploaded, not every def.
-        const hasUploadedDoc = data.nonIndustriDocuments.some((doc) => doc.enabled && doc.documentPath);
-        if (!hasUploadedDoc) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["nonIndustriDocuments"],
-            message: "Aktifkan dan unggah minimal satu Dokumen Modal",
-          });
-        }
-      }
-      if (
-        data.importTypes.includes("BARANG_KONSUMSI") &&
-        data.konsumsiDocuments.length < 1
-      ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["konsumsiDocuments"],
-          message: "Tambahkan minimal satu dokumen pendukung",
-        });
-      }
-      // Step "Merek yang Digunakan" — structural validity only (at least one
-      // Brand, and each entry's own role/appointment/representative shape).
-      // Readiness (evidence validity, relationship rules, document
-      // completeness — see viu-brand-relationship-rules.ts) is deliberately
-      // NOT enforced here: an INCOMPLETE Brand may still continue to Step 5
-      // per the Continue Rule; only Submit is expected to block on it, and
-      // that block happens via the server-side brand validator, not this
-      // schema (recalculating readiness needs a DB read this sync validator
-      // can't do).
-      if (data.importTypes.includes("BARANG_KONSUMSI") && data.applicationBrands.length < 1) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["applicationBrands"],
-          message: "Pilih atau tambahkan minimal satu merek yang digunakan",
-        });
-      }
-      data.applicationBrands.forEach((entry, index) => {
-        if (entry.applicantRole === "IMPORTER_ONLY" && !entry.appointmentSource) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["applicationBrands", index, "appointmentSource"],
-            message: "Pilih sumber penunjukan importir",
-          });
-        }
-        if (entry.appointmentSource === "OFFICIAL_REPRESENTATIVE" && !entry.officialRepresentativeCompanyId) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["applicationBrands", index, "officialRepresentativeCompanyId"],
-            message: "Pilih Perwakilan Resmi",
-          });
-        }
+  }
+  if (data.importTypes.includes("BARANG_KONSUMSI") && data.konsumsiDocuments.length < 1) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["konsumsiDocuments"],
+      message: "Tambahkan minimal satu dokumen pendukung",
+    });
+  }
+  // Step "Merek yang Digunakan" — structural validity only (at least one
+  // Brand, and each entry's own role/appointment/representative shape).
+  // Readiness (evidence validity, relationship rules, document
+  // completeness — see viu-brand-relationship-rules.ts) is deliberately
+  // NOT enforced here: an INCOMPLETE Brand may still continue to Step 5
+  // per the Continue Rule; only Submit is expected to block on it, and
+  // that block happens via the server-side brand validator, not this
+  // schema (recalculating readiness needs a DB read this sync validator
+  // can't do).
+  if (data.importTypes.includes("BARANG_KONSUMSI") && data.applicationBrands.length < 1) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["applicationBrands"],
+      message: "Pilih atau tambahkan minimal satu merek yang digunakan",
+    });
+  }
+  data.applicationBrands.forEach((entry, index) => {
+    if (entry.applicantRole === "IMPORTER_ONLY" && !entry.appointmentSource) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["applicationBrands", index, "appointmentSource"],
+        message: "Pilih sumber penunjukan importir",
       });
-      // Step "Hasil Uji Mutu" — every Brand used in this application needs at
-      // least one quality-test certificate of its own (see
-      // brandQualityTestsSchema's own comment on why this isn't Merk's
-      // qualityTests reused as-is).
-      if (data.importTypes.includes("BARANG_KONSUMSI")) {
-        const brandIdsMissingQualityTest = data.applicationBrands
-          .map((entry) => entry.brandId)
-          .filter((brandId) => !data.brandQualityTests.some((qt) => qt.brandId === brandId));
-        if (brandIdsMissingQualityTest.length > 0) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["brandQualityTests"],
-            message: `${brandIdsMissingQualityTest.length} merek belum memiliki dokumen hasil uji mutu`,
-          });
-        }
-      }
+    }
+    if (entry.appointmentSource === "OFFICIAL_REPRESENTATIVE" && !entry.officialRepresentativeCompanyId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["applicationBrands", index, "officialRepresentativeCompanyId"],
+        message: "Pilih Perwakilan Resmi",
+      });
     }
   });
+  // Step "Hasil Uji Mutu" — every Brand used in this application needs at
+  // least one quality-test certificate of its own (see
+  // brandQualityTestsSchema's own comment on why this isn't Merk's
+  // qualityTests reused as-is).
+  if (data.importTypes.includes("BARANG_KONSUMSI")) {
+    const brandIdsMissingQualityTest = data.applicationBrands
+      .map((entry) => entry.brandId)
+      .filter((brandId) => !data.brandQualityTests.some((qt) => qt.brandId === brandId));
+    if (brandIdsMissingQualityTest.length > 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["brandQualityTests"],
+        message: `${brandIdsMissingQualityTest.length} merek belum memiliki dokumen hasil uji mutu`,
+      });
+    }
+  }
+}
+
+/** The live wizard's own schema — one flat object (never a union, see
+ * `applicationWizardShape`'s own comment on why) so `ApplicationWizardValues` stays a plain
+ * type every step component, hook, and admin/company detail view can keep using unchanged.
+ * Guards VIU-only rules manually since both branches share one runtime object here; the
+ * authoritative, structurally-separated gate is `applicationSubmitSchema` below, which is
+ * what actually decides whether a submission gets persisted. */
+export const applicationWizardSchema = applicationWizardShape.superRefine((data, ctx) => {
+  if (data.verificationType === "VIU") applyViuOnlySubmitRules(data, ctx);
+});
+
+/**
+ * The authoritative submit-time schema — a `verificationType`-discriminated union instead
+ * of one object with an if-guard. `applyViuOnlySubmitRules` is only ever reachable through
+ * the VIU branch, so a VKI payload can structurally never run a VIU-only rule, even one
+ * added later without remembering a guard (the bug this type was introduced to prevent —
+ * see the validate-application-brands.ts fix for the matching server-side case). Used by
+ * `POST /api/applications` instead of `applicationWizardSchema` for the final persist gate.
+ */
+const viuSubmitSchema = applicationWizardShape
+  .extend({ verificationType: z.literal("VIU") })
+  .superRefine(applyViuOnlySubmitRules);
+const vkiSubmitSchema = applicationWizardShape.extend({ verificationType: z.literal("VKI") });
+export const applicationSubmitSchema = z.discriminatedUnion("verificationType", [
+  viuSubmitSchema,
+  vkiSubmitSchema,
+]);
 
 export type SupportDocumentValues = z.infer<typeof supportDocumentSchema>;
 export type ProductItemValues = z.infer<typeof productItemSchema>;

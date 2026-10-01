@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
-import { applicationWizardSchema, type LocationValues } from "@/modules/applications/schema";
+import { applicationSubmitSchema, type LocationValues } from "@/modules/applications/schema";
 import { validateApplicationBrands } from "@/modules/applications/server/validate-application-brands";
 
 function generateApplicationNumber(verificationType: string): string {
@@ -60,7 +60,9 @@ export async function GET() {
 export async function POST(request: Request) {
   const body = await request.json();
   const { draftApplicationId, ...wizardBody } = body ?? {};
-  const parsed = applicationWizardSchema.safeParse(wizardBody);
+  // Discriminated by verificationType — the authoritative gate, structurally unable to run
+  // a VIU-only rule against a VKI payload (see applicationSubmitSchema's own comment).
+  const parsed = applicationSubmitSchema.safeParse(wizardBody);
 
   if (!parsed.success) {
     return NextResponse.json(
