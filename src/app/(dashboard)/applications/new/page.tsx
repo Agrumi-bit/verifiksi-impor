@@ -14,13 +14,13 @@ function toVerificationType(value: string | string[] | undefined): VerificationT
 export default async function NewApplicationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; draftId?: string }>;
 }) {
-  const { type } = await searchParams;
+  const { type, draftId } = await searchParams;
 
   return (
     <div className="min-h-full bg-muted/30 px-4">
-      <ApplicationWizard lockedVerificationType={toVerificationType(type)} />
+      <ApplicationWizard lockedVerificationType={toVerificationType(type)} resumeDraftId={draftId} />
     </div>
   );
 }

@@ -215,9 +215,19 @@ export function ApplicationTable() {
               </span>
             </div>
             <div>
-              <Link href={`/applications/${application.id}`} className="text-[12.5px] font-semibold text-[#c14a1f]">
-                Detail
-              </Link>
+              {application.status === "DRAFT" ? (
+                <button
+                  type="button"
+                  onClick={() => router.push(`/applications/new?draftId=${application.id}`)}
+                  className="text-[12.5px] font-semibold text-[#c14a1f]"
+                >
+                  Lanjutkan
+                </button>
+              ) : (
+                <Link href={`/applications/${application.id}`} className="text-[12.5px] font-semibold text-[#c14a1f]">
+                  Detail
+                </Link>
+              )}
             </div>
           </div>
         ))}

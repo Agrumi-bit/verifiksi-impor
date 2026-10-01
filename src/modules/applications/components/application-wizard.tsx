@@ -78,7 +78,7 @@ type Props = {
   hideCompanyPicker?: boolean;
   /** Where the back arrow returns to — differs between the admin and company-workspace entry points. */
   backHref?: string;
-  /** Continuing an existing Application(DRAFT) row from the company-workspace Application List. */
+  /** Continuing an existing Application(DRAFT) row from the Application List (admin or company-workspace). */
   resumeDraftId?: string;
 };
 
@@ -95,7 +95,6 @@ export function ApplicationWizard({
     goNext,
     goBack,
     goToStep,
-    restoreStep,
     activeSteps,
     activeFieldNames,
     isVki,
@@ -105,11 +104,11 @@ export function ApplicationWizard({
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [receipt, setReceipt] = useState<SubmitReceipt | null>(null);
   const hasLoadedDraft = useRef(false);
-  // Company-workspace drafts are real Application(DRAFT) rows (so they show up
-  // in Application List) rather than the admin's per-user ApplicationDraft
-  // singleton — this tracks the row so repeat saves (and the final submit)
-  // update it in place instead of creating duplicates.
-  const [companyDraftApplicationId, setCompanyDraftApplicationId] = useState<string | null>(null);
+  // "Save as Draft" upserts a real Application(DRAFT) row (both admin and
+  // company-workspace entry points) so it shows up in Application List —
+  // this tracks the row so repeat saves (and the final submit) update it in
+  // place instead of creating duplicates.
+  const [draftApplicationId, setDraftApplicationId] = useState<string | null>(null);
   // Display-only, for Step "Merek yang Digunakan"'s "+ Tambah Merek Baru"
   // context banner — never sent anywhere, just lets the user see which
   // application they're attaching the new Brand to.
@@ -121,30 +120,15 @@ export function ApplicationWizard({
   const [validationIssues, setValidationIssues] = useState<StepValidationIssue[]>([]);
 
   useEffect(() => {
-    if (hideCompanyPicker) return;
-    if (hasLoadedDraft.current) return;
-    hasLoadedDraft.current = true;
-    (async () => {
-      const response = await fetch("/api/applications/drafts");
-      if (!response.ok) return;
-      const { data } = (await response.json()) as {
-        data: { payload: Partial<ApplicationWizardValues>; currentStep: number } | null;
-      };
-      if (!data) return;
-      form.reset(data.payload as ApplicationWizardValues);
-      restoreStep(data.currentStep);
-      toast.info("Draft tersimpan ditemukan, melanjutkan pengisian.");
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
     if (!resumeDraftId || hasLoadedDraft.current) return;
     hasLoadedDraft.current = true;
     (async () => {
-      const response = await fetch(`/api/company-workspace/applications/${resumeDraftId}`);
+      const resumeUrl = hideCompanyPicker
+        ? `/api/company-workspace/applications/${resumeDraftId}`
+        : `/api/applications/${resumeDraftId}`;
+      const response = await fetch(resumeUrl);
       if (!response.ok) {
-        toast.error("Draft tidak ditemukan, atau bukan milik perusahaan Anda.");
+        toast.error("Draft tidak ditemukan, atau tidak dapat diakses.");
         return;
       }
       const { data } = (await response.json()) as {
@@ -155,7 +139,7 @@ export function ApplicationWizard({
         return;
       }
       form.reset(data.payload);
-      setCompanyDraftApplicationId(resumeDraftId);
+      setDraftApplicationId(resumeDraftId);
       toast.info(data.status === "RETURNED" ? "Memuat permohonan untuk direvisi." : "Melanjutkan draft tersimpan.");
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -206,15 +190,14 @@ export function ApplicationWizard({
       const response = await fetch("/api/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, draftApplicationId: companyDraftApplicationId ?? undefined }),
+        body: JSON.stringify({ ...values, draftApplicationId: draftApplicationId ?? undefined }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => null);
         throw new Error(body?.error ?? "Gagal mengirim permohonan");
       }
       const data = (await response.json()) as { applicationNumber: string };
-      await fetch("/api/applications/drafts", { method: "DELETE" });
-      setCompanyDraftApplicationId(null);
+      setDraftApplicationId(null);
       setValidationIssues([]);
       setReceipt({ applicationNumber: data.applicationNumber });
       toast.success(`Permohonan berhasil disubmit: ${data.applicationNumber}`);
@@ -278,30 +261,22 @@ export function ApplicationWizard({
   async function handleSaveDraft() {
     setIsSavingDraft(true);
     try {
-      if (hideCompanyPicker) {
-        const response = await fetch("/api/company-workspace/applications", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            applicationId: companyDraftApplicationId ?? undefined,
-            payload: form.getValues(),
-          }),
-        });
-        if (!response.ok) throw new Error("Gagal menyimpan draft");
-        const { id, applicationNumber: savedApplicationNumber } = (await response.json()) as {
-          id: string;
-          applicationNumber: string;
-        };
-        setCompanyDraftApplicationId(id);
-        setApplicationNumber(savedApplicationNumber);
-      } else {
-        const response = await fetch("/api/applications/drafts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ payload: form.getValues(), currentStep }),
-        });
-        if (!response.ok) throw new Error("Gagal menyimpan draft");
-      }
+      const draftUrl = hideCompanyPicker ? "/api/company-workspace/applications" : "/api/applications/draft";
+      const response = await fetch(draftUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applicationId: draftApplicationId ?? undefined,
+          payload: form.getValues(),
+        }),
+      });
+      if (!response.ok) throw new Error("Gagal menyimpan draft");
+      const { id, applicationNumber: savedApplicationNumber } = (await response.json()) as {
+        id: string;
+        applicationNumber: string;
+      };
+      setDraftApplicationId(id);
+      setApplicationNumber(savedApplicationNumber);
       toast.success("Draft berhasil disimpan.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal menyimpan draft");
