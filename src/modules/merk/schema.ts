@@ -285,6 +285,14 @@ export const qualityTestEntrySchema = z.object({
 });
 export type QualityTestEntryValues = z.infer<typeof qualityTestEntrySchema>;
 
+// Standalone create payload for the Quality Test monitoring pages' own
+// "Tambah Dokumen" dialog — adds merkId since this entry isn't nested inside
+// a full Merk wizard submit like `qualityTestEntrySchema` normally is.
+export const qualityTestCreateSchema = qualityTestEntrySchema.extend({
+  merkId: requiredString("Merek wajib dipilih"),
+});
+export type QualityTestCreateValues = z.infer<typeof qualityTestCreateSchema>;
+
 const merkDocumentsBaseSchema = z.object({
   // Keyed by BrandDocumentRequirement.code — one entry per single-file slot.
   documents: z.record(z.string(), brandDocumentEntrySchema),

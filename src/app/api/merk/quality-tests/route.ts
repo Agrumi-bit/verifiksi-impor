@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { db } from "@/lib/db";
 import { requireAdminSession } from "@/lib/require-admin-session";
+import { mapPrismaWriteError } from "@/modules/merk/prisma-error-message";
+import { qualityTestCreateSchema } from "@/modules/merk/schema";
+import { validateQualityTestReferences } from "@/modules/merk/server-validation";
 
 /** Platform-level structured Quality Test monitoring — flattens
  * `BrandQualityTest` across every brand. Kept as its own structured record
@@ -33,4 +37,50 @@ export async function GET() {
       expiryDate: qt.expiryDate,
     })),
   });
+}
+
+export async function POST(request: Request) {
+  const { error } = await requireAdminSession();
+  if (error) return error;
+
+  const body = await request.json();
+  const parsed = qualityTestCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Data tidak valid", issues: z.treeifyError(parsed.error) },
+      { status: 400 },
+    );
+  }
+
+  const merk = await db.merk.findUnique({ where: { id: parsed.data.merkId } });
+  if (!merk) {
+    return NextResponse.json({ error: "Merek tidak ditemukan" }, { status: 404 });
+  }
+
+  const referenceError = await validateQualityTestReferences([parsed.data]);
+  if (referenceError) {
+    return NextResponse.json({ error: referenceError }, { status: 400 });
+  }
+
+  try {
+    const qualityTest = await db.brandQualityTest.create({
+      data: {
+        merkId: parsed.data.merkId,
+        commodityGroupId: parsed.data.commodityGroupId,
+        commoditySubGroupId: parsed.data.commoditySubGroupId || null,
+        certificateNumber: parsed.data.certificateNumber,
+        laboratoryName: parsed.data.laboratoryName,
+        issueDate: new Date(parsed.data.issueDate),
+        expiryDate: parsed.data.expiryDate ? new Date(parsed.data.expiryDate) : null,
+        filePath: parsed.data.filePath,
+        fileName: parsed.data.fileName,
+      },
+    });
+    return NextResponse.json({ data: qualityTest }, { status: 201 });
+  } catch (err) {
+    const message = mapPrismaWriteError(err);
+    if (message) return NextResponse.json({ error: message }, { status: 400 });
+    console.error("POST /api/merk/quality-tests failed:", err);
+    return NextResponse.json({ error: "Gagal menyimpan dokumen hasil uji mutu, coba lagi." }, { status: 500 });
+  }
 }

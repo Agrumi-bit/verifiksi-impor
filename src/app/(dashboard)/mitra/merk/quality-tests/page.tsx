@@ -15,7 +15,11 @@ export default function MerkQualityTestsPage() {
           Monitoring hasil uji mutu merek pada seluruh platform.
         </p>
       </div>
-      <QualityTestsTable fetchUrl="/api/merk/quality-tests" brandDetailHrefBase="/mitra/merk" />
+      <QualityTestsTable
+        fetchUrl="/api/merk/quality-tests"
+        brandDetailHrefBase="/mitra/merk"
+        brandOptionsUrl="/api/merk"
+      />
     </div>
   );
 }
