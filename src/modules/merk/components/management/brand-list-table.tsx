@@ -255,8 +255,8 @@ export function BrandListTable({
                     </TableCell>
                   )}
                   {cols.updated && <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDate(row.updatedAt)}</TableCell>}
-                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    <button type="button" className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted" onClick={(e) => openMenu(e, row.id)}>
+                  <TableCell className="text-right" onClick={(e) => { e.stopPropagation(); openMenu(e, row.id); }}>
+                    <button type="button" className="ml-auto flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted">
                       ⋮
                     </button>
                   </TableCell>
