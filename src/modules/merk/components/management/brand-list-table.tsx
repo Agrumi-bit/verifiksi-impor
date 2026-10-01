@@ -76,6 +76,7 @@ type Props = {
   onRowAction: (action: RowAction, row: BrandRow) => void;
   onExportCsv: (rows: BrandRow[]) => void;
   onBulkStatus: (ids: string[], nextActive: boolean) => void;
+  onBulkDelete: (ids: string[]) => void;
 };
 
 export function BrandListTable({
@@ -83,7 +84,7 @@ export function BrandListTable({
   sortKey, sortDir, onSort,
   cols, onColsChange,
   page, pageSize, onPageChange, onPageSizeChange,
-  selected, onSelectedChange, selectedRows, hasDraftSelected, onRowAction, onExportCsv, onBulkStatus,
+  selected, onSelectedChange, selectedRows, hasDraftSelected, onRowAction, onExportCsv, onBulkStatus, onBulkDelete,
 }: Props) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
@@ -275,6 +276,7 @@ export function BrandListTable({
           <Button size="sm" variant="outline" onClick={() => onExportCsv(selectedRows)}>Export</Button>
           <Button size="sm" variant="outline" disabled={hasDraftSelected} onClick={() => onBulkStatus(selectedIds, true)}>Ubah Status</Button>
           <Button size="sm" variant="outline" className="text-destructive" disabled={hasDraftSelected} onClick={() => onBulkStatus(selectedIds, false)}>Deactivate</Button>
+          <Button size="sm" variant="outline" className="text-destructive" onClick={() => onBulkDelete(selectedIds)}>Hapus</Button>
         </div>
       )}
 

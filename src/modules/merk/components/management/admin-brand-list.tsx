@@ -68,7 +68,7 @@ export function AdminBrandList() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [wizardTarget, setWizardTarget] = useState<"new" | string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<BrandRow | null>(null);
+  const [deleteTargets, setDeleteTargets] = useState<BrandRow[] | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: brands, isLoading, isError } = useQuery({
@@ -216,23 +216,45 @@ export function AdminBrandList() {
     else if (action === "status") toggleStatus(row.id, row.status !== "ACTIVE").then((ok) => { if (ok) queryClient.invalidateQueries({ queryKey: LIST_KEY }); });
     else if (action === "documents") setDetailId(row.id);
     else if (action === "activity") setDetailId(row.id);
-    else if (action === "delete" || action === "deleteDraft") setDeleteTarget(row);
+    else if (action === "delete" || action === "deleteDraft") setDeleteTargets([row]);
+  }
+
+  function handleBulkDelete(ids: string[]) {
+    const rows = allRows.filter((r) => ids.includes(r.id));
+    if (rows.length > 0) setDeleteTargets(rows);
   }
 
   async function handleConfirmDelete() {
-    if (!deleteTarget) return;
+    if (!deleteTargets || deleteTargets.length === 0) return;
     setIsDeleting(true);
     try {
-      const response = await fetch(`${SURFACE.apiBase}/${deleteTarget.id}`, { method: "DELETE" });
-      if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        throw new Error(body?.error ?? "Gagal menghapus merek");
+      const outcomes = await Promise.all(
+        deleteTargets.map(async (target) => {
+          try {
+            const response = await fetch(`${SURFACE.apiBase}/${target.id}`, { method: "DELETE" });
+            if (!response.ok) {
+              const body = await response.json().catch(() => null);
+              throw new Error(body?.error ?? `Gagal menghapus "${target.brandName}"`);
+            }
+            return { ok: true as const, target };
+          } catch (error) {
+            return { ok: false as const, target, message: error instanceof Error ? error.message : "Gagal menghapus merek" };
+          }
+        }),
+      );
+      const succeeded = outcomes.filter((o) => o.ok);
+      const failed = outcomes.filter((o) => !o.ok);
+      if (succeeded.length > 0) {
+        toast.success(
+          succeeded.length === 1
+            ? `Merek "${succeeded[0].target.brandName}" berhasil dihapus.`
+            : `${succeeded.length} merek berhasil dihapus.`,
+        );
+        queryClient.invalidateQueries({ queryKey: LIST_KEY });
+        setSelected(new Set());
       }
-      toast.success(`Merek "${deleteTarget.brandName}" berhasil dihapus.`);
-      queryClient.invalidateQueries({ queryKey: LIST_KEY });
-      setDeleteTarget(null);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Gagal menghapus merek");
+      failed.forEach((f) => toast.error(f.message));
+      setDeleteTargets(null);
     } finally {
       setIsDeleting(false);
     }
@@ -331,6 +353,7 @@ export function AdminBrandList() {
         onRowAction={handleRowAction}
         onExportCsv={(rows) => { downloadBrandsCsv(rows); toast.success(`Mengekspor ${rows.length} merek ke CSV.`); }}
         onBulkStatus={handleBulkStatus}
+        onBulkDelete={handleBulkDelete}
       />
 
       {wizardTarget && (
@@ -351,18 +374,32 @@ export function AdminBrandList() {
         />
       )}
 
-      <Dialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+      <Dialog open={deleteTargets !== null} onOpenChange={(open) => { if (!open) setDeleteTargets(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Hapus merek ini?</DialogTitle>
+            <DialogTitle>{deleteTargets && deleteTargets.length > 1 ? `Hapus ${deleteTargets.length} merek ini?` : "Hapus merek ini?"}</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Merek <b className="text-foreground">{deleteTarget?.brandName}</b> beserta seluruh dokumen,
-            kepemilikan, dan data kelas merek yang terkait akan dihapus permanen. Tindakan ini tidak
-            dapat dibatalkan.
-          </p>
+          {deleteTargets && deleteTargets.length > 1 ? (
+            <div className="text-sm text-muted-foreground">
+              <p className="mb-2">
+                {deleteTargets.length} merek berikut beserta seluruh dokumen, kepemilikan, dan data kelas
+                merek terkait akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.
+              </p>
+              <ul className="max-h-40 list-disc overflow-y-auto pl-5">
+                {deleteTargets.map((t) => (
+                  <li key={t.id} className="text-foreground">{t.brandName}</li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Merek <b className="text-foreground">{deleteTargets?.[0]?.brandName}</b> beserta seluruh dokumen,
+              kepemilikan, dan data kelas merek yang terkait akan dihapus permanen. Tindakan ini tidak
+              dapat dibatalkan.
+            </p>
+          )}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
+            <Button type="button" variant="outline" onClick={() => setDeleteTargets(null)} disabled={isDeleting}>
               Batal
             </Button>
             <Button type="button" variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
