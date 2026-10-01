@@ -61,6 +61,7 @@ function RowReadinessTracker({
     applicantRole: entry.applicantRole ?? null,
     appointmentSource: entry.appointmentSource ?? null,
     officialRepresentativeCompanyId: entry.officialRepresentativeCompanyId ?? null,
+    importerAppointmentDocumentPath: entry.importerAppointmentDocumentPath ?? null,
   });
   const readiness = requirements?.readiness ?? "NOT_ELIGIBLE";
 

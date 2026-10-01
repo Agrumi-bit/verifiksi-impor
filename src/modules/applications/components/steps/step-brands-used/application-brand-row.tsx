@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { RadioCardGroup } from "@/modules/merk/components/steps/step2/radio-card-group";
 import { CompanySearchSelect } from "@/modules/merk/components/steps/step2/company-search-select";
+import { FileUploadField } from "@/components/form/file-upload-field";
+import { FormField } from "@/components/form/form-field";
 import { useActiveBrandOwners } from "@/modules/master-data/use-active-brand-owners";
 import { MERK_EVIDENCE_TYPE_LABELS } from "@/modules/merk/schema";
 import {
@@ -82,6 +84,7 @@ export function ApplicationBrandRow({ form, index, apiBase, brandDetailHrefBase,
       applicantRole: entry.applicantRole ?? null,
       appointmentSource: entry.appointmentSource ?? null,
       officialRepresentativeCompanyId: entry.officialRepresentativeCompanyId ?? null,
+      importerAppointmentDocumentPath: entry.importerAppointmentDocumentPath ?? null,
     },
   );
 
@@ -270,7 +273,32 @@ export function ApplicationBrandRow({ form, index, apiBase, brandDetailHrefBase,
                     </p>
                   )}
                   {entry.appointmentSource === "BRAND_OWNER" && isDomestic && (
-                    <p className="mt-2 text-xs text-muted-foreground">Pemberi Penunjukan: {ownerTitle || "Pemilik Merek"} (read-only)</p>
+                    <div className="mt-3">
+                      <p className="mb-2 text-xs text-muted-foreground">Pemberi Penunjukan: {ownerTitle || "Pemilik Merek"} (read-only)</p>
+                      <FormField
+                        label="Surat Penunjukan Importir dari Pemilik Merek"
+                        required
+                        error={entryErrors?.importerAppointmentDocumentPath?.message}
+                      >
+                        <FileUploadField
+                          namespace="documents"
+                          value={entry.importerAppointmentDocumentPath}
+                          onChange={(path) => {
+                            setValue(`applicationBrands.${index}.importerAppointmentDocumentPath`, path ?? "", {
+                              shouldValidate: true,
+                              shouldDirty: true,
+                            });
+                            setValue(
+                              `applicationBrands.${index}.importerAppointmentDocumentName`,
+                              path ? path.split("/").pop() ?? "" : "",
+                              { shouldDirty: true },
+                            );
+                          }}
+                          label="Unggah Surat Penunjukan Importir"
+                          hint="Format: PDF, JPG, PNG"
+                        />
+                      </FormField>
+                    </div>
                   )}
                   {entryErrors?.appointmentSource?.message && (
                     <p className="mt-1.5 text-xs text-destructive">{entryErrors.appointmentSource.message}</p>

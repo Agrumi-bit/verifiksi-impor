@@ -41,6 +41,11 @@ export function useBrandApplicationDetail(
     applicantRole: ApplicantBrandRole | null;
     appointmentSource: ImportAppointmentSource | null;
     officialRepresentativeCompanyId: string | null;
+    /** This application's own uploaded proof (not a Brand Master document —
+     * see applicationBrandEntrySchema's own comment) that satisfies the
+     * "importer_appointment" requirement when appointmentSource is
+     * BRAND_OWNER. */
+    importerAppointmentDocumentPath?: string | null;
   },
 ) {
   const query = useQuery({
@@ -75,7 +80,10 @@ export function useBrandApplicationDetail(
       applicantRole: relationship.applicantRole,
       appointmentSource: relationship.appointmentSource,
       officialRepresentativeCompanyId: relationship.officialRepresentativeCompanyId ?? null,
-      availableDocumentCodes: new Set(query.data.documents.map((d) => d.documentType)),
+      availableDocumentCodes: new Set([
+        ...query.data.documents.map((d) => d.documentType),
+        ...(relationship.importerAppointmentDocumentPath ? ["importer_appointment"] : []),
+      ]),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- ownerLocation/ownerTitle are derived from query.data, not independent inputs
   }, [
@@ -83,6 +91,7 @@ export function useBrandApplicationDetail(
     relationship.applicantRole,
     relationship.appointmentSource,
     relationship.officialRepresentativeCompanyId,
+    relationship.importerAppointmentDocumentPath,
   ]);
 
   return {

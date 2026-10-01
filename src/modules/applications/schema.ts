@@ -147,6 +147,13 @@ export const applicationBrandEntrySchema = z.object({
   applicantRole: z.enum(APPLICANT_BRAND_ROLES, { message: "Pilih peran pemohon" }),
   appointmentSource: z.enum(IMPORT_APPOINTMENT_SOURCES).optional(),
   officialRepresentativeCompanyId: z.string().trim().optional(),
+  // Only collected when appointmentSource === "BRAND_OWNER" (a domestic brand
+  // owner appointing this applicant as importer directly) — Brand Master no
+  // longer collects a relationshipWithApiu document for this at registration
+  // time (see domestic-owner-ownership.tsx's own comment), so this proof of
+  // appointment is this application's own document instead.
+  importerAppointmentDocumentPath: z.string().trim().optional(),
+  importerAppointmentDocumentName: z.string().trim().optional(),
 });
 export type ApplicationBrandEntryValues = z.infer<typeof applicationBrandEntrySchema>;
 
@@ -602,6 +609,13 @@ function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardShape>, c
         code: "custom",
         path: ["applicationBrands", index, "officialRepresentativeCompanyId"],
         message: "Pilih Perwakilan Resmi",
+      });
+    }
+    if (entry.appointmentSource === "BRAND_OWNER" && !entry.importerAppointmentDocumentPath) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["applicationBrands", index, "importerAppointmentDocumentPath"],
+        message: "Unggah Surat Penunjukan Importir dari Pemilik Merek",
       });
     }
   });
