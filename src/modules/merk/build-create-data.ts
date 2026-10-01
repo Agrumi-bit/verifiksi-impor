@@ -223,9 +223,15 @@ export async function buildMerkCreateData(values: MerkWizardValues, ownerCompany
 
     // Legacy bridge — brandOwnerId only ever pointed at a BrandOwner row, so
     // it's only set for the domestic+company scenario (same table Step 2's
-    // company selectors search).
+    // company selectors search). `|| null`: a domestic+company owner typed
+    // as free text (never matched to a real BrandOwner row via search) sends
+    // ownerCompanyId as "", and `brandOwnerId` is a real FK to BrandOwner.id
+    // — writing "" there violates the FK constraint (no row has id=""),
+    // which Prisma throws as an uncaught P2003 the route had no try/catch
+    // for, surfacing as a bare empty 500. buildMerkDraftData already had
+    // this fallback; buildMerkCreateData was missing it.
     brandOwnerId: values.ownerLocation === "domestic" && values.ownerType === "company"
-      ? values.ownerCompanyId
+      ? values.ownerCompanyId || null
       : null,
     ownershipType,
     brandOwnerName,

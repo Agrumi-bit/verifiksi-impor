@@ -36,8 +36,14 @@ export function DomesticOwnerOwnership({ form }: Props) {
     // ownerCompanyId is a legacy field — Pemilik Merek is manual free text
     // for both "company" and "individual" now, so ownerName/ownerAddress
     // carry over across the switch instead of being cleared.
-    setValue("ownerCompanyId", "");
-    setValue("ownerType", next, { shouldValidate: true });
+    // `shouldDirty: true` on both — without it, a session where every field
+    // the user touches goes through a radio-card's setValue (never a plain
+    // register()'d input) never flips formState.isDirty, so MerkWizard's own
+    // unsaved-changes guard (requestClose) sees "nothing changed" and closes
+    // the drawer on overlay/X click with zero confirmation, silently
+    // dropping everything filled in so far.
+    setValue("ownerCompanyId", "", { shouldDirty: true });
+    setValue("ownerType", next, { shouldValidate: true, shouldDirty: true });
   }
 
   return (

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import { buildMerkUpdateData, buildMerkUpdateDraftData } from "@/modules/merk/build-create-data";
+import { mapPrismaWriteError } from "@/modules/merk/prisma-error-message";
 import { merkDraftSchema, merkStatusUpdateSchema, merkWizardSchema } from "@/modules/merk/schema";
 import { resolveOwnershipReferences, validateQualityTestReferences } from "@/modules/merk/server-validation";
 
@@ -61,12 +62,35 @@ export async function PATCH(
 
   const body = await request.json();
 
-  // See src/app/api/merk/[id]/route.ts — same full wizard/draft payload
-  // branch, mirrored here so the company-workspace surface can resume and
-  // finalize a Draft too, not just toggle Aktifkan/Nonaktifkan.
-  if (typeof body?.brandName === "string") {
-    if (body.draft === true) {
-      const parsed = merkDraftSchema.safeParse(body);
+  try {
+    // See src/app/api/merk/[id]/route.ts — same full wizard/draft payload
+    // branch, mirrored here so the company-workspace surface can resume and
+    // finalize a Draft too, not just toggle Aktifkan/Nonaktifkan.
+    if (typeof body?.brandName === "string") {
+      if (body.draft === true) {
+        const parsed = merkDraftSchema.safeParse(body);
+        if (!parsed.success) {
+          return NextResponse.json(
+            { error: "Data tidak valid", issues: z.treeifyError(parsed.error) },
+            { status: 400 },
+          );
+        }
+        const resolved = await resolveOwnershipReferences(parsed.data);
+        if ("error" in resolved) {
+          return NextResponse.json({ error: resolved.error }, { status: 400 });
+        }
+        const qualityTestError = await validateQualityTestReferences(parsed.data.qualityTests);
+        if (qualityTestError) {
+          return NextResponse.json({ error: qualityTestError }, { status: 400 });
+        }
+        const brand = await db.merk.update({
+          where: { id },
+          data: await buildMerkUpdateDraftData(parsed.data, resolved.ownerCompanyName),
+        });
+        return NextResponse.json({ data: brand });
+      }
+
+      const parsed = merkWizardSchema.safeParse(body);
       if (!parsed.success) {
         return NextResponse.json(
           { error: "Data tidak valid", issues: z.treeifyError(parsed.error) },
@@ -83,51 +107,37 @@ export async function PATCH(
       }
       const brand = await db.merk.update({
         where: { id },
-        data: await buildMerkUpdateDraftData(parsed.data, resolved.ownerCompanyName),
+        data: await buildMerkUpdateData(parsed.data, resolved.ownerCompanyName),
       });
       return NextResponse.json({ data: brand });
     }
 
-    const parsed = merkWizardSchema.safeParse(body);
+    const parsed = merkStatusUpdateSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Data tidak valid", issues: z.treeifyError(parsed.error) },
         { status: 400 },
       );
     }
-    const resolved = await resolveOwnershipReferences(parsed.data);
-    if ("error" in resolved) {
-      return NextResponse.json({ error: resolved.error }, { status: 400 });
+    if (existing.status === "DRAFT") {
+      return NextResponse.json(
+        { error: "Lengkapi wizard merek ini untuk mengaktifkannya, bukan lewat tombol status." },
+        { status: 409 },
+      );
     }
-    const qualityTestError = await validateQualityTestReferences(parsed.data.qualityTests);
-    if (qualityTestError) {
-      return NextResponse.json({ error: qualityTestError }, { status: 400 });
-    }
+
     const brand = await db.merk.update({
       where: { id },
-      data: await buildMerkUpdateData(parsed.data, resolved.ownerCompanyName),
+      data: { status: parsed.data.status },
     });
+
     return NextResponse.json({ data: brand });
+  } catch (error) {
+    // Same bare-empty-500 failure mode as POST /api/merk — see
+    // prisma-error-message.ts.
+    const message = mapPrismaWriteError(error);
+    if (message) return NextResponse.json({ error: message }, { status: 400 });
+    console.error(`PATCH /api/company-workspace/brands/${id} failed:`, error);
+    return NextResponse.json({ error: "Gagal menyimpan perubahan merek, coba lagi." }, { status: 500 });
   }
-
-  const parsed = merkStatusUpdateSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Data tidak valid", issues: z.treeifyError(parsed.error) },
-      { status: 400 },
-    );
-  }
-  if (existing.status === "DRAFT") {
-    return NextResponse.json(
-      { error: "Lengkapi wizard merek ini untuk mengaktifkannya, bukan lewat tombol status." },
-      { status: 409 },
-    );
-  }
-
-  const brand = await db.merk.update({
-    where: { id },
-    data: { status: parsed.data.status },
-  });
-
-  return NextResponse.json({ data: brand });
 }

@@ -65,12 +65,16 @@ export function Step2Kepemilikan({ form }: Props) {
   }, []);
 
   function selectOwnerLocation(next: MerkOwnerLocation) {
+    // `shouldDirty: true` throughout — a user whose only edits are radio-card
+    // picks like this one never flips formState.isDirty otherwise, which
+    // breaks MerkWizard's unsaved-changes close guard (see
+    // domestic-owner-ownership.tsx's selectOwnerType for the full story).
     const staleFields = next === "domestic" ? FOREIGN_ONLY_FIELDS : DOMESTIC_ONLY_FIELDS;
-    for (const field of staleFields) setValue(field, undefined);
+    for (const field of staleFields) setValue(field, undefined, { shouldDirty: true });
     if (next === "foreign" && !form.getValues("ownerCountryCode") && countryOfOrigin) {
-      setValue("ownerCountryCode", countryOfOrigin);
+      setValue("ownerCountryCode", countryOfOrigin, { shouldDirty: true });
     }
-    setValue("ownerLocation", next, { shouldValidate: true });
+    setValue("ownerLocation", next, { shouldValidate: true, shouldDirty: true });
   }
 
   return (

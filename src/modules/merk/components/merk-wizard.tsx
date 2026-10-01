@@ -208,16 +208,34 @@ export function MerkWizard({ surface, onClose, draftId, contextBanner, onBrandSa
     // every value that reaches form state is already a completed upload, so
     // this is structurally always true. See the Step 5 report.
     { key: "uploads", label: "Semua upload selesai", ok: true },
+    // declarationAccepted gates isReviewReady (see below) but was never
+    // itself a checklist entry — so a brand with everything else complete
+    // and only the checkbox unticked computed `checklist.filter(c =>
+    // !c.ok).length === 0` for the "Lengkapi N persyaratan" message below,
+    // showing the nonsensical "Lengkapi 0 persyaratan".
+    {
+      key: "declaration",
+      label: "Pernyataan disetujui",
+      ok: declarationAccepted === true,
+      step: 3,
+      issueLabel: "Centang pernyataan untuk melanjutkan.",
+    },
   ];
 
   const isTrademarkDocComplete = !requiredDocuments.some(
     (r) => !isRequirementComplete(r, documents, productLabelDocumentation),
   );
 
+  // Includes "Pernyataan" so this never shows 100% while the readiness badge
+  // right above it (driven by `isReviewReady`, which also requires
+  // declarationAccepted) still says "Belum Lengkap" — the two were computed
+  // from different field sets before, so a checked declaration was the only
+  // thing left but the summary already claimed full completion.
   const completionRows = [
     { label: "Informasi Merek", complete: isStep1Complete },
     { label: "Kepemilikan", complete: isOwnershipComplete },
     { label: "Dokumen Merek", complete: isTrademarkDocComplete },
+    { label: "Pernyataan", complete: declarationAccepted === true },
   ];
   const completionPercent =
     completionRows.length === 0

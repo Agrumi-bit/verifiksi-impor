@@ -50,7 +50,7 @@ function colorFor(name: string): string {
 
 type RowAction =
   | "detail" | "edit" | "duplicate" | "status" | "documents" | "activity"
-  | "continueDraft" | "deleteDraft";
+  | "continueDraft" | "deleteDraft" | "delete";
 
 type Props = {
   rows: BrandRow[];
@@ -320,7 +320,7 @@ export function BrandListTable({
               <MenuItem label="Lanjutkan Pengisian" onClick={() => { onRowAction("continueDraft", menuRow); setOpenMenuId(null); }} />
               <MenuItem label="Lihat Detail" onClick={() => { onRowAction("detail", menuRow); setOpenMenuId(null); }} />
               <div className="my-1 h-px bg-border" />
-              <MenuItem label="Hapus Draft" danger disabled title="Belum didukung backend" onClick={() => { toast.info("Hapus draft belum tersedia."); setOpenMenuId(null); }} />
+              <MenuItem label="Hapus Draft" danger onClick={() => { onRowAction("deleteDraft", menuRow); setOpenMenuId(null); }} />
             </>
           ) : (
             <>
@@ -330,6 +330,8 @@ export function BrandListTable({
               <MenuItem label="Ubah Status" onClick={() => { onRowAction("status", menuRow); setOpenMenuId(null); }} />
               <MenuItem label="Lihat Dokumen" onClick={() => { onRowAction("documents", menuRow); setOpenMenuId(null); }} />
               <MenuItem label="Riwayat Aktivitas" onClick={() => { onRowAction("activity", menuRow); setOpenMenuId(null); }} />
+              <div className="my-1 h-px bg-border" />
+              <MenuItem label="Hapus Merek" danger onClick={() => { onRowAction("delete", menuRow); setOpenMenuId(null); }} />
             </>
           )}
         </div>

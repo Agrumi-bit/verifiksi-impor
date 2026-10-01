@@ -90,7 +90,10 @@ export function Step1BrandInfo({ form, surface, draftId }: Props) {
     const next = { ...getValues("documents") };
     if (value) next.trademark_evidence = value;
     else delete next.trademark_evidence;
-    setValue("documents", next, { shouldValidate: true });
+    // `shouldDirty: true` — a document upload is a real edit; without this,
+    // MerkWizard's unsaved-changes close guard can't see it (see
+    // domestic-owner-ownership.tsx's selectOwnerType for the full story).
+    setValue("documents", next, { shouldValidate: true, shouldDirty: true });
   }
 
   // Duplicate-brand check — shares the list query MerkTable already caches

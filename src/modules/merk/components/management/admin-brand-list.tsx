@@ -6,6 +6,13 @@ import { toast } from "sonner";
 import { AlertTriangle, CheckCircle2, PauseCircle, Tag } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { INTERNAL_MERK_SURFACE } from "@/modules/merk/surface";
 import { MerkWizard } from "@/modules/merk/components/merk-wizard";
 import { KpiCard } from "./kpi-card";
@@ -61,6 +68,8 @@ export function AdminBrandList() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [wizardTarget, setWizardTarget] = useState<"new" | string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<BrandRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: brands, isLoading, isError } = useQuery({
     queryKey: LIST_KEY,
@@ -207,6 +216,26 @@ export function AdminBrandList() {
     else if (action === "status") toggleStatus(row.id, row.status !== "ACTIVE").then((ok) => { if (ok) queryClient.invalidateQueries({ queryKey: LIST_KEY }); });
     else if (action === "documents") setDetailId(row.id);
     else if (action === "activity") setDetailId(row.id);
+    else if (action === "delete" || action === "deleteDraft") setDeleteTarget(row);
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`${SURFACE.apiBase}/${deleteTarget.id}`, { method: "DELETE" });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error ?? "Gagal menghapus merek");
+      }
+      toast.success(`Merek "${deleteTarget.brandName}" berhasil dihapus.`);
+      queryClient.invalidateQueries({ queryKey: LIST_KEY });
+      setDeleteTarget(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal menghapus merek");
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   // Derived from the exact same fetch that feeds the table below — not a
@@ -321,6 +350,27 @@ export function AdminBrandList() {
           onEdit={() => { setWizardTarget(detailId); setDetailId(null); }}
         />
       )}
+
+      <Dialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hapus merek ini?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Merek <b className="text-foreground">{deleteTarget?.brandName}</b> beserta seluruh dokumen,
+            kepemilikan, dan data kelas merek yang terkait akan dihapus permanen. Tindakan ini tidak
+            dapat dibatalkan.
+          </p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
+              Batal
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
+              {isDeleting ? "Menghapus..." : "Ya, Hapus"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

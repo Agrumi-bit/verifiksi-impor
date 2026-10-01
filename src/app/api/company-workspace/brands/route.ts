@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import { buildMerkCreateData, buildMerkDraftData } from "@/modules/merk/build-create-data";
 import { MERK_LIST_INCLUDE, toMerkListItem } from "@/modules/merk/list-projection";
+import { mapPrismaWriteError } from "@/modules/merk/prisma-error-message";
 import { merkDraftSchema, merkWizardSchema } from "@/modules/merk/schema";
 import { resolveOwnershipReferences, validateQualityTestReferences } from "@/modules/merk/server-validation";
 
@@ -35,8 +36,31 @@ export async function POST(request: Request) {
 
   const body = await request.json();
 
-  if (body?.draft === true) {
-    const parsed = merkDraftSchema.safeParse(body);
+  try {
+    if (body?.draft === true) {
+      const parsed = merkDraftSchema.safeParse(body);
+      if (!parsed.success) {
+        return NextResponse.json(
+          { error: "Data tidak valid", issues: z.treeifyError(parsed.error) },
+          { status: 400 },
+        );
+      }
+      const values = parsed.data;
+      const resolved = await resolveOwnershipReferences(values);
+      if ("error" in resolved) {
+        return NextResponse.json({ error: resolved.error }, { status: 400 });
+      }
+      const qualityTestError = await validateQualityTestReferences(values.qualityTests);
+      if (qualityTestError) {
+        return NextResponse.json({ error: qualityTestError }, { status: 400 });
+      }
+      const brand = await db.merk.create({
+        data: { ...(await buildMerkDraftData(values, resolved.ownerCompanyName)), companyId },
+      });
+      return NextResponse.json({ data: brand }, { status: 201 });
+    }
+
+    const parsed = merkWizardSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Data tidak valid", issues: z.treeifyError(parsed.error) },
@@ -52,32 +76,18 @@ export async function POST(request: Request) {
     if (qualityTestError) {
       return NextResponse.json({ error: qualityTestError }, { status: 400 });
     }
+
     const brand = await db.merk.create({
-      data: { ...(await buildMerkDraftData(values, resolved.ownerCompanyName)), companyId },
+      data: { ...(await buildMerkCreateData(values, resolved.ownerCompanyName)), companyId },
     });
+
     return NextResponse.json({ data: brand }, { status: 201 });
+  } catch (error) {
+    // Same bare-empty-500 failure mode as POST /api/merk — see
+    // prisma-error-message.ts.
+    const message = mapPrismaWriteError(error);
+    if (message) return NextResponse.json({ error: message }, { status: 400 });
+    console.error("POST /api/company-workspace/brands failed:", error);
+    return NextResponse.json({ error: "Gagal menyimpan merek, coba lagi." }, { status: 500 });
   }
-
-  const parsed = merkWizardSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Data tidak valid", issues: z.treeifyError(parsed.error) },
-      { status: 400 },
-    );
-  }
-  const values = parsed.data;
-  const resolved = await resolveOwnershipReferences(values);
-  if ("error" in resolved) {
-    return NextResponse.json({ error: resolved.error }, { status: 400 });
-  }
-  const qualityTestError = await validateQualityTestReferences(values.qualityTests);
-  if (qualityTestError) {
-    return NextResponse.json({ error: qualityTestError }, { status: 400 });
-  }
-
-  const brand = await db.merk.create({
-    data: { ...(await buildMerkCreateData(values, resolved.ownerCompanyName)), companyId },
-  });
-
-  return NextResponse.json({ data: brand }, { status: 201 });
 }
