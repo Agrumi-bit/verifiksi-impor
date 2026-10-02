@@ -25,6 +25,7 @@ type Props = {
    * searchable text *is* the value (e.g. typing an HS Code not yet in the master list).
    */
   allowFreeText?: boolean;
+  disabled?: boolean;
 };
 
 export function SearchSelectInput({
@@ -34,6 +35,7 @@ export function SearchSelectInput({
   placeholder,
   onSelectOption,
   allowFreeText = true,
+  disabled = false,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   // The input shows the matched option's label (e.g. "5205.11.00 — Benang katun") while `value`
@@ -58,6 +60,7 @@ export function SearchSelectInput({
       <Input
         value={query}
         placeholder={placeholder}
+        disabled={disabled}
         onChange={(event) => {
           const next = event.target.value;
           setQuery(next);
@@ -67,7 +70,7 @@ export function SearchSelectInput({
         onFocus={() => setIsOpen(true)}
         onBlur={() => setTimeout(() => setIsOpen(false), 150)}
       />
-      {isOpen && filtered.length > 0 && (
+      {!disabled && isOpen && filtered.length > 0 && (
         <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-border bg-popover shadow-md">
           {filtered.map((option) => (
             <button

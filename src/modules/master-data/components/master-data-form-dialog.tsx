@@ -71,6 +71,10 @@ function buildInitialValues(
 ): Record<string, string> {
   const next: Record<string, string> = {};
   for (const field of fields) {
+    if (initialValues && field.deriveInitialValue) {
+      next[field.key] = field.deriveInitialValue(initialValues);
+      continue;
+    }
     const raw = initialValues?.[field.key];
     next[field.key] = typeof raw === "string" ? raw : "";
   }
@@ -89,7 +93,16 @@ function MasterDataForm({ fields, initialValues, onSubmit, onCancel, onDone }: F
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function updateField(key: string, value: string) {
-    setValues((current) => ({ ...current, [key]: value }));
+    setValues((current) => {
+      const next = { ...current, [key]: value };
+      // Any field cascading off this one may have a now-invalid selection (e.g. a Sub Kelompok
+      // Komoditas that no longer belongs to the newly-picked Kelompok Komoditas) — clear it
+      // rather than silently submitting a stale, mismatched pair.
+      for (const field of fields) {
+        if (field.dependsOn === key) next[field.key] = "";
+      }
+      return next;
+    });
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -144,28 +157,44 @@ function MasterDataForm({ fields, initialValues, onSubmit, onCancel, onDone }: F
                   className={`${inputClass} min-h-20 resize-y`}
                 />
               ) : field.type === "select" ? (
-                <select
-                  value={values[field.key] ?? ""}
-                  onChange={(event) => updateField(field.key, event.target.value)}
-                  className={inputClass}
-                >
-                  <option value="" disabled>
-                    {field.placeholder ?? "Pilih..."}
-                  </option>
-                  {field.options?.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                (() => {
+                  const parentValue = field.dependsOn ? values[field.dependsOn] : undefined;
+                  const isLocked = Boolean(field.dependsOn) && !parentValue;
+                  const options = field.optionsFor ? field.optionsFor(parentValue ?? "") : (field.options ?? []);
+                  return (
+                    <select
+                      value={values[field.key] ?? ""}
+                      onChange={(event) => updateField(field.key, event.target.value)}
+                      disabled={isLocked}
+                      className={`${inputClass} disabled:opacity-60`}
+                    >
+                      <option value="" disabled>
+                        {isLocked ? "Pilih field di atas dulu..." : (field.placeholder ?? "Pilih...")}
+                      </option>
+                      {options.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  );
+                })()
               ) : field.type === "searchselect" ? (
-                <SearchSelectInput
-                  value={values[field.key] ?? ""}
-                  onChange={(next) => updateField(field.key, next)}
-                  options={field.options ?? []}
-                  placeholder={field.placeholder ?? "Cari..."}
-                  allowFreeText={false}
-                />
+                (() => {
+                  const parentValue = field.dependsOn ? values[field.dependsOn] : undefined;
+                  const isLocked = Boolean(field.dependsOn) && !parentValue;
+                  const options = field.optionsFor ? field.optionsFor(parentValue ?? "") : (field.options ?? []);
+                  return (
+                    <SearchSelectInput
+                      value={values[field.key] ?? ""}
+                      onChange={(next) => updateField(field.key, next)}
+                      options={options}
+                      placeholder={isLocked ? "Pilih field di atas dulu..." : (field.placeholder ?? "Cari...")}
+                      allowFreeText={false}
+                      disabled={isLocked}
+                    />
+                  );
+                })()
               ) : (
                 <input
                   type="text"

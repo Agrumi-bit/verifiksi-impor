@@ -7,6 +7,9 @@ import { toast } from "sonner";
 
 import { MasterDataPage } from "./master-data-page";
 import { downloadHsCodeExcelTemplate, parseHsCodeExcelFile } from "../hs-code-excel";
+import { useIndustryCommodityGroups } from "../use-industry-commodity-groups";
+import { useCommodityGroups } from "../use-commodity-groups";
+import type { MasterDataRow } from "../types";
 
 type NamedOption = { id: string; name: string };
 
@@ -32,6 +35,14 @@ export function HsCodeMasterDataPage() {
     "/api/master-data/commodity-sub-group",
     "master-data-commodity-sub-group",
   );
+  // Kelompok Komoditas (IndustryGroup) > Sub Kelompok Komoditas (CommodityGroup) > Komoditas
+  // (CommoditySubGroup) — cascading "Tambah HS Code" fields, each level's options filtered down
+  // from the one above it. `industryGroupId` is a client-side filter only, never persisted on
+  // HsCodeMasterData itself (its chosen Sub Kelompok Komoditas already implies which Kelompok
+  // Komoditas it belongs to) — `hsCodeMasterDataSchema` strips it from the submitted body.
+  const { industryGroupOptions, commodityGroupOptionsFor } = useIndustryCommodityGroups();
+  const { subGroupOptionsFor } = useCommodityGroups();
+
   const { data: units } = useQuery({
     queryKey: ["master-data-uom", "options"],
     queryFn: async () => {
@@ -165,31 +176,43 @@ export function HsCodeMasterDataPage() {
           placeholder: "e.g. Benang katun, tunggal, dari serat tidak disikat",
         },
         {
+          key: "industryGroupId",
+          label: "Kelompok Komoditas",
+          type: "searchselect",
+          required: true,
+          placeholder: "Cari kelompok komoditas...",
+          options: industryGroupOptions,
+          // Reconstructed from the row's own Sub Kelompok Komoditas relation when editing — this
+          // filter field isn't a direct column on HsCodeMasterData (see the hook comment above).
+          deriveInitialValue: (row: MasterDataRow) => {
+            const commodityGroup = row.commodityGroup as { industryGroupId?: string | null } | undefined;
+            return commodityGroup?.industryGroupId ?? "";
+          },
+        },
+        {
           key: "commodityGroupId",
           label: "Sub Kelompok Komoditas",
-          type: "select",
+          type: "searchselect",
           required: true,
-          placeholder: "Pilih sub kelompok komoditas...",
-          options: groups?.map((group) => ({ value: group.id, label: group.name })) ?? [],
+          placeholder: "Cari sub kelompok komoditas...",
+          dependsOn: "industryGroupId",
+          optionsFor: commodityGroupOptionsFor,
         },
         {
           key: "commoditySubGroupId",
           label: "Komoditas",
-          type: "select",
+          type: "searchselect",
           required: true,
-          placeholder: "Pilih komoditas...",
-          options:
-            subGroups?.map((subGroup) => ({
-              value: subGroup.id,
-              label: subGroup.name,
-            })) ?? [],
+          placeholder: "Cari komoditas...",
+          dependsOn: "commodityGroupId",
+          optionsFor: subGroupOptionsFor,
         },
         {
           key: "unitOfMeasurementId",
           label: "Satuan",
-          type: "select",
+          type: "searchselect",
           required: true,
-          placeholder: "Pilih satuan...",
+          placeholder: "Cari satuan...",
           options: units?.map((unit) => ({ value: unit.id, label: unit.name })) ?? [],
         },
       ]}
