@@ -1,16 +1,13 @@
 "use client";
 
-import { Controller, useFieldArray, useWatch, type UseFormReturn } from "react-hook-form";
-import { X } from "lucide-react";
+import { Controller, useWatch, type UseFormReturn } from "react-hook-form";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/form/form-field";
 import { FileUploadField } from "@/components/form/file-upload-field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { terbilangRupiah } from "@/lib/terbilang";
 import {
-  createEmptySupportDocument,
   MODAL_STATEMENT_LETTER_DOC_DEF,
   NON_INDUSTRI_SUPPORT_DOC_DEFS,
   type ApplicationWizardValues,
@@ -20,77 +17,6 @@ import {
 type Step5Props = {
   form: UseFormReturn<ApplicationWizardValues>;
 };
-
-function DocumentListSection({
-  form,
-  fieldName,
-  namespace,
-  docCountHint,
-}: {
-  form: UseFormReturn<ApplicationWizardValues>;
-  fieldName: "konsumsiDocuments";
-  namespace: "documents";
-  docCountHint: string;
-}) {
-  const { control, register, formState } = form;
-  const { fields, append, remove } = useFieldArray({ control, name: fieldName });
-  const arrayError = formState.errors[fieldName];
-
-  return (
-    <div className="flex flex-col gap-3">
-      <p className="text-xs text-muted-foreground">
-        Tambahkan dokumen pendukung sesuai persyaratan ({docCountHint}). Daftar
-        dokumen persis masih menunggu konfirmasi dari modul System
-        Configuration — untuk sekarang, tambahkan dokumen secara manual.
-      </p>
-      {fields.map((field, index) => (
-        <div
-          key={field.id}
-          className="flex items-start gap-3 rounded-lg border border-border p-3"
-        >
-          <div className="flex flex-1 flex-col gap-2">
-            <Input
-              placeholder="Nama dokumen, mis. Surat Izin Edar"
-              {...register(`${fieldName}.${index}.label` as const)}
-            />
-            <Controller
-              control={control}
-              name={`${fieldName}.${index}.documentPath` as const}
-              render={({ field: docField }) => (
-                <FileUploadField
-                  namespace={namespace}
-                  value={docField.value}
-                  onChange={docField.onChange}
-                  label="Upload dokumen"
-                />
-              )}
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => remove(index)}
-            className="mt-2 shrink-0 text-muted-foreground hover:text-foreground"
-            aria-label="Hapus dokumen"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-      ))}
-      {arrayError?.message && typeof arrayError.message === "string" && (
-        <p className="text-xs text-destructive">{arrayError.message}</p>
-      )}
-      <Button
-        type="button"
-        variant="outline"
-        className="border-dashed"
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        onClick={() => append(createEmptySupportDocument() as any)}
-      >
-        + Add Document
-      </Button>
-    </div>
-  );
-}
 
 /**
  * Bukti Kemampuan Finansial: Surat Pernyataan Kepemilikan Modal Kerja is unconditionally
@@ -277,20 +203,6 @@ export function Step5SupportDocument({ form }: Step5Props) {
             VIU Konsumsi — Bukti Kemampuan Finansial
           </h2>
           <NonIndustriChecklist form={form} fieldName="konsumsiFinancialDocuments" />
-        </section>
-      )}
-
-      {hasKonsumsi && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Impor Barang Konsumsi
-          </h2>
-          <DocumentListSection
-            form={form}
-            fieldName="konsumsiDocuments"
-            namespace="documents"
-            docCountHint="7 dokumen"
-          />
         </section>
       )}
     </div>

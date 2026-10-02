@@ -43,13 +43,10 @@ export function applyKonsumsiSubmitRules(data: ApplicationWizardValues, ctx: z.R
     });
   }
 
-  if (data.konsumsiDocuments.length < 1) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["konsumsiDocuments"],
-      message: "Tambahkan minimal satu dokumen pendukung",
-    });
-  }
+  // konsumsiDocuments ("Impor Barang Konsumsi") is deliberately NOT required at submit — the
+  // exact document list is still pending System Configuration confirmation, so the applicant may
+  // leave it empty and a verifikator uploads it on the application's behalf later (same
+  // upload-on-behalf path document-versions.ts already supports for every other document key).
   // Structural validity only (at least one Brand, and each entry's own
   // role/appointment/representative shape). Readiness (evidence validity,
   // relationship rules, document completeness) is deliberately NOT enforced

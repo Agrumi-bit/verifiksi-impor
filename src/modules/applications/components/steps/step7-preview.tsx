@@ -171,16 +171,10 @@ export function Step7Preview({ form, onEditStep, stepNumberByKey }: Step7Props) 
           />
         )}
         {(values.importTypes ?? []).includes("BARANG_KONSUMSI") && (
-          <>
-            <SummaryItem
-              label="Dokumen Modal Konsumsi Terunggah"
-              value={values.konsumsiFinancialDocuments?.filter((doc) => doc?.documentPath).length?.toString()}
-            />
-            <SummaryItem
-              label="Dokumen Konsumsi"
-              value={values.konsumsiDocuments?.length?.toString()}
-            />
-          </>
+          <SummaryItem
+            label="Dokumen Modal Konsumsi Terunggah"
+            value={values.konsumsiFinancialDocuments?.filter((doc) => doc?.documentPath).length?.toString()}
+          />
         )}
       </SummarySection>
 

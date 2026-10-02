@@ -163,11 +163,10 @@ assert(
 assert(
   JSON.stringify(runSubmitRules({ importTypes: ["BARANG_KONSUMSI"] })) === JSON.stringify([
     "applicationBrands: Pilih atau tambahkan minimal satu merek yang digunakan",
-    "konsumsiDocuments: Tambahkan minimal satu dokumen pendukung",
     "konsumsiFinancialDocuments: Unggah Surat Pernyataan Kepemilikan Modal Kerja",
     "konsumsiProducts: Tambahkan minimal satu produk",
   ]),
-  "Konsumsi alone, nothing filled -> Bukti Kemampuan Finansial (konsumsiFinancialDocuments, its own field) is required too",
+  "Konsumsi alone, nothing filled -> Bukti Kemampuan Finansial (konsumsiFinancialDocuments, its own field) is required, konsumsiDocuments is NOT (pending System Configuration, verifikator can upload later)",
 );
 
 assert(
