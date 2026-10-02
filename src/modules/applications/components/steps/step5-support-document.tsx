@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/form/form-field";
 import { FileUploadField } from "@/components/form/file-upload-field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { terbilangRupiah } from "@/lib/terbilang";
 import {
   createEmptySupportDocument,
   MODAL_STATEMENT_LETTER_DOC_DEF,
@@ -157,6 +158,11 @@ function NonIndustriChecklist({ form }: { form: UseFormReturn<ApplicationWizardV
                       })
                     }
                   />
+                  {statementEntry?.amount && (
+                    <p className="mt-1 text-xs text-muted-foreground italic">
+                      Terbilang: {terbilangRupiah(statementEntry.amount)}
+                    </p>
+                  )}
                 </FormField>
                 <FileUploadField
                   namespace="documents"
