@@ -288,7 +288,8 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
                               label="Asal Negara"
                               value={product.productSnapshot?.countryOfOriginName ?? product.countryOfOrigin}
                             />
-                            <Item label="Jumlah" value={`${Number(product.quantity).toLocaleString("id-ID")} ${product.unit ?? ""}`} />
+                            <Item label="Jumlah Permohonan" value={`${Number(product.quantity).toLocaleString("id-ID")} ${product.unit ?? ""}`} />
+                            <Item label="Jumlah Stock" value={`${Number(product.stockQuantity ?? 0).toLocaleString("id-ID")} ${product.unit ?? ""}`} />
                             <Item label="Harga Satuan Rata-rata" value={`${product.currency} ${formatMoney(Number(product.averageUnitPrice))}`} />
                             <Item
                               label="Total Harga"

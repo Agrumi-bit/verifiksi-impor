@@ -5,7 +5,10 @@ export const PRODUCT_EXCEL_COLUMNS = [
   { key: "productName" as const, header: "Nama Produk", example: "Men's Cotton T-Shirt" },
   { key: "hsCode" as const, header: "HS Code", example: "61091000" },
   { key: "countryOfOrigin" as const, header: "Asal Negara", example: "Vietnam" },
-  { key: "quantity" as const, header: "Jumlah", example: "10000" },
+  { key: "quantity" as const, header: "Jumlah Permohonan", example: "10000" },
+  // Optional — not in the required-columns check below (see parseProductExcelFile), same "0"
+  // default as the manual Add Product form when left blank.
+  { key: "stockQuantity" as const, header: "Jumlah Stock", example: "0" },
   { key: "averageUnitPrice" as const, header: "Harga Satuan Rata-rata", example: "3.5" },
   { key: "currency" as const, header: "Mata Uang", example: "USD" },
 ];
@@ -46,6 +49,7 @@ export type ProductImportRow = {
   hsCode: string;
   countryOfOrigin: string;
   quantity: string;
+  stockQuantity: string;
   averageUnitPrice: string;
   currency: string;
 };
@@ -53,11 +57,12 @@ export type ProductImportRow = {
 /**
  * Parses an uploaded per-Brand Produk Excel file (same layout as the template) — matches columns
  * by header text, not position. A row needs at least Sub Kelompok Komoditas, Nama Produk, HS
- * Code, Asal Negara, Jumlah, and Harga Satuan Rata-rata to count; Mata Uang defaults to "USD"
- * when blank. Resolving Sub Kelompok Komoditas/HS Code/Country against real data — and rejecting
- * a Sub Kelompok Komoditas that isn't one of this Brand's own (Step "Dokumen Pendukung Merek")
- * groups — happens in the caller, which has that live data; this function only does the
- * spreadsheet-shape parsing.
+ * Code, Asal Negara, Jumlah Permohonan, and Harga Satuan Rata-rata to count; Mata Uang defaults to
+ * "USD" and Jumlah Stock defaults to "0" when blank (same default as the manual Add Product
+ * form) — neither is required for a row to count. Resolving Sub Kelompok Komoditas/HS
+ * Code/Country against real data — and rejecting a Sub Kelompok Komoditas that isn't one of this
+ * Brand's own (Step "Dokumen Pendukung Merek") groups — happens in the caller, which has that
+ * live data; this function only does the spreadsheet-shape parsing.
  */
 export async function parseProductExcelFile(file: File): Promise<{ rows: ProductImportRow[]; skippedRows: number }> {
   const buffer = await file.arrayBuffer();
@@ -90,6 +95,7 @@ export async function parseProductExcelFile(file: File): Promise<{ rows: Product
       hsCode,
       countryOfOrigin,
       quantity,
+      stockQuantity: String(sheetRow[headerFor("stockQuantity")] ?? "").trim() || "0",
       averageUnitPrice,
       currency: String(sheetRow[headerFor("currency")] ?? "").trim().toUpperCase() || "USD",
     });

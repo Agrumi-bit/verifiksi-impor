@@ -278,10 +278,16 @@ export const konsumsiProductSchema = z.object({
   // useActiveCountries: "value is the country name... used for negara asal style fields").
   countryOfOrigin: requiredString("Negara asal wajib dipilih"),
   countryOfOriginCode: z.string().trim().optional(),
-  quantity: positiveNumberString("Jumlah harus lebih besar dari 0"),
+  // "Jumlah Permohonan" — how much of this product THIS application is requesting to import,
+  // never the company's on-hand stock (see `stockQuantity` below, a separate concept).
+  quantity: positiveNumberString("Jumlah permohonan harus lebih besar dari 0"),
   // Derived from the selected HS Code's registered unit ("satuan mengikuti HS Code, bukan
   // diketik bebas" — see use-hs-code-options.ts) — not independently editable.
   unit: z.string().trim().optional(),
+  // "Jumlah Stock" — the company's current on-hand stock of this product, independent of how
+  // much is being requested in `quantity` above. Defaults to "0" (a new product line commonly
+  // has no stock yet), never required to be filled in beyond that default.
+  stockQuantity: nonNegativeNumberString("Jumlah stock tidak valid").default("0"),
   averageUnitPrice: nonNegativeNumberString("Harga satuan rata-rata tidak valid"),
   currency: z.enum(KONSUMSI_PRODUCT_CURRENCIES).default("USD"),
   productSnapshot: konsumsiProductSnapshotSchema.optional(),
@@ -300,6 +306,7 @@ export function createEmptyKonsumsiProduct(brandId: string, group: KonsumsiProdu
     hsCode: "",
     countryOfOrigin: "",
     quantity: "",
+    stockQuantity: "0",
     averageUnitPrice: "",
     currency: "USD",
   };

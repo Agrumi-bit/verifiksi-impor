@@ -100,7 +100,13 @@ export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle,
 
         const quantity = Number(row.quantity);
         if (!Number.isFinite(quantity) || quantity <= 0) {
-          errors.push(`${rowLabel}: Jumlah tidak valid.`);
+          errors.push(`${rowLabel}: Jumlah permohonan tidak valid.`);
+          return;
+        }
+
+        const stockQuantity = Number(row.stockQuantity);
+        if (!Number.isFinite(stockQuantity) || stockQuantity < 0) {
+          errors.push(`${rowLabel}: Jumlah stock tidak valid.`);
           return;
         }
 
@@ -137,6 +143,7 @@ export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle,
           countryOfOrigin: countryOption.value,
           countryOfOriginCode: countryOption.hint ?? "",
           quantity: row.quantity,
+          stockQuantity: row.stockQuantity,
           averageUnitPrice: row.averageUnitPrice,
           currency: row.currency as ApplicationKonsumsiProductValues["currency"],
         });

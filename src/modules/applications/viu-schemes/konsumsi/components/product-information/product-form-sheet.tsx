@@ -31,7 +31,7 @@ type Props = {
   onClose: () => void;
 };
 
-type FieldErrors = Partial<Record<"productName" | "hsCode" | "countryOfOrigin" | "quantity" | "averageUnitPrice" | "duplicate", string>>;
+type FieldErrors = Partial<Record<"productName" | "hsCode" | "countryOfOrigin" | "quantity" | "stockQuantity" | "averageUnitPrice" | "duplicate", string>>;
 
 function formatMoney(value: number): string {
   return value.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -89,7 +89,9 @@ export function ProductFormSheet({
     if (!form.hsCode) nextErrors.hsCode = "HS Code wajib dipilih.";
     if (!form.countryOfOrigin) nextErrors.countryOfOrigin = "Negara asal wajib dipilih.";
     const quantity = Number(form.quantity);
-    if (!Number.isFinite(quantity) || quantity <= 0) nextErrors.quantity = "Jumlah harus lebih besar dari 0.";
+    if (!Number.isFinite(quantity) || quantity <= 0) nextErrors.quantity = "Jumlah permohonan harus lebih besar dari 0.";
+    const stockQuantity = Number(form.stockQuantity ?? "0");
+    if (!Number.isFinite(stockQuantity) || stockQuantity < 0) nextErrors.stockQuantity = "Jumlah stock tidak valid.";
     const price = Number(form.averageUnitPrice);
     if (form.averageUnitPrice.trim() === "" || !Number.isFinite(price) || price < 0) {
       nextErrors.averageUnitPrice = "Harga satuan rata-rata tidak valid.";
@@ -178,7 +180,7 @@ export function ProductFormSheet({
           </FormField>
 
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="Jumlah" required error={errors.quantity}>
+            <FormField label="Jumlah Permohonan" required error={errors.quantity}>
               <Input
                 type="number"
                 min="0"
@@ -194,6 +196,19 @@ export function ProductFormSheet({
               <Input value={form.unit ?? ""} readOnly disabled />
             </FormField>
           </div>
+
+          <FormField label="Jumlah Stock" hint="Stock yang saat ini dimiliki perusahaan, terpisah dari Jumlah Permohonan." error={errors.stockQuantity}>
+            <Input
+              type="number"
+              min="0"
+              step="any"
+              value={form.stockQuantity ?? "0"}
+              onChange={(event) => {
+                update({ stockQuantity: event.target.value });
+                setErrors((e) => ({ ...e, stockQuantity: undefined }));
+              }}
+            />
+          </FormField>
 
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Harga Satuan Rata-rata" required error={errors.averageUnitPrice}>

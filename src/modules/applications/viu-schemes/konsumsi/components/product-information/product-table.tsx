@@ -17,8 +17,9 @@ const COLUMNS = [
   "HS Code",
   "Uraian HS Code",
   "Asal Negara",
-  "Jumlah",
+  "Jumlah Permohonan",
   "Satuan",
+  "Jumlah Stock",
   "Harga Satuan Rata-rata",
   "Mata Uang",
   "Total Harga",
@@ -60,6 +61,7 @@ export function ProductTable({
               <td className="px-3 py-2">{product.countryOfOrigin}</td>
               <td className="px-3 py-2">{Number(product.quantity).toLocaleString("id-ID")}</td>
               <td className="px-3 py-2">{product.unit}</td>
+              <td className="px-3 py-2">{Number(product.stockQuantity ?? 0).toLocaleString("id-ID")}</td>
               <td className="px-3 py-2">{formatMoney(Number(product.averageUnitPrice))}</td>
               <td className="px-3 py-2">{product.currency}</td>
               <td className="px-3 py-2 font-semibold">
