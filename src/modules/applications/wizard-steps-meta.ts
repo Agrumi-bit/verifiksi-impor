@@ -130,7 +130,16 @@ function composeViuSteps(
   includeIndustri: boolean,
 ): WizardStepMeta[] {
   const before = base.filter((s) => !["partner-industri", "support-document", "product-info", "preview", "submit"].includes(s.key));
-  const after = base.filter((s) => ["support-document", "product-info", "preview", "submit"].includes(s.key));
+  const after = base.map((s) => {
+    // "Support Document" now also carries the Bukti Kemampuan Finansial (modal) checklist for
+    // Barang Konsumsi (Step5SupportDocument's own `needsModalDocs`), so the step's displayed name
+    // reflects that purpose whenever Konsumsi is selected — Industri/Non-Industri-only keeps the
+    // generic "Support Document" title since that's still an accurate description for them.
+    if (s.key === "support-document" && includeKonsumsi) {
+      return { ...s, title: "Bukti Kemampuan Finansial", subtitle: "Dokumen modal & pendukung impor" };
+    }
+    return s;
+  }).filter((s) => ["support-document", "product-info", "preview", "submit"].includes(s.key));
   const partnerIndustri = includeIndustri ? base.filter((s) => s.key === "partner-industri") : [];
   const konsumsi = includeKonsumsi ? konsumsiSteps : [];
   const steps = [...before, ...konsumsi, ...partnerIndustri, ...after];

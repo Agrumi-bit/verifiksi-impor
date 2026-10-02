@@ -5,10 +5,12 @@ import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { FormField } from "@/components/form/form-field";
 import { FileUploadField } from "@/components/form/file-upload-field";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   createEmptySupportDocument,
+  MODAL_STATEMENT_LETTER_DOC_DEF,
   NON_INDUSTRI_SUPPORT_DOC_DEFS,
   type ApplicationWizardValues,
   type NonIndustriDocumentValues,
@@ -89,18 +91,14 @@ function DocumentListSection({
   );
 }
 
-const PRIORITY_LABEL = { UTAMA: "Utama", PENDUKUNG: "Pendukung" } as const;
-const PRIORITY_BADGE = {
-  UTAMA: "bg-primary/10 text-primary",
-  PENDUKUNG: "bg-muted text-muted-foreground",
-} as const;
-
 /**
- * Fixed checklist proving financial capability ("modal") to fund the import. Not every
- * applicant has every document (e.g. a shareholder loan only "jika memang ada dan sah"), so
- * each one is toggled on/off — the upload field only appears once its switch is on. Bound to
- * `nonIndustriDocuments` by `key`, not array index, since resumed drafts may have a
- * differently-ordered array.
+ * Bukti Kemampuan Finansial: Surat Pernyataan Kepemilikan Modal Kerja is unconditionally
+ * required (no toggle — always shown, direct upload). Below it, the applicant picks exactly ONE
+ * type of supporting evidence from `NON_INDUSTRI_SUPPORT_DOC_DEFS` via a dropdown, then uploads
+ * that one document — not a multi-toggle checklist, since only one piece of evidence is needed.
+ * Both pieces are stored in the same `nonIndustriDocuments` array (bound by `key`, not array
+ * index, since resumed drafts may have a differently-ordered array) so existing document-version
+ * tracking (`nonindustri-support:<key>`) keeps working unchanged.
  */
 function NonIndustriChecklist({ form }: { form: UseFormReturn<ApplicationWizardValues> }) {
   const { control, formState } = form;
@@ -117,59 +115,94 @@ function NonIndustriChecklist({ form }: { form: UseFormReturn<ApplicationWizardV
           return entries.find((entry) => entry.key === key);
         }
 
-        function handleToggle(key: string, checked: boolean) {
+        function updateEntry(key: string, patch: Partial<NonIndustriDocumentValues>) {
           const index = entries.findIndex((entry) => entry.key === key);
           if (index === -1) {
-            field.onChange([...entries, { key, enabled: checked, documentPath: "" }]);
+            field.onChange([...entries, { key, enabled: true, documentPath: "", ...patch }]);
             return;
           }
-          field.onChange(entries.map((entry, i) => (i === index ? { ...entry, enabled: checked } : entry)));
+          field.onChange(entries.map((entry, i) => (i === index ? { ...entry, ...patch } : entry)));
         }
 
-        function updateEntry(key: string, patch: Partial<NonIndustriDocumentValues>) {
-          field.onChange(entries.map((entry) => (entry.key === key ? { ...entry, ...patch } : entry)));
+        const statementEntry = entryFor(MODAL_STATEMENT_LETTER_DOC_DEF.key);
+        const evidenceEntry = NON_INDUSTRI_SUPPORT_DOC_DEFS.map((def) => entryFor(def.key)).find((entry) => entry?.enabled);
+        const evidenceDef = evidenceEntry ? NON_INDUSTRI_SUPPORT_DOC_DEFS.find((def) => def.key === evidenceEntry.key) : undefined;
+
+        function selectEvidenceType(key: string | null) {
+          if (!key) return;
+          // Only one evidence type at a time — clear any previously selected one so the array
+          // never ends up with two "enabled" evidence entries.
+          for (const def of NON_INDUSTRI_SUPPORT_DOC_DEFS) {
+            if (def.key !== key && entryFor(def.key)?.enabled) {
+              updateEntry(def.key, { enabled: false, documentPath: "" });
+            }
+          }
+          updateEntry(key, { enabled: true });
         }
 
         return (
-          <div className="flex flex-col gap-3">
-            <p className="text-xs text-muted-foreground">
-              Dokumen bukti kemampuan modal untuk pembiayaan impor. Aktifkan toggle pada dokumen yang relevan, lalu
-              unggah filenya.
-            </p>
-            {NON_INDUSTRI_SUPPORT_DOC_DEFS.map((def) => {
-              const entry = entryFor(def.key);
-              const enabled = entry?.enabled ?? false;
-              return (
-                <div key={def.key} className="rounded-xl border border-border p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold">{def.title}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${PRIORITY_BADGE[def.priority]}`}>
-                          {PRIORITY_LABEL[def.priority]}
-                        </span>
-                      </div>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{def.desc}</p>
-                    </div>
-                    <Switch
-                      checked={enabled}
-                      onCheckedChange={(checked) => handleToggle(def.key, checked)}
-                      aria-label={`Aktifkan dokumen ${def.title}`}
+          <div className="flex flex-col gap-5">
+            <div className="rounded-xl border border-border p-4">
+              <span className="text-sm font-bold">{MODAL_STATEMENT_LETTER_DOC_DEF.title}</span>
+              <p className="mt-0.5 text-xs text-muted-foreground">{MODAL_STATEMENT_LETTER_DOC_DEF.desc}</p>
+              <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3">
+                <FormField label="Jumlah Modal Kerja (Rp)" required>
+                  <Input
+                    inputMode="numeric"
+                    placeholder="e.g. 500000000"
+                    value={statementEntry?.amount ?? ""}
+                    onChange={(event) =>
+                      updateEntry(MODAL_STATEMENT_LETTER_DOC_DEF.key, {
+                        amount: event.target.value.replace(/[^0-9]/g, ""),
+                      })
+                    }
+                  />
+                </FormField>
+                <FileUploadField
+                  namespace="documents"
+                  value={statementEntry?.documentPath}
+                  onChange={(path) => updateEntry(MODAL_STATEMENT_LETTER_DOC_DEF.key, { documentPath: path ?? "" })}
+                  label="Upload dokumen"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border p-4">
+              <span className="text-sm font-bold">Dokumen Bukti Pernyataan Modal</span>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Opsional. Pilih salah satu jenis dokumen sebagai bukti pendukung, lalu unggah filenya.
+              </p>
+              <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3">
+                <FormField label="Jenis Dokumen">
+                  <Select value={evidenceDef?.key ?? ""} onValueChange={selectEvidenceType}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        {(value: string) => NON_INDUSTRI_SUPPORT_DOC_DEFS.find((def) => def.key === value)?.title ?? "Pilih jenis dokumen..."}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {NON_INDUSTRI_SUPPORT_DOC_DEFS.map((def) => (
+                        <SelectItem key={def.key} value={def.key}>
+                          {def.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
+                {evidenceDef && (
+                  <>
+                    <p className="text-xs text-muted-foreground">{evidenceDef.desc}</p>
+                    <FileUploadField
+                      namespace="documents"
+                      value={evidenceEntry?.documentPath}
+                      onChange={(path) => updateEntry(evidenceDef.key, { documentPath: path ?? "" })}
+                      label="Upload dokumen"
                     />
-                  </div>
-                  {enabled && (
-                    <div className="mt-3 border-t border-border pt-3">
-                      <FileUploadField
-                        namespace="documents"
-                        value={entry?.documentPath}
-                        onChange={(path) => updateEntry(def.key, { documentPath: path ?? "" })}
-                        label="Upload dokumen"
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                  </>
+                )}
+              </div>
+            </div>
+
             {arrayError?.message && typeof arrayError.message === "string" && (
               <p className="text-xs text-destructive">{arrayError.message}</p>
             )}
@@ -187,12 +220,12 @@ export function Step5SupportDocument({ form }: Step5Props) {
   const hasIndustri = importTypes.includes("BAHAN_BAKU_INDUSTRI");
   const hasNonIndustri = importTypes.includes("BAHAN_BAKU_NON_INDUSTRI");
   const hasKonsumsi = importTypes.includes("BARANG_KONSUMSI");
-  // Bukti kemampuan finansial ("modal") applies to both Bahan Baku Industri and Non Industri —
-  // both are importing goods on credit/trade financing and need to prove they can fund it, so
-  // they share the same checklist instead of duplicating it under two headings.
-  const needsModalDocs = hasIndustri || hasNonIndustri;
+  // Bukti kemampuan finansial ("modal") applies to Bahan Baku Industri, Non Industri, AND Barang
+  // Konsumsi — all three are importing goods on credit/trade financing and need to prove they can
+  // fund it, so they share the same checklist instead of duplicating it under separate headings.
+  const needsModalDocs = hasIndustri || hasNonIndustri || hasKonsumsi;
 
-  if (!needsModalDocs && !hasKonsumsi) {
+  if (!needsModalDocs) {
     return (
       <p className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
         Tidak ada Jenis Impor yang dipilih di Step 2, sehingga tidak ada

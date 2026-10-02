@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  MODAL_STATEMENT_LETTER_DOC_DEF,
   NON_INDUSTRI_SUPPORT_DOC_DEFS,
   VKI_SUPPORT_DOC_DEFS,
   type ApplicationWizardValues,
@@ -351,7 +352,7 @@ export function buildDocumentChecklist(
       });
     }
   } else {
-    for (const def of NON_INDUSTRI_SUPPORT_DOC_DEFS) {
+    for (const def of [MODAL_STATEMENT_LETTER_DOC_DEF, ...NON_INDUSTRI_SUPPORT_DOC_DEFS]) {
       const entry = (payload.nonIndustriDocuments ?? []).find((d) => d.key === def.key);
       items.push({
         key: `nonindustri-support:${def.key}`,

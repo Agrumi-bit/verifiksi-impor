@@ -74,27 +74,52 @@ export function createEmptyApplicationBrand(brandId: string): ApplicationBrandEn
 }
 
 /**
- * Step "Hasil Uji Mutu" — one entry per quality-test certificate uploaded
- * for a Brand used in THIS application. Deliberately its own field on the
- * Application payload rather than reusing Merk's own `qualityTests`: the
- * same rich shape (`qualityTestEntrySchema` — commodity classification,
- * lab, dates, file) applies, but this test result is specific to what's
- * being imported under this application, not a permanent Brand Master
- * record. `brandId` must match one of this application's own
- * `applicationBrands` entries.
+ * Step "Dokumen Pendukung Merek" — one entry per Brand + Sub Kelompok
+ * Komoditas combination used in THIS application, bundling its quality-test
+ * certificate together with the two Indonesian-labeling documents regulation
+ * requires for the same combination (Surat Pernyataan Pemenuhan Ketentuan
+ * Label Berbahasa Indonesia + Dokumentasi Label Produk). Deliberately its own
+ * field on the Application payload rather than reusing Merk's own
+ * `qualityTests`: most of the rich shape (`qualityTestEntrySchema` — lab,
+ * dates, file) applies, but this test result is specific to what's being
+ * imported under this application, not a permanent Brand Master record.
+ * `brandId` must match one of this application's own `applicationBrands`
+ * entries.
+ *
+ * Classifies by the top two commodity hierarchy levels — "Kelompok
+ * Komoditas" (IndustryGroup) and "Sub Kelompok Komoditas" (CommodityGroup) —
+ * rather than Brand Master's own CommodityGroup/CommoditySubGroup pair, so
+ * `commoditySubGroupId`/`commoditySubGroupName` are dropped in favor of a new
+ * `industryGroupId`/`industryName`. `commodityGroupId`/`commodityName` are
+ * kept as-is (same CommodityGroup target), now cascading from the selected
+ * `industryGroupId` instead of standing alone.
  */
-export const applicationBrandQualityTestEntrySchema = qualityTestEntrySchema.extend({
-  brandId: requiredString("Merek wajib dipilih"),
-});
+export const applicationBrandQualityTestEntrySchema = qualityTestEntrySchema
+  .omit({ commoditySubGroupId: true, commoditySubGroupName: true })
+  .extend({
+    brandId: requiredString("Merek wajib dipilih"),
+    industryGroupId: requiredString("Kelompok Komoditas wajib dipilih"),
+    industryName: z.string().trim().optional(),
+    labelStatementFilePath: requiredString("Surat Pernyataan Pemenuhan Ketentuan Label Berbahasa Indonesia wajib diunggah"),
+    labelStatementFileName: requiredString("Nama file tidak valid"),
+    labelDocumentationFilePath: requiredString("Dokumentasi Label Produk wajib diunggah"),
+    labelDocumentationFileName: requiredString("Nama file tidak valid"),
+  });
 export type ApplicationBrandQualityTestEntryValues = z.infer<typeof applicationBrandQualityTestEntrySchema>;
 
 export function createEmptyApplicationBrandQualityTest(brandId: string): ApplicationBrandQualityTestEntryValues {
   return {
     brandId,
+    industryGroupId: "",
+    industryName: "",
     commodityGroupId: "",
     commodityName: "",
     certificateNumber: "",
     laboratoryName: "",
+    labelStatementFilePath: "",
+    labelStatementFileName: "",
+    labelDocumentationFilePath: "",
+    labelDocumentationFileName: "",
     issueDate: "",
     filePath: "",
     fileName: "",

@@ -56,6 +56,19 @@ for (const [label, steps] of [["konsumsiOnly", konsumsiOnly], ["industriOnly", i
   assert(nums === expected, `${label}: sequential renumbering (${nums})`);
 }
 
+assert(
+  konsumsiOnly.find((s) => s.key === "support-document").title === "Bukti Kemampuan Finansial",
+  "Konsumsi: Support Document step renamed to Bukti Kemampuan Finansial",
+);
+assert(
+  mixed.find((s) => s.key === "support-document").title === "Bukti Kemampuan Finansial",
+  "Mixed Industri+Konsumsi: still renamed (Konsumsi present)",
+);
+assert(
+  industriOnly.find((s) => s.key === "support-document").title === "Support Document",
+  "Industri alone: generic Support Document title unchanged",
+);
+
 assert(VIU_WIZARD_STEPS.length === 12, "VIU_WIZARD_STEPS (full/unfiltered) still has all 12 steps");
 for (const s of VIU_WIZARD_STEPS) {
   assert(s.key in VIU_STEP_FIELD_NAMES, `VIU_STEP_FIELD_NAMES has "${s.key}"`);
@@ -117,7 +130,7 @@ assert(
 
 assert(
   JSON.stringify(runSubmitRules({ importTypes: ["BAHAN_BAKU_INDUSTRI"] })) === JSON.stringify([
-    "nonIndustriDocuments: Aktifkan dan unggah minimal satu Dokumen Modal",
+    "nonIndustriDocuments: Unggah Surat Pernyataan Kepemilikan Modal Kerja",
     "partnerIndustriEntries: Aktifkan minimal satu Partner Industri tujuan",
   ]),
   "Industri alone, nothing filled -> both Industri-side issues (unaffected by Konsumsi extraction)",
@@ -127,14 +140,41 @@ assert(
   JSON.stringify(
     runSubmitRules({
       importTypes: ["BARANG_KONSUMSI"],
+      // Bukti Kemampuan Finansial now applies to Konsumsi too (Step5SupportDocument's
+      // `needsModalDocs`) — satisfied here since this case is testing the Konsumsi-specific
+      // issues below, not this shared check. Only the statement letter is unconditionally
+      // required; the "pick one evidence" document is optional.
+      nonIndustriDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, documentPath: "x.pdf", amount: "500000000" }],
       konsumsiDocuments: [{ id: "1", label: "x", documentPath: "x" }],
       applicationBrands: [{ brandId: "b1", applicantRole: "IMPORTER_ONLY", relationshipDocuments: {} }],
     }),
   ) === JSON.stringify([
     "applicationBrands.0.appointmentSource: Pilih sumber penunjukan importir",
-    "brandQualityTests: 1 merek belum memiliki dokumen hasil uji mutu",
+    "brandQualityTests: 1 merek belum memiliki dokumen pendukung merek",
   ]),
   "Konsumsi: brand missing appointmentSource + quality test -> applyKonsumsiSubmitRules fires correctly",
+);
+
+assert(
+  JSON.stringify(runSubmitRules({ importTypes: ["BARANG_KONSUMSI"] })) === JSON.stringify([
+    "applicationBrands: Pilih atau tambahkan minimal satu merek yang digunakan",
+    "konsumsiDocuments: Tambahkan minimal satu dokumen pendukung",
+    "nonIndustriDocuments: Unggah Surat Pernyataan Kepemilikan Modal Kerja",
+  ]),
+  "Konsumsi alone, nothing filled -> Bukti Kemampuan Finansial is now required too",
+);
+
+assert(
+  JSON.stringify(
+    runSubmitRules({
+      importTypes: ["BARANG_KONSUMSI"],
+      nonIndustriDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, documentPath: "x.pdf" }],
+      konsumsiDocuments: [{ id: "1", label: "x", documentPath: "x" }],
+      applicationBrands: [{ brandId: "b1", applicantRole: "OWNER", relationshipDocuments: {} }],
+      brandQualityTests: [{ brandId: "b1" }],
+    }),
+  ) === JSON.stringify(["nonIndustriDocuments: Isi jumlah modal kerja pada Surat Pernyataan Kepemilikan Modal Kerja"]),
+  "Statement letter uploaded but amount empty -> amount-specific issue fires",
 );
 
 assert(
@@ -142,7 +182,7 @@ assert(
     runSubmitRules({
       importTypes: ["BAHAN_BAKU_INDUSTRI", "BARANG_KONSUMSI"],
       partnerIndustriEntries: [{ partnerId: "p1", enabled: true }],
-      nonIndustriDocuments: [{ key: "rekening-koran", enabled: true, documentPath: "x.pdf" }],
+      nonIndustriDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, documentPath: "x.pdf", amount: "500000000" }],
       konsumsiDocuments: [{ id: "1", label: "x", documentPath: "x" }],
       applicationBrands: [{ brandId: "b1", applicantRole: "OWNER", relationshipDocuments: {} }],
       brandQualityTests: [{ brandId: "b1" }],

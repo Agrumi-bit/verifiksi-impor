@@ -1,4 +1,4 @@
-import { NON_INDUSTRI_SUPPORT_DOC_DEFS, type ApplicationWizardValues, type NonIndustriSupportDocDef } from "@/modules/applications/schema";
+import { MODAL_STATEMENT_LETTER_DOC_DEF, NON_INDUSTRI_SUPPORT_DOC_DEFS, type ApplicationWizardValues, type NonIndustriSupportDocDef } from "@/modules/applications/schema";
 import { OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS, splitKbliEntries, type LocationValues } from "@/modules/shared/schema";
 import type { CompanyLegalContext } from "./company-context";
 import type { ChecklistPartnerContext } from "./schema";
@@ -602,11 +602,12 @@ function skfSupportNote(company: string): string {
 }
 
 /**
- * "Dokumen Pendukung" chapter — VIU's "Bukti Kemampuan Finansial" checklist (shared between the
- * "Bahan Baku Industri" and "Bahan Baku Non Industri" import types), one narrative document per
- * `NON_INDUSTRI_SUPPORT_DOC_DEFS` entry. UTAMA docs are required; PENDUKUNG docs are supplementary
- * evidence and only assessed when the company actually enabled/uploaded them (same "Tidak Berlaku"
- * pattern as SKF in the Perpajakan chapter).
+ * "Dokumen Pendukung" chapter — VIU's "Bukti Kemampuan Finansial" checklist (shared across Bahan
+ * Baku Industri, Bahan Baku Non Industri, and Barang Konsumsi), one narrative document per
+ * `MODAL_STATEMENT_LETTER_DOC_DEF` (the sole UTAMA entry — always required) plus each
+ * `NON_INDUSTRI_SUPPORT_DOC_DEFS` entry (all PENDUKUNG — the applicant picks and uploads just one
+ * as supporting evidence). PENDUKUNG docs are only assessed when the company actually
+ * enabled/uploaded them (same "Tidak Berlaku" pattern as SKF in the Perpajakan chapter).
  */
 function modalFinansialDocument(def: NonIndustriSupportDocDef, no: number): DocDetail {
   const key = `nonindustri-support:${def.key}`;
@@ -620,7 +621,16 @@ function modalFinansialDocument(def: NonIndustriSupportDocDef, no: number): DocD
     ],
     fields: ({ payload }) => {
       const entry = payload.nonIndustriDocuments?.find((d) => d.key === def.key);
-      return [{ label: def.title, value: entry?.documentPath ? "Tersedia" : "Belum Tersedia", ok: Boolean(entry?.documentPath) }];
+      const fields = [{ label: def.title, value: entry?.documentPath ? "Tersedia" : "Belum Tersedia", ok: Boolean(entry?.documentPath) }];
+      if (def.key === MODAL_STATEMENT_LETTER_DOC_DEF.key) {
+        const amount = entry?.amount ? Number(entry.amount) : null;
+        fields.push({
+          label: "Jumlah Modal Kerja",
+          value: amount ? `Rp ${amount.toLocaleString("id-ID")}` : "Belum Diisi",
+          ok: Boolean(amount),
+        });
+      }
+      return fields;
     },
     findings: ({ payload, company }) => {
       const entry = payload.nonIndustriDocuments?.find((d) => d.key === def.key);
@@ -629,8 +639,12 @@ function modalFinansialDocument(def: NonIndustriSupportDocDef, no: number): DocD
           ? [skfSupportNote(company).replace("kelengkapan persyaratan wajib Perpajakan", "kelengkapan bukti kemampuan finansial")]
           : [`Berdasarkan hasil pemeriksaan, ${company} belum menyampaikan ${def.title}.`];
       }
+      const amountNote =
+        def.key === MODAL_STATEMENT_LETTER_DOC_DEF.key && entry.amount
+          ? ` Surat pernyataan tersebut menyatakan jumlah modal kerja sebesar Rp ${Number(entry.amount).toLocaleString("id-ID")}.`
+          : "";
       return [
-        `Berdasarkan hasil pemeriksaan dokumen, ${company} telah menyampaikan ${def.title} sebagai bukti kemampuan finansial perusahaan dalam membiayai kegiatan importasi. ${def.desc}`,
+        `Berdasarkan hasil pemeriksaan dokumen, ${company} telah menyampaikan ${def.title} sebagai bukti kemampuan finansial perusahaan dalam membiayai kegiatan importasi. ${def.desc}${amountNote}`,
       ];
     },
     kesimpulan: (ctx) => {
@@ -651,7 +665,9 @@ function modalFinansialDocument(def: NonIndustriSupportDocDef, no: number): DocD
   };
 }
 
-export const MODAL_FINANSIAL_DOCUMENTS: DocDetail[] = NON_INDUSTRI_SUPPORT_DOC_DEFS.map((def, i) => modalFinansialDocument(def, i + 1));
+export const MODAL_FINANSIAL_DOCUMENTS: DocDetail[] = [MODAL_STATEMENT_LETTER_DOC_DEF, ...NON_INDUSTRI_SUPPORT_DOC_DEFS].map(
+  (def, i) => modalFinansialDocument(def, i + 1),
+);
 
 /** "Tenaga Kerja" chapter — a single fixed document (surat pernyataan jumlah tenaga kerja). */
 export const TENAGA_KERJA_DOCUMENTS: DocDetail[] = [

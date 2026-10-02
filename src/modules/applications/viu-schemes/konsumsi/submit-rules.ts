@@ -60,9 +60,10 @@ export function applyKonsumsiSubmitRules(data: ApplicationWizardValues, ctx: z.R
       });
     }
   });
-  // Every Brand used in this application needs at least one quality-test
-  // certificate of its own (see brandQualityTestsSchema's own comment on
-  // why this isn't Merk's qualityTests reused as-is).
+  // Every Brand used in this application needs at least one Dokumen
+  // Pendukung Merek entry of its own (quality-test certificate + label
+  // compliance documents — see brandQualityTestsSchema's own comment on why
+  // this isn't Merk's qualityTests reused as-is).
   const brandIdsMissingQualityTest = data.applicationBrands
     .map((entry) => entry.brandId)
     .filter((brandId) => !data.brandQualityTests.some((qt) => qt.brandId === brandId));
@@ -70,7 +71,7 @@ export function applyKonsumsiSubmitRules(data: ApplicationWizardValues, ctx: z.R
     ctx.addIssue({
       code: "custom",
       path: ["brandQualityTests"],
-      message: `${brandIdsMissingQualityTest.length} merek belum memiliki dokumen hasil uji mutu`,
+      message: `${brandIdsMissingQualityTest.length} merek belum memiliki dokumen pendukung merek`,
     });
   }
 }

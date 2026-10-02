@@ -21,8 +21,8 @@ export const KONSUMSI_STEPS: WizardStepMeta[] = [
   {
     key: "quality-test",
     step: 0,
-    title: "Hasil Uji Mutu",
-    subtitle: "Impor barang konsumsi — dokumen uji mutu per merek",
+    title: "Dokumen Pendukung Merek",
+    subtitle: "Impor barang konsumsi — uji mutu & label berbahasa Indonesia per merek",
     icon: FlaskConical,
     implemented: true,
   },

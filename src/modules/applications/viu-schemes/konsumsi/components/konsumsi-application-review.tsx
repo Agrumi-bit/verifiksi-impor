@@ -140,32 +140,55 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
         </div>
       </Section>
 
-      <Section title="VIU Konsumsi — Hasil Uji Mutu">
+      <Section title="VIU Konsumsi — Dokumen Pendukung Merek">
         <div className="flex flex-col gap-3">
           {payload.brandQualityTests.map((qt, index) => (
             <div key={index} className="rounded-lg border border-border p-3">
               <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
                 <Item label="Merek" value={snapshotOrFallbackBrandName(payload, qt.brandId, fallbackBrandName)} />
-                <Item label="Komoditas" value={qt.commodityName} />
+                <Item label="Kelompok Komoditas" value={qt.industryName} />
+                <Item label="Sub Kelompok Komoditas" value={qt.commodityName} />
                 <Item label="Nomor Sertifikat" value={qt.certificateNumber} />
                 <Item label="Laboratorium" value={qt.laboratoryName} />
                 <Item label="Tanggal Terbit" value={formatDate(qt.issueDate)} />
                 <Item label="Tanggal Kadaluarsa" value={qt.expiryDate ? formatDate(qt.expiryDate) : "—"} />
               </dl>
-              {qt.filePath && (
-                <a
-                  href={`/${qt.filePath}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-block text-xs font-medium text-primary hover:underline"
-                >
-                  {qt.fileName || "Lihat dokumen"}
-                </a>
-              )}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {qt.filePath && (
+                  <a
+                    href={`/${qt.filePath}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    {qt.fileName || "Hasil Uji Mutu"}
+                  </a>
+                )}
+                {qt.labelStatementFilePath && (
+                  <a
+                    href={`/${qt.labelStatementFilePath}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    {qt.labelStatementFileName || "Surat Pernyataan Label Berbahasa Indonesia"}
+                  </a>
+                )}
+                {qt.labelDocumentationFilePath && (
+                  <a
+                    href={`/${qt.labelDocumentationFilePath}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    {qt.labelDocumentationFileName || "Dokumentasi Label Produk"}
+                  </a>
+                )}
+              </div>
             </div>
           ))}
           {payload.brandQualityTests.length === 0 && (
-            <p className="text-sm text-muted-foreground">Belum ada hasil uji mutu pada permohonan ini.</p>
+            <p className="text-sm text-muted-foreground">Belum ada dokumen pendukung merek pada permohonan ini.</p>
           )}
         </div>
       </Section>

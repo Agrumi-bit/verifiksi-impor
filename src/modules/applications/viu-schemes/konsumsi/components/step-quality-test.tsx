@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/form/form-field";
 import { SearchSelectInput } from "@/components/form/search-select-input";
-import { useCommodityGroups } from "@/modules/master-data/use-commodity-groups";
+import { useIndustryCommodityGroups } from "@/modules/master-data/use-industry-commodity-groups";
 import { useApplicationBrandOptions } from "../../../hooks/use-application-brand-options";
 import {
   createEmptyApplicationBrandQualityTest,
@@ -20,12 +20,16 @@ type Props = {
   form: UseFormReturn<ApplicationWizardValues>;
 };
 
-function QualityTestFileUpload({
-  value,
+function DocumentUpload({
+  filePath,
+  fileName,
+  uploadLabel,
   onChange,
 }: {
-  value: ApplicationBrandQualityTestEntryValues;
-  onChange: (patch: Partial<ApplicationBrandQualityTestEntryValues>) => void;
+  filePath: string;
+  fileName: string;
+  uploadLabel: string;
+  onChange: (patch: { filePath: string; fileName: string }) => void;
 }) {
   const [status, setStatus] = useState<"idle" | "uploading" | "error">("idle");
 
@@ -45,12 +49,12 @@ function QualityTestFileUpload({
     }
   }
 
-  if (value.filePath) {
+  if (filePath) {
     return (
       <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm">
         <span className="flex min-w-0 items-center gap-2">
           <FileText className="size-4 shrink-0 text-primary" />
-          <span className="truncate">{value.fileName}</span>
+          <span className="truncate">{fileName}</span>
           <CheckCircle2 className="size-3.5 shrink-0 text-emerald-600" />
         </span>
         <button
@@ -67,7 +71,7 @@ function QualityTestFileUpload({
   return (
     <label className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2.5 text-xs text-muted-foreground hover:bg-muted/40">
       {status === "uploading" ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
-      {status === "uploading" ? "Mengunggah..." : "Unggah Dokumen Hasil Uji Mutu"}
+      {status === "uploading" ? "Mengunggah..." : uploadLabel}
       <input
         type="file"
         accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
@@ -83,27 +87,29 @@ function QualityTestFileUpload({
 }
 
 /**
- * Step "Hasil Uji Mutu" — only relevant for "Barang Konsumsi" (same gate as
- * StepBrandsUsed). One card per Brand selected in Step "Merek yang
+ * Step "Dokumen Pendukung Merek" — only relevant for "Barang Konsumsi" (same
+ * gate as StepBrandsUsed). One card per Brand selected in Step "Merek yang
  * Digunakan" (`applicationBrands`), each with its own repeatable list of
- * quality-test certificates (`brandQualityTests`, filtered by `brandId`).
- * Manual array management via Controller (not `useFieldArray`) since the
- * rendered groups are a filtered view over one flat array keyed by
- * `brandId` — same pattern StepPartnerIndustri already uses for its own
- * per-partner-id grouping.
+ * entries (`brandQualityTests`, filtered by `brandId`) — one entry per Sub
+ * Kelompok Komoditas, bundling the quality-test certificate with the Surat
+ * Pernyataan Pemenuhan Ketentuan Label Berbahasa Indonesia and Dokumentasi
+ * Label Produk required for that same combination. Manual array management
+ * via Controller (not `useFieldArray`) since the rendered groups are a
+ * filtered view over one flat array keyed by `brandId` — same pattern
+ * StepPartnerIndustri already uses for its own per-partner-id grouping.
  */
 export function StepQualityTest({ form }: Props) {
   const { control, formState } = form;
   const importTypes = useWatch({ control, name: "importTypes" }) ?? [];
   const applicationBrands = useWatch({ control, name: "applicationBrands" }) ?? [];
   const { data: brandOptions } = useApplicationBrandOptions();
-  const { groupOptions, subGroupOptionsFor } = useCommodityGroups();
+  const { industryGroupOptions, commodityGroupOptionsFor } = useIndustryCommodityGroups();
 
   if (!importTypes.includes("BARANG_KONSUMSI")) {
     return (
       <p className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
         Step ini hanya berlaku untuk Jenis Impor &quot;Barang Konsumsi&quot;. Tidak ada jenis impor
-        tersebut yang dipilih di Step 2, sehingga tidak ada dokumen hasil uji mutu yang perlu
+        tersebut yang dipilih di Step 2, sehingga tidak ada dokumen pendukung merek yang perlu
         ditambahkan di step ini.
       </p>
     );
@@ -113,7 +119,7 @@ export function StepQualityTest({ form }: Props) {
     return (
       <p className="rounded-lg border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
         Belum ada merek yang dipilih di Step &quot;Merek yang Digunakan&quot;. Pilih merek terlebih
-        dahulu sebelum mengunggah dokumen hasil uji mutu.
+        dahulu sebelum mengunggah dokumen pendukung merek.
       </p>
     );
   }
@@ -121,10 +127,11 @@ export function StepQualityTest({ form }: Props) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-lg font-bold">Hasil Uji Mutu</h2>
+        <h2 className="text-lg font-bold">Dokumen Pendukung Merek</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Unggah dokumen hasil uji mutu untuk setiap merek yang digunakan pada permohonan ini.
-          Satu merek dapat memiliki lebih dari satu sertifikat uji mutu (per sub kelompok komoditas).
+          Unggah dokumen hasil uji mutu, Surat Pernyataan Pemenuhan Ketentuan Label Berbahasa
+          Indonesia, dan Dokumentasi Label Produk untuk setiap merek yang digunakan pada permohonan
+          ini. Satu merek dapat memiliki lebih dari satu set dokumen (per sub kelompok komoditas).
         </p>
       </div>
 
@@ -164,13 +171,13 @@ export function StepQualityTest({ form }: Props) {
                       <p className="text-sm font-bold">{brandOption?.brandName ?? "Merek"}</p>
                       <Button type="button" variant="outline" size="sm" onClick={() => addEntry(brand.brandId)}>
                         <Plus className="size-3.5" />
-                        Tambah Sertifikat
+                        Tambah Dokumen
                       </Button>
                     </div>
 
                     {brandEntries.length === 0 ? (
                       <p className="mt-3 rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-                        Belum ada dokumen hasil uji mutu untuk merek ini.
+                        Belum ada dokumen pendukung untuk merek ini.
                       </p>
                     ) : (
                       <div className="mt-3 flex flex-col gap-3">
@@ -178,38 +185,38 @@ export function StepQualityTest({ form }: Props) {
                           <div key={entryIndex} className="rounded-lg border border-border bg-muted/20 p-3.5">
                             <div className="flex items-start justify-between gap-3">
                               <div className="grid flex-1 gap-3 sm:grid-cols-2">
+                                <FormField label="Kelompok Komoditas" required>
+                                  <SearchSelectInput
+                                    value={entry.industryGroupId}
+                                    onChange={(value) => {
+                                      const option = industryGroupOptions.find((o) => o.value === value);
+                                      updateEntry(entry, {
+                                        industryGroupId: value,
+                                        industryName: option?.label ?? "",
+                                        commodityGroupId: "",
+                                        commodityName: "",
+                                      });
+                                    }}
+                                    options={industryGroupOptions}
+                                    allowFreeText={false}
+                                    placeholder="Pilih kelompok komoditas"
+                                  />
+                                </FormField>
                                 <FormField label="Sub Kelompok Komoditas" required>
                                   <SearchSelectInput
                                     value={entry.commodityGroupId}
                                     onChange={(value) => {
-                                      const option = groupOptions.find((o) => o.value === value);
-                                      updateEntry(entry, {
-                                        commodityGroupId: value,
-                                        commodityName: option?.label ?? "",
-                                        commoditySubGroupId: undefined,
-                                        commoditySubGroupName: undefined,
-                                      });
-                                    }}
-                                    options={groupOptions}
-                                    allowFreeText={false}
-                                    placeholder="Pilih sub kelompok komoditas"
-                                  />
-                                </FormField>
-                                <FormField label="Komoditas" hint="Opsional, apabila tersedia.">
-                                  <SearchSelectInput
-                                    value={entry.commoditySubGroupId ?? ""}
-                                    onChange={(value) => {
-                                      const option = subGroupOptionsFor(entry.commodityGroupId).find(
+                                      const option = commodityGroupOptionsFor(entry.industryGroupId).find(
                                         (o) => o.value === value,
                                       );
                                       updateEntry(entry, {
-                                        commoditySubGroupId: value || undefined,
-                                        commoditySubGroupName: option?.label,
+                                        commodityGroupId: value,
+                                        commodityName: option?.label ?? "",
                                       });
                                     }}
-                                    options={subGroupOptionsFor(entry.commodityGroupId)}
+                                    options={commodityGroupOptionsFor(entry.industryGroupId)}
                                     allowFreeText={false}
-                                    placeholder="Pilih komoditas (opsional)"
+                                    placeholder="Pilih sub kelompok komoditas"
                                   />
                                 </FormField>
                                 <FormField label="Nomor Sertifikat" required>
@@ -242,7 +249,42 @@ export function StepQualityTest({ form }: Props) {
                                 </FormField>
                                 <div className="sm:col-span-2">
                                   <FormField label="Dokumen Hasil Uji Mutu" required>
-                                    <QualityTestFileUpload value={entry} onChange={(patch) => updateEntry(entry, patch)} />
+                                    <DocumentUpload
+                                      filePath={entry.filePath}
+                                      fileName={entry.fileName}
+                                      uploadLabel="Unggah Dokumen Hasil Uji Mutu"
+                                      onChange={(patch) => updateEntry(entry, patch)}
+                                    />
+                                  </FormField>
+                                </div>
+                                <div className="sm:col-span-2">
+                                  <FormField label="Surat Pernyataan Pemenuhan Ketentuan Label Berbahasa Indonesia" required>
+                                    <DocumentUpload
+                                      filePath={entry.labelStatementFilePath}
+                                      fileName={entry.labelStatementFileName}
+                                      uploadLabel="Unggah Surat Pernyataan Label Berbahasa Indonesia"
+                                      onChange={(patch) =>
+                                        updateEntry(entry, {
+                                          labelStatementFilePath: patch.filePath,
+                                          labelStatementFileName: patch.fileName,
+                                        })
+                                      }
+                                    />
+                                  </FormField>
+                                </div>
+                                <div className="sm:col-span-2">
+                                  <FormField label="Dokumentasi Label Produk" required>
+                                    <DocumentUpload
+                                      filePath={entry.labelDocumentationFilePath}
+                                      fileName={entry.labelDocumentationFileName}
+                                      uploadLabel="Unggah Dokumentasi Label Produk"
+                                      onChange={(patch) =>
+                                        updateEntry(entry, {
+                                          labelDocumentationFilePath: patch.filePath,
+                                          labelDocumentationFileName: patch.fileName,
+                                        })
+                                      }
+                                    />
                                   </FormField>
                                 </div>
                               </div>

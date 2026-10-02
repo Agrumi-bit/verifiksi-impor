@@ -1,5 +1,4 @@
 import { db } from "@/lib/db";
-import { validateQualityTestReferences } from "@/modules/merk/server-validation";
 import type { MerkEvidenceType } from "@/modules/merk/schema";
 import { getVIUConsumptionBrandRequirements } from "../business-rules";
 import type { ApplicationBrandEntryValues, ApplicationBrandSubmissionSnapshot } from "../schema";
@@ -16,6 +15,26 @@ const SUPPORTED_EVIDENCE_TYPES = new Set<string>([
 ]);
 function toEvidenceType(value: string | null): MerkEvidenceType | null {
   return value && SUPPORTED_EVIDENCE_TYPES.has(value) ? (value as MerkEvidenceType) : null;
+}
+
+/**
+ * Quality Test commodity references, Konsumsi-specific shape: "Kelompok
+ * Komoditas" (IndustryGroup) + "Sub Kelompok Komoditas" (CommodityGroup) —
+ * one level higher than Brand Master's own CommodityGroup/CommoditySubGroup
+ * pair (modules/merk/server-validation.ts's validateQualityTestReferences),
+ * so this is its own check rather than a reuse of that one.
+ */
+async function validateKonsumsiQualityTestReferences(
+  qualityTests: { industryGroupId: string; commodityGroupId: string }[] | undefined,
+): Promise<string | null> {
+  for (const qt of qualityTests ?? []) {
+    const group = await db.commodityGroup.findUnique({ where: { id: qt.commodityGroupId } });
+    if (!group) return "Sub Kelompok Komoditas pada Hasil Uji Mutu tidak ditemukan";
+    if (group.industryGroupId !== qt.industryGroupId) {
+      return "Sub Kelompok Komoditas pada Hasil Uji Mutu tidak sesuai dengan Kelompok Komoditas yang dipilih";
+    }
+  }
+  return null;
 }
 
 type ValidateKonsumsiSubmitInput = Pick<
@@ -177,10 +196,9 @@ export async function validateKonsumsiSubmit(
     snapshotBrands.push({ ...entry, submissionSnapshot: snapshot });
   }
 
-  // Quality-test master-data references — reuses the same utility Brand
-  // Master's own wizard uses for the identical shape (commodityGroupId /
-  // commoditySubGroupId), never a duplicated check.
-  const qualityTestError = await validateQualityTestReferences(values.brandQualityTests);
+  // Quality-test master-data references — Konsumsi's own shape (industryGroupId /
+  // commodityGroupId), see validateKonsumsiQualityTestReferences above.
+  const qualityTestError = await validateKonsumsiQualityTestReferences(values.brandQualityTests);
   if (qualityTestError) {
     return { error: qualityTestError };
   }

@@ -149,35 +149,50 @@ export type NonIndustriSupportDocDef = {
   priority: NonIndustriDocPriority;
 };
 
+/** The only unconditionally required document in the Bukti Kemampuan Finansial section — a sworn
+ * statement of working-capital ownership. Kept out of `NON_INDUSTRI_SUPPORT_DOC_DEFS` (the "pick
+ * one evidence type" group below) since it's not a choice: every applicant uploads this one, full
+ * stop, then additionally picks ONE supporting evidence document from the list. Still stored in
+ * the same `nonIndustriDocuments` array (keyed by `MODAL_STATEMENT_LETTER_DOC_DEF.key`) so the
+ * existing document-version tracking (`nonindustri-support:<key>`) and verifikator checklist both
+ * keep working unchanged. */
+export const MODAL_STATEMENT_LETTER_DOC_DEF: NonIndustriSupportDocDef = {
+  key: "surat-pernyataan-modal-kerja",
+  title: "Surat Pernyataan Kepemilikan Modal Kerja",
+  desc: "Pernyataan bermaterai bahwa perusahaan memiliki modal kerja yang cukup untuk membiayai kegiatan impor.",
+  priority: "UTAMA",
+};
+
 /**
- * Fixed checklist for "Impor Bahan Baku – Perusahaan Non Industri (API-U)" — proof of financial
- * capability ("modal") to fund the import. UTAMA docs are required before submit; PENDUKUNG are
- * supplementary evidence (e.g. shareholder loans "jika memang ada dan sah") and stay optional.
+ * "Pick one" evidence-of-financial-capability checklist for "Impor Bahan Baku – Perusahaan Non
+ * Industri (API-U)" and Barang Konsumsi — supplementary to `MODAL_STATEMENT_LETTER_DOC_DEF`
+ * (always required). All PENDUKUNG: the applicant selects exactly one type of evidence and
+ * uploads it, rather than needing every item on this list.
  */
 export const NON_INDUSTRI_SUPPORT_DOC_DEFS: NonIndustriSupportDocDef[] = [
   {
     key: "rekening-koran",
     title: "Rekening Koran Perusahaan (3–6 Bulan Terakhir)",
     desc: "Saldo, arus kas, dan aktivitas keuangan aktual perusahaan.",
-    priority: "UTAMA",
+    priority: "PENDUKUNG",
   },
   {
     key: "surat-referensi-bank",
     title: "Surat Referensi Bank",
     desc: "Hubungan perbankan dan keberadaan rekening perusahaan.",
-    priority: "UTAMA",
+    priority: "PENDUKUNG",
   },
   {
     key: "laporan-keuangan",
     title: "Laporan Keuangan Terakhir",
     desc: "Kas, aset lancar, kewajiban lancar, modal dan kondisi keuangan.",
-    priority: "UTAMA",
+    priority: "PENDUKUNG",
   },
   {
     key: "fasilitas-kredit",
     title: "Bukti Fasilitas Kredit / Credit Line dari Bank",
     desc: "Kemampuan memperoleh pembiayaan untuk transaksi impor.",
-    priority: "UTAMA",
+    priority: "PENDUKUNG",
   },
   {
     key: "keterangan-saldo",
@@ -218,11 +233,16 @@ export const nonIndustriDocumentSchema = z.object({
   key: z.string(),
   enabled: z.boolean(),
   documentPath: z.string().trim().optional(),
+  // Only meaningful for MODAL_STATEMENT_LETTER_DOC_DEF's entry — the Rupiah amount the statement
+  // itself declares. Kept on the generic per-entry shape rather than a dedicated top-level field
+  // so it travels with that one entry (same key-based lookup, no new array/field to thread through
+  // document-versions.ts or the submit payload separately).
+  amount: z.string().trim().optional(),
 });
 export type NonIndustriDocumentValues = z.infer<typeof nonIndustriDocumentSchema>;
 
 export function createEmptyNonIndustriDocuments(): NonIndustriDocumentValues[] {
-  return NON_INDUSTRI_SUPPORT_DOC_DEFS.map((def) => ({ key: def.key, enabled: false }));
+  return [MODAL_STATEMENT_LETTER_DOC_DEF, ...NON_INDUSTRI_SUPPORT_DOC_DEFS].map((def) => ({ key: def.key, enabled: false }));
 }
 
 /** Industri/Non-Industri supporting documents (Partner Industri financing
@@ -508,16 +528,26 @@ export function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardSh
   }
   if (
     data.importTypes.includes("BAHAN_BAKU_INDUSTRI") ||
-    data.importTypes.includes("BAHAN_BAKU_NON_INDUSTRI")
+    data.importTypes.includes("BAHAN_BAKU_NON_INDUSTRI") ||
+    data.importTypes.includes("BARANG_KONSUMSI")
   ) {
-    // Not every document applies to every applicant (toggled on/off per case) — just require
-    // at least one enabled document to actually have a file uploaded, not every def.
-    const hasUploadedDoc = data.nonIndustriDocuments.some((doc) => doc.enabled && doc.documentPath);
-    if (!hasUploadedDoc) {
+    // Only the Surat Pernyataan Kepemilikan Modal Kerja is unconditionally required — the rest of
+    // NON_INDUSTRI_SUPPORT_DOC_DEFS is a "pick one" supplementary evidence list the applicant may
+    // optionally fill in (see Step5SupportDocument's own NonIndustriChecklist). Applies to Barang
+    // Konsumsi too now (see `needsModalDocs`) — Bukti Kemampuan Finansial is required regardless of
+    // which Jenis Impor is selected.
+    const statementEntry = data.nonIndustriDocuments.find((doc) => doc.key === MODAL_STATEMENT_LETTER_DOC_DEF.key);
+    if (!statementEntry?.enabled || !statementEntry.documentPath) {
       ctx.addIssue({
         code: "custom",
         path: ["nonIndustriDocuments"],
-        message: "Aktifkan dan unggah minimal satu Dokumen Modal",
+        message: "Unggah Surat Pernyataan Kepemilikan Modal Kerja",
+      });
+    } else if (!statementEntry.amount?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["nonIndustriDocuments"],
+        message: "Isi jumlah modal kerja pada Surat Pernyataan Kepemilikan Modal Kerja",
       });
     }
   }
