@@ -151,13 +151,15 @@ export const konsumsiDocumentsSchema = z.object({
 
 /**
  * Step "Product Information" (shared step, scheme-owned content) — Konsumsi products are
- * structured as Merek (`applicationBrands[].brandId`) > Kelompok Komoditas (CommodityGroup
- * master data, referenced by `commodityGroupId` — displayed as "Sub Kelompok Komoditas" per the
- * app-wide commodity hierarchy naming) > Produk. This is entirely separate from the shared
- * `products` field (free-text HS/volume, used by VKI/Industri/Non-Industri — never touched here)
- * since the shapes are structurally incompatible: Konsumsi products carry a Brand/commodity
- * relationship, master-data-backed HS Code + Country of Origin, and per-line pricing that the
- * generic product list has no concept of.
+ * structured as Merek (`applicationBrands[].brandId`) > Kelompok Komoditas / Sub Kelompok
+ * Komoditas > Produk. The commodity grouping is never picked independently in this step — it's
+ * always one of that Brand's own `brandQualityTests` combinations (Step "Dokumen Pendukung
+ * Merek"), kept in sync via `deriveKonsumsiProductGroups` below, so a product can never reference
+ * a grouping that doesn't also exist there. Entirely separate from the shared `products` field
+ * (free-text HS/volume, used by VKI/Industri/Non-Industri — never touched here) since the shapes
+ * are structurally incompatible: Konsumsi products carry a Brand/commodity relationship, master-
+ * data-backed HS Code + Country of Origin, and per-line pricing the generic product list has no
+ * concept of.
  */
 const positiveNumberString = (message: string) =>
   z
@@ -177,21 +179,42 @@ export const KONSUMSI_PRODUCT_CURRENCIES = ["USD", "IDR", "EUR", "CNY", "JPY"] a
 export type KonsumsiProductCurrency = (typeof KONSUMSI_PRODUCT_CURRENCIES)[number];
 
 /**
- * One "Kelompok Komoditas" grouping slot under a selected Brand — exists independently of
- * whether it has any Product rows yet (an empty group is a valid state: the user picks the
- * group first, then adds products into it). `commodityGroupId` references CommodityGroup
- * master data (System Configuration > "Sub Kelompok Komoditas"), never a free-text name.
+ * A Brand's Kelompok Komoditas / Sub Kelompok Komoditas grouping is never picked independently in
+ * this step — it's always derived from that Brand's own `brandQualityTests` entries (Step "Dokumen
+ * Pendukung Merek"), so Product Information stays in sync with whatever commodity groupings were
+ * already established there. See `deriveKonsumsiProductGroups` below.
  */
-export const konsumsiProductGroupSchema = z.object({
-  id: z.string(),
-  brandId: requiredString("Merek wajib dipilih"),
-  commodityGroupId: requiredString("Kelompok komoditas wajib dipilih"),
-  commodityName: z.string().trim().optional(),
-});
-export type KonsumsiProductGroupValues = z.infer<typeof konsumsiProductGroupSchema>;
+export type KonsumsiProductGroup = {
+  brandId: string;
+  industryGroupId: string;
+  industryName?: string;
+  commodityGroupId: string;
+  commodityName?: string;
+};
 
-export function createEmptyKonsumsiProductGroup(brandId: string): KonsumsiProductGroupValues {
-  return { id: crypto.randomUUID(), brandId, commodityGroupId: "" };
+/** Distinct (industryGroupId, commodityGroupId) pairs per Brand, taken from `brandQualityTests` —
+ * the single source of truth for which commodity groupings a Brand has. Dedupes by
+ * `commodityGroupId` (it already uniquely implies its parent `industryGroupId`), preserving first-
+ * seen order so the UI lists groups in the same order they were added in Step "Dokumen Pendukung
+ * Merek". */
+export function deriveKonsumsiProductGroups(
+  qualityTests: Pick<ApplicationBrandQualityTestEntryValues, "brandId" | "industryGroupId" | "industryName" | "commodityGroupId" | "commodityName">[],
+): KonsumsiProductGroup[] {
+  const seen = new Set<string>();
+  const groups: KonsumsiProductGroup[] = [];
+  for (const qt of qualityTests) {
+    const key = `${qt.brandId}|${qt.commodityGroupId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    groups.push({
+      brandId: qt.brandId,
+      industryGroupId: qt.industryGroupId,
+      industryName: qt.industryName,
+      commodityGroupId: qt.commodityGroupId,
+      commodityName: qt.commodityName,
+    });
+  }
+  return groups;
 }
 
 /** Server-authoritative snapshot of one Product line as it stood at final submit time — same
@@ -200,6 +223,7 @@ export function createEmptyKonsumsiProductGroup(brandId: string): KonsumsiProduc
 export const konsumsiProductSnapshotSchema = z.object({
   capturedAt: z.string(),
   brandName: z.string(),
+  industryName: z.string(),
   commodityName: z.string(),
   hsDescription: z.string(),
   countryOfOriginName: z.string(),
@@ -210,9 +234,14 @@ export type KonsumsiProductSnapshot = z.infer<typeof konsumsiProductSnapshotSche
 export const konsumsiProductSchema = z.object({
   id: z.string(),
   brandId: requiredString("Merek wajib dipilih"),
-  commodityGroupId: requiredString("Kelompok komoditas wajib dipilih"),
-  // Display cache, resolved at selection time — never the source of truth (server re-resolves
-  // from commodityGroupId at submit, same pattern as the quality-test entries' commodityName).
+  // Both of these always come from a matching `brandQualityTests` entry (same brandId +
+  // commodityGroupId) — never picked independently here — so Product Information can't drift out
+  // of sync with Step "Dokumen Pendukung Merek". Cached directly on the product (not re-derived by
+  // joining against brandQualityTests at render time) so a row stays self-describing even if that
+  // quality-test entry is later edited or removed.
+  industryGroupId: requiredString("Kelompok komoditas wajib dipilih"),
+  industryName: z.string().trim().optional(),
+  commodityGroupId: requiredString("Sub kelompok komoditas wajib dipilih"),
   commodityName: z.string().trim().optional(),
   productName: requiredString("Nama produk wajib diisi"),
   // References HS Code master data by its code string (the existing convention — see
@@ -234,11 +263,14 @@ export const konsumsiProductSchema = z.object({
 });
 export type ApplicationKonsumsiProductValues = z.infer<typeof konsumsiProductSchema>;
 
-export function createEmptyKonsumsiProduct(brandId: string, commodityGroupId: string): ApplicationKonsumsiProductValues {
+export function createEmptyKonsumsiProduct(brandId: string, group: KonsumsiProductGroup): ApplicationKonsumsiProductValues {
   return {
     id: crypto.randomUUID(),
     brandId,
-    commodityGroupId,
+    industryGroupId: group.industryGroupId,
+    industryName: group.industryName,
+    commodityGroupId: group.commodityGroupId,
+    commodityName: group.commodityName,
     productName: "",
     hsCode: "",
     countryOfOrigin: "",
@@ -258,6 +290,5 @@ export function konsumsiProductTotal(product: Pick<ApplicationKonsumsiProductVal
 }
 
 export const konsumsiProductsSchema = z.object({
-  konsumsiProductGroups: z.array(konsumsiProductGroupSchema).default([]),
   konsumsiProducts: z.array(konsumsiProductSchema).default([]),
 });

@@ -114,7 +114,6 @@ function runSubmitRules(data) {
       konsumsiDocuments: [],
       applicationBrands: [],
       brandQualityTests: [],
-      konsumsiProductGroups: [],
       konsumsiProducts: [],
       products: [],
       ...data,

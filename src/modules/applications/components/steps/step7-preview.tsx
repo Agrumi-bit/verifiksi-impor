@@ -4,7 +4,7 @@ import { useWatch, type UseFormReturn } from "react-hook-form";
 import { Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { konsumsiProductTotal } from "../../viu-schemes/konsumsi/schema";
+import { deriveKonsumsiProductGroups, konsumsiProductTotal } from "../../viu-schemes/konsumsi/schema";
 import type { ApplicationWizardValues } from "../../schema";
 
 type Step7Props = {
@@ -185,7 +185,24 @@ export function Step7Preview({ form, onEditStep, stepNumberByKey }: Step7Props) 
       {(values.importTypes ?? []).includes("BARANG_KONSUMSI") && (
         <SummarySection title="Produk — VIU Barang Konsumsi" step={stepNumberByKey["product-info"]} onEditStep={onEditStep}>
           <SummaryItem label="Jumlah Merek" value={values.applicationBrands?.length?.toString()} />
-          <SummaryItem label="Jumlah Kelompok Komoditas" value={values.konsumsiProductGroups?.length?.toString()} />
+          <SummaryItem
+            label="Jumlah Kelompok Komoditas"
+            value={deriveKonsumsiProductGroups(
+              (values.brandQualityTests ?? []).flatMap((qt) =>
+                qt?.brandId && qt.industryGroupId && qt.commodityGroupId
+                  ? [
+                      {
+                        brandId: qt.brandId,
+                        industryGroupId: qt.industryGroupId,
+                        industryName: qt.industryName,
+                        commodityGroupId: qt.commodityGroupId,
+                        commodityName: qt.commodityName ?? "",
+                      },
+                    ]
+                  : [],
+              ),
+            ).length.toString()}
+          />
           <SummaryItem label="Jumlah Produk" value={values.konsumsiProducts?.length?.toString()} />
           <SummaryItem
             label="Total Nilai Produk"

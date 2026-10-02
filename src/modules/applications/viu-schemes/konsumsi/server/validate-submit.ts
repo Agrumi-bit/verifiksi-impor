@@ -3,9 +3,9 @@ import type { MerkEvidenceType } from "@/modules/merk/schema";
 import { getVIUConsumptionBrandRequirements } from "../business-rules";
 import type {
   ApplicationBrandEntryValues,
+  ApplicationBrandQualityTestEntryValues,
   ApplicationBrandSubmissionSnapshot,
   ApplicationKonsumsiProductValues,
-  KonsumsiProductGroupValues,
 } from "../schema";
 import type { ApplicationWizardValues } from "../../../schema";
 
@@ -44,13 +44,7 @@ async function validateKonsumsiQualityTestReferences(
 
 type ValidateKonsumsiSubmitInput = Pick<
   ApplicationWizardValues,
-  | "verificationType"
-  | "importTypes"
-  | "companyId"
-  | "applicationBrands"
-  | "brandQualityTests"
-  | "konsumsiProductGroups"
-  | "konsumsiProducts"
+  "verificationType" | "importTypes" | "companyId" | "applicationBrands" | "brandQualityTests" | "konsumsiProducts"
 >;
 
 type ValidateKonsumsiSubmitResult =
@@ -62,33 +56,38 @@ type ValidateKonsumsiSubmitResult =
     };
 
 /**
- * Step "Product Information" — Konsumsi's own Merek > Kelompok Komoditas > Produk structure.
- * Every product/group must reference a Brand actually selected on this same application
- * (`validBrandIds`, already DB-validated above by the caller); `commodityGroupId` must be a real,
- * active CommodityGroup; `hsCode` a real, active HS Code (keyed by code, the existing convention
- * — see useHsCodeOptions); `countryOfOrigin` a real, active country (keyed by name, the existing
+ * Step "Product Information" — Konsumsi's own Merek > Kelompok Komoditas / Sub Kelompok
+ * Komoditas > Produk structure. The commodity grouping is never picked independently in this
+ * step (see `deriveKonsumsiProductGroups` in ../schema.ts), so every product's (brandId,
+ * commodityGroupId) pair must match one already established in that same Brand's
+ * `brandQualityTests` (Step "Dokumen Pendukung Merek") — never trusted from the client alone.
+ * `hsCode` must be a real, active HS Code (keyed by code, the existing convention — see
+ * useHsCodeOptions); `countryOfOrigin` a real, active country (keyed by name, the existing
  * convention — see useActiveCountries). Returns products with their display caches
- * (commodityName/hsDescription/unit/countryOfOriginCode) and a server-built `productSnapshot`
- * re-resolved from master data — never the client-submitted values for any of these.
+ * (industryName/commodityName/hsDescription/unit/countryOfOriginCode) and a server-built
+ * `productSnapshot` re-resolved from master data — never the client-submitted values for any of
+ * these.
  */
 async function validateKonsumsiProducts(
-  productGroups: KonsumsiProductGroupValues[] | undefined,
+  qualityTests: ApplicationBrandQualityTestEntryValues[],
   products: ApplicationKonsumsiProductValues[] | undefined,
   validBrandIds: Set<string>,
   brandNameById: Map<string, string>,
 ): Promise<{ error: string } | { ok: true; products: ApplicationKonsumsiProductValues[] }> {
   const list = products ?? [];
-
-  for (const group of productGroups ?? []) {
-    if (!validBrandIds.has(group.brandId)) {
-      return { error: "Merek pada salah satu kelompok komoditas produk tidak terdaftar dalam permohonan ini." };
-    }
-  }
   if (list.length === 0) return { ok: true, products: list };
+
+  const validGroupKeys = new Set(qualityTests.map((qt) => `${qt.brandId}|${qt.commodityGroupId}`));
+  const industryNameByGroupKey = new Map(qualityTests.map((qt) => [`${qt.brandId}|${qt.commodityGroupId}`, qt.industryName ?? ""]));
 
   for (const product of list) {
     if (!validBrandIds.has(product.brandId)) {
       return { error: `Merek pada produk "${product.productName}" tidak terdaftar dalam permohonan ini.` };
+    }
+    if (!validGroupKeys.has(`${product.brandId}|${product.commodityGroupId}`)) {
+      return {
+        error: `Kelompok komoditas pada produk "${product.productName}" tidak sesuai dengan Dokumen Pendukung Merek untuk merek ini.`,
+      };
     }
   }
 
@@ -130,9 +129,11 @@ async function validateKonsumsiProducts(
       return { error: `Harga satuan rata-rata pada produk "${product.productName}" tidak valid.` };
     }
 
+    const industryName = industryNameByGroupKey.get(`${product.brandId}|${product.commodityGroupId}`) ?? "";
     const totalPrice = (quantity * averageUnitPrice).toFixed(2);
     resolved.push({
       ...product,
+      industryName,
       commodityName: commodityGroup.name,
       hsDescription: hsRow.description,
       unit: hsRow.unitOfMeasurement?.symbol ?? hsRow.unitOfMeasurement?.name ?? product.unit ?? "",
@@ -140,6 +141,7 @@ async function validateKonsumsiProducts(
       productSnapshot: {
         capturedAt,
         brandName: brandNameById.get(product.brandId) ?? "",
+        industryName,
         commodityName: commodityGroup.name,
         hsDescription: hsRow.description,
         countryOfOriginName: country.name,
@@ -314,7 +316,7 @@ export async function validateKonsumsiSubmit(
   // DB-validated above) instead of a second brand lookup.
   const brandNameById = new Map(brands.map((brand) => [brand.id, brand.brandName]));
   const productsResult = await validateKonsumsiProducts(
-    values.konsumsiProductGroups,
+    values.brandQualityTests,
     values.konsumsiProducts,
     new Set(brandIds),
     brandNameById,

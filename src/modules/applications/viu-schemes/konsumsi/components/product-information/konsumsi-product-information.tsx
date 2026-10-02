@@ -5,7 +5,7 @@ import { useWatch, type UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { useApplicationBrandOptions } from "../../../../hooks/use-application-brand-options";
 import type { ApplicationWizardValues } from "../../../../schema";
-import { konsumsiProductTotal } from "../../schema";
+import { deriveKonsumsiProductGroups, konsumsiProductTotal } from "../../schema";
 import { BrandProductSection } from "./brand-product-section";
 import { CurrencyTotals } from "./product-summary";
 
@@ -14,6 +14,9 @@ type Props = {
   /** Jumps the wizard to Step "Merek yang Digunakan" — used by the empty state below when no
    * Brand has been selected yet, so the user isn't stuck on this step with nothing to do. */
   onNavigateToBrandsStep: () => void;
+  /** Jumps the wizard to Step "Dokumen Pendukung Merek" — forwarded to each BrandProductSection
+   * for its own empty state (a Brand with no commodity grouping yet). */
+  onNavigateToQualityTestStep: () => void;
 };
 
 function SummaryStat({ label, value }: { label: string; value: number }) {
@@ -32,14 +35,15 @@ function SummaryStat({ label, value }: { label: string; value: number }) {
  * before, including on a mixed Industri+Konsumsi application.
  *
  * Structure: Merek (`applicationBrands`, selected in Step "Merek yang Digunakan" — never typed
- * here) > Sub Kelompok Komoditas (CommodityGroup master data) > Produk. Brand source is always
+ * here) > Kelompok Komoditas / Sub Kelompok Komoditas (derived from `brandQualityTests`, Step
+ * "Dokumen Pendukung Merek" — never picked independently here) > Produk. Brand source is always
  * `applicationBrands[].brandId`; this component never lets the user type an arbitrary brand name.
  */
-export function KonsumsiProductInformation({ form, onNavigateToBrandsStep }: Props) {
+export function KonsumsiProductInformation({ form, onNavigateToBrandsStep, onNavigateToQualityTestStep }: Props) {
   const { control } = form;
   const importTypes = useWatch({ control, name: "importTypes" }) ?? [];
   const applicationBrands = useWatch({ control, name: "applicationBrands" }) ?? [];
-  const productGroups = useWatch({ control, name: "konsumsiProductGroups" }) ?? [];
+  const qualityTests = useWatch({ control, name: "brandQualityTests" }) ?? [];
   const products = useWatch({ control, name: "konsumsiProducts" }) ?? [];
   const { data: brandOptions } = useApplicationBrandOptions();
 
@@ -77,7 +81,7 @@ export function KonsumsiProductInformation({ form, onNavigateToBrandsStep }: Pro
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <SummaryStat label="Jumlah Merek" value={applicationBrands.length} />
-        <SummaryStat label="Jumlah Kelompok Komoditas" value={productGroups.length} />
+        <SummaryStat label="Jumlah Kelompok Komoditas" value={deriveKonsumsiProductGroups(qualityTests).length} />
         <SummaryStat label="Jumlah Produk" value={products.length} />
         <div className="rounded-xl border border-border p-3">
           <p className="text-xs text-muted-foreground">Total Nilai Produk</p>
@@ -101,6 +105,7 @@ export function KonsumsiProductInformation({ form, onNavigateToBrandsStep }: Pro
               brandId={brand.brandId}
               brandName={brandOption?.brandName ?? "Merek"}
               brandOwnerTitle={brandOption?.ownerTitle ?? null}
+              onNavigateToQualityTestStep={onNavigateToQualityTestStep}
             />
           );
         })}

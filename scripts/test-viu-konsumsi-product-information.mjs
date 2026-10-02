@@ -1,19 +1,20 @@
-// Regression check for VIU Konsumsi Step "Product Information" (Merek > Kelompok Komoditas >
-// Produk) — schema validation, derived total calculation, duplicate-line detection, multi-
-// currency grouping, and submit-rule gating across Industri / Non-Industri / Konsumsi / mixed.
+// Regression check for VIU Konsumsi Step "Product Information" (Merek > Kelompok Komoditas /
+// Sub Kelompok Komoditas > Produk) — schema validation, derived total calculation, duplicate-line
+// detection, multi-currency grouping, submit-rule gating, and group derivation from Step "Dokumen
+// Pendukung Merek" (brandQualityTests) across Industri / Non-Industri / Konsumsi / mixed.
 //
 // DB-dependent checks (invalid Brand/CommodityGroup/HS Code/Country references, server-rebuilt
-// submission snapshot, malicious client snapshot rejection) are NOT covered here — they require
-// a live DB + HTTP round trip and were verified manually against the dev server (see the
-// implementation report). This script covers everything testable as pure logic.
+// submission snapshot, malicious client snapshot rejection, group-sync-with-Step-7 rejection) are
+// NOT covered here — they require a live DB + HTTP round trip and were verified manually against
+// the dev server (see the implementation report). This script covers everything testable as pure
+// logic.
 //
 // Run with: npx tsx scripts/test-viu-konsumsi-product-information.mjs
 import {
   konsumsiProductSchema,
-  konsumsiProductGroupSchema,
   konsumsiProductTotal,
   createEmptyKonsumsiProduct,
-  createEmptyKonsumsiProductGroup,
+  deriveKonsumsiProductGroups,
 } from "../src/modules/applications/viu-schemes/konsumsi/schema.ts";
 import { applyViuOnlySubmitRules } from "../src/modules/applications/schema.ts";
 
@@ -28,7 +29,10 @@ function validProduct(overrides = {}) {
   return {
     id: "p1",
     brandId: "b1",
+    industryGroupId: "ig1",
+    industryName: "Industri Tekstil",
     commodityGroupId: "cg1",
+    commodityName: "Pakaian Jadi",
     productName: "Men's Cotton T-Shirt",
     hsCode: "61091000",
     countryOfOrigin: "Vietnam",
@@ -76,8 +80,27 @@ assert(
   "empty countryOfOrigin -> rejected",
 );
 assert(
-  konsumsiProductGroupSchema.safeParse({ id: "g1", brandId: "b1", commodityGroupId: "cg1" }).success,
-  "product group (empty products, just the slot) parses",
+  !konsumsiProductSchema.safeParse(validProduct({ commodityGroupId: "" })).success,
+  "empty commodityGroupId -> rejected (grouping always comes from Step 7, never blank)",
+);
+
+console.log("--- Group derivation from Step 7 (Dokumen Pendukung Merek) ---");
+
+const qualityTests = [
+  { brandId: "b1", industryGroupId: "ig1", industryName: "Industri Tekstil", commodityGroupId: "cg1", commodityName: "Pakaian Jadi" },
+  { brandId: "b1", industryGroupId: "ig1", industryName: "Industri Tekstil", commodityGroupId: "cg2", commodityName: "Aksesori" },
+  // Same (brandId, commodityGroupId) as the first entry, different certificate — must dedupe to
+  // one group, not two, since it's the same Kelompok Komoditas slot.
+  { brandId: "b1", industryGroupId: "ig1", industryName: "Industri Tekstil", commodityGroupId: "cg1", commodityName: "Pakaian Jadi" },
+  { brandId: "b2", industryGroupId: "ig2", industryName: "Industri Kulit", commodityGroupId: "cg3", commodityName: "Alas Kaki" },
+];
+const groups = deriveKonsumsiProductGroups(qualityTests);
+assert(groups.length === 3, "distinct (brandId, commodityGroupId) pairs dedupe correctly (4 quality tests -> 3 groups)");
+assert(groups.filter((g) => g.brandId === "b1").length === 2, "Brand b1 has 2 distinct Kelompok Komoditas");
+assert(groups.filter((g) => g.brandId === "b2").length === 1, "Brand b2 has 1 distinct Kelompok Komoditas");
+assert(
+  deriveKonsumsiProductGroups(qualityTests.filter((qt) => qt.brandId === "nonexistent")).length === 0,
+  "a Brand with no quality-test entries has zero available groups (Product Information shows its empty state)",
 );
 
 console.log("--- Total calculation ---");
@@ -86,10 +109,11 @@ assert(konsumsiProductTotal(validProduct()) === 35000, "13. 10,000 PCS x USD 3.5
 assert(konsumsiProductTotal(validProduct({ quantity: "", averageUnitPrice: "3.5" })) === 0, "incomplete row -> total is 0, never NaN");
 assert(konsumsiProductTotal(validProduct({ quantity: "abc" })) === 0, "non-numeric quantity -> total is 0, never NaN");
 
-const emptyProduct = createEmptyKonsumsiProduct("b1", "cg1");
-assert(emptyProduct.brandId === "b1" && emptyProduct.commodityGroupId === "cg1", "createEmptyKonsumsiProduct seeds brand + group");
-const emptyGroup = createEmptyKonsumsiProductGroup("b1");
-assert(emptyGroup.brandId === "b1" && emptyGroup.commodityGroupId === "", "createEmptyKonsumsiProductGroup seeds brand, empty group selection");
+const emptyProduct = createEmptyKonsumsiProduct("b1", groups[0]);
+assert(
+  emptyProduct.brandId === "b1" && emptyProduct.commodityGroupId === "cg1" && emptyProduct.industryGroupId === "ig1",
+  "createEmptyKonsumsiProduct seeds brand + group straight from a derived Step-7 group, never a blank selection",
+);
 
 console.log("--- Multi-currency grouping (page/brand/group summary logic) ---");
 
@@ -124,7 +148,6 @@ function runSubmitRules(data) {
       konsumsiDocuments: [],
       applicationBrands: [],
       brandQualityTests: [],
-      konsumsiProductGroups: [],
       konsumsiProducts: [],
       products: [],
       ...data,
@@ -138,7 +161,7 @@ const baseKonsumsi = {
   importTypes: ["BARANG_KONSUMSI"],
   konsumsiDocuments: [{ id: "1", label: "x", documentPath: "x" }],
   applicationBrands: [{ brandId: "b1", applicantRole: "OWNER", relationshipDocuments: {} }],
-  brandQualityTests: [{ brandId: "b1" }],
+  brandQualityTests: [{ brandId: "b1", industryGroupId: "ig1", commodityGroupId: "cg1" }],
   nonIndustriDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, documentPath: "x.pdf", amount: "1000000" }],
 };
 
@@ -177,7 +200,6 @@ assert(
 assert(
   runSubmitRules({
     ...baseKonsumsi,
-    konsumsiProductGroups: [{ id: "g1", brandId: "b1", commodityGroupId: "cg1" }, { id: "g2", brandId: "b1", commodityGroupId: "cg2" }],
     konsumsiProducts: [
       validProduct({ id: "p1", commodityGroupId: "cg1" }),
       validProduct({ id: "p2", commodityGroupId: "cg2", productName: "Men's Jacket" }),
@@ -193,7 +215,10 @@ assert(
       { brandId: "b1", applicantRole: "OWNER", relationshipDocuments: {} },
       { brandId: "b2", applicantRole: "OWNER", relationshipDocuments: {} },
     ],
-    brandQualityTests: [{ brandId: "b1" }, { brandId: "b2" }],
+    brandQualityTests: [
+      { brandId: "b1", industryGroupId: "ig1", commodityGroupId: "cg1" },
+      { brandId: "b2", industryGroupId: "ig1", commodityGroupId: "cg1" },
+    ],
     konsumsiProducts: [validProduct({ id: "p1", brandId: "b1" }), validProduct({ id: "p2", brandId: "b2", productName: "Hoodie" })],
   }).length === 0,
   "4. multiple Brands, one Product each -> no cross-brand false positives",

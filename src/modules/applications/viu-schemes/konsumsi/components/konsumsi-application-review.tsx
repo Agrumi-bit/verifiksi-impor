@@ -179,6 +179,12 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
                   {[...groups.entries()].map(([commodityGroupId, products]) => (
                     <div key={commodityGroupId} className="rounded-lg border border-border bg-muted/10 p-3">
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Kelompok Komoditas
+                      </p>
+                      <p className="text-sm font-bold">
+                        {products[0].productSnapshot?.industryName ?? products[0].industryName ?? "—"}
+                      </p>
+                      <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         Sub Kelompok Komoditas
                       </p>
                       <p className="text-sm font-bold">

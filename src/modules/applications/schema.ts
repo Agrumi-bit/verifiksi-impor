@@ -768,7 +768,7 @@ export const VIU_STEP_FIELD_NAMES: Record<string, (keyof ApplicationWizardValues
   // Konsumsi's own product structure (see KonsumsiProductInformation) is additive here, not
   // owned by KONSUMSI_STEP_FIELD_NAMES below — "product-info" itself is a shared step, not one
   // Konsumsi contributes to the step list, so it can't be spread in from that Konsumsi-owned map.
-  "product-info": ["products", "konsumsiProductGroups", "konsumsiProducts"],
+  "product-info": ["products", "konsumsiProducts"],
   preview: [],
   submit: ["declarationAccepted"],
   ...KONSUMSI_STEP_FIELD_NAMES,
