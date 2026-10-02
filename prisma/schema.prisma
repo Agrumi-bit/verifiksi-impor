@@ -740,15 +740,16 @@ model UnitOfMeasurement {
 // and WBP/K-factor detail goes in keterangan) — matches this codebase's convention of storing
 // numeric wizard/reference fields as display strings rather than Decimal.
 model ElectricityTariffMasterData {
-  id          String           @id @default(cuid())
-  status      MasterDataStatus @default(ACTIVE)
-  kelompok    String
-  golongan    String
-  batasDaya   String
-  tarifPerKwh String
-  keterangan  String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id           String           @id @default(cuid())
+  status       MasterDataStatus @default(ACTIVE)
+  kelompok     String
+  tipeKelompok String           @default("")
+  golongan     String
+  batasDaya    String
+  tarifPerKwh  String
+  keterangan   String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
   @@map("electricity_tariff_master_data")
 }

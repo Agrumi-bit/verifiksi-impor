@@ -18,6 +18,7 @@ export const unitOfMeasurementSchema = z.object({
 
 export const electricityTariffMasterDataSchema = z.object({
   kelompok: requiredString("Kelompok wajib diisi"),
+  tipeKelompok: requiredString("Tipe kelompok wajib diisi"),
   golongan: requiredString("Golongan tarif wajib diisi"),
   batasDaya: requiredString("Batas daya wajib diisi"),
   tarifPerKwh: requiredString("Tarif per kWh wajib diisi"),
