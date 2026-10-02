@@ -252,10 +252,15 @@ export function Step5SupportDocument({ form }: Step5Props) {
 
   return (
     <div className="flex flex-col gap-8">
-      <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
-        Dokumen pendukung yang perlu diunggah disesuaikan dengan Jenis Impor
-        yang Anda pilih di Step 2.
-      </p>
+      {/* This step is "Bukti Kemampuan Finansial" for Konsumsi-only (a single, fixed purpose —
+          see composeViuSteps' rename) — the generic "varies by Jenis Impor" banner only applies
+          when Industri/Non-Industri's own (differently-shaped) Support Document step is active. */}
+      {needsIndustriModalDocs && (
+        <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
+          Dokumen pendukung yang perlu diunggah disesuaikan dengan Jenis Impor
+          yang Anda pilih di Step 2.
+        </p>
+      )}
 
       {needsIndustriModalDocs && (
         <section className="flex flex-col gap-3">
