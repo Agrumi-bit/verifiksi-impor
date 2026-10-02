@@ -9,6 +9,7 @@ import { getDocumentMeta } from "@/modules/company/document-versions";
 import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS, toChecklistStatus } from "@/modules/verifikator-workspace/schema";
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
 import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
+import { resolveKonsumsiBrandContexts } from "@/modules/verifikator-workspace/konsumsi-brand-context";
 import {
   crDocumentRequestsSchema,
   editApplicationFieldsSchema,
@@ -53,7 +54,10 @@ export async function GET(
   // every other workspace's buildDocumentChecklist call passes, so CR's "Kelengkapan Dokumen"
   // check doesn't show stale paths or silently drop the Dokumen Partner Industri category.
   const company = application.companyId ? await db.company.findUnique({ where: { id: application.companyId } }) : null;
-  const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload));
+  const konsumsiBrands = payload.importTypes?.includes("BARANG_KONSUMSI")
+    ? await resolveKonsumsiBrandContexts(payload.applicationBrands ?? [])
+    : undefined;
+  const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload), konsumsiBrands);
   const requests = crDocumentRequestsSchema.parse(application.crDocumentVerifications ?? {});
   const docsTotal = checklist.length;
   const docsLengkap = checklist.filter((d) => d.documentPath).length;
@@ -78,8 +82,13 @@ export async function GET(
       rejectionNote: meta?.rejectionNote ?? "",
       requestNote: requests[item.key]?.requestNote ?? "",
       version: meta?.version ?? 1,
-      uploadedByName: meta?.uploadedByName ?? null,
-      uploadedAt: meta?.uploadedAt ?? null,
+      // `getApplicationDocumentMeta` fills every key with a fallback entry (createdAt-stamped,
+      // see its own `fallbackMetaEntry`) even when the document was never uploaded — that
+      // fallback date is a placeholder for "no version row exists yet", never a real upload
+      // timestamp, so it must never be shown as one. Only a document that actually has a file
+      // gets a Tanggal Upload; otherwise it's "—" below, not a fake submission-date fallback.
+      uploadedByName: lengkap ? (meta?.uploadedByName ?? null) : null,
+      uploadedAt: lengkap ? (meta?.uploadedAt ?? null) : null,
       verifiedAt: meta?.verifiedAt ?? null,
     };
   });

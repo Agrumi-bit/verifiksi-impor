@@ -241,6 +241,16 @@ export const DOCUMENT_COMPLIANCE_DEFS: Record<string, DocumentComplianceDef> = {
     referensi: "Persyaratan Mitra Industri — Verifikasi Importir Umum (VIU)",
     keterangan: "Membuktikan bahwa mitra industri telah dinyatakan memiliki kemampuan industri yang terverifikasi.",
   },
+  "konsumsi-brand:evidence": {
+    persyaratan: "Wajib",
+    referensi: "Persyaratan Bukti Merek — Verifikasi Importir Umum (VIU) Barang Konsumsi",
+    keterangan: "Diverifikasi untuk memastikan merek yang digunakan dalam permohonan ini terdaftar dan sah, sesuai Sertifikat Merek atau Tanda Pendaftaran Merek pada Merek Management.",
+  },
+  "konsumsi-brand:qt": {
+    persyaratan: "Wajib",
+    referensi: "Persyaratan Hasil Uji Mutu — Verifikasi Importir Umum (VIU) Barang Konsumsi",
+    keterangan: "Diverifikasi untuk memastikan barang konsumsi yang diimpor pada Kelompok Komoditas/Sub Kelompok Komoditas terkait telah lulus uji mutu sesuai ketentuan yang berlaku.",
+  },
 };
 
 /**
@@ -264,7 +274,14 @@ export function getComplianceDef(key: string): DocumentComplianceDef | undefined
   // regulatory requirement and document catalog — reuse the same compliance text instead of
   // duplicating it.
   const konsumsiFinancialMatch = key.match(/^konsumsi-financial:(.+)$/);
-  return konsumsiFinancialMatch ? DOCUMENT_COMPLIANCE_DEFS[`nonindustri-support:${konsumsiFinancialMatch[1]}`] : undefined;
+  if (konsumsiFinancialMatch) return DOCUMENT_COMPLIANCE_DEFS[`nonindustri-support:${konsumsiFinancialMatch[1]}`];
+  // "Dokumen Merek" keys are dynamic per brandId (`konsumsi-brand:{brandId}:evidence`,
+  // `konsumsi-brand:{brandId}:qt:{commodityGroupId}`) — same suffix-match idea as location/partner
+  // above. Relationship-document items (`:rel:{code}`) have no fixed compliance text here (the
+  // code set is dynamic, resolved per-brand by getVIUConsumptionBrandRequirements) — the checklist
+  // still works without one, just with a blank Persyaratan/Referensi/Keterangan for those rows.
+  const konsumsiBrandMatch = key.match(/^konsumsi-brand:[^:]+:(evidence|qt)(?::.+)?$/);
+  return konsumsiBrandMatch ? DOCUMENT_COMPLIANCE_DEFS[`konsumsi-brand:${konsumsiBrandMatch[1]}`] : undefined;
 }
 
 export const COMPLIANCE_SECTION_DEFS = [
@@ -343,6 +360,19 @@ export const COMPLIANCE_SECTION_DEFS = [
     intro: [
       "Pemeriksaan administratif bukti kemampuan finansial dilaksanakan untuk memastikan bahwa perusahaan memiliki kemampuan keuangan yang memadai dalam membiayai kegiatan importasi barang konsumsi, sebagai bagian dari persyaratan pengajuan Verifikasi Importir Umum (VIU) Barang Konsumsi.",
       "Pemeriksaan dilakukan melalui verifikasi terhadap dokumen keuangan wajib (rekening koran, surat referensi bank, laporan keuangan, dan bukti fasilitas kredit) serta dokumen pendukung tambahan yang diserahkan perusahaan apabila tersedia.",
+    ],
+    // VIU Barang Konsumsi only — buildDocumentChecklist only pushes these items when
+    // importTypes includes BARANG_KONSUMSI (see that function's own gate).
+    vkiOnly: false,
+    viuOnly: true,
+  },
+  {
+    category: "Dokumen Merek",
+    title: "Pemeriksaan Administratif Dokumen Merek",
+    desc: "Dasar hukum dan klasifikasi dokumen merek yang diperiksa",
+    intro: [
+      "Pemeriksaan administratif dokumen merek dilaksanakan untuk memastikan bahwa setiap merek yang digunakan dalam permohonan Verifikasi Importir Umum (VIU) Barang Konsumsi terdaftar secara sah, memenuhi persyaratan uji mutu pada Kelompok Komoditas/Sub Kelompok Komoditas terkait, dan hubungan hukum perusahaan pemohon dengan merek tersebut didukung dokumen yang sesuai dengan peran pemohon.",
+      "Pemeriksaan dilakukan melalui verifikasi terhadap Sertifikat Merek/Tanda Pendaftaran Merek, Sertifikat Hasil Uji Mutu per Kelompok Komoditas/Sub Kelompok Komoditas, serta dokumen hubungan merek (penunjukan/lisensi/sublisensi) apabila perusahaan pemohon bukan merupakan pemilik merek.",
     ],
     // VIU Barang Konsumsi only — buildDocumentChecklist only pushes these items when
     // importTypes includes BARANG_KONSUMSI (see that function's own gate).

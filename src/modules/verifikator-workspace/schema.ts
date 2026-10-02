@@ -16,6 +16,7 @@ import {
   PRODUCTION_QTY_VERIFICATION_STATUSES,
   type DocVerificationStatusValue,
 } from "./status";
+import type { ChecklistKonsumsiBrandContext } from "./konsumsi-brand-context";
 
 /**
  * The 6 checklist documents that are snapshots of the company's own legal
@@ -167,6 +168,7 @@ export function buildDocumentChecklist(
   payload: ApplicationWizardValues,
   company?: ChecklistCompanyContext | null,
   partners?: ChecklistPartnerContext[],
+  konsumsiBrands?: ChecklistKonsumsiBrandContext[],
 ): DocumentChecklistItem[] {
   const items: DocumentChecklistItem[] = [];
 
@@ -352,23 +354,35 @@ export function buildDocumentChecklist(
       });
     }
   } else {
-    for (const def of [MODAL_STATEMENT_LETTER_DOC_DEF, ...NON_INDUSTRI_SUPPORT_DOC_DEFS]) {
-      const entry = (payload.nonIndustriDocuments ?? []).find((d) => d.key === def.key);
-      items.push({
-        key: `nonindustri-support:${def.key}`,
-        label: `${def.title} (${def.priority === "UTAMA" ? "Utama" : "Pendukung"})`,
-        category: "Dokumen Pendukung",
-        documentPath: entry?.documentPath || null,
-      });
+    // Bahan Baku Industri/Non Industri's own "Dokumen Pendukung" checklist, reading
+    // `nonIndustriDocuments` — gated the same as Step5SupportDocument's own
+    // `needsIndustriModalDocs` so a Barang-Konsumsi-only application (which never renders or
+    // writes to this field) doesn't get an irrelevant, always-empty "Dokumen Pendukung" category
+    // duplicating its own "Bukti Kemampuan Finansial — Konsumsi" one below.
+    if (payload.importTypes?.includes("BAHAN_BAKU_INDUSTRI") || payload.importTypes?.includes("BAHAN_BAKU_NON_INDUSTRI")) {
+      for (const def of [MODAL_STATEMENT_LETTER_DOC_DEF, ...NON_INDUSTRI_SUPPORT_DOC_DEFS]) {
+        const entry = (payload.nonIndustriDocuments ?? []).find((d) => d.key === def.key);
+        items.push({
+          key: `nonindustri-support:${def.key}`,
+          label: `${def.title} (${def.priority === "UTAMA" ? "Utama" : "Pendukung"})`,
+          category: "Dokumen Pendukung",
+          documentPath: entry?.documentPath || null,
+        });
+      }
     }
     // Barang Konsumsi's OWN Bukti Kemampuan Finansial — a separate `konsumsiFinancialDocuments`
     // array (see konsumsi/schema.ts), own key prefix and category, so a mixed Industri+Konsumsi
     // application shows two independent checklists instead of one shared one. Gated on Barang
     // Konsumsi actually being selected (unlike the loop above) so an Industri/Non-Industri-only
-    // application doesn't get an irrelevant, always-empty checklist category.
+    // application doesn't get an irrelevant, always-empty checklist category. Unlike the
+    // Industri/Non-Industri loop above, only the UTAMA statement letter is unconditional — a
+    // PENDUKUNG evidence type the applicant never picked isn't a real requirement for this
+    // application and must not show up as an unreviewed/"Kurang" item here.
     if (payload.importTypes?.includes("BARANG_KONSUMSI")) {
+      const konsumsiFinancialDocs = payload.konsumsiFinancialDocuments ?? [];
       for (const def of [MODAL_STATEMENT_LETTER_DOC_DEF, ...NON_INDUSTRI_SUPPORT_DOC_DEFS]) {
-        const entry = (payload.konsumsiFinancialDocuments ?? []).find((d) => d.key === def.key);
+        const entry = konsumsiFinancialDocs.find((d) => d.key === def.key);
+        if (def.priority === "PENDUKUNG" && !entry?.enabled) continue;
         items.push({
           key: `konsumsi-financial:${def.key}`,
           label: `${def.title} (${def.priority === "UTAMA" ? "Utama" : "Pendukung"})`,
@@ -419,6 +433,51 @@ export function buildDocumentChecklist(
       category: "Dokumen Partner Industri",
       documentPath: entry.lhvkiDocumentPath || null,
     });
+  }
+
+  // Barang Konsumsi's "Dokumen Merek" — the brand's own bukti merek file and, per Brand, its
+  // quality-test certificates (Step "Dokumen Pendukung Merek") and any relationship document its
+  // applicantRole actually requires (Step "Merek yang Digunakan"). Brand identity/ownership
+  // itself lives on `Merk`, not the application payload, so this needs `konsumsiBrands` (resolved
+  // by the caller via `resolveKonsumsiBrandContexts` — a live DB read, same pattern as
+  // `partners` above) rather than anything already on `payload`. Omitted entirely when the
+  // caller doesn't pass that context (e.g. a workspace not yet wired up for it) rather than
+  // rendering with blank brand names.
+  if (payload.importTypes?.includes("BARANG_KONSUMSI") && konsumsiBrands) {
+    const brandContextById = new Map(konsumsiBrands.map((brand) => [brand.brandId, brand]));
+
+    for (const entry of payload.applicationBrands ?? []) {
+      const brand = brandContextById.get(entry.brandId);
+      const brandLabel = brand?.brandName ?? entry.brandId;
+
+      items.push({
+        key: `konsumsi-brand:${entry.brandId}:evidence`,
+        label: `Sertifikat Merek — ${brandLabel}`,
+        category: "Dokumen Merek",
+        documentPath: brand?.registrationDocumentPath ?? null,
+      });
+
+      if (entry.applicantRole !== "OWNER") {
+        for (const requirement of brand?.requiredRelationshipDocuments ?? []) {
+          items.push({
+            key: `konsumsi-brand:${entry.brandId}:rel:${requirement.code}`,
+            label: `${requirement.label} — ${brandLabel}`,
+            category: "Dokumen Merek",
+            documentPath: entry.relationshipDocuments?.[requirement.code]?.filePath ?? null,
+          });
+        }
+      }
+    }
+
+    for (const qt of payload.brandQualityTests ?? []) {
+      const brandLabel = brandContextById.get(qt.brandId)?.brandName ?? qt.brandId;
+      items.push({
+        key: `konsumsi-brand:${qt.brandId}:qt:${qt.commodityGroupId}`,
+        label: `Sertifikat Uji Mutu — ${brandLabel} · ${qt.commodityName}`,
+        category: "Dokumen Merek",
+        documentPath: qt.filePath || null,
+      });
+    }
   }
 
   return items;

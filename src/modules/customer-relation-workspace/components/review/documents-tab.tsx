@@ -155,6 +155,12 @@ export function DocumentsTab({ applicationId, company, verificationType, documen
         (def) => (!def.vkiOnly || verificationType === "VKI") && (!def.viuOnly || verificationType === "VIU"),
       ).map((def) => {
         const sectionDocs = documents.filter((doc) => doc.category === def.category);
+        // A category with zero matching documents means this application's Jenis Impor doesn't
+        // need it (e.g. "Dokumen Partner Industri" on a Barang-Konsumsi-only application) — skip
+        // the accordion entirely instead of showing an empty, confusing card. Keeps this generic
+        // (driven by what buildDocumentChecklist actually produced) rather than hardcoding which
+        // category belongs to which Jenis Impor here too.
+        if (sectionDocs.length === 0) return null;
         return (
           <CollapsibleCard key={def.category} title={def.title} desc={def.desc}>
             <div className="mb-4.5 flex flex-col gap-3 text-[12.5px] leading-relaxed text-[#4a4038]">
