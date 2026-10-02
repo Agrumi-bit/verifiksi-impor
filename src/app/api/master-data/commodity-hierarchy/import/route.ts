@@ -20,7 +20,7 @@ const importSchema = z.object({
 const norm = (value: string) => value.trim().toLowerCase();
 
 /**
- * Fills all three hierarchy levels (Kelompok Industri > Commodity Group > Commodity Sub Group)
+ * Fills all three hierarchy levels (Kelompok Komoditas > Sub Kelompok Komoditas > Komoditas)
  * from a single spreadsheet in one pass. Each level is find-or-create by name (case/whitespace
  * insensitive) scoped to its parent — a name that already exists (in the DB, or created earlier
  * in this same import) is reused rather than duplicated; a genuinely new name requires its own
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     let industryGroup = industryByName.get(industryKey);
     if (!industryGroup) {
       if (!row.industryGroupCode) {
-        skipped.push({ row: rowNo, reason: `Kelompok Industri baru "${row.industryGroupName}" butuh Kode Kelompok Industri` });
+        skipped.push({ row: rowNo, reason: `Kelompok Komoditas baru "${row.industryGroupName}" butuh Kode Kelompok Komoditas` });
         continue;
       }
       industryGroup = await db.industryGroup.create({ data: { name: row.industryGroupName, code: row.industryGroupCode } });
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     let commodityGroup = groupByKey.get(groupKey);
     if (!commodityGroup) {
       if (!row.commodityGroupCode) {
-        skipped.push({ row: rowNo, reason: `Commodity Group baru "${row.commodityGroupName}" butuh Kode Commodity Group` });
+        skipped.push({ row: rowNo, reason: `Sub Kelompok Komoditas baru "${row.commodityGroupName}" butuh Kode Sub Kelompok Komoditas` });
         continue;
       }
       commodityGroup = await db.commodityGroup.create({
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     if (subGroupByKey.has(subGroupKey)) continue;
 
     if (!row.subGroupCode) {
-      skipped.push({ row: rowNo, reason: `Commodity Sub Group baru "${row.subGroupName}" butuh Kode Sub Group` });
+      skipped.push({ row: rowNo, reason: `Komoditas baru "${row.subGroupName}" butuh Kode Komoditas` });
       continue;
     }
     const subGroup = await db.commoditySubGroup.create({

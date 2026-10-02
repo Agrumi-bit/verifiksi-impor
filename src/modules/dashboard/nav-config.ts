@@ -91,15 +91,15 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "KBLI Master Data", href: "/system-configuration/kbli" },
       { label: "Lartas", href: "/system-configuration/lartas" },
       {
-        label: "Kelompok Industri",
+        label: "Kelompok Komoditas",
         href: "/system-configuration/industry-group",
       },
       {
-        label: "Commodity Group",
+        label: "Sub Kelompok Komoditas",
         href: "/system-configuration/commodity-group",
       },
       {
-        label: "Commodity Sub Group",
+        label: "Komoditas",
         href: "/system-configuration/commodity-sub-group",
       },
       {

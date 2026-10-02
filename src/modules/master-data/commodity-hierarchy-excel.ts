@@ -1,12 +1,12 @@
 import * as XLSX from "xlsx";
 
 export const HIERARCHY_EXCEL_COLUMNS = [
-  { key: "industryGroupName" as const, header: "Kelompok Industri", example: "Industri Tekstil" },
-  { key: "industryGroupCode" as const, header: "Kode Kelompok Industri", example: "IND-01" },
-  { key: "commodityGroupName" as const, header: "Commodity Group", example: "Serat Tekstil" },
-  { key: "commodityGroupCode" as const, header: "Kode Commodity Group", example: "52" },
-  { key: "subGroupName" as const, header: "Commodity Sub Group", example: "Katun" },
-  { key: "subGroupCode" as const, header: "Kode Sub Group", example: "52.01" },
+  { key: "industryGroupName" as const, header: "Kelompok Komoditas", example: "Industri Tekstil" },
+  { key: "industryGroupCode" as const, header: "Kode Kelompok Komoditas", example: "IND-01" },
+  { key: "commodityGroupName" as const, header: "Sub Kelompok Komoditas", example: "Serat Tekstil" },
+  { key: "commodityGroupCode" as const, header: "Kode Sub Kelompok Komoditas", example: "52" },
+  { key: "subGroupName" as const, header: "Komoditas", example: "Katun" },
+  { key: "subGroupCode" as const, header: "Kode Komoditas", example: "52.01" },
 ];
 
 /** Triggers a browser download of the combined hierarchy Excel template — headers plus one filled example row. */
@@ -16,8 +16,8 @@ export function downloadCommodityHierarchyExcelTemplate(): void {
   const sheet = XLSX.utils.aoa_to_sheet([headerRow, exampleRow]);
   sheet["!cols"] = HIERARCHY_EXCEL_COLUMNS.map((c) => ({ wch: Math.max(c.header.length, c.example.length, 14) }));
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, sheet, "Kelompok Industri");
-  XLSX.writeFile(workbook, "Template_Kelompok_Industri.xlsx");
+  XLSX.utils.book_append_sheet(workbook, sheet, "Kelompok Komoditas");
+  XLSX.writeFile(workbook, "Template_Kelompok_Komoditas.xlsx");
 }
 
 export type CommodityHierarchyImportRow = {
@@ -31,8 +31,8 @@ export type CommodityHierarchyImportRow = {
 
 /**
  * Parses an uploaded hierarchy Excel file (same layout as the template) — matches columns by
- * header text, not position. A row needs at least "Kelompok Industri" to count; "Commodity Group"
- * and "Commodity Sub Group" are optional per row (a row can define just the top level). The server
+ * header text, not position. A row needs at least "Kelompok Komoditas" to count; "Sub Kelompok
+ * Komoditas" and "Komoditas" are optional per row (a row can define just the top level). The server
  * import endpoint does the actual find-or-create + duplicate handling across all three levels.
  */
 export async function parseCommodityHierarchyExcelFile(file: File): Promise<{ rows: CommodityHierarchyImportRow[]; skippedRows: number }> {

@@ -21,7 +21,7 @@ export function IndustryGroupPage() {
     try {
       const { rows, skippedRows } = await parseCommodityHierarchyExcelFile(file);
       if (rows.length === 0) {
-        toast.error("Tidak ada baris valid ditemukan. Pastikan kolom \"Kelompok Industri\" terisi.");
+        toast.error("Tidak ada baris valid ditemukan. Pastikan kolom \"Kelompok Komoditas\" terisi.");
         return;
       }
 
@@ -50,7 +50,7 @@ export function IndustryGroupPage() {
 
       if (total > 0) {
         toast.success(
-          `Berhasil impor: ${data.industryGroupsCreated} Kelompok Industri, ${data.commodityGroupsCreated} Commodity Group, ${data.subGroupsCreated} Commodity Sub Group.` +
+          `Berhasil impor: ${data.industryGroupsCreated} Kelompok Komoditas, ${data.commodityGroupsCreated} Sub Kelompok Komoditas, ${data.subGroupsCreated} Komoditas.` +
             (notes.length > 0 ? " " + notes.join("; ") + "." : ""),
         );
       } else {
@@ -68,8 +68,8 @@ export function IndustryGroupPage() {
 
   return (
     <MasterDataPage
-      title="Kelompok Industri"
-      description="Level tertinggi hierarki komoditas: Kelompok Industri > Commodity Group > Commodity Sub Group. Impor Excel di sini bisa mengisi ketiga level sekaligus."
+      title="Kelompok Komoditas"
+      description="Level tertinggi hierarki komoditas: Kelompok Komoditas > Sub Kelompok Komoditas > Komoditas. Impor Excel di sini bisa mengisi ketiga level sekaligus."
       apiPath="/api/master-data/industry-group"
       queryKey="master-data-industry-group"
       headerActions={
@@ -95,16 +95,16 @@ export function IndustryGroupPage() {
         </>
       }
       columns={[
-        { key: "name", label: "Kelompok Industri" },
+        { key: "name", label: "Kelompok Komoditas" },
         { key: "code", label: "Kode" },
         { key: "description", label: "Deskripsi" },
       ]}
       fields={[
-        { key: "name", label: "Nama Kelompok Industri", type: "text", required: true, placeholder: "e.g. Industri Tekstil" },
+        { key: "name", label: "Nama Kelompok Komoditas", type: "text", required: true, placeholder: "e.g. Industri Tekstil" },
         { key: "code", label: "Kode", type: "text", required: true, placeholder: "e.g. IND-01" },
         { key: "description", label: "Deskripsi", type: "textarea" },
       ]}
-      addButtonLabel="Tambah Kelompok Industri"
+      addButtonLabel="Tambah Kelompok Komoditas"
     />
   );
 }

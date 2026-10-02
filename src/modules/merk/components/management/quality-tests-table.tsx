@@ -322,7 +322,7 @@ function AddQualityTestDialog({
             />
           </FormField>
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="Kelompok Komoditas" required>
+            <FormField label="Sub Kelompok Komoditas" required>
               <SearchSelectInput
                 value={form.commodityGroupId}
                 onChange={(value) => {
@@ -337,10 +337,10 @@ function AddQualityTestDialog({
                 }}
                 options={groupOptions}
                 allowFreeText={false}
-                placeholder="Pilih kelompok komoditas"
+                placeholder="Pilih sub kelompok komoditas"
               />
             </FormField>
-            <FormField label="Sub-Kelompok Komoditas" hint="Opsional">
+            <FormField label="Komoditas" hint="Opsional">
               <SearchSelectInput
                 value={form.commoditySubGroupId}
                 onChange={(value) => {

@@ -132,13 +132,13 @@ export function HsCodeMasterDataPage() {
         { key: "description", label: "Uraian Barang" },
         {
           key: "commodityGroup",
-          label: "Kelompok Komoditas",
+          label: "Sub Kelompok Komoditas",
           render: (row) =>
             (row.commodityGroup as NamedOption | undefined)?.name ?? "—",
         },
         {
           key: "commoditySubGroup",
-          label: "Sub Kelompok Komoditas",
+          label: "Komoditas",
           render: (row) =>
             (row.commoditySubGroup as NamedOption | undefined)?.name ?? "—",
         },
@@ -166,18 +166,18 @@ export function HsCodeMasterDataPage() {
         },
         {
           key: "commodityGroupId",
-          label: "Kelompok Komoditas",
-          type: "select",
-          required: true,
-          placeholder: "Pilih kelompok komoditas...",
-          options: groups?.map((group) => ({ value: group.id, label: group.name })) ?? [],
-        },
-        {
-          key: "commoditySubGroupId",
           label: "Sub Kelompok Komoditas",
           type: "select",
           required: true,
           placeholder: "Pilih sub kelompok komoditas...",
+          options: groups?.map((group) => ({ value: group.id, label: group.name })) ?? [],
+        },
+        {
+          key: "commoditySubGroupId",
+          label: "Komoditas",
+          type: "select",
+          required: true,
+          placeholder: "Pilih komoditas...",
           options:
             subGroups?.map((subGroup) => ({
               value: subGroup.id,

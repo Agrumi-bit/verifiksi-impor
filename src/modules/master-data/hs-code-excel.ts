@@ -5,8 +5,8 @@ type NamedOption = { id: string; name: string };
 export const HS_CODE_EXCEL_COLUMNS: { key: "hsCode" | "description" | "commodityGroup" | "commoditySubGroup" | "unitOfMeasurement"; header: string; example: string }[] = [
   { key: "hsCode", header: "Pos Tarif / HS Code", example: "5205.31.00" },
   { key: "description", header: "Uraian Barang", example: "Benang katun, tunggal, dari serat tidak disikat" },
-  { key: "commodityGroup", header: "Kelompok Komoditas", example: "Tekstil" },
-  { key: "commoditySubGroup", header: "Sub Kelompok Komoditas", example: "Benang" },
+  { key: "commodityGroup", header: "Sub Kelompok Komoditas", example: "Tekstil" },
+  { key: "commoditySubGroup", header: "Komoditas", example: "Benang" },
   { key: "unitOfMeasurement", header: "Satuan", example: "Kg" },
 ];
 
@@ -33,13 +33,13 @@ export type HsCodeImportResult = {
   rows: HsCodeImportRow[];
   /** Rows skipped for having no "Pos Tarif / HS Code" or "Uraian Barang". */
   skippedRows: number;
-  /** Rows skipped because "Kelompok Komoditas" / "Sub Kelompok Komoditas" / "Satuan" didn't match any master data — reported by HS Code so the user can fix and re-import just those. */
+  /** Rows skipped because "Sub Kelompok Komoditas" / "Komoditas" / "Satuan" didn't match any master data — reported by HS Code so the user can fix and re-import just those. */
   unmatchedReferenceRows: { hsCode: string; missing: string[] }[];
 };
 
 /**
  * Parses an uploaded HS Code Excel file (same layout as the template) — matches columns by header
- * text, not position. "Kelompok Komoditas"/"Sub Kelompok Komoditas"/"Satuan" are matched by name
+ * text, not position. "Sub Kelompok Komoditas"/"Komoditas"/"Satuan" are matched by name
  * (case insensitive) against the master data already registered for each — a row referencing a
  * name that doesn't exist yet is reported, not silently dropped or guessed.
  */
@@ -83,8 +83,8 @@ export async function parseHsCodeExcelFile(
     const unitId = unitByName.get(String(sheetRow[unitHeader] ?? "").trim().toLowerCase());
 
     const missing: string[] = [];
-    if (!groupId) missing.push("Kelompok Komoditas");
-    if (!subGroupId) missing.push("Sub Kelompok Komoditas");
+    if (!groupId) missing.push("Sub Kelompok Komoditas");
+    if (!subGroupId) missing.push("Komoditas");
     if (!unitId) missing.push("Satuan");
     if (missing.length > 0) {
       unmatchedReferenceRows.push({ hsCode, missing });
