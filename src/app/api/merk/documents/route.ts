@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { requireAdminSession } from "@/lib/require-admin-session";
+import { resolveTrademarkEvidenceExpiry } from "@/modules/merk/trademark-evidence-expiry";
 
 /** Platform-level Brand document monitoring — flattens `BrandDocument`
  * across every brand. Upload status only; never "Verified" (no verification
@@ -13,7 +14,18 @@ export async function GET() {
 
   const documents = await db.brandDocument.findMany({
     orderBy: { createdAt: "desc" },
-    include: { merk: { select: { id: true, brandName: true, company: { select: { companyName: true } } } } },
+    include: {
+      merk: {
+        select: {
+          id: true,
+          brandName: true,
+          certificateType: true,
+          registrationDate: true,
+          registrationExpiryDate: true,
+          company: { select: { companyName: true } },
+        },
+      },
+    },
   });
 
   return NextResponse.json({
@@ -27,7 +39,10 @@ export async function GET() {
       fileName: doc.fileName,
       documentNumber: doc.documentNumber,
       issueDate: doc.issueDate,
-      expiryDate: doc.expiryDate,
+      expiryDate:
+        doc.documentType === "trademark_evidence"
+          ? resolveTrademarkEvidenceExpiry(doc.merk.certificateType, doc.merk.registrationDate, doc.merk.registrationExpiryDate)
+          : doc.expiryDate,
     })),
   });
 }

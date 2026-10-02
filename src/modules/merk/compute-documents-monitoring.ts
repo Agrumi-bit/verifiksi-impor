@@ -2,7 +2,8 @@ import { db } from "@/lib/db";
 import { computeBrandCompleteness } from "./compute-brand-completeness";
 import { getExpiryStatus } from "./components/management/expiry-status";
 import { relationshipBucket, type OwnershipRow } from "@/app/api/merk/relationships/route";
-import { MERK_AGREEMENT_TYPE_LABELS, type MerkAgreementType } from "./schema";
+import { MERK_AGREEMENT_TYPE_LABELS, MERK_EVIDENCE_TYPE_LABELS, type MerkAgreementType, type MerkEvidenceType } from "./schema";
+import { resolveTrademarkEvidenceExpiry } from "./trademark-evidence-expiry";
 
 const STALE_DRAFT_DAYS = 30;
 
@@ -72,6 +73,8 @@ export async function getDocumentsMonitoringSummary(): Promise<DocumentsMonitori
       certificateType: true,
       trademarkClass: true,
       registrationNumber: true,
+      registrationDate: true,
+      registrationExpiryDate: true,
       countryOfOrigin: true,
       createdAt: true,
       updatedAt: true,
@@ -139,16 +142,28 @@ export async function getDocumentsMonitoringSummary(): Promise<DocumentsMonitori
     const companyName = brand.company?.companyName ?? null;
 
     for (const doc of brand.documents) {
-      if (!doc.expiryDate) continue;
-      const days = Math.round((doc.expiryDate.getTime() - now.getTime()) / 86400000);
+      // "Tanda Pendaftaran Merek" never carries its own expiryDate (the Step 1 upload card
+      // doesn't collect one) — its real validity is capped at 6 months from the brand's own
+      // registrationDate, so Dokumen & Monitoring must derive it from the brand instead of
+      // trusting this (always-null, for that doc type) column. See trademark-evidence-expiry.ts.
+      const effectiveExpiry =
+        doc.documentType === "trademark_evidence"
+          ? resolveTrademarkEvidenceExpiry(brand.certificateType, brand.registrationDate, brand.registrationExpiryDate)
+          : doc.expiryDate;
+      if (!effectiveExpiry) continue;
+      const days = Math.round((effectiveExpiry.getTime() - now.getTime()) / 86400000);
       bucketExpiry(days);
-      const status = getExpiryStatus(doc.expiryDate);
+      const status = getExpiryStatus(effectiveExpiry);
       if (status === "expired") {
         docsExpired++;
+        const evidenceLabel = brand.certificateType
+          ? MERK_EVIDENCE_TYPE_LABELS[brand.certificateType as MerkEvidenceType]
+          : undefined;
         priorityQueue.push({
-          priority: "Kritis", issue: `${doc.documentType === "trademark_evidence" ? "Sertifikat Merek" : doc.fileName} Kedaluwarsa`,
+          priority: "Kritis",
+          issue: `${doc.documentType === "trademark_evidence" ? (evidenceLabel ?? "Sertifikat Merek") : doc.fileName} Kedaluwarsa`,
           brandId: brand.id, brand: brand.brandName, company: companyName, category: "Dokumen",
-          detail: doc.fileName, deadline: doc.expiryDate.toISOString(), ageDays: Math.abs(days),
+          detail: doc.fileName, deadline: effectiveExpiry.toISOString(), ageDays: Math.abs(days),
         });
       } else if (status === "expiring_soon") {
         docsExpiringSoon++;

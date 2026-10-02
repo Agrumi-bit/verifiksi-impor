@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
+import { resolveTrademarkEvidenceExpiry } from "@/modules/merk/trademark-evidence-expiry";
 
 /** Company-scoped counterpart to /api/merk/documents. */
 export async function GET() {
@@ -17,7 +18,11 @@ export async function GET() {
   const documents = await db.brandDocument.findMany({
     where: { merk: { companyId } },
     orderBy: { createdAt: "desc" },
-    include: { merk: { select: { id: true, brandName: true } } },
+    include: {
+      merk: {
+        select: { id: true, brandName: true, certificateType: true, registrationDate: true, registrationExpiryDate: true },
+      },
+    },
   });
 
   return NextResponse.json({
@@ -30,7 +35,10 @@ export async function GET() {
       fileName: doc.fileName,
       documentNumber: doc.documentNumber,
       issueDate: doc.issueDate,
-      expiryDate: doc.expiryDate,
+      expiryDate:
+        doc.documentType === "trademark_evidence"
+          ? resolveTrademarkEvidenceExpiry(doc.merk.certificateType, doc.merk.registrationDate, doc.merk.registrationExpiryDate)
+          : doc.expiryDate,
     })),
   });
 }
