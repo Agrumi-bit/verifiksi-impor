@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { applicationSubmitSchema, type ApplicationWizardValues, type LocationValues } from "@/modules/applications/schema";
 import { konsumsiScheme } from "@/modules/applications/viu-schemes/konsumsi/registry";
+import { syncMerkRelationshipsForApplication } from "@/modules/merk/application-relationship-sync";
 
 /**
  * Schemes with a registered DB-aware server validator — only Konsumsi for
@@ -140,6 +141,14 @@ export async function POST(request: Request) {
       if (values.companyId) {
         await syncNewFacilitiesToCompany(values.companyId, values.locations);
       }
+      // "Every non-draft update of the application" — a RETURNED application resubmitted
+      // through this same promote-draft path counts, since its status becomes SUBMITTED here.
+      await syncMerkRelationshipsForApplication({
+        applicationId: promoted.id,
+        companyId: values.companyId,
+        companyName: values.companyName,
+        applicationBrands: values.applicationBrands ?? [],
+      });
       return NextResponse.json({
         applicationNumber: promoted.applicationNumber,
         id: promoted.id,
@@ -169,6 +178,12 @@ export async function POST(request: Request) {
   if (values.companyId) {
     await syncNewFacilitiesToCompany(values.companyId, values.locations);
   }
+  await syncMerkRelationshipsForApplication({
+    applicationId: application.id,
+    companyId: values.companyId,
+    companyName: values.companyName,
+    applicationBrands: values.applicationBrands ?? [],
+  });
 
   return NextResponse.json({
     applicationNumber: application.applicationNumber,

@@ -18,6 +18,9 @@ export type MerkSurface = {
   newHref: string;
   /** When set, table rows link to `${detailHrefBase}/${id}`; when null, no detail link. */
   detailHrefBase: string | null;
+  /** Base path for linking to an Application's own detail page from a brand's
+   * APPLICATION-sourced relationship row — `${applicationHrefBase}/${sourceApplicationId}`. */
+  applicationHrefBase: string;
   title: string;
   description: string | null;
   newLabel: string;
@@ -36,6 +39,7 @@ export const INTERNAL_MERK_SURFACE: MerkSurface = {
   listHref: "/mitra/merk",
   newHref: "/mitra/merk/new",
   detailHrefBase: "/mitra/merk",
+  applicationHrefBase: "/applications",
   title: "Merk",
   description: null,
   newLabel: "+ Tambah Merek",
@@ -51,6 +55,7 @@ export const COMPANY_BRAND_SURFACE: MerkSurface = {
   // Company users may view their own brand's detail (read-only sections plus
   // permitted edit actions) — the Audit tab there hides itself, admin-only.
   detailHrefBase: "/company-workspace/supporting/brands",
+  applicationHrefBase: "/company-workspace/applications",
   title: "Brand Management",
   description:
     "Daftar merek produk tekstil yang terdaftar untuk perusahaan Anda.",

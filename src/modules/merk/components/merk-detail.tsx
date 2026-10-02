@@ -19,12 +19,14 @@ import {
   MERK_APIU_RELATIONSHIP_LABELS,
   MERK_REPRESENTATION_TYPE_LABELS,
   MERK_AGREEMENT_TYPE_LABELS,
+  MERK_APPOINTMENT_SOURCE_LABELS,
   type MerkEvidenceType,
   type MerkOwnerLocation,
   type MerkOwnerType,
   type MerkApiuRelationship,
   type MerkRepresentationType,
   type MerkAgreementType,
+  type MerkAppointmentSource,
   type MerkStatusValue,
 } from "@/modules/merk/schema";
 import type { MerkSurface } from "@/modules/merk/surface";
@@ -84,12 +86,92 @@ type MerkDetailData = {
     commodityGroup: { name: string };
     commoditySubGroup: { name: string } | null;
   }[];
+  importers: {
+    id: string;
+    companyName: string;
+    companyId: string | null;
+    role: "IMPORTER_ONLY" | "OFFICIAL_REPRESENTATIVE" | "OWNER" | null;
+    appointmentSource: MerkAppointmentSource | null;
+    authorizationDocumentPath: string | null;
+    authorizationDocumentName: string | null;
+    sourceType: "MANUAL" | "APPLICATION";
+    sourceApplicationId: string | null;
+    createdAt: string;
+    sourceApplication: { applicationNumber: string; status: string } | null;
+  }[];
+};
+
+// Applicant's relationship to the brand, established per-application via
+// `applicantRole` — never Brand Master ownership (see MerkImporter's own
+// schema comment). Mirrors the wording used in VIU Konsumsi's own Step 6.
+const MERK_RELATIONSHIP_ROLE_LABELS: Record<"IMPORTER_ONLY" | "OFFICIAL_REPRESENTATIVE" | "OWNER", string> = {
+  OWNER: "Pemohon VIU sebagai Pemilik Merek",
+  OFFICIAL_REPRESENTATIVE: "Perwakilan Resmi",
+  IMPORTER_ONLY: "Hanya Bertindak sebagai Importir",
 };
 
 const APIU_PLACEHOLDER_NAME = "Perusahaan API-U (Aplikasi VIU)";
 
 function lower<T extends string>(value: string | null | undefined): T | undefined {
   return value ? (value.toLowerCase() as T) : undefined;
+}
+
+function fileHref(path: string): string {
+  return `/api/files?path=${encodeURIComponent(path)}`;
+}
+
+type ImporterRow = MerkDetailData["importers"][number];
+
+/**
+ * Companies using this Brand per-application (`applicantRole`) — distinct from Brand Master
+ * ownership, see MerkImporter's own schema comment. APPLICATION-sourced rows are read-only here;
+ * they can only be changed by editing/resubmitting the originating Application (linked below).
+ */
+function ImporterRelationshipsSection({ importers, applicationHrefBase }: { importers: ImporterRow[]; applicationHrefBase: string }) {
+  if (importers.length === 0) return null;
+
+  return (
+    <DetailSection title="Perusahaan Pengguna Merek / Importir &amp; Perwakilan">
+      <div className="sm:col-span-2 flex flex-col gap-2">
+        {importers.map((importer) => (
+          <div key={importer.id} className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-semibold">{importer.companyName}</span>
+              {importer.sourceType === "APPLICATION" && (
+                <Badge variant="outline">Dari Permohonan — Read Only</Badge>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {importer.role ? MERK_RELATIONSHIP_ROLE_LABELS[importer.role] : "Pengguna Merek"}
+              {importer.appointmentSource &&
+                ` · Ditunjuk oleh ${MERK_APPOINTMENT_SOURCE_LABELS[lower<MerkAppointmentSource>(importer.appointmentSource)!]}`}
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+              {importer.authorizationDocumentPath && (
+                <a
+                  href={fileHref(importer.authorizationDocumentPath)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary underline"
+                >
+                  {importer.authorizationDocumentName ?? "Dokumen Penunjukan"}
+                </a>
+              )}
+              {importer.sourceApplication && (
+                <Link
+                  href={`${applicationHrefBase}/${importer.sourceApplicationId}`}
+                  className="font-medium text-primary underline"
+                >
+                  {importer.sourceApplication.applicationNumber} ({importer.sourceApplication.status})
+                </Link>
+              )}
+              <span className="text-muted-foreground">{formatDate(importer.createdAt)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </DetailSection>
+  );
 }
 
 type Props = { id: string; surface: MerkSurface };
@@ -154,7 +236,17 @@ export function MerkDetail({ id, surface }: Props) {
       ? APIU_PLACEHOLDER_NAME
       : (ownership.officialRepresentative?.name ?? null)
     : null;
-  const importerTitle = ownership ? APIU_PLACEHOLDER_NAME : null;
+  // Real companies using this Brand per-application (`applicantRole`), never
+  // Brand Master ownership — see MerkImporter's own schema comment. Replaces
+  // the previous hardcoded "Perusahaan API-U" placeholder, which never
+  // reflected which company actually held the relationship.
+  const importers = data.importers;
+  const importerSummaryLabels = importers.map((importer) => {
+    const roleLabel = importer.role ? MERK_RELATIONSHIP_ROLE_LABELS[importer.role] : "Pengguna Merek";
+    return importer.sourceApplication
+      ? `${importer.companyName} (${roleLabel}, ${importer.sourceApplication.applicationNumber})`
+      : `${importer.companyName} (${roleLabel})`;
+  });
 
   const completeness = computeBrandCompleteness({
     certificateType: data.certificateType,
@@ -254,7 +346,7 @@ export function MerkDetail({ id, surface }: Props) {
               />
             </DetailSection>
 
-            {ownership && (
+            {(ownership || importers.length > 0) && (
               <div className="rounded-xl border border-border p-4">
                 <p className="mb-3 text-sm font-semibold">Relationship Summary</p>
                 <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -269,10 +361,23 @@ export function MerkDetail({ id, surface }: Props) {
                       </span>
                     </>
                   )}
-                  <span className="text-muted-foreground">↓</span>
-                  <span className="rounded-lg border border-border bg-muted/30 px-3 py-1.5 font-medium">
-                    {importerTitle}
-                  </span>
+                  {importerSummaryLabels.length === 0 ? (
+                    <>
+                      <span className="text-muted-foreground">↓</span>
+                      <span className="rounded-lg border border-dashed border-border px-3 py-1.5 text-muted-foreground">
+                        Belum ada perusahaan pengguna merek
+                      </span>
+                    </>
+                  ) : (
+                    importerSummaryLabels.map((label) => (
+                      <span key={label} className="contents">
+                        <span className="text-muted-foreground">↓</span>
+                        <span className="rounded-lg border border-border bg-muted/30 px-3 py-1.5 font-medium">
+                          {label}
+                        </span>
+                      </span>
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -343,6 +448,8 @@ export function MerkDetail({ id, surface }: Props) {
           ) : (
             <p className="text-sm text-muted-foreground">Belum ada data kepemilikan &amp; perwakilan.</p>
           )}
+
+          <ImporterRelationshipsSection importers={importers} applicationHrefBase={surface.applicationHrefBase} />
         </TabsPanel>
 
         <TabsPanel value="trademark">
@@ -410,8 +517,39 @@ export function MerkDetail({ id, surface }: Props) {
                 </div>
               );
             })}
-            {data.documents.length === 0 && (
+            {data.documents.length === 0 && importers.every((importer) => !importer.authorizationDocumentPath) && (
               <p className="text-sm text-muted-foreground">Belum ada dokumen diunggah.</p>
+            )}
+
+            {importers.some((importer) => importer.authorizationDocumentPath) && (
+              <div className="rounded-xl border border-border p-4">
+                <p className="mb-2 text-sm font-semibold">Dokumen Hubungan Pemohon ↔ Merek</p>
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Dokumen penunjukan dari relasi importir/perwakilan — di luar Kelengkapan Dokumen di atas.
+                </p>
+                <ul className="flex flex-col gap-2">
+                  {importers
+                    .filter((importer) => importer.authorizationDocumentPath)
+                    .map((importer) => (
+                      <li key={importer.id} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
+                        <span className="min-w-0 truncate">
+                          {importer.authorizationDocumentName ?? "Dokumen Penunjukan"} — {importer.companyName}
+                        </span>
+                        <span className="flex shrink-0 items-center gap-2 text-xs">
+                          <Badge variant="outline">{importer.sourceType === "APPLICATION" ? "Dari Permohonan" : "Manual"}</Badge>
+                          <a
+                            href={fileHref(importer.authorizationDocumentPath!)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-primary underline"
+                          >
+                            Lihat
+                          </a>
+                        </span>
+                      </li>
+                    ))}
+                </ul>
+              </div>
             )}
           </div>
         </TabsPanel>

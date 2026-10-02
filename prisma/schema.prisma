@@ -117,6 +117,9 @@ model Application {
   assignments      Assignment[]
   messages         ApplicationMessage[]
   documentVersions ApplicationDocumentVersion[]
+  // Brand relationships (importir/perwakilan resmi/pemilik) this application established with
+  // one or more Merk rows via its own applicationBrands — see MerkImporter's own comment.
+  merkRelationships MerkImporter[]
 
   // Customer Relation Workspace's own operational tracking — intentionally
   // separate from `status` (ApplicationStatus) above, which is driven by the
@@ -268,6 +271,9 @@ model Company {
   ownedPartners    Partner[]                 @relation("PartnerOwner")
   relatedToPartners Partner[]                @relation("PartnerRelatedCompanies")
   documentVersions CompanyDocumentVersion[]
+  // Brand relationships (importir/perwakilan resmi/pemilik) this company holds on OTHER
+  // companies' Merk rows, synced from its own VIU applications — see MerkImporter's own comment.
+  merkRelationships MerkImporter[]
 
   @@map("company")
 }
@@ -449,6 +455,22 @@ enum MerkAppointmentSource {
   OFFICIAL_REPRESENTATIVE
 }
 
+// A company's relationship to a Brand it doesn't necessarily own — mirrors VIU Konsumsi's own
+// applicantRole (src/modules/applications/viu-schemes/konsumsi/business-rules.ts), since
+// MerkImporter rows synced from an application use these exact three values.
+enum MerkRelationshipRole {
+  IMPORTER_ONLY
+  OFFICIAL_REPRESENTATIVE
+  OWNER
+}
+
+// Whether a MerkImporter row was entered manually in Merk Management, or synced from a VIU
+// application's own applicationBrands at submit time.
+enum MerkRelationshipSource {
+  MANUAL
+  APPLICATION
+}
+
 model Merk {
   id     String     @id @default(cuid())
   status MerkStatus @default(ACTIVE)
@@ -549,20 +571,53 @@ model Merk {
   @@map("merk")
 }
 
-// One row per importer named in Step 4 when importerRelation is
-// SEPARATE_IMPORTERS — each carries its own authorization document (surat
-// kuasa/penunjukan dari pemilik merek), matching Step 5/6's "N importir
-// dengan dokumen masing-masing".
+// One row per company that has a relationship to a Brand it doesn't necessarily own — either
+// entered manually in Merk Management (legacy Step 4 "Separate Importers" flow,
+// importerRelation = SEPARATE_IMPORTERS, sourceType = MANUAL, the only kind that existed before
+// this comment) or synced automatically from a VIU Konsumsi application's own
+// `applicationBrands[]` at submit time (sourceType = APPLICATION — see
+// src/modules/merk/application-relationship-sync.ts). Brand ownership itself (MerkOwnership,
+// free text, 1:1 per Merk) is never written by this sync; this table is strictly about OTHER
+// companies' USE of the brand (Pemilik Merek / Perwakilan Resmi / Hanya Bertindak sebagai
+// Importir), which several different companies can simultaneously hold via different
+// applications — the reason this can't live on MerkOwnership's own 1:1 representation fields.
 model MerkImporter {
-  id                        String   @id @default(cuid())
-  merkId                    String
-  merk                      Merk     @relation(fields: [merkId], references: [id], onDelete: Cascade)
-  companyName               String
-  authorizationDocumentPath String
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
+  id     String @id @default(cuid())
+  merkId String
+  merk   Merk   @relation(fields: [merkId], references: [id], onDelete: Cascade)
 
+  // Denormalized display name — always populated (from Company.companyName for APPLICATION rows,
+  // typed manually for legacy MANUAL rows that predate `companyId`).
+  companyName String
+  // Nullable: legacy MANUAL rows never had a real Company reference, only free-text companyName.
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id])
+
+  // Nullable: legacy MANUAL rows are implicitly "importer" (that's what this table meant before
+  // the sync feature) and were never asked to classify further.
+  role              MerkRelationshipRole?
+  appointmentSource MerkAppointmentSource?
+
+  // Was NOT NULL before this change — OWNER-role sync rows have no relationship document to
+  // attach (see getVIUConsumptionBrandRequirements: OWNER needs none), so this widens to nullable
+  // rather than storing a placeholder path. Existing MANUAL rows are unaffected.
+  authorizationDocumentPath String?
+  authorizationDocumentName String?
+
+  sourceType          MerkRelationshipSource @default(MANUAL)
+  sourceApplicationId String?
+  sourceApplication   Application?           @relation(fields: [sourceApplicationId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // companyId/sourceApplicationId are both null for every legacy MANUAL row — Postgres treats
+  // each NULL as distinct, so this constraint only actually dedupes APPLICATION-sourced rows
+  // (the sync's own upsert key), never collides with or merges legacy manual entries.
+  @@unique([merkId, companyId, sourceApplicationId])
   @@index([merkId])
+  @@index([companyId])
+  @@index([sourceApplicationId])
   @@map("merk_importer")
 }
 

@@ -42,6 +42,10 @@ export async function GET(
   const brand = await db.merk.findFirst({
     where: { id, OR: [{ companyId }, { status: "ACTIVE" }] },
     include: {
+      importers: {
+        orderBy: { createdAt: "desc" },
+        include: { sourceApplication: { select: { applicationNumber: true, status: true } } },
+      },
       ownership: { include: { ownerCompany: true, officialRepresentative: true } },
       documents: true,
       qualityTests: { include: { commodityGroup: true, commoditySubGroup: true } },
