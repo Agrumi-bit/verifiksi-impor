@@ -8,8 +8,23 @@ import { mapPrismaWriteError } from "@/modules/merk/prisma-error-message";
 import { merkDraftSchema, merkStatusUpdateSchema, merkWizardSchema } from "@/modules/merk/schema";
 import { resolveOwnershipReferences, validateQualityTestReferences } from "@/modules/merk/server-validation";
 
-/** Used to resume a saved Draft into MerkWizard (see BR-002 in the Add Brand
- * review) — company-scoped so one company can never read another's brand. */
+/**
+ * Used for two different purposes that need two different trust boundaries:
+ * 1. Resuming a saved Draft into MerkWizard (see BR-002 in the Add Brand review) — must stay
+ *    company-scoped, a company can never read/resume another's in-progress Brand registration.
+ * 2. VIU Konsumsi's "Merek yang Digunakan" step fetching a selected Brand's live detail (evidence
+ *    validity, documents on file) to compute relationship requirements/readiness — here company
+ *    ownership must NOT gate access. Brand ownership (`Merk.companyId`) is deliberately separate
+ *    from which company may USE a Brand in an application (see
+ *    `/api/applications/brand-options`'s own comment) — the applicant's relationship is
+ *    established per-application via `applicantRole`, not by matching company ids. Blocking this
+ *    fetch for a legitimately-usable ACTIVE Brand caused "Gagal memuat detail merek ini" and a
+ *    false NOT_ELIGIBLE readiness for any Brand the applying company didn't itself register.
+ *
+ * So: found if it's this company's own Brand (any status, purpose 1) OR any ACTIVE Brand
+ * platform-wide (purpose 2). `PATCH` below stays strictly company-scoped — only purpose 1 ever
+ * writes data.
+ */
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -25,7 +40,7 @@ export async function GET(
 
   const { id } = await params;
   const brand = await db.merk.findFirst({
-    where: { id, companyId },
+    where: { id, OR: [{ companyId }, { status: "ACTIVE" }] },
     include: {
       ownership: { include: { ownerCompany: true, officialRepresentative: true } },
       documents: true,
