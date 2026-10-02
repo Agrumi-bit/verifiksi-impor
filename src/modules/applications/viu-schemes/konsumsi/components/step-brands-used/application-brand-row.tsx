@@ -15,7 +15,6 @@ import {
 import { RadioCardGroup } from "@/modules/merk/components/steps/step2/radio-card-group";
 import { CompanySearchSelect } from "@/modules/merk/components/steps/step2/company-search-select";
 import { FileUploadField } from "@/components/form/file-upload-field";
-import { FormField } from "@/components/form/form-field";
 import { useActiveBrandOwners } from "@/modules/master-data/use-active-brand-owners";
 import { MERK_EVIDENCE_TYPE_LABELS } from "@/modules/merk/schema";
 import {
@@ -28,9 +27,9 @@ import {
   getDocumentDisplayState,
   type ApplicantBrandRole,
   type ImportAppointmentSource,
-} from "../../../viu-brand-relationship-rules";
-import { useBrandApplicationDetail } from "../../../hooks/use-brand-application-detail";
-import type { ApplicationWizardValues } from "../../../schema";
+} from "../../business-rules";
+import { useBrandApplicationDetail } from "../../hooks/use-brand-application-detail";
+import type { ApplicationWizardValues } from "../../../../schema";
 
 const APIU_PLACEHOLDER_NAME = "Perusahaan API-U (Aplikasi VIU)";
 
@@ -66,7 +65,7 @@ type Props = {
  * its expandable relationship-configuration panel in a single component
  * since they share the same brand-detail fetch and rule-engine result —
  * splitting them would just mean threading the same data through props
- * twice. The rule engine itself (viu-brand-relationship-rules.ts) stays a
+ * twice. The rule engine itself (business-rules.ts) stays a
  * plain function this component only calls, never reimplements.
  */
 export function ApplicationBrandRow({ form, index, apiBase, brandDetailHrefBase, defaultExpanded, onRemoved }: Props) {
@@ -84,7 +83,7 @@ export function ApplicationBrandRow({ form, index, apiBase, brandDetailHrefBase,
       applicantRole: entry.applicantRole ?? null,
       appointmentSource: entry.appointmentSource ?? null,
       officialRepresentativeCompanyId: entry.officialRepresentativeCompanyId ?? null,
-      importerAppointmentDocumentPath: entry.importerAppointmentDocumentPath ?? null,
+      relationshipDocuments: entry.relationshipDocuments,
     },
   );
 
@@ -92,6 +91,19 @@ export function ApplicationBrandRow({ form, index, apiBase, brandDetailHrefBase,
     setValue(`applicationBrands.${index}.applicantRole`, role, { shouldValidate: true, shouldDirty: true });
     setValue(`applicationBrands.${index}.appointmentSource`, undefined, { shouldDirty: true });
     setValue(`applicationBrands.${index}.officialRepresentativeCompanyId`, undefined, { shouldDirty: true });
+  }
+
+  function setRelationshipDocument(code: string, path: string | undefined) {
+    const next = { ...(entry.relationshipDocuments ?? {}) };
+    if (path) {
+      next[code] = { filePath: path, fileName: path.split("/").pop() ?? path };
+    } else {
+      delete next[code];
+    }
+    setValue(`applicationBrands.${index}.relationshipDocuments`, next, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
   }
 
   function setAppointmentSource(source: ImportAppointmentSource) {
@@ -273,32 +285,7 @@ export function ApplicationBrandRow({ form, index, apiBase, brandDetailHrefBase,
                     </p>
                   )}
                   {entry.appointmentSource === "BRAND_OWNER" && isDomestic && (
-                    <div className="mt-3">
-                      <p className="mb-2 text-xs text-muted-foreground">Pemberi Penunjukan: {ownerTitle || "Pemilik Merek"} (read-only)</p>
-                      <FormField
-                        label="Surat Penunjukan Importir dari Pemilik Merek"
-                        required
-                        error={entryErrors?.importerAppointmentDocumentPath?.message}
-                      >
-                        <FileUploadField
-                          namespace="documents"
-                          value={entry.importerAppointmentDocumentPath}
-                          onChange={(path) => {
-                            setValue(`applicationBrands.${index}.importerAppointmentDocumentPath`, path ?? "", {
-                              shouldValidate: true,
-                              shouldDirty: true,
-                            });
-                            setValue(
-                              `applicationBrands.${index}.importerAppointmentDocumentName`,
-                              path ? path.split("/").pop() ?? "" : "",
-                              { shouldDirty: true },
-                            );
-                          }}
-                          label="Unggah Surat Penunjukan Importir"
-                          hint="Format: PDF, JPG, PNG"
-                        />
-                      </FormField>
-                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">Pemberi Penunjukan: {ownerTitle || "Pemilik Merek"} (read-only)</p>
                   )}
                   {entryErrors?.appointmentSource?.message && (
                     <p className="mt-1.5 text-xs text-destructive">{entryErrors.appointmentSource.message}</p>
@@ -348,7 +335,10 @@ export function ApplicationBrandRow({ form, index, apiBase, brandDetailHrefBase,
                 />
               </section>
 
-              {/* Required Document Checklist */}
+              {/* Required Document Checklist — every REQUIRED item is this
+                  application's own document now (see applicationBrandEntrySchema's
+                  comment), uploaded inline right here instead of linking out
+                  to a Brand Master page that never had anywhere to put it. */}
               {requirements && requirements.requirements.length > 0 && (
                 <section>
                   <div className="mb-2 flex items-center justify-between">
@@ -358,27 +348,35 @@ export function ApplicationBrandRow({ form, index, apiBase, brandDetailHrefBase,
                       {requirements.exemptDocumentCount > 0 && ` · ${requirements.exemptDocumentCount} dokumen dikecualikan`}
                     </p>
                   </div>
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-3">
                     {requirements.requirements.map((item) => {
                       const state = getDocumentDisplayState(item);
-                      return (
-                        <div key={item.code} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background p-3">
-                          <span className="text-xs font-medium">{item.label}</span>
-                          <div className="flex items-center gap-2">
+                      if (item.requirementStatus !== "REQUIRED") {
+                        return (
+                          <div key={item.code} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background p-3">
+                            <span className="text-xs font-medium">{item.label}</span>
                             <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${DOC_STATE_PILL_CLASS[state]}`}>
                               {DOCUMENT_DISPLAY_STATE_LABELS[state]}
                             </span>
-                            {state === "BELUM_TERSEDIA" && (
-                              <a
-                                href={`${brandDetailHrefBase}/${brand.id}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs font-semibold text-primary hover:underline"
-                              >
-                                Lengkapi Dokumen
-                              </a>
-                            )}
                           </div>
+                        );
+                      }
+                      const doc = entry.relationshipDocuments?.[item.code];
+                      return (
+                        <div key={item.code} className="rounded-lg border border-border bg-background p-3">
+                          <div className="mb-2 flex items-center justify-between gap-3">
+                            <span className="text-xs font-medium">{item.label}</span>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${DOC_STATE_PILL_CLASS[state]}`}>
+                              {DOCUMENT_DISPLAY_STATE_LABELS[state]}
+                            </span>
+                          </div>
+                          <FileUploadField
+                            namespace="documents"
+                            value={doc?.filePath}
+                            onChange={(path) => setRelationshipDocument(item.code, path)}
+                            label={`Unggah ${item.label}`}
+                            hint="Format: PDF, JPG, PNG"
+                          />
                         </div>
                       );
                     })}

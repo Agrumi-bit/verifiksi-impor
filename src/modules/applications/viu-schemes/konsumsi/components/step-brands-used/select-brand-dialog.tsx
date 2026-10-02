@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useApplicationBrandOptions, type ApplicationBrandOption } from "../../../hooks/use-application-brand-options";
+import { useApplicationBrandOptions, type ApplicationBrandOption } from "../../../../hooks/use-application-brand-options";
 import { MERK_EVIDENCE_TYPE_LABELS } from "@/modules/merk/schema";
 
 type Props = {

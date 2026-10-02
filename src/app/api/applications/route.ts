@@ -3,8 +3,19 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
-import { applicationSubmitSchema, type LocationValues } from "@/modules/applications/schema";
-import { validateApplicationBrands } from "@/modules/applications/server/validate-application-brands";
+import { applicationSubmitSchema, type ApplicationWizardValues, type LocationValues } from "@/modules/applications/schema";
+import { konsumsiScheme } from "@/modules/applications/viu-schemes/konsumsi/registry";
+
+/**
+ * Schemes with a registered DB-aware server validator — only Konsumsi for
+ * now (Industri/Non-Industri aren't separated into scheme modules yet, see
+ * the VIU Konsumsi implementation plan). Each validator may return a
+ * replacement `applicationBrands`-shaped slice of `values` (e.g. Konsumsi
+ * attaches a server-built submission snapshot) — when it does, that
+ * replacement is what gets persisted, never the client-submitted payload
+ * for that slice.
+ */
+const REGISTERED_VIU_SCHEMES = [konsumsiScheme];
 
 function generateApplicationNumber(verificationType: string): string {
   const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -71,11 +82,21 @@ export async function POST(request: Request) {
     );
   }
 
-  const values = parsed.data;
+  let values: ApplicationWizardValues = parsed.data;
 
-  const brandValidation = await validateApplicationBrands(values);
-  if ("error" in brandValidation) {
-    return NextResponse.json({ error: brandValidation.error }, { status: 400 });
+  // Run every registered scheme's server-side validator whose key is
+  // actually enabled on this application — never the client's own computed
+  // readiness/document count/brand metadata. A scheme's validator may
+  // return a server-authoritative replacement for its own slice of
+  // `values` (Konsumsi attaches a submission snapshot to each brand entry
+  // here); when it does, that replacement is what gets persisted below.
+  for (const scheme of REGISTERED_VIU_SCHEMES) {
+    if (!values.importTypes.includes(scheme.key)) continue;
+    const result = await scheme.validateServerSide(values);
+    if ("error" in result) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    values = { ...values, applicationBrands: result.applicationBrands };
   }
 
   // Promote the draft row saved during the wizard instead of creating a

@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ApplicationWizardValues } from "../schema";
+import { KonsumsiApplicationReview } from "../viu-schemes/konsumsi/components/konsumsi-application-review";
 
 type ApplicationDetailData = {
   id: string;
@@ -122,6 +123,10 @@ export function ApplicationDetail({ id }: Props) {
           value={payload.products?.map((product) => product.materialType).join(", ")}
         />
       </Section>
+
+      {payload.importTypes?.includes("BARANG_KONSUMSI") && (
+        <KonsumsiApplicationReview payload={payload} brandLookupApiBase="/api/merk" />
+      )}
     </div>
   );
 }

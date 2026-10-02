@@ -14,7 +14,7 @@ import {
   VKI_SUPPORT_DOC_DEFS,
   type ApplicationWizardValues,
 } from "../schema";
-import { VIU_WIZARD_STEPS, VKI_WIZARD_STEPS } from "../wizard-steps-meta";
+import { getViuWizardSteps, VKI_WIZARD_STEPS } from "../wizard-steps-meta";
 
 export function useApplicationWizard() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -54,8 +54,9 @@ export function useApplicationWizard() {
   });
 
   const verificationType = useWatch({ control: form.control, name: "verificationType" });
+  const importTypes = useWatch({ control: form.control, name: "importTypes" });
   const isVki = verificationType === "VKI";
-  const activeSteps = isVki ? VKI_WIZARD_STEPS : VIU_WIZARD_STEPS;
+  const activeSteps = isVki ? VKI_WIZARD_STEPS : getViuWizardSteps(importTypes ?? []);
   const activeFieldNames = isVki ? VKI_STEP_FIELD_NAMES : VIU_STEP_FIELD_NAMES;
   const totalSteps = activeSteps.length;
 
@@ -68,14 +69,14 @@ export function useApplicationWizard() {
     const target = clampStep(step);
     if (!gatePassed) {
       if (target >= 2 && currentStep === 1) {
-        const step1Valid = await form.trigger(activeFieldNames[1] ?? []);
+        const step1Valid = await form.trigger(activeFieldNames.company ?? []);
         if (!step1Valid) {
           setCurrentStep(1);
           return false;
         }
       }
       if (target > 2) {
-        const step2Valid = await form.trigger(activeFieldNames[2] ?? []);
+        const step2Valid = await form.trigger(activeFieldNames["application-info"] ?? []);
         if (!step2Valid) {
           setCurrentStep(2);
           return false;

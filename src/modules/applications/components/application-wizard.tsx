@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FieldErrors } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -14,8 +14,8 @@ import { LockedCompanyField } from "./locked-company-field";
 import type { CompanyAddressValues } from "@/components/wizard/locations-field";
 import { LOCATION_TYPES } from "@/modules/shared/schema";
 import { Step1ApplicationInformation } from "./steps/step1-application-information";
-import { StepBrandsUsed } from "./steps/step-brands-used/step-brands-used";
-import { StepQualityTest } from "./steps/step-quality-test";
+import { StepBrandsUsed } from "../viu-schemes/konsumsi/components/step-brands-used/step-brands-used";
+import { StepQualityTest } from "../viu-schemes/konsumsi/components/step-quality-test";
 import { StepPartnerIndustri } from "./steps/step-partner-industri";
 import { Step5SupportDocument } from "./steps/step5-support-document";
 import { Step6ProductInformation } from "./steps/step6-product-information";
@@ -34,6 +34,7 @@ import { VkiStep12Sales } from "./steps/vki-step12-sales";
 import { VkiStep13Preview } from "./steps/vki-step13-preview";
 import { VkiStep14Submit } from "./steps/vki-step14-submit";
 import type { ApplicationWizardValues, VerificationType } from "../schema";
+import { getViuWizardSteps, VKI_WIZARD_STEPS } from "../wizard-steps-meta";
 
 type SubmitReceipt = {
   applicationNumber: string;
@@ -95,11 +96,20 @@ export function ApplicationWizard({
     goNext,
     goBack,
     goToStep,
+    restoreStep,
     activeSteps,
     activeFieldNames,
     isVki,
     isLastImplementedStep,
   } = useApplicationWizard();
+  // Steps from "Partner Industri" onward shift their number whenever it's
+  // filtered out of activeSteps (see getViuWizardSteps) — look its current
+  // number up by stable key instead of hardcoding it, same as everywhere
+  // else keyed off a step's identity rather than its position.
+  const stepNumberByKey = useMemo(
+    () => Object.fromEntries(activeSteps.map((s) => [s.key, s.step])) as Record<string, number | undefined>,
+    [activeSteps],
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [receipt, setReceipt] = useState<SubmitReceipt | null>(null);
@@ -132,7 +142,10 @@ export function ApplicationWizard({
         return;
       }
       const { data } = (await response.json()) as {
-        data: { status: string; payload: ApplicationWizardValues };
+        data: {
+          status: string;
+          payload: ApplicationWizardValues & { _meta?: { currentStepKey?: string } };
+        };
       };
       if (data.status !== "DRAFT" && data.status !== "RETURNED") {
         toast.error("Permohonan ini tidak dapat diedit lagi.");
@@ -140,6 +153,21 @@ export function ApplicationWizard({
       }
       form.reset(data.payload);
       setDraftApplicationId(resumeDraftId);
+      // Resolve the saved step by its stable key against the step list the
+      // RESUMED payload's own verificationType/importTypes produce — not
+      // this component's own `activeSteps`, which still reflects whatever
+      // was on screen before `form.reset` above and hasn't re-rendered yet
+      // in this same effect tick. Falls back to step 1 when there's no
+      // saved key (legacy drafts, saved before this feature existed) or
+      // when the saved step no longer exists (e.g. its scheme was
+      // deselected before this save) — never crashes, never guesses.
+      const savedKey = data.payload._meta?.currentStepKey;
+      if (savedKey) {
+        const resumedSteps =
+          data.payload.verificationType === "VKI" ? VKI_WIZARD_STEPS : getViuWizardSteps(data.payload.importTypes ?? []);
+        const target = resumedSteps.find((s) => s.key === savedKey)?.step;
+        if (target) restoreStep(target);
+      }
       toast.info(data.status === "RETURNED" ? "Memuat permohonan untuk direvisi." : "Melanjutkan draft tersimpan.");
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -225,7 +253,7 @@ export function ApplicationWizard({
     // summary panel below can show the user everything that needs fixing at once.
     const issues: StepValidationIssue[] = activeSteps
       .map((meta): StepValidationIssue | null => {
-        const stepFields = (activeFieldNames[meta.step] ?? []).filter((field) => invalidFields.has(field));
+        const stepFields = (activeFieldNames[meta.key] ?? []).filter((field) => invalidFields.has(field));
         if (stepFields.length === 0) return null;
         stepFields.forEach((field) => claimedFields.add(field));
         const messages = stepFields.flatMap((field) => collectErrorMessages(errorRecord[field]));
@@ -262,12 +290,20 @@ export function ApplicationWizard({
     setIsSavingDraft(true);
     try {
       const draftUrl = hideCompanyPicker ? "/api/company-workspace/applications" : "/api/applications/draft";
+      // Stable key, not the raw number — same reasoning as everywhere else
+      // that looks steps up by `key` (see stepNumberByKey above): this
+      // number can mean a different step next time the draft is resumed if
+      // a scheme gets enabled/disabled in between. Stored inside the same
+      // payload JSON (no schema/DB change) and stripped by
+      // applicationSubmitSchema's "unknown keys" default on final submit,
+      // so it never reaches a persisted SUBMITTED application.
+      const currentStepKey = activeSteps[currentStep - 1]?.key;
       const response = await fetch(draftUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           applicationId: draftApplicationId ?? undefined,
-          payload: form.getValues(),
+          payload: { ...form.getValues(), _meta: { currentStepKey } },
         }),
       });
       if (!response.ok) throw new Error("Gagal menyimpan draft");
@@ -336,7 +372,7 @@ export function ApplicationWizard({
                 // a trigger/submit, so pre-submit every visited step still reads as
                 // done (unchanged behavior); after a failed final submit, steps with
                 // unfilled required data stop showing a false checkmark.
-                const hasStepError = (activeFieldNames[step] ?? []).some((field) => Boolean(form.formState.errors[field]));
+                const hasStepError = (activeFieldNames[meta.key] ?? []).some((field) => Boolean(form.formState.errors[field]));
                 const isVisited = step < currentStep;
                 const isDone = isVisited && !hasStepError;
                 const isInvalid = isVisited && hasStepError;
@@ -443,7 +479,7 @@ export function ApplicationWizard({
                   companyAddress={companyAddress}
                 />
               )}
-              {!isVki && currentStep === 6 && (
+              {!isVki && currentStep === stepNumberByKey["brands-used"] && (
                 <StepBrandsUsed
                   form={form}
                   apiBase={hideCompanyPicker ? "/api/company-workspace/brands" : "/api/merk"}
@@ -453,8 +489,8 @@ export function ApplicationWizard({
                   applicationNumber={applicationNumber ?? undefined}
                 />
               )}
-              {!isVki && currentStep === 7 && <StepQualityTest form={form} />}
-              {!isVki && currentStep === 8 && (
+              {!isVki && currentStep === stepNumberByKey["quality-test"] && <StepQualityTest form={form} />}
+              {!isVki && currentStep === stepNumberByKey["partner-industri"] && (
                 <StepPartnerIndustri
                   form={form}
                   partnerManagementHref={
@@ -462,10 +498,10 @@ export function ApplicationWizard({
                   }
                 />
               )}
-              {!isVki && currentStep === 9 && <Step5SupportDocument form={form} />}
-              {!isVki && currentStep === 10 && <Step6ProductInformation form={form} />}
-              {!isVki && currentStep === 11 && <Step7Preview form={form} onEditStep={goToStep} />}
-              {!isVki && currentStep === 12 && <Step8Submit form={form} />}
+              {!isVki && currentStep === stepNumberByKey["support-document"] && <Step5SupportDocument form={form} />}
+              {!isVki && currentStep === stepNumberByKey["product-info"] && <Step6ProductInformation form={form} />}
+              {!isVki && currentStep === stepNumberByKey.preview && <Step7Preview form={form} onEditStep={goToStep} />}
+              {!isVki && currentStep === stepNumberByKey.submit && <Step8Submit form={form} />}
 
               {isVki && currentStep === 3 && <VkiStep3Legal form={form} />}
               {isVki && currentStep === 4 && <VkiStep4Tax form={form} />}

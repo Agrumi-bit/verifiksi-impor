@@ -16,8 +16,9 @@ import {
   type WarehouseRegistrationType,
 } from "@/modules/shared/schema";
 import { taxProofEntrySchema, COMPANY_AGES } from "@/modules/company/schema";
-import { qualityTestEntrySchema } from "@/modules/merk/schema";
-import { APPLICANT_BRAND_ROLES, IMPORT_APPOINTMENT_SOURCES } from "./viu-brand-relationship-rules";
+import { brandsUsedSchema, brandQualityTestsSchema, konsumsiDocumentsSchema } from "./viu-schemes/konsumsi/schema";
+import { applyKonsumsiSubmitRules } from "./viu-schemes/konsumsi/submit-rules";
+import { KONSUMSI_STEP_FIELD_NAMES } from "./viu-schemes/konsumsi/step-field-names";
 
 export {
   companyProfileSchema,
@@ -131,75 +132,12 @@ export const partnerIndustriEntrySchema = z.object({
 });
 export type PartnerIndustriEntryValues = z.infer<typeof partnerIndustriEntrySchema>;
 
-export { APPLICANT_BRAND_ROLES, IMPORT_APPOINTMENT_SOURCES };
-export type { ApplicantBrandRole, ImportAppointmentSource } from "./viu-brand-relationship-rules";
-
-/**
- * One Brand used in this VIU Barang Konsumsi application (Step "Merek yang
- * Digunakan"). `brandId` references an existing Merk row — Brand identity
- * itself (name, owner, evidence, class, documents) is never duplicated here;
- * only this application's own legal-relationship choice is. See
- * viu-brand-relationship-rules.ts for how these three fields turn into a
- * document checklist and readiness state.
- */
-export const applicationBrandEntrySchema = z.object({
-  brandId: requiredString("Merek wajib dipilih"),
-  applicantRole: z.enum(APPLICANT_BRAND_ROLES, { message: "Pilih peran pemohon" }),
-  appointmentSource: z.enum(IMPORT_APPOINTMENT_SOURCES).optional(),
-  officialRepresentativeCompanyId: z.string().trim().optional(),
-  // Only collected when appointmentSource === "BRAND_OWNER" (a domestic brand
-  // owner appointing this applicant as importer directly) — Brand Master no
-  // longer collects a relationshipWithApiu document for this at registration
-  // time (see domestic-owner-ownership.tsx's own comment), so this proof of
-  // appointment is this application's own document instead.
-  importerAppointmentDocumentPath: z.string().trim().optional(),
-  importerAppointmentDocumentName: z.string().trim().optional(),
-});
-export type ApplicationBrandEntryValues = z.infer<typeof applicationBrandEntrySchema>;
-
-/** Step "Merek yang Digunakan" — only meaningful when Jenis Impor includes
- * BARANG_KONSUMSI (see step-brands-used.tsx's own empty state otherwise). */
-export const brandsUsedSchema = z.object({
-  applicationBrands: z.array(applicationBrandEntrySchema).default([]),
-});
-
-export function createEmptyApplicationBrand(brandId: string): ApplicationBrandEntryValues {
-  return { brandId, applicantRole: "OFFICIAL_REPRESENTATIVE" };
-}
-
-/**
- * Step "Hasil Uji Mutu" — one entry per quality-test certificate uploaded
- * for a Brand used in THIS application. Deliberately its own field on the
- * Application payload rather than reusing Merk's own `qualityTests`: the
- * same rich shape (`qualityTestEntrySchema` — commodity classification,
- * lab, dates, file) applies, but this test result is specific to what's
- * being imported under this application, not a permanent Brand Master
- * record. `brandId` must match one of this application's own
- * `applicationBrands` entries.
- */
-export const applicationBrandQualityTestEntrySchema = qualityTestEntrySchema.extend({
-  brandId: requiredString("Merek wajib dipilih"),
-});
-export type ApplicationBrandQualityTestEntryValues = z.infer<typeof applicationBrandQualityTestEntrySchema>;
-
-export function createEmptyApplicationBrandQualityTest(brandId: string): ApplicationBrandQualityTestEntryValues {
-  return {
-    brandId,
-    commodityGroupId: "",
-    commodityName: "",
-    certificateNumber: "",
-    laboratoryName: "",
-    issueDate: "",
-    filePath: "",
-    fileName: "",
-  };
-}
-
-/** Step "Hasil Uji Mutu" — only meaningful when Jenis Impor includes
- * BARANG_KONSUMSI, same gate as `brandsUsedSchema`. */
-export const brandQualityTestsSchema = z.object({
-  brandQualityTests: z.array(applicationBrandQualityTestEntrySchema).default([]),
-});
+// Konsumsi-exclusive schemas live in ./viu-schemes/konsumsi/schema — imported
+// above for this file's own internal composition (`applicationWizardShape`
+// below) only. No longer re-exported from here: every former consumer
+// (components, hooks) has been migrated to import directly from the
+// konsumsi module (see viu-schemes/konsumsi/schema.ts for ownership). New
+// code should do the same rather than reaching for these via schema.ts.
 
 export type NonIndustriDocPriority = "UTAMA" | "PENDUKUNG";
 
@@ -287,12 +225,15 @@ export function createEmptyNonIndustriDocuments(): NonIndustriDocumentValues[] {
   return NON_INDUSTRI_SUPPORT_DOC_DEFS.map((def) => ({ key: def.key, enabled: false }));
 }
 
-/** Import-type-specific supporting documents (Partner Industri financing proof, Non-Industri
- * modal proof, Konsumsi supporting docs) — Support Document step. */
+/** Industri/Non-Industri supporting documents (Partner Industri financing
+ * proof, Non-Industri modal proof) — Support Document step. Konsumsi's own
+ * `konsumsiDocuments` field is declared and owned by
+ * ./viu-schemes/konsumsi/schema.ts (`konsumsiDocumentsSchema`) and composed
+ * in below, not declared here, so this object only ever holds fields no
+ * scheme module has claimed ownership of yet. */
 export const importSupportDocumentsSchema = z.object({
   partnerIndustriEntries: z.array(partnerIndustriEntrySchema).default([]),
   nonIndustriDocuments: z.array(nonIndustriDocumentSchema).default([]),
-  konsumsiDocuments: z.array(supportDocumentSchema),
 });
 
 /** Every document-shaped field on the application: company legal/tax proof (auto-filled,
@@ -300,7 +241,8 @@ export const importSupportDocumentsSchema = z.object({
  * documents part" of the payload instead of three. */
 export const documentsSchema = companyLegalExtraSchema
   .extend(taxSupportDocumentsSchema.shape)
-  .extend(importSupportDocumentsSchema.shape);
+  .extend(importSupportDocumentsSchema.shape)
+  .extend(konsumsiDocumentsSchema.shape);
 
 export const productItemSchema = z.object({
   id: z.string(),
@@ -540,7 +482,9 @@ const applicationWizardShape = applicationMetaSchema
  * payload in the first place, so a future rule added here can never leak into a VKI
  * submission by a forgotten if-guard).
  */
-function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardShape>, ctx: z.RefinementCtx): void {
+// Exported for scripts/test-viu-konsumsi-scheme-separation.mjs's submit-rule
+// parity regression — not otherwise imported outside this file.
+export function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardShape>, ctx: z.RefinementCtx): void {
   if (data.declarationAccepted !== true) {
     ctx.addIssue({
       code: "custom",
@@ -548,6 +492,10 @@ function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardShape>, c
       message: "Anda harus menyetujui pernyataan ini sebelum submit",
     });
   }
+  // Industri/Non-Industri rules — not yet separated into their own scheme
+  // modules (Konsumsi is the first; see the VIU Konsumsi implementation
+  // plan). Left exactly as before, unaffected by the Konsumsi extraction
+  // below.
   if (
     data.importTypes.includes("BAHAN_BAKU_INDUSTRI") &&
     !data.partnerIndustriEntries.some((entry) => entry.enabled)
@@ -573,67 +521,11 @@ function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardShape>, c
       });
     }
   }
-  if (data.importTypes.includes("BARANG_KONSUMSI") && data.konsumsiDocuments.length < 1) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["konsumsiDocuments"],
-      message: "Tambahkan minimal satu dokumen pendukung",
-    });
-  }
-  // Step "Merek yang Digunakan" — structural validity only (at least one
-  // Brand, and each entry's own role/appointment/representative shape).
-  // Readiness (evidence validity, relationship rules, document
-  // completeness — see viu-brand-relationship-rules.ts) is deliberately
-  // NOT enforced here: an INCOMPLETE Brand may still continue to Step 5
-  // per the Continue Rule; only Submit is expected to block on it, and
-  // that block happens via the server-side brand validator, not this
-  // schema (recalculating readiness needs a DB read this sync validator
-  // can't do).
-  if (data.importTypes.includes("BARANG_KONSUMSI") && data.applicationBrands.length < 1) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["applicationBrands"],
-      message: "Pilih atau tambahkan minimal satu merek yang digunakan",
-    });
-  }
-  data.applicationBrands.forEach((entry, index) => {
-    if (entry.applicantRole === "IMPORTER_ONLY" && !entry.appointmentSource) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["applicationBrands", index, "appointmentSource"],
-        message: "Pilih sumber penunjukan importir",
-      });
-    }
-    if (entry.appointmentSource === "OFFICIAL_REPRESENTATIVE" && !entry.officialRepresentativeCompanyId) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["applicationBrands", index, "officialRepresentativeCompanyId"],
-        message: "Pilih Perwakilan Resmi",
-      });
-    }
-    if (entry.appointmentSource === "BRAND_OWNER" && !entry.importerAppointmentDocumentPath) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["applicationBrands", index, "importerAppointmentDocumentPath"],
-        message: "Unggah Surat Penunjukan Importir dari Pemilik Merek",
-      });
-    }
-  });
-  // Step "Hasil Uji Mutu" — every Brand used in this application needs at
-  // least one quality-test certificate of its own (see
-  // brandQualityTestsSchema's own comment on why this isn't Merk's
-  // qualityTests reused as-is).
+  // Konsumsi rules live in viu-schemes/konsumsi/submit-rules.ts — this
+  // shared function only decides *whether* they run, never *what* they
+  // check (see that module's own docstring for the regulatory detail).
   if (data.importTypes.includes("BARANG_KONSUMSI")) {
-    const brandIdsMissingQualityTest = data.applicationBrands
-      .map((entry) => entry.brandId)
-      .filter((brandId) => !data.brandQualityTests.some((qt) => qt.brandId === brandId));
-    if (brandIdsMissingQualityTest.length > 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["brandQualityTests"],
-        message: `${brandIdsMissingQualityTest.length} merek belum memiliki dokumen hasil uji mutu`,
-      });
-    }
+    applyKonsumsiSubmitRules(data, ctx);
   }
 }
 
@@ -652,7 +544,7 @@ export const applicationWizardSchema = applicationWizardShape.superRefine((data,
  * of one object with an if-guard. `applyViuOnlySubmitRules` is only ever reachable through
  * the VIU branch, so a VKI payload can structurally never run a VIU-only rule, even one
  * added later without remembering a guard (the bug this type was introduced to prevent —
- * see the validate-application-brands.ts fix for the matching server-side case). Used by
+ * see the viu-schemes/konsumsi/server/validate-submit.ts fix for the matching server-side case). Used by
  * `POST /api/applications` instead of `applicationWizardSchema` for the final persist gate.
  */
 const viuSubmitSchema = applicationWizardShape
@@ -784,8 +676,17 @@ const TAX_STEP_FIELDS: (keyof ApplicationWizardValues)[] = ["npwpNumber", "npwpD
  * one was already reachable, just never wired into the step map. */
 const LOCATION_STEP_FIELDS: (keyof ApplicationWizardValues)[] = ["locations"];
 
-export const VIU_STEP_FIELD_NAMES: Record<number, (keyof ApplicationWizardValues)[]> = {
-  1: [
+/** Keyed by WizardStepMeta.key (wizard-steps-meta.ts), not by step number —
+ * step numbers shift depending on which schemes' steps are enabled (see
+ * getViuWizardSteps), but a step's identity and field list don't.
+ * "brands-used"/"quality-test" are owned by and composed in from
+ * viu-schemes/konsumsi/step-field-names.ts, not declared here — this object
+ * only ever declares steps no scheme module has claimed ownership of.
+ * `konsumsiDocuments` stays listed under "support-document" since that step
+ * itself (unlike brands-used/quality-test) remains shared infrastructure —
+ * only the Konsumsi-specific document *field* within it is scheme-owned. */
+export const VIU_STEP_FIELD_NAMES: Record<string, (keyof ApplicationWizardValues)[]> = {
+  company: [
     "companyId",
     "companyName",
     "companyType",
@@ -798,17 +699,16 @@ export const VIU_STEP_FIELD_NAMES: Record<number, (keyof ApplicationWizardValues
     "contactEmail",
     "contactPhone",
   ],
-  2: ["verificationType", "applicationCategory", "importTypes"],
-  3: LEGAL_STEP_FIELDS,
-  4: TAX_STEP_FIELDS,
-  5: LOCATION_STEP_FIELDS,
-  6: ["applicationBrands"],
-  7: ["brandQualityTests"],
-  8: ["partnerIndustriEntries"],
-  9: ["nonIndustriDocuments", "konsumsiDocuments"],
-  10: ["products"],
-  11: [],
-  12: ["declarationAccepted"],
+  "application-info": ["verificationType", "applicationCategory", "importTypes"],
+  legal: LEGAL_STEP_FIELDS,
+  tax: TAX_STEP_FIELDS,
+  location: LOCATION_STEP_FIELDS,
+  "partner-industri": ["partnerIndustriEntries"],
+  "support-document": ["nonIndustriDocuments", "konsumsiDocuments"],
+  "product-info": ["products"],
+  preview: [],
+  submit: ["declarationAccepted"],
+  ...KONSUMSI_STEP_FIELD_NAMES,
 };
 
 /**
@@ -817,21 +717,21 @@ export const VIU_STEP_FIELD_NAMES: Record<number, (keyof ApplicationWizardValues
  * components as VIU — same field lists apply, see LEGAL_STEP_FIELDS /
  * TAX_STEP_FIELDS / LOCATION_STEP_FIELDS above.
  */
-export const VKI_STEP_FIELD_NAMES: Record<number, (keyof ApplicationWizardValues)[]> = {
-  1: VIU_STEP_FIELD_NAMES[1],
-  2: VIU_STEP_FIELD_NAMES[2],
-  3: LEGAL_STEP_FIELDS,
-  4: TAX_STEP_FIELDS,
-  5: LOCATION_STEP_FIELDS,
-  6: ["vkiSupportDocs", "electricityMonths", "tenagaKerjaEntries", "tenagaKerjaDocumentPath"],
-  7: ["machines"],
-  8: ["products", "rawMaterials"],
-  9: ["capacity", "capacityDocumentPath"],
-  10: ["productionQty"],
-  11: ["rawMaterialUsage"],
-  12: ["sales"],
-  13: [],
-  14: [],
+export const VKI_STEP_FIELD_NAMES: Record<string, (keyof ApplicationWizardValues)[]> = {
+  company: VIU_STEP_FIELD_NAMES.company,
+  "application-info": VIU_STEP_FIELD_NAMES["application-info"],
+  legal: LEGAL_STEP_FIELDS,
+  tax: TAX_STEP_FIELDS,
+  location: LOCATION_STEP_FIELDS,
+  "support-document": ["vkiSupportDocs", "electricityMonths", "tenagaKerjaEntries", "tenagaKerjaDocumentPath"],
+  "data-mesin": ["machines"],
+  "product-info": ["products", "rawMaterials"],
+  capacity: ["capacity", "capacityDocumentPath"],
+  "production-qty": ["productionQty"],
+  "raw-material-usage": ["rawMaterialUsage"],
+  sales: ["sales"],
+  preview: [],
+  submit: [],
 };
 
 // Backward-compatible alias — existing imports keep working.

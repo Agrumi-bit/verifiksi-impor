@@ -6,10 +6,11 @@ import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { createEmptyApplicationBrand, type ApplicationWizardValues } from "../../../schema";
-import { useApplicationBrandOptions, type ApplicationBrandOption } from "../../../hooks/use-application-brand-options";
-import { useBrandApplicationDetail } from "../../../hooks/use-brand-application-detail";
-import type { BrandApplicationReadiness } from "../../../viu-brand-relationship-rules";
+import { createEmptyApplicationBrand } from "../../schema";
+import type { ApplicationWizardValues } from "../../../../schema";
+import { useApplicationBrandOptions, type ApplicationBrandOption } from "../../../../hooks/use-application-brand-options";
+import { useBrandApplicationDetail } from "../../hooks/use-brand-application-detail";
+import type { BrandApplicationReadiness } from "../../business-rules";
 import { BrandStepSummary } from "./brand-step-summary";
 import { SelectBrandDialog } from "./select-brand-dialog";
 import { AddBrandLauncher } from "./add-brand-launcher";
@@ -61,7 +62,7 @@ function RowReadinessTracker({
     applicantRole: entry.applicantRole ?? null,
     appointmentSource: entry.appointmentSource ?? null,
     officialRepresentativeCompanyId: entry.officialRepresentativeCompanyId ?? null,
-    importerAppointmentDocumentPath: entry.importerAppointmentDocumentPath ?? null,
+    relationshipDocuments: entry.relationshipDocuments,
   });
   const readiness = requirements?.readiness ?? "NOT_ELIGIBLE";
 
@@ -77,7 +78,7 @@ function RowReadinessTracker({
  * includes BARANG_KONSUMSI, mirroring how StepPartnerIndustri gates itself
  * on BAHAN_BAKU_INDUSTRI. Orchestrates brand selection/creation and hands
  * each selected Brand's relationship configuration to its own row — all
- * regulatory logic lives in viu-brand-relationship-rules.ts, never here.
+ * regulatory logic lives in business-rules.ts, never here.
  */
 export function StepBrandsUsed({ form, apiBase, brandDetailHrefBase, applicationNumber }: Props) {
   const { control } = form;

@@ -9,12 +9,12 @@ import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/form/form-field";
 import { SearchSelectInput } from "@/components/form/search-select-input";
 import { useCommodityGroups } from "@/modules/master-data/use-commodity-groups";
-import { useApplicationBrandOptions } from "../../hooks/use-application-brand-options";
+import { useApplicationBrandOptions } from "../../../hooks/use-application-brand-options";
 import {
   createEmptyApplicationBrandQualityTest,
   type ApplicationBrandQualityTestEntryValues,
-  type ApplicationWizardValues,
-} from "../../schema";
+} from "../schema";
+import type { ApplicationWizardValues } from "../../../schema";
 
 type Props = {
   form: UseFormReturn<ApplicationWizardValues>;
@@ -124,7 +124,7 @@ export function StepQualityTest({ form }: Props) {
         <h2 className="text-lg font-bold">Hasil Uji Mutu</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Unggah dokumen hasil uji mutu untuk setiap merek yang digunakan pada permohonan ini.
-          Satu merek dapat memiliki lebih dari satu sertifikat uji mutu (per kelompok komoditas).
+          Satu merek dapat memiliki lebih dari satu sertifikat uji mutu (per sub kelompok komoditas).
         </p>
       </div>
 
@@ -178,7 +178,7 @@ export function StepQualityTest({ form }: Props) {
                           <div key={entryIndex} className="rounded-lg border border-border bg-muted/20 p-3.5">
                             <div className="flex items-start justify-between gap-3">
                               <div className="grid flex-1 gap-3 sm:grid-cols-2">
-                                <FormField label="Kelompok Komoditas" required>
+                                <FormField label="Sub Kelompok Komoditas" required>
                                   <SearchSelectInput
                                     value={entry.commodityGroupId}
                                     onChange={(value) => {
@@ -192,10 +192,10 @@ export function StepQualityTest({ form }: Props) {
                                     }}
                                     options={groupOptions}
                                     allowFreeText={false}
-                                    placeholder="Pilih kelompok komoditas"
+                                    placeholder="Pilih sub kelompok komoditas"
                                   />
                                 </FormField>
-                                <FormField label="Sub-Kelompok Komoditas" hint="Opsional, apabila tersedia.">
+                                <FormField label="Komoditas" hint="Opsional, apabila tersedia.">
                                   <SearchSelectInput
                                     value={entry.commoditySubGroupId ?? ""}
                                     onChange={(value) => {
@@ -209,7 +209,7 @@ export function StepQualityTest({ form }: Props) {
                                     }}
                                     options={subGroupOptionsFor(entry.commodityGroupId)}
                                     allowFreeText={false}
-                                    placeholder="Pilih sub-kelompok (opsional)"
+                                    placeholder="Pilih komoditas (opsional)"
                                   />
                                 </FormField>
                                 <FormField label="Nomor Sertifikat" required>

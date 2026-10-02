@@ -1,6 +1,6 @@
-import { getRequiredBrandDocuments } from "@/modules/merk/document-requirements";
 import type { BrandDocumentCategory } from "@/modules/merk/document-requirements";
 import type { MerkEvidenceType, MerkOwnerLocation } from "@/modules/merk/schema";
+import { getKonsumsiRelationshipDocuments } from "./document-rules";
 
 /**
  * VIU Barang Konsumsi — Step "Merek yang Digunakan" business rules.
@@ -10,18 +10,25 @@ import type { MerkEvidenceType, MerkOwnerLocation } from "@/modules/merk/schema"
  * enforcement) — see BR-003 in the Add Brand review, which deferred exactly
  * this linkage until "create application VIU Konsumsi" was built.
  *
- * Deliberately reuses `getRequiredBrandDocuments` from the Merk module
- * instead of re-deriving a parallel document list: a brand's legal
- * relationship (domestic/foreign owner, representation type, appointment
- * source) already produces the same "representation" /
- * "official_representative_legal" / "import_authorization" document
- * requirements the Add Brand wizard's own Step 4 shows — this module only
- * adds what's genuinely new for VIU: the 9-month registration-evidence rule,
- * the foreign-owner direct-appointment restriction, and translating this
- * application's own applicantRole/appointmentSource into the shape that
- * engine expects.
+ * Deliberately reuses Brand Master's document-requirement engine (via this
+ * module's own `document-rules.ts` adapter, never Merk's
+ * `document-requirements.ts` directly) instead of re-deriving a parallel
+ * document list: a brand's legal relationship (domestic/foreign owner,
+ * representation type, appointment source) already produces the same
+ * "representation" / "official_representative_legal" / "import_authorization"
+ * document requirements the Add Brand wizard's own Step 4 shows — this
+ * module only adds what's genuinely new for VIU: the 9-month
+ * registration-evidence rule, the foreign-owner direct-appointment
+ * restriction, and translating this application's own
+ * applicantRole/appointmentSource into the shape that engine expects.
  */
 
+// "OWNER" ("Pemohon VIU Konsumsi sebagai Pemilik Merek") is retained for
+// backward compatibility with already-stored drafts/applications and
+// existing parsing/UI that reference it. It is NOT being newly confirmed or
+// expanded as part of this module-separation refactor — any further
+// regulatory decision about this role is a separate product/compliance
+// discussion, out of scope here.
 export const APPLICANT_BRAND_ROLES = ["OFFICIAL_REPRESENTATIVE", "IMPORTER_ONLY", "OWNER"] as const;
 export type ApplicantBrandRole = (typeof APPLICANT_BRAND_ROLES)[number];
 export const APPLICANT_BRAND_ROLE_LABELS: Record<ApplicantBrandRole, string> = {
@@ -273,7 +280,7 @@ export function getVIUConsumptionBrandRequirements(
   );
   const { valid: relationshipValid, issue: relationshipIssue } = validateRelationship(input);
 
-  const baseRequirements = getRequiredBrandDocuments({
+  const baseRequirements = getKonsumsiRelationshipDocuments({
     evidenceType: input.evidenceType ?? undefined,
     ownerLocation: input.ownerLocation ?? undefined,
     ...toDocumentRequirementInput(input),

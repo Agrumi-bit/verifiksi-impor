@@ -9,7 +9,7 @@ import {
   type ApplicantBrandRole,
   type ImportAppointmentSource,
   type VIUBrandRequirementsResult,
-} from "../viu-brand-relationship-rules";
+} from "../business-rules";
 
 type BrandDetailResponse = {
   id: string;
@@ -41,11 +41,11 @@ export function useBrandApplicationDetail(
     applicantRole: ApplicantBrandRole | null;
     appointmentSource: ImportAppointmentSource | null;
     officialRepresentativeCompanyId: string | null;
-    /** This application's own uploaded proof (not a Brand Master document —
-     * see applicationBrandEntrySchema's own comment) that satisfies the
-     * "importer_appointment" requirement when appointmentSource is
-     * BRAND_OWNER. */
-    importerAppointmentDocumentPath?: string | null;
+    /** This application's own uploaded relationship documents, keyed by the
+     * same codes the rule engine produces (e.g. "importer_appointment",
+     * "official_rep_deed") — not Brand Master documents, see
+     * applicationBrandEntrySchema's own comment on why. */
+    relationshipDocuments?: Record<string, { filePath: string; fileName: string }>;
   },
 ) {
   const query = useQuery({
@@ -80,10 +80,7 @@ export function useBrandApplicationDetail(
       applicantRole: relationship.applicantRole,
       appointmentSource: relationship.appointmentSource,
       officialRepresentativeCompanyId: relationship.officialRepresentativeCompanyId ?? null,
-      availableDocumentCodes: new Set([
-        ...query.data.documents.map((d) => d.documentType),
-        ...(relationship.importerAppointmentDocumentPath ? ["importer_appointment"] : []),
-      ]),
+      availableDocumentCodes: new Set(Object.keys(relationship.relationshipDocuments ?? {})),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- ownerLocation/ownerTitle are derived from query.data, not independent inputs
   }, [
@@ -91,7 +88,7 @@ export function useBrandApplicationDetail(
     relationship.applicantRole,
     relationship.appointmentSource,
     relationship.officialRepresentativeCompanyId,
-    relationship.importerAppointmentDocumentPath,
+    relationship.relationshipDocuments,
   ]);
 
   return {

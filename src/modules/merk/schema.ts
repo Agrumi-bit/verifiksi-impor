@@ -106,7 +106,7 @@ export const merkBrandInfoSchema = merkBrandInfoBaseSchema.superRefine(validateE
 // stays in MerkOwnershipValues below (optional, unvalidated) purely so rows
 // written by the old wizard keep loading, but this wizard no longer asks
 // for or requires any of it — that relationship is now captured per VIU
-// Application instead (modules/applications/viu-brand-relationship-rules.ts).
+// Application instead (modules/applications/viu-schemes/konsumsi/business-rules.ts).
 //
 // Legacy note: this replaces the earlier brandOwnerId + importerRelation +
 // importers[] model (still on the Merk/MerkImporter tables, non-destructively
@@ -225,7 +225,7 @@ function issue(ctx: z.RefinementCtx, path: string | string[], message: string) {
 // officialRepresentativeCompanyId / agreementType) is no longer collected by
 // this wizard — that step was removed; the legal relationship between a
 // Brand and an applicant API-U is now captured per VIU Application instead
-// (see modules/applications/viu-brand-relationship-rules.ts), not at Brand
+// (see modules/applications/viu-schemes/konsumsi/business-rules.ts), not at Brand
 // registration time. The fields themselves stay in the schema (optional,
 // unvalidated) so existing rows written by the old wizard keep working and
 // nothing downstream (build-create-data.ts, document-requirements.ts) needs
@@ -405,7 +405,7 @@ export const MERK_STEP_FIELD_NAMES: Record<number, (keyof MerkWizardValues)[]> =
   // representationType/appointmentSource/officialRepresentativeCompanyId/
   // agreementType) and the standalone Dokumen Pendukung step were both
   // removed — that legal relationship is now captured per VIU Application
-  // instead (see modules/applications/viu-brand-relationship-rules.ts), and
+  // instead (see modules/applications/viu-schemes/konsumsi/business-rules.ts), and
   // Step 1's own upload card already covers the one document this wizard
   // still collects (trademark_evidence).
   2: [

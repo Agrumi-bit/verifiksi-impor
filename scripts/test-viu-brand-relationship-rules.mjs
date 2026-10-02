@@ -6,7 +6,7 @@
 //
 // Run with: npx tsx scripts/test-viu-brand-relationship-rules.mjs
 // Exits non-zero if any assertion fails.
-import { getVIUConsumptionBrandRequirements } from "../src/modules/applications/viu-brand-relationship-rules.ts";
+import { getVIUConsumptionBrandRequirements } from "../src/modules/applications/viu-schemes/konsumsi/business-rules.ts";
 
 let failed = false;
 
