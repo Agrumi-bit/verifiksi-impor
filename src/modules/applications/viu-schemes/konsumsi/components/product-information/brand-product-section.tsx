@@ -1,12 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Download, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { useActiveCountries } from "@/modules/master-data/use-active-countries";
+import { useHsCodeOptions } from "../../../../hooks/use-hs-code-options";
 import type { ApplicationWizardValues } from "../../../../schema";
-import { deriveKonsumsiProductGroups, konsumsiProductTotal } from "../../schema";
+import {
+  createEmptyKonsumsiProduct,
+  deriveKonsumsiProductGroups,
+  konsumsiProductTotal,
+  KONSUMSI_PRODUCT_CURRENCIES,
+  type ApplicationKonsumsiProductValues,
+} from "../../schema";
+import { downloadProductExcelTemplate, parseProductExcelFile } from "./product-excel";
 import { CommodityProductSection } from "./commodity-product-section";
 import { CurrencyTotals } from "./product-summary";
 
@@ -34,6 +44,10 @@ export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle,
   const qualityTests = useWatch({ control, name: "brandQualityTests" }) ?? [];
   const allProducts = useWatch({ control, name: "konsumsiProducts" }) ?? [];
   const [collapsed, setCollapsed] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const hsCodeOptions = useHsCodeOptions();
+  const { options: countryOptions } = useActiveCountries();
 
   const brandGroups = deriveKonsumsiProductGroups(qualityTests.filter((qt) => qt.brandId === brandId));
   const brandProducts = allProducts.filter((product) => product.brandId === brandId);
@@ -43,29 +57,156 @@ export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle,
     totalsByCurrency.set(product.currency, (totalsByCurrency.get(product.currency) ?? 0) + konsumsiProductTotal(product));
   }
 
+  function handleDownloadTemplate() {
+    downloadProductExcelTemplate(brandName, brandGroups.map((g) => g.commodityName ?? "").filter(Boolean));
+  }
+
+  async function handleImportFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setIsImporting(true);
+    try {
+      const { rows, skippedRows } = await parseProductExcelFile(file);
+      if (rows.length === 0) {
+        toast.error('Tidak ada baris valid ditemukan. Pastikan semua kolom wajib terisi.');
+        return;
+      }
+
+      const currentProducts = form.getValues("konsumsiProducts") ?? [];
+      const newProducts: ApplicationKonsumsiProductValues[] = [];
+      const errors: string[] = [];
+      let duplicateCount = 0;
+
+      rows.forEach((row, rowIndex) => {
+        const rowLabel = `Baris ${rowIndex + 2}`;
+        const group = brandGroups.find((g) => (g.commodityName ?? "").trim().toLowerCase() === row.commodityName.trim().toLowerCase());
+        if (!group) {
+          errors.push(`${rowLabel}: Sub Kelompok Komoditas "${row.commodityName}" tidak ditemukan untuk merek ini.`);
+          return;
+        }
+
+        const hsOption = hsCodeOptions.find((o) => o.value.trim().toLowerCase() === row.hsCode.trim().toLowerCase());
+        if (!hsOption) {
+          errors.push(`${rowLabel}: HS Code "${row.hsCode}" tidak ditemukan.`);
+          return;
+        }
+
+        const countryOption = countryOptions.find((o) => o.value.trim().toLowerCase() === row.countryOfOrigin.trim().toLowerCase());
+        if (!countryOption) {
+          errors.push(`${rowLabel}: Negara asal "${row.countryOfOrigin}" tidak ditemukan.`);
+          return;
+        }
+
+        const quantity = Number(row.quantity);
+        if (!Number.isFinite(quantity) || quantity <= 0) {
+          errors.push(`${rowLabel}: Jumlah tidak valid.`);
+          return;
+        }
+
+        const price = Number(row.averageUnitPrice);
+        if (!Number.isFinite(price) || price < 0) {
+          errors.push(`${rowLabel}: Harga satuan rata-rata tidak valid.`);
+          return;
+        }
+
+        if (!(KONSUMSI_PRODUCT_CURRENCIES as readonly string[]).includes(row.currency)) {
+          errors.push(`${rowLabel}: Mata uang "${row.currency}" tidak dikenali.`);
+          return;
+        }
+
+        const isDuplicate = [...currentProducts, ...newProducts].some(
+          (product) =>
+            product.brandId === brandId &&
+            product.commodityGroupId === group.commodityGroupId &&
+            product.hsCode.trim().toLowerCase() === hsOption.value.trim().toLowerCase() &&
+            product.countryOfOrigin.trim().toLowerCase() === countryOption.value.trim().toLowerCase() &&
+            product.productName.trim().toLowerCase() === row.productName.trim().toLowerCase(),
+        );
+        if (isDuplicate) {
+          duplicateCount += 1;
+          return;
+        }
+
+        newProducts.push({
+          ...createEmptyKonsumsiProduct(brandId, group),
+          productName: row.productName,
+          hsCode: hsOption.value,
+          hsDescription: hsOption.hint ?? "",
+          unit: hsOption.unit ?? "",
+          countryOfOrigin: countryOption.value,
+          countryOfOriginCode: countryOption.hint ?? "",
+          quantity: row.quantity,
+          averageUnitPrice: row.averageUnitPrice,
+          currency: row.currency as ApplicationKonsumsiProductValues["currency"],
+        });
+      });
+
+      if (newProducts.length > 0) {
+        form.setValue("konsumsiProducts", [...currentProducts, ...newProducts], { shouldDirty: true });
+      }
+
+      const notes: string[] = [];
+      if (duplicateCount > 0) notes.push(`${duplicateCount} duplikat dilewati`);
+      if (skippedRows > 0) notes.push(`${skippedRows} baris kosong dilewati`);
+      if (errors.length > 0) notes.push(`${errors.length} baris gagal: ${errors.slice(0, 3).join(" ")}${errors.length > 3 ? " ..." : ""}`);
+
+      if (newProducts.length > 0) {
+        toast.success(`${newProducts.length} produk berhasil diimpor.${notes.length > 0 ? " " + notes.join("; ") + "." : ""}`);
+      } else {
+        toast.error(`Tidak ada produk baru diimpor.${notes.length > 0 ? " " + notes.join("; ") + "." : ""}`);
+      }
+    } catch {
+      toast.error("Gagal membaca file Excel. Pastikan format file sesuai template.");
+    } finally {
+      setIsImporting(false);
+    }
+  }
+
   return (
     <section className="overflow-hidden rounded-xl border border-border">
-      <button
-        type="button"
-        onClick={() => setCollapsed((c) => !c)}
-        className="flex w-full flex-wrap items-center gap-3 p-4.5 text-left hover:bg-muted/30"
-        aria-expanded={!collapsed}
-      >
-        <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${collapsed ? "-rotate-90" : ""}`} />
-        <div className="flex-1">
-          <p className="text-sm font-bold">{brandName}</p>
-          {brandOwnerTitle && (
-            <p className="mt-0.5 text-xs text-muted-foreground">Pemilik Merek: {brandOwnerTitle}</p>
-          )}
-          <p className="mt-1 text-xs text-muted-foreground">
-            {brandGroups.length} Kelompok Komoditas &middot; {brandProducts.length} Produk
-          </p>
+      <div className="flex w-full flex-wrap items-center gap-3 p-4.5 hover:bg-muted/30">
+        <div
+          className="flex flex-1 cursor-pointer items-center gap-3"
+          role="button"
+          tabIndex={0}
+          onClick={() => setCollapsed((c) => !c)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") setCollapsed((c) => !c);
+          }}
+          aria-expanded={!collapsed}
+        >
+          <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+          <div>
+            <p className="text-sm font-bold">{brandName}</p>
+            {brandOwnerTitle && (
+              <p className="mt-0.5 text-xs text-muted-foreground">Pemilik Merek: {brandOwnerTitle}</p>
+            )}
+            <p className="mt-1 text-xs text-muted-foreground">
+              {brandGroups.length} Kelompok Komoditas &middot; {brandProducts.length} Produk
+            </p>
+          </div>
         </div>
+
+        {brandGroups.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={handleDownloadTemplate}>
+              <Download className="size-3.5" />
+              Template
+            </Button>
+            <Button type="button" variant="outline" size="sm" disabled={isImporting} onClick={() => fileInputRef.current?.click()}>
+              <Upload className="size-3.5" />
+              {isImporting ? "Mengimpor..." : "Impor Excel"}
+            </Button>
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportFile} />
+          </div>
+        )}
+
         <div className="text-right">
           <p className="text-xs text-muted-foreground">Total Nilai</p>
           <CurrencyTotals totals={totalsByCurrency} />
         </div>
-      </button>
+      </div>
 
       {!collapsed && (
         <div className="flex flex-col gap-3 border-t border-border p-4.5">
