@@ -16,7 +16,13 @@ import {
   type WarehouseRegistrationType,
 } from "@/modules/shared/schema";
 import { taxProofEntrySchema, COMPANY_AGES } from "@/modules/company/schema";
-import { brandsUsedSchema, brandQualityTestsSchema, konsumsiDocumentsSchema, konsumsiProductsSchema } from "./viu-schemes/konsumsi/schema";
+import {
+  brandsUsedSchema,
+  brandQualityTestsSchema,
+  konsumsiDocumentsSchema,
+  konsumsiFinancialDocumentsSchema,
+  konsumsiProductsSchema,
+} from "./viu-schemes/konsumsi/schema";
 import { applyKonsumsiSubmitRules } from "./viu-schemes/konsumsi/submit-rules";
 import { KONSUMSI_STEP_FIELD_NAMES } from "./viu-schemes/konsumsi/step-field-names";
 
@@ -139,92 +145,17 @@ export type PartnerIndustriEntryValues = z.infer<typeof partnerIndustriEntrySche
 // konsumsi module (see viu-schemes/konsumsi/schema.ts for ownership). New
 // code should do the same rather than reaching for these via schema.ts.
 
-export type NonIndustriDocPriority = "UTAMA" | "PENDUKUNG";
-
-export type NonIndustriSupportDocDef = {
-  key: string;
-  title: string;
-  /** What the document proves — shown as the field's hint. */
-  desc: string;
-  priority: NonIndustriDocPriority;
-};
-
-/** The only unconditionally required document in the Bukti Kemampuan Finansial section — a sworn
- * statement of working-capital ownership. Kept out of `NON_INDUSTRI_SUPPORT_DOC_DEFS` (the "pick
- * one evidence type" group below) since it's not a choice: every applicant uploads this one, full
- * stop, then additionally picks ONE supporting evidence document from the list. Still stored in
- * the same `nonIndustriDocuments` array (keyed by `MODAL_STATEMENT_LETTER_DOC_DEF.key`) so the
- * existing document-version tracking (`nonindustri-support:<key>`) and verifikator checklist both
- * keep working unchanged. */
-export const MODAL_STATEMENT_LETTER_DOC_DEF: NonIndustriSupportDocDef = {
-  key: "surat-pernyataan-modal-kerja",
-  title: "Surat Pernyataan Kepemilikan Modal Kerja",
-  desc: "Pernyataan bermaterai bahwa perusahaan memiliki modal kerja yang cukup untuk membiayai kegiatan impor.",
-  priority: "UTAMA",
-};
-
-/**
- * "Pick one" evidence-of-financial-capability checklist for "Impor Bahan Baku – Perusahaan Non
- * Industri (API-U)" and Barang Konsumsi — supplementary to `MODAL_STATEMENT_LETTER_DOC_DEF`
- * (always required). All PENDUKUNG: the applicant selects exactly one type of evidence and
- * uploads it, rather than needing every item on this list.
- */
-export const NON_INDUSTRI_SUPPORT_DOC_DEFS: NonIndustriSupportDocDef[] = [
-  {
-    key: "rekening-koran",
-    title: "Rekening Koran Perusahaan (3–6 Bulan Terakhir)",
-    desc: "Saldo, arus kas, dan aktivitas keuangan aktual perusahaan.",
-    priority: "PENDUKUNG",
-  },
-  {
-    key: "surat-referensi-bank",
-    title: "Surat Referensi Bank",
-    desc: "Hubungan perbankan dan keberadaan rekening perusahaan.",
-    priority: "PENDUKUNG",
-  },
-  {
-    key: "laporan-keuangan",
-    title: "Laporan Keuangan Terakhir",
-    desc: "Kas, aset lancar, kewajiban lancar, modal dan kondisi keuangan.",
-    priority: "PENDUKUNG",
-  },
-  {
-    key: "fasilitas-kredit",
-    title: "Bukti Fasilitas Kredit / Credit Line dari Bank",
-    desc: "Kemampuan memperoleh pembiayaan untuk transaksi impor.",
-    priority: "PENDUKUNG",
-  },
-  {
-    key: "keterangan-saldo",
-    title: "Surat Keterangan Saldo / Bank Statement",
-    desc: "Posisi dana pada tanggal tertentu.",
-    priority: "PENDUKUNG",
-  },
-  {
-    key: "deposito",
-    title: "Bukti Deposito atau Instrumen Likuid Perusahaan",
-    desc: "Tambahan sumber dana yang dapat digunakan.",
-    priority: "PENDUKUNG",
-  },
-  {
-    key: "pinjaman-afiliasi",
-    title: "Perjanjian Pinjaman Pemegang Saham/Afiliasi",
-    desc: "Sumber pembiayaan tambahan, jika memang ada dan sah.",
-    priority: "PENDUKUNG",
-  },
-  {
-    key: "kontrak-po",
-    title: "Kontrak/PO dengan Perusahaan Industri",
-    desc: "Dasar komersial kebutuhan pembelian/importasi.",
-    priority: "PENDUKUNG",
-  },
-  {
-    key: "proforma-invoice",
-    title: "Proforma Invoice/Quotation Supplier Luar Negeri",
-    desc: "Estimasi nilai pembelian barang yang akan dibiayai.",
-    priority: "PENDUKUNG",
-  },
-];
+// The document catalog (labels/descriptions) lives in financial-capability-defs.ts — a leaf
+// module with no dependency on this file or konsumsi/schema.ts, so both can import the catalog
+// without a cycle. `nonIndustriDocuments` below is this type's array field for Bahan Baku
+// Industri/Non Industri specifically; Barang Konsumsi has its own separate array
+// (`konsumsiFinancialDocuments`, see viu-schemes/konsumsi/schema.ts) built from the same catalog
+// — same regulatory requirement, same document types, but never the same storage, so an
+// Industri/Non-Industri application's financial-capability data can never leak into or be
+// overwritten by a Konsumsi one, even within one mixed application.
+export type { FinancialDocPriority as NonIndustriDocPriority, FinancialDocDef as NonIndustriSupportDocDef } from "./financial-capability-defs";
+export { MODAL_STATEMENT_LETTER_DOC_DEF, NON_INDUSTRI_SUPPORT_DOC_DEFS } from "./financial-capability-defs";
+import { MODAL_STATEMENT_LETTER_DOC_DEF, NON_INDUSTRI_SUPPORT_DOC_DEFS } from "./financial-capability-defs";
 
 /** `enabled` is a per-document on/off toggle — not every applicant has every one of these
  * (e.g. a shareholder loan only "jika memang ada dan sah"), so the upload field only appears
@@ -262,7 +193,8 @@ export const importSupportDocumentsSchema = z.object({
 export const documentsSchema = companyLegalExtraSchema
   .extend(taxSupportDocumentsSchema.shape)
   .extend(importSupportDocumentsSchema.shape)
-  .extend(konsumsiDocumentsSchema.shape);
+  .extend(konsumsiDocumentsSchema.shape)
+  .extend(konsumsiFinancialDocumentsSchema.shape);
 
 export const productItemSchema = z.object({
   id: z.string(),
@@ -545,16 +477,13 @@ export function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardSh
       message: "Tambahkan minimal satu produk",
     });
   }
-  if (
-    data.importTypes.includes("BAHAN_BAKU_INDUSTRI") ||
-    data.importTypes.includes("BAHAN_BAKU_NON_INDUSTRI") ||
-    data.importTypes.includes("BARANG_KONSUMSI")
-  ) {
+  if (data.importTypes.includes("BAHAN_BAKU_INDUSTRI") || data.importTypes.includes("BAHAN_BAKU_NON_INDUSTRI")) {
     // Only the Surat Pernyataan Kepemilikan Modal Kerja is unconditionally required — the rest of
     // NON_INDUSTRI_SUPPORT_DOC_DEFS is a "pick one" supplementary evidence list the applicant may
-    // optionally fill in (see Step5SupportDocument's own NonIndustriChecklist). Applies to Barang
-    // Konsumsi too now (see `needsModalDocs`) — Bukti Kemampuan Finansial is required regardless of
-    // which Jenis Impor is selected.
+    // optionally fill in (see Step5SupportDocument's own NonIndustriChecklist). Barang Konsumsi has
+    // its OWN separate check against `konsumsiFinancialDocuments` in applyKonsumsiSubmitRules — not
+    // this one — so an Industri/Non-Industri application's financial-capability data is never
+    // shared with a Konsumsi one, even in a mixed application.
     const statementEntry = data.nonIndustriDocuments.find((doc) => doc.key === MODAL_STATEMENT_LETTER_DOC_DEF.key);
     if (!statementEntry?.enabled || !statementEntry.documentPath) {
       ctx.addIssue({
@@ -572,7 +501,8 @@ export function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardSh
   }
   // Konsumsi rules live in viu-schemes/konsumsi/submit-rules.ts — this
   // shared function only decides *whether* they run, never *what* they
-  // check (see that module's own docstring for the regulatory detail).
+  // check (see that module's own docstring for the regulatory detail). Includes its own
+  // Bukti Kemampuan Finansial check against `konsumsiFinancialDocuments`.
   if (data.importTypes.includes("BARANG_KONSUMSI")) {
     applyKonsumsiSubmitRules(data, ctx);
   }
@@ -764,7 +694,7 @@ export const VIU_STEP_FIELD_NAMES: Record<string, (keyof ApplicationWizardValues
   tax: TAX_STEP_FIELDS,
   location: LOCATION_STEP_FIELDS,
   "partner-industri": ["partnerIndustriEntries"],
-  "support-document": ["nonIndustriDocuments", "konsumsiDocuments"],
+  "support-document": ["nonIndustriDocuments", "konsumsiDocuments", "konsumsiFinancialDocuments"],
   // Konsumsi's own product structure (see KonsumsiProductInformation) is additive here, not
   // owned by KONSUMSI_STEP_FIELD_NAMES below — "product-info" itself is a shared step, not one
   // Konsumsi contributes to the step list, so it can't be spread in from that Konsumsi-owned map.

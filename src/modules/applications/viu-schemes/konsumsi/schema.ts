@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { qualityTestEntrySchema } from "@/modules/merk/schema";
+import { MODAL_STATEMENT_LETTER_DOC_DEF, NON_INDUSTRI_SUPPORT_DOC_DEFS } from "../../financial-capability-defs";
 import { APPLICANT_BRAND_ROLES, IMPORT_APPOINTMENT_SOURCES } from "./business-rules";
 
 const requiredString = (message: string) => z.string().trim().min(1, message);
@@ -147,6 +148,30 @@ const konsumsiSupportDocumentSchema = z.object({
 
 export const konsumsiDocumentsSchema = z.object({
   konsumsiDocuments: z.array(konsumsiSupportDocumentSchema),
+});
+
+/**
+ * "Bukti Kemampuan Finansial" — Konsumsi's OWN Surat Pernyataan Kepemilikan Modal Kerja + "pick
+ * one" supporting-evidence entry, isolated from Bahan Baku Industri/Non Industri's
+ * `nonIndustriDocuments` (applications/schema.ts). Same catalog (financial-capability-defs.ts),
+ * same regulatory requirement, but a fully separate array — so a mixed Industri+Konsumsi
+ * application never shares one Jumlah Modal Kerja/evidence doc between the two Jenis Impor; each
+ * fills in and submits its own.
+ */
+export const konsumsiFinancialDocumentSchema = z.object({
+  key: z.string(),
+  enabled: z.boolean(),
+  documentPath: z.string().trim().optional(),
+  amount: z.string().trim().optional(),
+});
+export type KonsumsiFinancialDocumentValues = z.infer<typeof konsumsiFinancialDocumentSchema>;
+
+export function createEmptyKonsumsiFinancialDocuments(): KonsumsiFinancialDocumentValues[] {
+  return [MODAL_STATEMENT_LETTER_DOC_DEF, ...NON_INDUSTRI_SUPPORT_DOC_DEFS].map((def) => ({ key: def.key, enabled: false }));
+}
+
+export const konsumsiFinancialDocumentsSchema = z.object({
+  konsumsiFinancialDocuments: z.array(konsumsiFinancialDocumentSchema).default([]),
 });
 
 /**

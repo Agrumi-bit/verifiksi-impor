@@ -258,7 +258,13 @@ export function getComplianceDef(key: string): DocumentComplianceDef | undefined
   // Partner Industri keys are dynamic per partnerId (`partner:{partnerId}:nib`) — same
   // suffix-match idea as the per-location lookup above.
   const partnerMatch = key.match(/^partner:[^:]+:(nib|npwp|sk|lhvki)$/);
-  return partnerMatch ? DOCUMENT_COMPLIANCE_DEFS[`partner:${partnerMatch[1]}`] : undefined;
+  if (partnerMatch) return DOCUMENT_COMPLIANCE_DEFS[`partner:${partnerMatch[1]}`];
+  // Konsumsi's own Bukti Kemampuan Finansial checklist (`konsumsi-financial:<key>`) is a separate
+  // array from Industri/Non-Industri's (`nonindustri-support:<key>`), but the exact same
+  // regulatory requirement and document catalog — reuse the same compliance text instead of
+  // duplicating it.
+  const konsumsiFinancialMatch = key.match(/^konsumsi-financial:(.+)$/);
+  return konsumsiFinancialMatch ? DOCUMENT_COMPLIANCE_DEFS[`nonindustri-support:${konsumsiFinancialMatch[1]}`] : undefined;
 }
 
 export const COMPLIANCE_SECTION_DEFS = [
@@ -327,6 +333,19 @@ export const COMPLIANCE_SECTION_DEFS = [
     // VIU-only — a VKI application never has these checklist items (buildDocumentChecklist only
     // pushes them for non-VKI applications), so without this flag the section rendered as an
     // empty, VIU-worded card on every VKI application.
+    vkiOnly: false,
+    viuOnly: true,
+  },
+  {
+    category: "Bukti Kemampuan Finansial — Konsumsi",
+    title: "Pemeriksaan Administratif Bukti Kemampuan Finansial",
+    desc: "Dasar hukum dan klasifikasi dokumen bukti kemampuan finansial VIU Barang Konsumsi yang diperiksa",
+    intro: [
+      "Pemeriksaan administratif bukti kemampuan finansial dilaksanakan untuk memastikan bahwa perusahaan memiliki kemampuan keuangan yang memadai dalam membiayai kegiatan importasi barang konsumsi, sebagai bagian dari persyaratan pengajuan Verifikasi Importir Umum (VIU) Barang Konsumsi.",
+      "Pemeriksaan dilakukan melalui verifikasi terhadap dokumen keuangan wajib (rekening koran, surat referensi bank, laporan keuangan, dan bukti fasilitas kredit) serta dokumen pendukung tambahan yang diserahkan perusahaan apabila tersedia.",
+    ],
+    // VIU Barang Konsumsi only — buildDocumentChecklist only pushes these items when
+    // importTypes includes BARANG_KONSUMSI (see that function's own gate).
     vkiOnly: false,
     viuOnly: true,
   },

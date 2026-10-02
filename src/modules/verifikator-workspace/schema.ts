@@ -361,6 +361,22 @@ export function buildDocumentChecklist(
         documentPath: entry?.documentPath || null,
       });
     }
+    // Barang Konsumsi's OWN Bukti Kemampuan Finansial — a separate `konsumsiFinancialDocuments`
+    // array (see konsumsi/schema.ts), own key prefix and category, so a mixed Industri+Konsumsi
+    // application shows two independent checklists instead of one shared one. Gated on Barang
+    // Konsumsi actually being selected (unlike the loop above) so an Industri/Non-Industri-only
+    // application doesn't get an irrelevant, always-empty checklist category.
+    if (payload.importTypes?.includes("BARANG_KONSUMSI")) {
+      for (const def of [MODAL_STATEMENT_LETTER_DOC_DEF, ...NON_INDUSTRI_SUPPORT_DOC_DEFS]) {
+        const entry = (payload.konsumsiFinancialDocuments ?? []).find((d) => d.key === def.key);
+        items.push({
+          key: `konsumsi-financial:${def.key}`,
+          label: `${def.title} (${def.priority === "UTAMA" ? "Utama" : "Pendukung"})`,
+          category: "Bukti Kemampuan Finansial — Konsumsi",
+          documentPath: entry?.documentPath || null,
+        });
+      }
+    }
     for (const doc of payload.konsumsiDocuments ?? []) {
       items.push({
         key: `support:${doc.id}`,

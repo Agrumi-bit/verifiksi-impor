@@ -145,6 +145,7 @@ function runSubmitRules(data) {
       importTypes: [],
       partnerIndustriEntries: [],
       nonIndustriDocuments: [],
+      konsumsiFinancialDocuments: [],
       konsumsiDocuments: [],
       applicationBrands: [],
       brandQualityTests: [],
@@ -162,7 +163,7 @@ const baseKonsumsi = {
   konsumsiDocuments: [{ id: "1", label: "x", documentPath: "x" }],
   applicationBrands: [{ brandId: "b1", applicantRole: "OWNER", relationshipDocuments: {} }],
   brandQualityTests: [{ brandId: "b1", industryGroupId: "ig1", commodityGroupId: "cg1" }],
-  nonIndustriDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, documentPath: "x.pdf", amount: "1000000" }],
+  konsumsiFinancialDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, documentPath: "x.pdf", amount: "1000000" }],
 };
 
 assert(
@@ -248,6 +249,7 @@ assert(
     ...baseKonsumsi,
     importTypes: ["BAHAN_BAKU_INDUSTRI", "BARANG_KONSUMSI"],
     partnerIndustriEntries: [{ partnerId: "p1", enabled: true }],
+    nonIndustriDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, documentPath: "x.pdf", amount: "1000000" }],
     products: [{ id: "prod1", materialType: "Benang Katun", hsCode: "52053100" }],
     konsumsiProducts: [validProduct()],
   }).length === 0,

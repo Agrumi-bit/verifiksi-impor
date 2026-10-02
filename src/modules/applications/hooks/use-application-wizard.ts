@@ -14,6 +14,7 @@ import {
   VKI_SUPPORT_DOC_DEFS,
   type ApplicationWizardValues,
 } from "../schema";
+import { createEmptyKonsumsiFinancialDocuments } from "../viu-schemes/konsumsi/schema";
 import { getViuWizardSteps, VKI_WIZARD_STEPS } from "../wizard-steps-meta";
 
 export function useApplicationWizard() {
@@ -39,6 +40,7 @@ export function useApplicationWizard() {
       partnerIndustriEntries: [],
       nonIndustriDocuments: createEmptyNonIndustriDocuments(),
       konsumsiDocuments: [],
+      konsumsiFinancialDocuments: createEmptyKonsumsiFinancialDocuments(),
       products: [createEmptyProduct()],
       vkiSupportDocs: VKI_SUPPORT_DOC_DEFS.map((def) => ({ key: def.key })),
       electricityMonths: [],

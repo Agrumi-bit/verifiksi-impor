@@ -1,6 +1,7 @@
 import type { z } from "zod";
 
 import type { ApplicationWizardValues } from "../../schema";
+import { MODAL_STATEMENT_LETTER_DOC_DEF } from "../../financial-capability-defs";
 
 /**
  * Every cross-field submit-time rule exclusive to VIU Barang Konsumsi
@@ -24,6 +25,24 @@ import type { ApplicationWizardValues } from "../../schema";
  * with a real DB read and blocks submit there instead.
  */
 export function applyKonsumsiSubmitRules(data: ApplicationWizardValues, ctx: z.RefinementCtx): void {
+  // Bukti Kemampuan Finansial — Konsumsi's OWN `konsumsiFinancialDocuments`, isolated from Bahan
+  // Baku Industri/Non Industri's `nonIndustriDocuments` check in the shared
+  // `applyViuOnlySubmitRules` (applications/schema.ts). Same requirement, separate data.
+  const statementEntry = data.konsumsiFinancialDocuments.find((doc) => doc.key === MODAL_STATEMENT_LETTER_DOC_DEF.key);
+  if (!statementEntry?.enabled || !statementEntry.documentPath) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["konsumsiFinancialDocuments"],
+      message: "Unggah Surat Pernyataan Kepemilikan Modal Kerja",
+    });
+  } else if (!statementEntry.amount?.trim()) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["konsumsiFinancialDocuments"],
+      message: "Isi jumlah modal kerja pada Surat Pernyataan Kepemilikan Modal Kerja",
+    });
+  }
+
   if (data.konsumsiDocuments.length < 1) {
     ctx.addIssue({
       code: "custom",

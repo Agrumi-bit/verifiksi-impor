@@ -97,18 +97,26 @@ function DocumentListSection({
  * required (no toggle — always shown, direct upload). Below it, the applicant picks exactly ONE
  * type of supporting evidence from `NON_INDUSTRI_SUPPORT_DOC_DEFS` via a dropdown, then uploads
  * that one document — not a multi-toggle checklist, since only one piece of evidence is needed.
- * Both pieces are stored in the same `nonIndustriDocuments` array (bound by `key`, not array
- * index, since resumed drafts may have a differently-ordered array) so existing document-version
- * tracking (`nonindustri-support:<key>`) keeps working unchanged.
+ * `fieldName` picks which array this instance reads/writes — `nonIndustriDocuments` for Bahan Baku
+ * Industri/Non Industri, `konsumsiFinancialDocuments` for Barang Konsumsi — two fully separate
+ * arrays (same catalog, never shared storage) so a mixed Industri+Konsumsi application gets two
+ * independent checklists, each with its own Jumlah Modal Kerja and evidence document. Entries are
+ * bound by `key`, not array index, since resumed drafts may have a differently-ordered array.
  */
-function NonIndustriChecklist({ form }: { form: UseFormReturn<ApplicationWizardValues> }) {
+function NonIndustriChecklist({
+  form,
+  fieldName,
+}: {
+  form: UseFormReturn<ApplicationWizardValues>;
+  fieldName: "nonIndustriDocuments" | "konsumsiFinancialDocuments";
+}) {
   const { control, formState } = form;
-  const arrayError = formState.errors.nonIndustriDocuments;
+  const arrayError = formState.errors[fieldName];
 
   return (
     <Controller
       control={control}
-      name="nonIndustriDocuments"
+      name={fieldName}
       render={({ field }) => {
         const entries = (field.value as NonIndustriDocumentValues[] | undefined) ?? [];
 
@@ -227,11 +235,13 @@ export function Step5SupportDocument({ form }: Step5Props) {
   const hasNonIndustri = importTypes.includes("BAHAN_BAKU_NON_INDUSTRI");
   const hasKonsumsi = importTypes.includes("BARANG_KONSUMSI");
   // Bukti kemampuan finansial ("modal") applies to Bahan Baku Industri, Non Industri, AND Barang
-  // Konsumsi — all three are importing goods on credit/trade financing and need to prove they can
-  // fund it, so they share the same checklist instead of duplicating it under separate headings.
-  const needsModalDocs = hasIndustri || hasNonIndustri || hasKonsumsi;
+  // Konsumsi — same regulatory requirement for all three, so they share the same checklist
+  // CONTENT (catalog), but each gets its own independent checklist INSTANCE/storage below —
+  // `nonIndustriDocuments` for Industri/Non-Industri, `konsumsiFinancialDocuments` for Konsumsi —
+  // so a mixed application never couples one scheme's Jumlah Modal Kerja/evidence doc with another's.
+  const needsIndustriModalDocs = hasIndustri || hasNonIndustri;
 
-  if (!needsModalDocs) {
+  if (!needsIndustriModalDocs && !hasKonsumsi) {
     return (
       <p className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
         Tidak ada Jenis Impor yang dipilih di Step 2, sehingga tidak ada
@@ -247,12 +257,21 @@ export function Step5SupportDocument({ form }: Step5Props) {
         yang Anda pilih di Step 2.
       </p>
 
-      {needsModalDocs && (
+      {needsIndustriModalDocs && (
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Dokumen Modal — Bukti Kemampuan Finansial
           </h2>
-          <NonIndustriChecklist form={form} />
+          <NonIndustriChecklist form={form} fieldName="nonIndustriDocuments" />
+        </section>
+      )}
+
+      {hasKonsumsi && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            VIU Konsumsi — Bukti Kemampuan Finansial
+          </h2>
+          <NonIndustriChecklist form={form} fieldName="konsumsiFinancialDocuments" />
         </section>
       )}
 

@@ -111,6 +111,7 @@ function runSubmitRules(data) {
       importTypes: [],
       partnerIndustriEntries: [],
       nonIndustriDocuments: [],
+      konsumsiFinancialDocuments: [],
       konsumsiDocuments: [],
       applicationBrands: [],
       brandQualityTests: [],
@@ -143,11 +144,11 @@ assert(
   JSON.stringify(
     runSubmitRules({
       importTypes: ["BARANG_KONSUMSI"],
-      // Bukti Kemampuan Finansial now applies to Konsumsi too (Step5SupportDocument's
-      // `needsModalDocs`) — satisfied here since this case is testing the Konsumsi-specific
-      // issues below, not this shared check. Only the statement letter is unconditionally
-      // required; the "pick one evidence" document is optional.
-      nonIndustriDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, documentPath: "x.pdf", amount: "500000000" }],
+      // Bukti Kemampuan Finansial is Konsumsi's OWN separate check (applyKonsumsiSubmitRules,
+      // against konsumsiFinancialDocuments — never nonIndustriDocuments) — satisfied here since
+      // this case is testing the Konsumsi-specific issues below, not this check. Only the
+      // statement letter is unconditionally required; the "pick one evidence" document is optional.
+      konsumsiFinancialDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, documentPath: "x.pdf", amount: "500000000" }],
       konsumsiDocuments: [{ id: "1", label: "x", documentPath: "x" }],
       applicationBrands: [{ brandId: "b1", applicantRole: "IMPORTER_ONLY", relationshipDocuments: {} }],
     }),
@@ -163,10 +164,10 @@ assert(
   JSON.stringify(runSubmitRules({ importTypes: ["BARANG_KONSUMSI"] })) === JSON.stringify([
     "applicationBrands: Pilih atau tambahkan minimal satu merek yang digunakan",
     "konsumsiDocuments: Tambahkan minimal satu dokumen pendukung",
+    "konsumsiFinancialDocuments: Unggah Surat Pernyataan Kepemilikan Modal Kerja",
     "konsumsiProducts: Tambahkan minimal satu produk",
-    "nonIndustriDocuments: Unggah Surat Pernyataan Kepemilikan Modal Kerja",
   ]),
-  "Konsumsi alone, nothing filled -> Bukti Kemampuan Finansial is now required too",
+  "Konsumsi alone, nothing filled -> Bukti Kemampuan Finansial (konsumsiFinancialDocuments, its own field) is required too",
 );
 
 assert(
@@ -178,7 +179,7 @@ assert(
   JSON.stringify(
     runSubmitRules({
       importTypes: ["BARANG_KONSUMSI"],
-      nonIndustriDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, documentPath: "x.pdf" }],
+      konsumsiFinancialDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, documentPath: "x.pdf" }],
       konsumsiDocuments: [{ id: "1", label: "x", documentPath: "x" }],
       applicationBrands: [{ brandId: "b1", applicantRole: "OWNER", relationshipDocuments: {} }],
       brandQualityTests: [{ brandId: "b1" }],
@@ -196,8 +197,8 @@ assert(
         },
       ],
     }),
-  ) === JSON.stringify(["nonIndustriDocuments: Isi jumlah modal kerja pada Surat Pernyataan Kepemilikan Modal Kerja"]),
-  "Statement letter uploaded but amount empty -> amount-specific issue fires",
+  ) === JSON.stringify(["konsumsiFinancialDocuments: Isi jumlah modal kerja pada Surat Pernyataan Kepemilikan Modal Kerja"]),
+  "Statement letter uploaded but amount empty -> amount-specific issue fires (on konsumsiFinancialDocuments, not nonIndustriDocuments)",
 );
 
 assert(
@@ -206,6 +207,7 @@ assert(
       importTypes: ["BAHAN_BAKU_INDUSTRI", "BARANG_KONSUMSI"],
       partnerIndustriEntries: [{ partnerId: "p1", enabled: true }],
       nonIndustriDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, documentPath: "x.pdf", amount: "500000000" }],
+      konsumsiFinancialDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, documentPath: "y.pdf", amount: "250000000" }],
       konsumsiDocuments: [{ id: "1", label: "x", documentPath: "x" }],
       applicationBrands: [{ brandId: "b1", applicantRole: "OWNER", relationshipDocuments: {} }],
       brandQualityTests: [{ brandId: "b1" }],
@@ -228,6 +230,30 @@ assert(
     }),
   ) === JSON.stringify([]),
   "Mixed Industri+Konsumsi, everything satisfied -> clean (no cross-talk between the two rule sets)",
+);
+
+// Isolation proof: on a mixed application, satisfying Industri's `nonIndustriDocuments` must
+// NEVER also satisfy Konsumsi's own `konsumsiFinancialDocuments` check, and vice versa — each
+// scheme's Bukti Kemampuan Finansial is genuinely separate data, not a shared field read twice.
+assert(
+  runSubmitRules({
+    importTypes: ["BAHAN_BAKU_INDUSTRI", "BARANG_KONSUMSI"],
+    partnerIndustriEntries: [{ partnerId: "p1", enabled: true }],
+    nonIndustriDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, documentPath: "x.pdf", amount: "500000000" }],
+    konsumsiFinancialDocuments: [],
+    products: [{ id: "prod1", materialType: "Benang Katun", hsCode: "52053100" }],
+  }).includes("konsumsiFinancialDocuments: Unggah Surat Pernyataan Kepemilikan Modal Kerja"),
+  "Mixed: Industri's nonIndustriDocuments satisfied does NOT satisfy Konsumsi's own konsumsiFinancialDocuments check",
+);
+assert(
+  runSubmitRules({
+    importTypes: ["BAHAN_BAKU_INDUSTRI", "BARANG_KONSUMSI"],
+    partnerIndustriEntries: [{ partnerId: "p1", enabled: true }],
+    nonIndustriDocuments: [],
+    konsumsiFinancialDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, documentPath: "y.pdf", amount: "250000000" }],
+    products: [{ id: "prod1", materialType: "Benang Katun", hsCode: "52053100" }],
+  }).includes("nonIndustriDocuments: Unggah Surat Pernyataan Kepemilikan Modal Kerja"),
+  "Mixed: Konsumsi's konsumsiFinancialDocuments satisfied does NOT satisfy Industri's own nonIndustriDocuments check",
 );
 
 console.log(failed ? "\nFAILED" : "\nAll scheme-separation checks passed.");

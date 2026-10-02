@@ -7,14 +7,14 @@ import {
   IMPORT_APPOINTMENT_SOURCE_LABELS,
   BRAND_APPLICATION_READINESS_LABELS,
 } from "../business-rules";
-import { konsumsiProductTotal, type ApplicationKonsumsiProductValues } from "../schema";
-import { terbilangRupiah } from "@/lib/terbilang";
 import {
-  MODAL_STATEMENT_LETTER_DOC_DEF,
-  NON_INDUSTRI_SUPPORT_DOC_DEFS,
-  type ApplicationWizardValues,
-  type NonIndustriDocumentValues,
-} from "../../../schema";
+  konsumsiProductTotal,
+  type ApplicationKonsumsiProductValues,
+  type KonsumsiFinancialDocumentValues,
+} from "../schema";
+import { terbilangRupiah } from "@/lib/terbilang";
+import { MODAL_STATEMENT_LETTER_DOC_DEF, NON_INDUSTRI_SUPPORT_DOC_DEFS } from "../../../financial-capability-defs";
+import type { ApplicationWizardValues } from "../../../schema";
 
 function formatMoney(value: number): string {
   return value.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -84,7 +84,7 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
     payload.brandQualityTests.length === 0 &&
     payload.konsumsiDocuments.length === 0 &&
     payload.konsumsiProducts.length === 0 &&
-    (payload.nonIndustriDocuments ?? []).every((doc) => !doc.enabled && !doc.documentPath && !doc.amount)
+    (payload.konsumsiFinancialDocuments ?? []).every((doc) => !doc.enabled && !doc.documentPath && !doc.amount)
   ) {
     return null;
   }
@@ -221,7 +221,7 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
 
       <Section title="VIU Konsumsi — Bukti Kemampuan Finansial">
         <div className="flex flex-col gap-4">
-          <FinancialCapabilitySummary documents={payload.nonIndustriDocuments ?? []} />
+          <FinancialCapabilitySummary documents={payload.konsumsiFinancialDocuments ?? []} />
 
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -320,7 +320,7 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
  * see Step5SupportDocument's `needsModalDocs`) — Surat Pernyataan Kepemilikan Modal Kerja
  * (always required, carries the Jumlah Modal Kerja amount + its terbilang) plus whichever single
  * evidence document (from NON_INDUSTRI_SUPPORT_DOC_DEFS) the applicant picked. */
-function FinancialCapabilitySummary({ documents }: { documents: NonIndustriDocumentValues[] }) {
+function FinancialCapabilitySummary({ documents }: { documents: KonsumsiFinancialDocumentValues[] }) {
   const statementEntry = documents.find((doc) => doc.key === MODAL_STATEMENT_LETTER_DOC_DEF.key);
   const evidenceEntry = documents.find((doc) => doc.enabled && doc.key !== MODAL_STATEMENT_LETTER_DOC_DEF.key);
   const evidenceDef = evidenceEntry ? NON_INDUSTRI_SUPPORT_DOC_DEFS.find((def) => def.key === evidenceEntry.key) : undefined;

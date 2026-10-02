@@ -14,6 +14,7 @@ import {
   TENAGA_KERJA_DOCUMENTS,
   SURAT_PERNYATAAN_DOCUMENTS,
   MODAL_FINANSIAL_DOCUMENTS,
+  KONSUMSI_MODAL_FINANSIAL_DOCUMENTS,
   buildLocationDocuments,
   buildElectricityDocuments,
   buildPartnerIndustriDocuments,
@@ -1029,7 +1030,13 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   // for this application. Unlike every other category, where NOT_APPLICABLE still prints with a
   // "Tidak Berlaku" conclusion, a Dokumen Pendukung item marked this way is dropped from the
   // report entirely — narrative page, compliance table, and every count below.
-  const documents = data.documents.filter((d) => !(d.category === "Dokumen Pendukung" && d.status === "NOT_APPLICABLE"));
+  const documents = data.documents.filter(
+    (d) =>
+      !(
+        (d.category === "Dokumen Pendukung" || d.category === "Bukti Kemampuan Finansial — Konsumsi") &&
+        d.status === "NOT_APPLICABLE"
+      ),
+  );
   const documentStatuses = Object.fromEntries(documents.map((d) => [d.key, d.status]));
   const ctx: NarrativeContext = {
     payload: data.payload,
@@ -1065,9 +1072,11 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
     else if (category === "Tenaga Kerja") categoryDocsMap[category] = TENAGA_KERJA_DOCUMENTS.filter((d) => realKeys.has(d.key));
     else if (category === "Dokumen Lokasi") categoryDocsMap[category] = buildLocationDocuments(ctx);
     else if (category === "Dokumen Pendukung VKI") categoryDocsMap[category] = buildElectricityDocuments(ctx);
-    // VIU's "Bukti Kemampuan Finansial" checklist (shared between Bahan Baku Industri and
-    // Bahan Baku Non Industri) and VIU-industri's "Partner Industri" checklist.
+    // VIU's "Bukti Kemampuan Finansial" checklist for Bahan Baku Industri/Non Industri
+    // ("Dokumen Pendukung"), Barang Konsumsi's own separate one, and VIU-industri's
+    // "Partner Industri" checklist — three independent categories, never sharing data.
     else if (category === "Dokumen Pendukung") categoryDocsMap[category] = MODAL_FINANSIAL_DOCUMENTS.filter((d) => realKeys.has(d.key));
+    else if (category === "Bukti Kemampuan Finansial — Konsumsi") categoryDocsMap[category] = KONSUMSI_MODAL_FINANSIAL_DOCUMENTS.filter((d) => realKeys.has(d.key));
     else if (category === "Dokumen Partner Industri") categoryDocsMap[category] = buildPartnerIndustriDocuments(ctx);
     else categoryDocsMap[category] = [];
   }

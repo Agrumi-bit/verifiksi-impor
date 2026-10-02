@@ -132,6 +132,21 @@ export function applyChecklistDocumentPath(
     };
   }
 
+  // Barang Konsumsi's own, separate Bukti Kemampuan Finansial array — mirrors the
+  // nonindustri-support handling above but never shares storage with it.
+  const konsumsiFinancialMatch = key.match(/^konsumsi-financial:(.+)$/);
+  if (konsumsiFinancialMatch) {
+    const [, defKey] = konsumsiFinancialMatch;
+    const existing = payload.konsumsiFinancialDocuments ?? [];
+    const found = existing.some((entry) => entry.key === defKey);
+    return {
+      ...payload,
+      konsumsiFinancialDocuments: found
+        ? existing.map((entry) => (entry.key === defKey ? { ...entry, documentPath: newPath } : entry))
+        : [...existing, { key: defKey, enabled: true, documentPath: newPath }],
+    };
+  }
+
   const supportDocMatch = key.match(/^support:(.+)$/);
   if (supportDocMatch) {
     const [, docId] = supportDocMatch;

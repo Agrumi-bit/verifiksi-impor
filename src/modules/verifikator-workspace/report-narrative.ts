@@ -602,25 +602,32 @@ function skfSupportNote(company: string): string {
 }
 
 /**
- * "Dokumen Pendukung" chapter — VIU's "Bukti Kemampuan Finansial" checklist (shared across Bahan
- * Baku Industri, Bahan Baku Non Industri, and Barang Konsumsi), one narrative document per
- * `MODAL_STATEMENT_LETTER_DOC_DEF` (the sole UTAMA entry — always required) plus each
- * `NON_INDUSTRI_SUPPORT_DOC_DEFS` entry (all PENDUKUNG — the applicant picks and uploads just one
- * as supporting evidence). PENDUKUNG docs are only assessed when the company actually
- * enabled/uploaded them (same "Tidak Berlaku" pattern as SKF in the Perpajakan chapter).
+ * "Bukti Kemampuan Finansial" chapter factory — shared text/logic for Bahan Baku Industri/Non
+ * Industri's "Dokumen Pendukung" checklist AND Barang Konsumsi's own, separate
+ * "Bukti Kemampuan Finansial — Konsumsi" checklist. Same regulatory requirement and document
+ * catalog (`MODAL_STATEMENT_LETTER_DOC_DEF` + `NON_INDUSTRI_SUPPORT_DOC_DEFS`), but each scheme
+ * reads its own payload field (`nonIndustriDocuments` vs `konsumsiFinancialDocuments`) and writes
+ * its own checklist key prefix, so a mixed application gets two independent chapters instead of
+ * one shared one. PENDUKUNG docs are only assessed when the company actually enabled/uploaded
+ * them (same "Tidak Berlaku" pattern as SKF in the Perpajakan chapter).
  */
-function modalFinansialDocument(def: NonIndustriSupportDocDef, no: number): DocDetail {
-  const key = `nonindustri-support:${def.key}`;
+function buildModalFinansialDocument(
+  def: NonIndustriSupportDocDef,
+  no: number,
+  opts: { fieldName: "nonIndustriDocuments" | "konsumsiFinancialDocuments"; keyPrefix: string; schemeLabel: string },
+): DocDetail {
+  const key = `${opts.keyPrefix}:${def.key}`;
+  const findEntry = (payload: NarrativeContext["payload"]) => payload[opts.fieldName]?.find((d) => d.key === def.key);
   return {
     key,
     no,
     title: def.title,
-    documentPath: ({ payload }) => payload.nonIndustriDocuments?.find((d) => d.key === def.key)?.documentPath,
+    documentPath: ({ payload }) => findEntry(payload)?.documentPath,
     intro: () => [
-      `Verifikasi terhadap ${def.title} dilakukan sebagai bagian dari pemeriksaan bukti kemampuan finansial perusahaan dalam membiayai kegiatan importasi bahan baku, sebagaimana dipersyaratkan dalam pengajuan Verifikasi Importir Umum (VIU) bagi perusahaan non industri (API-U).`,
+      `Verifikasi terhadap ${def.title} dilakukan sebagai bagian dari pemeriksaan bukti kemampuan finansial perusahaan dalam membiayai kegiatan importasi ${opts.schemeLabel}, sebagaimana dipersyaratkan dalam pengajuan Verifikasi Importir Umum (VIU).`,
     ],
     fields: ({ payload }) => {
-      const entry = payload.nonIndustriDocuments?.find((d) => d.key === def.key);
+      const entry = findEntry(payload);
       const fields = [{ label: def.title, value: entry?.documentPath ? "Tersedia" : "Belum Tersedia", ok: Boolean(entry?.documentPath) }];
       if (def.key === MODAL_STATEMENT_LETTER_DOC_DEF.key) {
         const amount = entry?.amount ? Number(entry.amount) : null;
@@ -633,7 +640,7 @@ function modalFinansialDocument(def: NonIndustriSupportDocDef, no: number): DocD
       return fields;
     },
     findings: ({ payload, company }) => {
-      const entry = payload.nonIndustriDocuments?.find((d) => d.key === def.key);
+      const entry = findEntry(payload);
       if (!entry?.documentPath) {
         return def.priority === "PENDUKUNG"
           ? [skfSupportNote(company).replace("kelengkapan persyaratan wajib Perpajakan", "kelengkapan bukti kemampuan finansial")]
@@ -649,7 +656,7 @@ function modalFinansialDocument(def: NonIndustriSupportDocDef, no: number): DocD
     },
     kesimpulan: (ctx) => {
       const { payload, company } = ctx;
-      const entry = payload.nonIndustriDocuments?.find((d) => d.key === def.key);
+      const entry = findEntry(payload);
       if (!entry?.documentPath && def.priority === "PENDUKUNG") {
         return {
           memenuhi: true,
@@ -666,7 +673,13 @@ function modalFinansialDocument(def: NonIndustriSupportDocDef, no: number): DocD
 }
 
 export const MODAL_FINANSIAL_DOCUMENTS: DocDetail[] = [MODAL_STATEMENT_LETTER_DOC_DEF, ...NON_INDUSTRI_SUPPORT_DOC_DEFS].map(
-  (def, i) => modalFinansialDocument(def, i + 1),
+  (def, i) => buildModalFinansialDocument(def, i + 1, { fieldName: "nonIndustriDocuments", keyPrefix: "nonindustri-support", schemeLabel: "bahan baku" }),
+);
+
+/** Barang Konsumsi's own, isolated counterpart — see `buildModalFinansialDocument`'s own
+ * docstring for why this is a separate chapter rather than reusing `MODAL_FINANSIAL_DOCUMENTS`. */
+export const KONSUMSI_MODAL_FINANSIAL_DOCUMENTS: DocDetail[] = [MODAL_STATEMENT_LETTER_DOC_DEF, ...NON_INDUSTRI_SUPPORT_DOC_DEFS].map(
+  (def, i) => buildModalFinansialDocument(def, i + 1, { fieldName: "konsumsiFinancialDocuments", keyPrefix: "konsumsi-financial", schemeLabel: "barang konsumsi" }),
 );
 
 /** "Tenaga Kerja" chapter — a single fixed document (surat pernyataan jumlah tenaga kerja). */

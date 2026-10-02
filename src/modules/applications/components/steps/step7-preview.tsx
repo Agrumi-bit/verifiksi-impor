@@ -136,51 +136,69 @@ export function Step7Preview({ form, onEditStep, stepNumberByKey }: Step7Props) 
         />
       </SummarySection>
 
-      <SummarySection title="Merek yang Digunakan" step={stepNumberByKey["brands-used"]} onEditStep={onEditStep}>
-        <SummaryItem
-          label="Jumlah Merek"
-          value={values.applicationBrands?.length?.toString()}
-        />
-      </SummarySection>
+      {(values.importTypes ?? []).includes("BARANG_KONSUMSI") && (
+        <SummarySection title="Merek yang Digunakan" step={stepNumberByKey["brands-used"]} onEditStep={onEditStep}>
+          <SummaryItem
+            label="Jumlah Merek"
+            value={values.applicationBrands?.length?.toString()}
+          />
+        </SummarySection>
+      )}
 
-      <SummarySection title="Dokumen Pendukung Merek" step={stepNumberByKey["quality-test"]} onEditStep={onEditStep}>
-        <SummaryItem
-          label="Sertifikat Uji Mutu Terunggah"
-          value={values.brandQualityTests?.filter((qt) => qt?.filePath).length?.toString()}
-        />
-      </SummarySection>
+      {(values.importTypes ?? []).includes("BARANG_KONSUMSI") && (
+        <SummarySection title="Dokumen Pendukung Merek" step={stepNumberByKey["quality-test"]} onEditStep={onEditStep}>
+          <SummaryItem
+            label="Sertifikat Uji Mutu Terunggah"
+            value={values.brandQualityTests?.filter((qt) => qt?.filePath).length?.toString()}
+          />
+        </SummarySection>
+      )}
 
-      <SummarySection title="Partner Industri" step={stepNumberByKey["partner-industri"]} onEditStep={onEditStep}>
-        <SummaryItem
-          label="Partner Industri Aktif"
-          value={values.partnerIndustriEntries?.filter((entry) => entry?.enabled).length?.toString()}
-        />
-      </SummarySection>
+      {(values.importTypes ?? []).includes("BAHAN_BAKU_INDUSTRI") && (
+        <SummarySection title="Partner Industri" step={stepNumberByKey["partner-industri"]} onEditStep={onEditStep}>
+          <SummaryItem
+            label="Partner Industri Aktif"
+            value={values.partnerIndustriEntries?.filter((entry) => entry?.enabled).length?.toString()}
+          />
+        </SummarySection>
+      )}
 
       <SummarySection title="Support Document" step={stepNumberByKey["support-document"]} onEditStep={onEditStep}>
-        <SummaryItem
-          label="Dokumen Modal Terunggah"
-          value={values.nonIndustriDocuments?.filter((doc) => doc?.documentPath).length?.toString()}
-        />
-        <SummaryItem
-          label="Dokumen Konsumsi"
-          value={values.konsumsiDocuments?.length?.toString()}
-        />
+        {((values.importTypes ?? []).includes("BAHAN_BAKU_INDUSTRI") || (values.importTypes ?? []).includes("BAHAN_BAKU_NON_INDUSTRI")) && (
+          <SummaryItem
+            label="Dokumen Modal Terunggah"
+            value={values.nonIndustriDocuments?.filter((doc) => doc?.documentPath).length?.toString()}
+          />
+        )}
+        {(values.importTypes ?? []).includes("BARANG_KONSUMSI") && (
+          <>
+            <SummaryItem
+              label="Dokumen Modal Konsumsi Terunggah"
+              value={values.konsumsiFinancialDocuments?.filter((doc) => doc?.documentPath).length?.toString()}
+            />
+            <SummaryItem
+              label="Dokumen Konsumsi"
+              value={values.konsumsiDocuments?.length?.toString()}
+            />
+          </>
+        )}
       </SummarySection>
 
-      <SummarySection title="Product Information" step={stepNumberByKey["product-info"]} onEditStep={onEditStep}>
-        <SummaryItem
-          label="Jumlah Produk"
-          value={values.products?.length?.toString()}
-        />
-        <SummaryItem
-          label="Jenis Material"
-          value={values.products
-            ?.map((product) => product?.materialType)
-            .filter(Boolean)
-            .join(", ")}
-        />
-      </SummarySection>
+      {((values.importTypes ?? []).includes("BAHAN_BAKU_INDUSTRI") || (values.importTypes ?? []).includes("BAHAN_BAKU_NON_INDUSTRI")) && (
+        <SummarySection title="Product Information" step={stepNumberByKey["product-info"]} onEditStep={onEditStep}>
+          <SummaryItem
+            label="Jumlah Produk"
+            value={values.products?.length?.toString()}
+          />
+          <SummaryItem
+            label="Jenis Material"
+            value={values.products
+              ?.map((product) => product?.materialType)
+              .filter(Boolean)
+              .join(", ")}
+          />
+        </SummarySection>
+      )}
 
       {(values.importTypes ?? []).includes("BARANG_KONSUMSI") && (
         <SummarySection title="Produk — VIU Barang Konsumsi" step={stepNumberByKey["product-info"]} onEditStep={onEditStep}>
