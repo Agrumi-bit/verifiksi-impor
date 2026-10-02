@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ApplicationWizardValues } from "../../../../schema";
 import { konsumsiProductTotal, type ApplicationKonsumsiProductValues } from "../../schema";
-import { ProductFormDialog } from "./product-form-dialog";
+import { ProductFormSheet } from "./product-form-sheet";
 import { ProductTable } from "./product-table";
 import { CurrencyTotals } from "./product-summary";
 
@@ -15,21 +16,33 @@ type Props = {
   form: UseFormReturn<ApplicationWizardValues>;
   brandId: string;
   brandName: string;
+  industryGroupId: string;
+  industryName: string;
   commodityGroupId: string;
   commodityName: string;
 };
 
-type DialogState = { mode: "add" } | { mode: "edit"; index: number };
+type SheetState = { mode: "add" } | { mode: "edit"; index: number };
 
-/** One Kelompok Komoditas slot under a Brand — its own product table, scoped to rows matching
- * both `brandId` and `commodityGroupId`. Reads/writes `konsumsiProducts` directly via
- * getValues/setValue rather than a nested `useFieldArray` (the rendered rows are a filtered view
- * over one flat array shared across every Brand x Commodity Group combination, same pattern
- * StepQualityTest already uses for its own per-brand grouping). */
-export function CommodityProductSection({ form, brandId, brandName, commodityGroupId, commodityName }: Props) {
+/** One Sub Kelompok Komoditas slot under a Brand (part of a Kelompok Komoditas / Sub Kelompok
+ * Komoditas pair derived from Step "Dokumen Pendukung Merek" — see BrandProductSection) — its own
+ * product table, scoped to rows matching both `brandId` and `commodityGroupId`. Reads/writes
+ * `konsumsiProducts` directly via getValues/setValue rather than a nested `useFieldArray` (the
+ * rendered rows are a filtered view over one flat array shared across every Brand x Commodity
+ * Group combination, same pattern StepQualityTest already uses for its own per-brand grouping). */
+export function CommodityProductSection({
+  form,
+  brandId,
+  brandName,
+  industryGroupId,
+  industryName,
+  commodityGroupId,
+  commodityName,
+}: Props) {
   const { control } = form;
   const allProducts = useWatch({ control, name: "konsumsiProducts" }) ?? [];
-  const [dialogState, setDialogState] = useState<DialogState | null>(null);
+  const [sheetState, setSheetState] = useState<SheetState | null>(null);
+  const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
 
   const rows = allProducts
     .map((product, index) => ({ product, index }))
@@ -42,35 +55,38 @@ export function CommodityProductSection({ form, brandId, brandName, commodityGro
 
   function handleSave(values: ApplicationKonsumsiProductValues) {
     const current = form.getValues("konsumsiProducts") ?? [];
-    if (dialogState?.mode === "edit") {
+    if (sheetState?.mode === "edit") {
       form.setValue(
         "konsumsiProducts",
-        current.map((product, index) => (index === dialogState.index ? values : product)),
+        current.map((product, index) => (index === sheetState.index ? values : product)),
         { shouldDirty: true },
       );
     } else {
       form.setValue("konsumsiProducts", [...current, values], { shouldDirty: true });
     }
-    setDialogState(null);
+    setSheetState(null);
   }
 
-  function handleRemove(index: number) {
-    if (!window.confirm("Hapus produk dari permohonan?\n\nProduk hanya akan dihapus dari permohonan VIU ini.")) return;
+  function confirmDelete() {
+    if (deleteIndex === null) return;
     const current = form.getValues("konsumsiProducts") ?? [];
     form.setValue(
       "konsumsiProducts",
-      current.filter((_, i) => i !== index),
+      current.filter((_, i) => i !== deleteIndex),
       { shouldDirty: true },
     );
+    setDeleteIndex(null);
   }
 
-  const editingProduct = dialogState?.mode === "edit" ? rows.find((row) => row.index === dialogState.index)?.product : undefined;
+  const editingProduct = sheetState?.mode === "edit" ? rows.find((row) => row.index === sheetState.index)?.product : undefined;
 
   return (
     <div className="rounded-lg border border-border bg-muted/10 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kelompok Komoditas</p>
+          <p className="text-sm font-bold">{industryName}</p>
+          <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sub Kelompok Komoditas</p>
           <p className="text-sm font-bold">{commodityName}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">{rows.length} Produk</p>
         </div>
@@ -80,34 +96,62 @@ export function CommodityProductSection({ form, brandId, brandName, commodityGro
         </div>
       </div>
 
+      <p className="mt-3 flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[11px] text-muted-foreground">
+        Hasil Uji Mutu akan dikelola berdasarkan Merek + Kelompok Komoditas.
+      </p>
+
       <div className="mt-3">
         {rows.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
             Belum ada produk pada kelompok komoditas ini.
           </p>
         ) : (
-          <ProductTable rows={rows} onEdit={(index) => setDialogState({ mode: "edit", index })} onRemove={handleRemove} />
+          <ProductTable rows={rows} onEdit={(index) => setSheetState({ mode: "edit", index })} onRemove={setDeleteIndex} />
         )}
       </div>
 
-      <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setDialogState({ mode: "add" })}>
+      <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setSheetState({ mode: "add" })}>
         <Plus className="size-3.5" />
         Tambah Produk
       </Button>
 
-      {dialogState && (
-        <ProductFormDialog
+      {sheetState && (
+        <ProductFormSheet
           brandId={brandId}
           brandName={brandName}
+          industryGroupId={industryGroupId}
+          industryName={industryName}
           commodityGroupId={commodityGroupId}
           commodityName={commodityName}
           initialValues={editingProduct}
           existingProducts={allProducts}
-          excludeIndex={dialogState.mode === "edit" ? dialogState.index : undefined}
+          excludeIndex={sheetState.mode === "edit" ? sheetState.index : undefined}
           onSave={handleSave}
-          onClose={() => setDialogState(null)}
+          onClose={() => setSheetState(null)}
         />
       )}
+
+      <Dialog open={deleteIndex !== null} onOpenChange={(open) => { if (!open) setDeleteIndex(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+                <Trash2 className="size-4" />
+              </div>
+              <DialogTitle>Hapus Produk?</DialogTitle>
+            </div>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">Produk hanya akan dihapus dari permohonan VIU ini.</p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeleteIndex(null)}>
+              Batal
+            </Button>
+            <Button type="button" variant="destructive" onClick={confirmDelete}>
+              Hapus
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

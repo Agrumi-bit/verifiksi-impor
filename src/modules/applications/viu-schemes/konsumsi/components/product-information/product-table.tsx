@@ -1,5 +1,11 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { MoreVertical, Pencil, Trash2 } from "lucide-react";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { konsumsiProductTotal, type ApplicationKonsumsiProductValues } from "../../schema";
 
 function formatMoney(value: number): string {
@@ -16,7 +22,7 @@ const COLUMNS = [
   "Harga Satuan Rata-rata",
   "Mata Uang",
   "Total Harga",
-  "Aksi",
+  "",
 ];
 
 type Row = { product: ApplicationKonsumsiProductValues; index: number };
@@ -38,8 +44,8 @@ export function ProductTable({
       <table className="w-full min-w-240 text-left text-sm">
         <thead className="bg-muted/40">
           <tr>
-            {COLUMNS.map((col) => (
-              <th key={col} className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+            {COLUMNS.map((col, i) => (
+              <th key={col || `col-${i}`} className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
                 {col}
               </th>
             ))}
@@ -59,25 +65,25 @@ export function ProductTable({
               <td className="px-3 py-2 font-semibold">
                 {product.currency} {formatMoney(konsumsiProductTotal(product))}
               </td>
-              <td className="px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onEdit(index)}
-                    aria-label="Edit produk"
-                    className="text-muted-foreground hover:text-foreground"
+              <td className="px-3 py-2 text-right">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground"
+                    aria-label="Menu produk"
                   >
-                    <Pencil className="size-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onRemove(index)}
-                    aria-label="Hapus produk"
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
-                </div>
+                    <MoreVertical className="size-3.5" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onEdit(index)}>
+                      <Pencil />
+                      Edit Produk
+                    </DropdownMenuItem>
+                    <DropdownMenuItem variant="destructive" onClick={() => onRemove(index)}>
+                      <Trash2 />
+                      Hapus Produk
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </td>
             </tr>
           ))}

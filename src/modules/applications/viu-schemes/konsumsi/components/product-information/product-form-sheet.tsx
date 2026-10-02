@@ -3,18 +3,25 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetBody, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/form/form-field";
 import { NativeSelect } from "@/components/form/native-select";
 import { SearchSelectInput } from "@/components/form/search-select-input";
 import { useActiveCountries } from "@/modules/master-data/use-active-countries";
 import { useHsCodeOptions } from "../../../../hooks/use-hs-code-options";
-import { KONSUMSI_PRODUCT_CURRENCIES, konsumsiProductTotal, type ApplicationKonsumsiProductValues } from "../../schema";
+import {
+  createEmptyKonsumsiProduct,
+  KONSUMSI_PRODUCT_CURRENCIES,
+  konsumsiProductTotal,
+  type ApplicationKonsumsiProductValues,
+} from "../../schema";
 
 type Props = {
   brandId: string;
   brandName: string;
+  industryGroupId: string;
+  industryName: string;
   commodityGroupId: string;
   commodityName: string;
   initialValues?: ApplicationKonsumsiProductValues;
@@ -24,36 +31,27 @@ type Props = {
   onClose: () => void;
 };
 
+type FieldErrors = Partial<Record<"productName" | "hsCode" | "countryOfOrigin" | "quantity" | "averageUnitPrice" | "duplicate", string>>;
+
 function formatMoney(value: number): string {
   return value.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function emptyProduct(brandId: string, commodityGroupId: string): ApplicationKonsumsiProductValues {
-  return {
-    id: crypto.randomUUID(),
-    brandId,
-    commodityGroupId,
-    productName: "",
-    hsCode: "",
-    countryOfOrigin: "",
-    quantity: "",
-    averageUnitPrice: "",
-    currency: "USD",
-  };
-}
-
 /**
- * Add/Edit Product — Brand and Kelompok Komoditas are fixed, read-only context (never silently
- * re-parented; see this component's own callers for the remove+add-elsewhere alternative when a
- * product genuinely belongs under a different Brand/group). HS Code and Country of Origin are
- * master-data-backed selections, never free text — Uraian HS Code and Satuan are derived
- * read-only displays from the selected HS Code, never independently editable. Total Harga is
- * always derived (Jumlah x Harga Satuan Rata-rata), recalculated server-side at submit — this
- * dialog never lets the user type a total directly.
+ * Add/Edit Product — a right-side Sheet rather than a centered Dialog (a form this long reads
+ * better sliding in from the edge). Brand and Kelompok Komoditas / Sub Kelompok Komoditas are
+ * fixed, read-only context (never silently re-parented — delete + re-add elsewhere if a product
+ * genuinely belongs under a different Brand/group). HS Code and Country of Origin are master-
+ * data-backed selections, never free text — Uraian HS Code and Satuan are derived read-only
+ * displays from the selected HS Code, never independently editable. Total Harga is always derived
+ * (Jumlah x Harga Satuan Rata-rata), recalculated server-side at submit — this sheet never lets
+ * the user type a total directly.
  */
-export function ProductFormDialog({
+export function ProductFormSheet({
   brandId,
   brandName,
+  industryGroupId,
+  industryName,
   commodityGroupId,
   commodityName,
   initialValues,
@@ -65,9 +63,9 @@ export function ProductFormDialog({
   const hsCodeOptions = useHsCodeOptions();
   const { options: countryOptions } = useActiveCountries();
   const [form, setForm] = useState<ApplicationKonsumsiProductValues>(
-    initialValues ?? emptyProduct(brandId, commodityGroupId),
+    initialValues ?? createEmptyKonsumsiProduct(brandId, { brandId, industryGroupId, industryName, commodityGroupId, commodityName }),
   );
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FieldErrors>({});
 
   function update(patch: Partial<ApplicationKonsumsiProductValues>) {
     setForm((current) => ({ ...current, ...patch }));
@@ -76,34 +74,29 @@ export function ProductFormDialog({
   function handleHsCodeChange(value: string) {
     const option = hsCodeOptions.find((o) => o.value === value);
     update({ hsCode: value, hsDescription: option?.hint ?? "", unit: option?.unit ?? "" });
+    setErrors((e) => ({ ...e, hsCode: undefined }));
   }
 
   function handleCountryChange(value: string) {
     const option = countryOptions.find((o) => o.value === value);
     update({ countryOfOrigin: value, countryOfOriginCode: option?.hint ?? "" });
+    setErrors((e) => ({ ...e, countryOfOrigin: undefined }));
   }
 
   function handleSubmit() {
-    if (!form.productName.trim()) {
-      setError("Nama produk wajib diisi.");
-      return;
-    }
-    if (!form.hsCode) {
-      setError("HS Code wajib dipilih.");
-      return;
-    }
-    if (!form.countryOfOrigin) {
-      setError("Negara asal wajib dipilih.");
-      return;
-    }
+    const nextErrors: FieldErrors = {};
+    if (!form.productName.trim()) nextErrors.productName = "Nama produk wajib diisi.";
+    if (!form.hsCode) nextErrors.hsCode = "HS Code wajib dipilih.";
+    if (!form.countryOfOrigin) nextErrors.countryOfOrigin = "Negara asal wajib dipilih.";
     const quantity = Number(form.quantity);
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      setError("Jumlah harus lebih besar dari 0.");
-      return;
-    }
+    if (!Number.isFinite(quantity) || quantity <= 0) nextErrors.quantity = "Jumlah harus lebih besar dari 0.";
     const price = Number(form.averageUnitPrice);
-    if (!Number.isFinite(price) || price < 0) {
-      setError("Harga satuan rata-rata tidak valid.");
+    if (form.averageUnitPrice.trim() === "" || !Number.isFinite(price) || price < 0) {
+      nextErrors.averageUnitPrice = "Harga satuan rata-rata tidak valid.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
       return;
     }
 
@@ -117,23 +110,23 @@ export function ProductFormDialog({
         product.productName.trim().toLowerCase() === form.productName.trim().toLowerCase(),
     );
     if (isDuplicate) {
-      setError("Produk ini sudah ada untuk kombinasi merek, kelompok komoditas, HS Code, dan negara asal yang sama.");
+      setErrors({ duplicate: "Produk dengan HS Code dan negara asal yang sama sudah terdapat pada kelompok ini." });
       return;
     }
 
-    setError(null);
+    setErrors({});
     onSave(form);
   }
 
   const total = konsumsiProductTotal(form);
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{initialValues ? "Edit Produk" : "Tambah Produk"}</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-3">
+    <Sheet open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>{initialValues ? "Edit Produk" : "Tambah Produk"}</SheetTitle>
+        </SheetHeader>
+        <SheetBody className="flex flex-col gap-3.5">
           <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/30 p-3 text-sm">
             <div>
               <p className="text-xs text-muted-foreground">Merek</p>
@@ -141,19 +134,26 @@ export function ProductFormDialog({
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Kelompok Komoditas</p>
+              <p className="font-semibold">{industryName}</p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-xs text-muted-foreground">Sub Kelompok Komoditas</p>
               <p className="font-semibold">{commodityName}</p>
             </div>
           </div>
 
-          <FormField label="Nama Produk" required>
+          <FormField label="Nama Produk" required error={errors.productName}>
             <Input
               placeholder="e.g. Men's Cotton T-Shirt"
               value={form.productName}
-              onChange={(event) => update({ productName: event.target.value })}
+              onChange={(event) => {
+                update({ productName: event.target.value });
+                setErrors((e) => ({ ...e, productName: undefined, duplicate: undefined }));
+              }}
             />
           </FormField>
 
-          <FormField label="HS Code" required hint="Cari berdasarkan nomor atau uraian HS Code.">
+          <FormField label="HS Code" required hint="Cari berdasarkan nomor atau uraian HS Code." error={errors.hsCode}>
             <SearchSelectInput
               value={form.hsCode}
               onChange={handleHsCodeChange}
@@ -167,7 +167,7 @@ export function ProductFormDialog({
             <Input value={form.hsDescription ?? ""} readOnly disabled />
           </FormField>
 
-          <FormField label="Asal Negara" required>
+          <FormField label="Asal Negara" required error={errors.countryOfOrigin}>
             <SearchSelectInput
               value={form.countryOfOrigin}
               onChange={handleCountryChange}
@@ -178,13 +178,16 @@ export function ProductFormDialog({
           </FormField>
 
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="Jumlah" required>
+            <FormField label="Jumlah" required error={errors.quantity}>
               <Input
                 type="number"
                 min="0"
                 step="any"
                 value={form.quantity}
-                onChange={(event) => update({ quantity: event.target.value })}
+                onChange={(event) => {
+                  update({ quantity: event.target.value });
+                  setErrors((e) => ({ ...e, quantity: undefined }));
+                }}
               />
             </FormField>
             <FormField label="Satuan" hint="Mengikuti HS Code terpilih.">
@@ -193,13 +196,16 @@ export function ProductFormDialog({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="Harga Satuan Rata-rata" required>
+            <FormField label="Harga Satuan Rata-rata" required error={errors.averageUnitPrice}>
               <Input
                 type="number"
                 min="0"
                 step="any"
                 value={form.averageUnitPrice}
-                onChange={(event) => update({ averageUnitPrice: event.target.value })}
+                onChange={(event) => {
+                  update({ averageUnitPrice: event.target.value });
+                  setErrors((e) => ({ ...e, averageUnitPrice: undefined }));
+                }}
               />
             </FormField>
             <FormField label="Mata Uang" required>
@@ -216,21 +222,31 @@ export function ProductFormDialog({
             </FormField>
           </div>
 
-          <FormField label="Total Harga" hint="Jumlah x Harga Satuan Rata-rata, dihitung otomatis.">
-            <Input value={`${form.currency} ${formatMoney(total)}`} readOnly disabled className="font-semibold" />
+          <FormField label="Total Harga">
+            <div className="flex items-baseline justify-between rounded-lg border border-accent/30 bg-accent/10 px-3 py-2.5">
+              <span className="text-xs font-medium text-muted-foreground">Dihitung otomatis</span>
+              <span className="text-base font-bold">{form.currency} {formatMoney(total)}</span>
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Total harga dihitung otomatis berdasarkan jumlah dan harga satuan rata-rata.
+            </p>
           </FormField>
 
-          {error && <p className="text-xs text-destructive">{error}</p>}
-        </div>
-        <DialogFooter>
+          {errors.duplicate && (
+            <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-2.5 text-xs text-destructive">
+              {errors.duplicate}
+            </p>
+          )}
+        </SheetBody>
+        <SheetFooter>
           <Button type="button" variant="outline" onClick={onClose}>
             Batal
           </Button>
           <Button type="button" onClick={handleSubmit}>
-            Simpan
+            {initialValues ? "Simpan Perubahan" : "Simpan"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
