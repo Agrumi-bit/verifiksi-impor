@@ -508,7 +508,7 @@ export function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardSh
     // this one — so an Industri/Non-Industri application's financial-capability data is never
     // shared with a Konsumsi one, even in a mixed application.
     const statementEntry = data.nonIndustriDocuments.find((doc) => doc.key === MODAL_STATEMENT_LETTER_DOC_DEF.key);
-    if (!statementEntry?.enabled || !statementEntry.documentPath) {
+    if (!statementEntry?.documentPath) {
       ctx.addIssue({
         code: "custom",
         path: ["nonIndustriDocuments"],

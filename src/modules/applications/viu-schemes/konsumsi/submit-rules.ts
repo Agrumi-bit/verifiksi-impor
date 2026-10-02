@@ -29,7 +29,7 @@ export function applyKonsumsiSubmitRules(data: ApplicationWizardValues, ctx: z.R
   // Baku Industri/Non Industri's `nonIndustriDocuments` check in the shared
   // `applyViuOnlySubmitRules` (applications/schema.ts). Same requirement, separate data.
   const statementEntry = data.konsumsiFinancialDocuments.find((doc) => doc.key === MODAL_STATEMENT_LETTER_DOC_DEF.key);
-  if (!statementEntry?.enabled || !statementEntry.documentPath) {
+  if (!statementEntry?.documentPath) {
     ctx.addIssue({
       code: "custom",
       path: ["konsumsiFinancialDocuments"],

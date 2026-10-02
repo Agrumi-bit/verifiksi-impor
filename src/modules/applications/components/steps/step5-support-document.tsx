@@ -88,6 +88,7 @@ function NonIndustriChecklist({
                     value={statementEntry?.amount ?? ""}
                     onChange={(event) =>
                       updateEntry(MODAL_STATEMENT_LETTER_DOC_DEF.key, {
+                        enabled: true,
                         amount: event.target.value.replace(/[^0-9]/g, ""),
                       })
                     }
@@ -101,7 +102,7 @@ function NonIndustriChecklist({
                 <FileUploadField
                   namespace="documents"
                   value={statementEntry?.documentPath}
-                  onChange={(path) => updateEntry(MODAL_STATEMENT_LETTER_DOC_DEF.key, { documentPath: path ?? "" })}
+                  onChange={(path) => updateEntry(MODAL_STATEMENT_LETTER_DOC_DEF.key, { enabled: true, documentPath: path ?? "" })}
                   label="Upload dokumen"
                 />
               </div>
