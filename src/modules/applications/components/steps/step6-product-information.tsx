@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Controller, useFieldArray, useWatch, type UseFormReturn } from "react-hook-form";
 import { Trash2 } from "lucide-react";
 
@@ -45,6 +46,14 @@ export function Step6ProductInformation({ form }: Step6Props) {
   // separate concept from Konsumsi's per-brand commercial product list).
   const needsGenericProducts =
     importTypes.includes("BAHAN_BAKU_INDUSTRI") || importTypes.includes("BAHAN_BAKU_NON_INDUSTRI");
+
+  // `products` defaults to [] now (see use-application-wizard.ts) so a Konsumsi-only application
+  // never carries a stray, never-validated row — seed the first editable row here instead, once
+  // this generic list is actually relevant and still empty.
+  useEffect(() => {
+    if (needsGenericProducts && fields.length === 0) append(createEmptyProduct());
+  }, [needsGenericProducts, fields.length, append]);
+
   if (!needsGenericProducts) return null;
 
   return (
@@ -132,7 +141,7 @@ export function Step6ProductInformation({ form }: Step6Props) {
                   hint="Cari dari HS Code Master Data (System Configuration)."
                 >
                   <SearchSelectInput
-                    value={field.value}
+                    value={field.value ?? ""}
                     onChange={field.onChange}
                     options={hsCodeOptions}
                     placeholder="e.g. 5205.31.00"

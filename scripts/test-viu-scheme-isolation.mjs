@@ -15,7 +15,7 @@
 //
 // Run with: npx tsx scripts/test-viu-scheme-isolation.mjs
 import { getViuWizardSteps } from "../src/modules/applications/wizard-steps-meta.ts";
-import { applyViuOnlySubmitRules } from "../src/modules/applications/schema.ts";
+import { applyViuOnlySubmitRules, applicationWizardSchema } from "../src/modules/applications/schema.ts";
 
 let failed = false;
 function assert(cond, label) {
@@ -194,6 +194,89 @@ for (const state of inactiveFieldStates) {
     `Non-Industri-only tolerates inactive Konsumsi/Partner Industri fields as ${JSON.stringify(state)}`,
   );
 }
+
+console.log("--- BUG REPRODUCTION 2: generic `products` list must never block a Konsumsi-only submit ---");
+// A second real production bug: `products` (the generic Bahan Baku Industri/Non Industri
+// material list) carried unconditionally-required `materialType`/`hsCode` at the item-schema
+// level, so a Konsumsi-only draft with a single stray/leftover empty product row (e.g. the old
+// seeded default item) always failed Submit with "Jenis material wajib diisi"/"HS Code wajib
+// diisi", even though `products` is never shown or relevant for Konsumsi. Fixed by making those
+// fields optional at the schema level and validating them via `validateProductItems`, called only
+// when the owning scheme (Bahan Baku Industri/Non Industri, or VKI unconditionally) is active.
+assert(
+  runSubmitRules({ ...validKonsumsi, products: [{ id: "stray-empty-row" }] }).length === 0,
+  "Konsumsi-only with a stray empty products row -> submits clean (the exact reported bug)",
+);
+assert(
+  runSubmitRules({ ...validIndustri, products: [{ id: "empty" }] }).some((i) => i.startsWith("products.0.materialType")),
+  "Industri-only with an empty products row -> 'Jenis material wajib diisi' still fires (unaffected)",
+);
+assert(
+  runSubmitRules({ ...validIndustri, products: [{ id: "empty" }] }).some((i) => i.startsWith("products.0.hsCode")),
+  "Industri-only with an empty products row -> 'HS Code wajib diisi' still fires (unaffected)",
+);
+assert(
+  runSubmitRules({ ...validNonIndustri, products: [{ id: "empty" }] }).some((i) => i.startsWith("products.0.materialType")),
+  "Non-Industri-only with an empty products row -> 'Jenis material wajib diisi' still fires (unaffected)",
+);
+
+console.log("--- VKI parity: generic products list still unconditionally required for VKI ---");
+function runVkiLiveValidation(products) {
+  const result = applicationWizardSchema.safeParse({
+    verificationType: "VKI",
+    importTypes: [],
+    companyId: "c1",
+    applicationCategory: "NEW",
+    companyName: "PT Contoh",
+    companyType: "PT",
+    investmentStatus: "PMDN",
+    companyEmail: "a@a.com",
+    companyPhone: "08123",
+    contactFullName: "x",
+    contactDesignation: "x",
+    contactEmail: "a@a.com",
+    contactPhone: "08123",
+    nibNumber: "x",
+    nibIssueDate: "2020-01-01",
+    nibDocumentPath: "x.pdf",
+    kbliEntries: [{ code: "123", description: "x" }],
+    kbliDocumentPath: "x.pdf",
+    notarialDeedNumber: "x",
+    notarialDeedIssueDate: "2020-01-01",
+    notarialIssuingAuthority: "x",
+    notarialDocumentPath: "x.pdf",
+    locations: [
+      {
+        id: "l1",
+        locationType: "PABRIK",
+        address: "x",
+        addressDesa: "x",
+        addressKecamatan: "x",
+        city: "x",
+        province: "x",
+        country: "ID",
+        postalCode: "12345",
+        buildingStatus: "MILIK_SENDIRI",
+        ownershipDocuments: [{ type: "SHM", documentPath: "x.pdf" }],
+        leaseDocuments: [],
+      },
+    ],
+    konsumsiDocuments: [],
+    declarationAccepted: true,
+    products,
+  });
+  if (result.success) return [];
+  return result.error.issues.map((i) => i.path.join("."));
+}
+assert(
+  runVkiLiveValidation([{ id: "p1" }]).includes("products.0.materialType") &&
+    runVkiLiveValidation([{ id: "p1" }]).includes("products.0.hsCode"),
+  "VKI with an empty product row -> materialType/hsCode still required (unaffected by the Konsumsi fix)",
+);
+assert(
+  !runVkiLiveValidation([{ id: "p1", materialType: "Benang Katun", hsCode: "52053100" }]).some((p) => p.startsWith("products.0.")),
+  "VKI with a filled product row -> no products.0.* issue",
+);
 
 console.log(failed ? "\nFAILED" : "\nAll VIU scheme isolation checks passed.");
 process.exit(failed ? 1 : 0);

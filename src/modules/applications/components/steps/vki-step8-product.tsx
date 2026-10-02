@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useFieldArray, type UseFormReturn } from "react-hook-form";
 import { Trash2, Download, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -54,6 +54,12 @@ export function VkiStep8Product({ form }: Props) {
   const [isImportingRawMaterials, setIsImportingRawMaterials] = useState(false);
   const conversionFileInputRef = useRef<HTMLInputElement>(null);
   const [isImportingConversions, setIsImportingConversions] = useState(false);
+
+  // `products` defaults to [] (see use-application-wizard.ts) rather than a seeded row shared
+  // with VIU — VKI always needs at least one product, so seed the first editable row here.
+  useEffect(() => {
+    if (productFields.length === 0) appendProduct(createEmptyProduct());
+  }, [productFields.length, appendProduct]);
 
   async function handleImportProductFile(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -182,7 +188,7 @@ export function VkiStep8Product({ form }: Props) {
                   render={({ field: hsField }) => (
                     <FormField label="HS Code" required>
                       <SearchSelectInput
-                        value={hsField.value}
+                        value={hsField.value ?? ""}
                         onChange={hsField.onChange}
                         options={hsCodeOptions}
                         placeholder="Cari kode atau uraian HS Code..."

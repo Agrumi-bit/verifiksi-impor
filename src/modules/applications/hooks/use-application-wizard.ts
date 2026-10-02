@@ -8,7 +8,6 @@ import {
   applicationWizardSchema,
   createEmptyLocation,
   createEmptyNonIndustriDocuments,
-  createEmptyProduct,
   VIU_STEP_FIELD_NAMES,
   VKI_STEP_FIELD_NAMES,
   VKI_SUPPORT_DOC_DEFS,
@@ -41,7 +40,12 @@ export function useApplicationWizard() {
       nonIndustriDocuments: createEmptyNonIndustriDocuments(),
       konsumsiDocuments: [],
       konsumsiFinancialDocuments: createEmptyKonsumsiFinancialDocuments(),
-      products: [createEmptyProduct()],
+      // [] here, not a seeded empty row — materialType/hsCode are only required for Bahan Baku
+      // Industri/Non Industri and VKI, never for Barang Konsumsi (see productItemSchema's own
+      // comment). A static seeded row would otherwise sit unvalidated-but-present on a
+      // Konsumsi-only application forever. Step6ProductInformation / VkiStep8Product each append
+      // their own first empty row once their own scheme condition says they actually need one.
+      products: [],
       vkiSupportDocs: VKI_SUPPORT_DOC_DEFS.map((def) => ({ key: def.key })),
       electricityMonths: [],
       tenagaKerjaEntries: [],

@@ -199,8 +199,15 @@ export const documentsSchema = companyLegalExtraSchema
 export const productItemSchema = z.object({
   id: z.string(),
   kategori: z.string().trim().optional(),
-  materialType: requiredString("Jenis material wajib diisi"),
-  hsCode: requiredString("HS Code wajib diisi"),
+  // materialType/hsCode are NOT required at this schema level — VKI always needs them filled,
+  // but VIU only needs them for Bahan Baku Industri/Non Industri (a Barang-Konsumsi-only
+  // application never renders this generic list at all, see Step6ProductInformation's own gate).
+  // Enforced instead by `validateProductItems` below, called only where each scheme actually
+  // needs it (vkiSubmitSchema unconditionally, applyViuOnlySubmitRules only when Bahan Baku
+  // Industri/Non Industri is selected) — never at the item-schema level, which would require it
+  // unconditionally for every scheme including Konsumsi.
+  materialType: z.string().trim().optional(),
+  hsCode: z.string().trim().optional(),
   hsDesc: z.string().trim().optional(),
   estimatedVolume: z.string().trim().optional(),
   volumeUnit: z.string().trim().optional(),
@@ -221,6 +228,22 @@ export const productItemSchema = z.object({
 export const productsSchema = z.object({
   products: z.array(productItemSchema).default([]),
 });
+
+/** Per-item required-field check for the generic `products` list — materialType/hsCode are
+ * optional at the schema level (see productItemSchema's own comment) so a Barang-Konsumsi-only
+ * application's stray empty row (e.g. a leftover default item) never blocks submit. Callers gate
+ * *whether* this runs (VKI always, VIU only for Bahan Baku Industri/Non Industri); this function
+ * only decides *what* each item needs once that gate says yes. */
+function validateProductItems(products: z.infer<typeof productItemSchema>[], ctx: z.RefinementCtx): void {
+  products.forEach((product, index) => {
+    if (!product.materialType?.trim()) {
+      ctx.addIssue({ code: "custom", path: ["products", index, "materialType"], message: "Jenis material wajib diisi" });
+    }
+    if (!product.hsCode?.trim()) {
+      ctx.addIssue({ code: "custom", path: ["products", index, "hsCode"], message: "HS Code wajib diisi" });
+    }
+  });
+}
 
 /** VIU submission declaration checkbox — Submit step. */
 export const declarationSchema = z.object({
@@ -467,15 +490,15 @@ export function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardSh
   // Industri (see Step6ProductInformation's own gate). A Barang-Konsumsi-only application has no
   // use for it and is never required to fill it; `konsumsiProducts` is its own requirement,
   // enforced by applyKonsumsiSubmitRules below.
-  if (
-    (data.importTypes.includes("BAHAN_BAKU_INDUSTRI") || data.importTypes.includes("BAHAN_BAKU_NON_INDUSTRI")) &&
-    data.products.length < 1
-  ) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["products"],
-      message: "Tambahkan minimal satu produk",
-    });
+  if (data.importTypes.includes("BAHAN_BAKU_INDUSTRI") || data.importTypes.includes("BAHAN_BAKU_NON_INDUSTRI")) {
+    if (data.products.length < 1) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["products"],
+        message: "Tambahkan minimal satu produk",
+      });
+    }
+    validateProductItems(data.products, ctx);
   }
   if (data.importTypes.includes("BAHAN_BAKU_INDUSTRI") || data.importTypes.includes("BAHAN_BAKU_NON_INDUSTRI")) {
     // Only the Surat Pernyataan Kepemilikan Modal Kerja is unconditionally required — the rest of
@@ -516,6 +539,10 @@ export function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardSh
  * what actually decides whether a submission gets persisted. */
 export const applicationWizardSchema = applicationWizardShape.superRefine((data, ctx) => {
   if (data.verificationType === "VIU") applyViuOnlySubmitRules(data, ctx);
+  // VKI always needs materialType/hsCode on every product row (see vkiSubmitSchema's own
+  // comment) — validated live here too, not just at final submit, so this matches the inline
+  // error display VkiStep8Product had before these fields moved off the item schema itself.
+  else if (data.verificationType === "VKI") validateProductItems(data.products, ctx);
 });
 
 /**
@@ -540,6 +567,7 @@ const vkiSubmitSchema = applicationWizardShape.extend({ verificationType: z.lite
       message: "Tambahkan minimal satu produk",
     });
   }
+  validateProductItems(data.products, ctx);
 });
 export const applicationSubmitSchema = z.discriminatedUnion("verificationType", [
   viuSubmitSchema,

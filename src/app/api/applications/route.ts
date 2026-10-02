@@ -84,6 +84,19 @@ export async function POST(request: Request) {
 
   let values: ApplicationWizardValues = parsed.data;
 
+  // The generic `products` list is only meaningful for Bahan Baku Industri/Non Industri — a
+  // Barang-Konsumsi-only (or VKI-only-fields-irrelevant) submission may still carry a stray
+  // leftover row (e.g. an empty default item from before this list stopped requiring
+  // materialType/hsCode unconditionally); normalize it away before persisting rather than storing
+  // dead data forever. Validation already passed either way — this is cleanup, not a gate.
+  if (
+    values.verificationType === "VIU" &&
+    !values.importTypes.includes("BAHAN_BAKU_INDUSTRI") &&
+    !values.importTypes.includes("BAHAN_BAKU_NON_INDUSTRI")
+  ) {
+    values = { ...values, products: [] };
+  }
+
   // Run every registered scheme's server-side validator whose key is
   // actually enabled on this application — never the client's own computed
   // readiness/document count/brand metadata. A scheme's validator may

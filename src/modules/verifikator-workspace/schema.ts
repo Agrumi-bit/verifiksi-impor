@@ -441,8 +441,8 @@ export function buildProductChecklist(payload: ApplicationWizardValues): Product
   return (payload.products ?? []).map((product) => ({
     id: product.id,
     kategori: product.kategori ?? "",
-    materialType: product.materialType,
-    hsCode: product.hsCode,
+    materialType: product.materialType ?? "",
+    hsCode: product.hsCode ?? "",
     hsDesc: product.hsDesc ?? "",
     deskripsi: product.deskripsi ?? "",
     estimatedVolume: product.estimatedVolume ?? "",
