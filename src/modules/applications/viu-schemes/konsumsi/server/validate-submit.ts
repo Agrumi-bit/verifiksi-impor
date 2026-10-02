@@ -44,7 +44,7 @@ async function validateKonsumsiQualityTestReferences(
 
 type ValidateKonsumsiSubmitInput = Pick<
   ApplicationWizardValues,
-  "verificationType" | "importTypes" | "companyId" | "applicationBrands" | "brandQualityTests" | "konsumsiProducts"
+  "verificationType" | "importTypes" | "applicationBrands" | "brandQualityTests" | "konsumsiProducts"
 >;
 
 type ValidateKonsumsiSubmitResult =
@@ -223,9 +223,12 @@ export async function validateKonsumsiSubmit(
     if (!brand) {
       return { error: "Salah satu merek pada permohonan ini tidak ditemukan." };
     }
-    if (values.companyId && brand.companyId !== values.companyId) {
-      return { error: `Merek "${brand.brandName}" tidak terdaftar untuk perusahaan pemohon ini.` };
-    }
+    // Merk.companyId/brandOwnerId/ownership.ownerCompanyId are deliberately free-standing — brand
+    // ownership in Merk Management is free text, not a Company FK, and the applicant's
+    // relationship to a brand is established per-application via `entry.applicantRole` +
+    // `getVIUConsumptionBrandRequirements` below, never by matching Merk.companyId to
+    // Application.companyId. A brand with no owning company at all is a normal, valid case
+    // (e.g. applicantRole OWNER with ownership recorded as free text), not a reason to reject.
     if (brand.status !== "ACTIVE") {
       return {
         error: `Merek "${brand.brandName}" berstatus ${brand.status} dan tidak dapat digunakan pada permohonan ini.`,
