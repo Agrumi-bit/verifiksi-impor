@@ -8,7 +8,13 @@ import {
   BRAND_APPLICATION_READINESS_LABELS,
 } from "../business-rules";
 import { konsumsiProductTotal, type ApplicationKonsumsiProductValues } from "../schema";
-import type { ApplicationWizardValues } from "../../../schema";
+import { terbilangRupiah } from "@/lib/terbilang";
+import {
+  MODAL_STATEMENT_LETTER_DOC_DEF,
+  NON_INDUSTRI_SUPPORT_DOC_DEFS,
+  type ApplicationWizardValues,
+  type NonIndustriDocumentValues,
+} from "../../../schema";
 
 function formatMoney(value: number): string {
   return value.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -77,7 +83,8 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
     payload.applicationBrands.length === 0 &&
     payload.brandQualityTests.length === 0 &&
     payload.konsumsiDocuments.length === 0 &&
-    payload.konsumsiProducts.length === 0
+    payload.konsumsiProducts.length === 0 &&
+    (payload.nonIndustriDocuments ?? []).every((doc) => !doc.enabled && !doc.documentPath && !doc.amount)
   ) {
     return null;
   }
@@ -159,6 +166,87 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
         </div>
       </Section>
 
+      <Section title="VIU Konsumsi — Dokumen Pendukung Merek">
+        <div className="flex flex-col gap-3">
+          {payload.brandQualityTests.map((qt, index) => (
+            <div key={index} className="rounded-lg border border-border p-3">
+              <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                <Item label="Merek" value={snapshotOrFallbackBrandName(payload, qt.brandId, fallbackBrandName)} />
+                <Item label="Kelompok Komoditas" value={qt.industryName} />
+                <Item label="Sub Kelompok Komoditas" value={qt.commodityName} />
+                <Item label="Nomor Sertifikat" value={qt.certificateNumber} />
+                <Item label="Laboratorium" value={qt.laboratoryName} />
+                <Item label="Tanggal Terbit" value={formatDate(qt.issueDate)} />
+                <Item label="Tanggal Kadaluarsa" value={qt.expiryDate ? formatDate(qt.expiryDate) : "—"} />
+              </dl>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {qt.filePath && (
+                  <a
+                    href={`/${qt.filePath}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    {qt.fileName || "Hasil Uji Mutu"}
+                  </a>
+                )}
+                {qt.labelStatementFilePath && (
+                  <a
+                    href={`/${qt.labelStatementFilePath}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    {qt.labelStatementFileName || "Surat Pernyataan Label Berbahasa Indonesia"}
+                  </a>
+                )}
+                {qt.labelDocumentationFilePath && (
+                  <a
+                    href={`/${qt.labelDocumentationFilePath}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    {qt.labelDocumentationFileName || "Dokumentasi Label Produk"}
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+          {payload.brandQualityTests.length === 0 && (
+            <p className="text-sm text-muted-foreground">Belum ada dokumen pendukung merek pada permohonan ini.</p>
+          )}
+        </div>
+      </Section>
+
+      <Section title="VIU Konsumsi — Bukti Kemampuan Finansial">
+        <div className="flex flex-col gap-4">
+          <FinancialCapabilitySummary documents={payload.nonIndustriDocuments ?? []} />
+
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Dokumen Impor Barang Konsumsi
+            </p>
+            <div className="flex flex-col gap-2">
+              {payload.konsumsiDocuments.map((doc) => (
+                <a
+                  key={doc.id}
+                  href={`/${doc.documentPath}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  {doc.label}
+                </a>
+              ))}
+              {payload.konsumsiDocuments.length === 0 && (
+                <p className="text-sm text-muted-foreground">Belum ada dokumen pendukung pada permohonan ini.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </Section>
+
       <Section title="VIU Konsumsi — Informasi Produk">
         <div className="flex flex-col gap-4">
           {payload.applicationBrands.map((brandEntry) => {
@@ -224,79 +312,57 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
           )}
         </div>
       </Section>
-
-      <Section title="VIU Konsumsi — Dokumen Pendukung Merek">
-        <div className="flex flex-col gap-3">
-          {payload.brandQualityTests.map((qt, index) => (
-            <div key={index} className="rounded-lg border border-border p-3">
-              <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-                <Item label="Merek" value={snapshotOrFallbackBrandName(payload, qt.brandId, fallbackBrandName)} />
-                <Item label="Kelompok Komoditas" value={qt.industryName} />
-                <Item label="Sub Kelompok Komoditas" value={qt.commodityName} />
-                <Item label="Nomor Sertifikat" value={qt.certificateNumber} />
-                <Item label="Laboratorium" value={qt.laboratoryName} />
-                <Item label="Tanggal Terbit" value={formatDate(qt.issueDate)} />
-                <Item label="Tanggal Kadaluarsa" value={qt.expiryDate ? formatDate(qt.expiryDate) : "—"} />
-              </dl>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {qt.filePath && (
-                  <a
-                    href={`/${qt.filePath}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
-                  >
-                    {qt.fileName || "Hasil Uji Mutu"}
-                  </a>
-                )}
-                {qt.labelStatementFilePath && (
-                  <a
-                    href={`/${qt.labelStatementFilePath}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
-                  >
-                    {qt.labelStatementFileName || "Surat Pernyataan Label Berbahasa Indonesia"}
-                  </a>
-                )}
-                {qt.labelDocumentationFilePath && (
-                  <a
-                    href={`/${qt.labelDocumentationFilePath}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
-                  >
-                    {qt.labelDocumentationFileName || "Dokumentasi Label Produk"}
-                  </a>
-                )}
-              </div>
-            </div>
-          ))}
-          {payload.brandQualityTests.length === 0 && (
-            <p className="text-sm text-muted-foreground">Belum ada dokumen pendukung merek pada permohonan ini.</p>
-          )}
-        </div>
-      </Section>
-
-      <Section title="VIU Konsumsi — Dokumen Pendukung">
-        <div className="flex flex-col gap-2">
-          {payload.konsumsiDocuments.map((doc) => (
-            <a
-              key={doc.id}
-              href={`/${doc.documentPath}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              {doc.label}
-            </a>
-          ))}
-          {payload.konsumsiDocuments.length === 0 && (
-            <p className="text-sm text-muted-foreground">Belum ada dokumen pendukung pada permohonan ini.</p>
-          )}
-        </div>
-      </Section>
     </>
+  );
+}
+
+/** Step "Bukti Kemampuan Finansial" (support-document, shared with Industri/Non-Industri —
+ * see Step5SupportDocument's `needsModalDocs`) — Surat Pernyataan Kepemilikan Modal Kerja
+ * (always required, carries the Jumlah Modal Kerja amount + its terbilang) plus whichever single
+ * evidence document (from NON_INDUSTRI_SUPPORT_DOC_DEFS) the applicant picked. */
+function FinancialCapabilitySummary({ documents }: { documents: NonIndustriDocumentValues[] }) {
+  const statementEntry = documents.find((doc) => doc.key === MODAL_STATEMENT_LETTER_DOC_DEF.key);
+  const evidenceEntry = documents.find((doc) => doc.enabled && doc.key !== MODAL_STATEMENT_LETTER_DOC_DEF.key);
+  const evidenceDef = evidenceEntry ? NON_INDUSTRI_SUPPORT_DOC_DEFS.find((def) => def.key === evidenceEntry.key) : undefined;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="rounded-lg border border-border p-3">
+        <p className="text-sm font-semibold">{MODAL_STATEMENT_LETTER_DOC_DEF.title}</p>
+        <dl className="mt-2 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          <Item
+            label="Jumlah Modal Kerja"
+            value={statementEntry?.amount ? `Rp ${formatMoney(Number(statementEntry.amount))}` : null}
+          />
+          <Item label="Terbilang" value={statementEntry?.amount ? terbilangRupiah(statementEntry.amount) : null} />
+        </dl>
+        {statementEntry?.documentPath && (
+          <a
+            href={`/${statementEntry.documentPath}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-block rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
+          >
+            Dokumen Surat Pernyataan
+          </a>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-border p-3">
+        <p className="text-sm font-semibold">Dokumen Bukti Pernyataan Modal</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{evidenceDef?.title ?? "Belum dipilih"}</p>
+        {evidenceEntry?.documentPath && (
+          <a
+            href={`/${evidenceEntry.documentPath}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-block rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
+          >
+            {evidenceDef?.title ?? "Dokumen Bukti"}
+          </a>
+        )}
+      </div>
+    </div>
   );
 }
 

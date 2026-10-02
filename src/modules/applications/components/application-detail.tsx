@@ -108,6 +108,10 @@ export function ApplicationDetail({ id }: Props) {
         <Item label="Issuing Authority" value={payload.notarialIssuingAuthority} />
       </Section>
 
+      <Section title="Tax Information">
+        <Item label="NPWP" value={payload.npwpNumber} />
+      </Section>
+
       <Section title="Location Information">
         <Item label="Jumlah Lokasi" value={payload.locations?.length?.toString()} />
         <Item
@@ -116,13 +120,18 @@ export function ApplicationDetail({ id }: Props) {
         />
       </Section>
 
-      <Section title="Product Information">
-        <Item label="Jumlah Produk" value={payload.products?.length?.toString()} />
-        <Item
-          label="Jenis Material"
-          value={payload.products?.map((product) => product.materialType).join(", ")}
-        />
-      </Section>
+      {/* Generic product list — only meaningful for Bahan Baku Industri/Non-Industri (see
+          Step6ProductInformation's own gate). A Barang-Konsumsi-only application uses
+          KonsumsiApplicationReview's own "Informasi Produk" section instead. */}
+      {(payload.importTypes?.includes("BAHAN_BAKU_INDUSTRI") || payload.importTypes?.includes("BAHAN_BAKU_NON_INDUSTRI")) && (
+        <Section title="Product Information">
+          <Item label="Jumlah Produk" value={payload.products?.length?.toString()} />
+          <Item
+            label="Jenis Material"
+            value={payload.products?.map((product) => product.materialType).join(", ")}
+          />
+        </Section>
+      )}
 
       {payload.importTypes?.includes("BARANG_KONSUMSI") && (
         <KonsumsiApplicationReview payload={payload} brandLookupApiBase="/api/merk" />
