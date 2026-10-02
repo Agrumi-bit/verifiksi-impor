@@ -7,7 +7,12 @@ import {
   IMPORT_APPOINTMENT_SOURCE_LABELS,
   BRAND_APPLICATION_READINESS_LABELS,
 } from "../business-rules";
+import { konsumsiProductTotal, type ApplicationKonsumsiProductValues } from "../schema";
 import type { ApplicationWizardValues } from "../../../schema";
+
+function formatMoney(value: number): string {
+  return value.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -68,8 +73,22 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
   });
   const fallbackBrandName = (brandId: string) => fallbackBrands?.find((b) => b.id === brandId)?.brandName;
 
-  if (payload.applicationBrands.length === 0 && payload.brandQualityTests.length === 0 && payload.konsumsiDocuments.length === 0) {
+  if (
+    payload.applicationBrands.length === 0 &&
+    payload.brandQualityTests.length === 0 &&
+    payload.konsumsiDocuments.length === 0 &&
+    payload.konsumsiProducts.length === 0
+  ) {
     return null;
+  }
+
+  // Group by Brand, then by Sub Kelompok Komoditas — same structure Step "Product Information"
+  // itself uses. Submitted applications show the server-built `productSnapshot` (never live
+  // master data); drafts have no snapshot yet, so they fall back to the display caches captured
+  // at selection time (commodityName/hsDescription/countryOfOriginCode on the product itself).
+  const productsByBrand = new Map<string, ApplicationKonsumsiProductValues[]>();
+  for (const product of payload.konsumsiProducts) {
+    productsByBrand.set(product.brandId, [...(productsByBrand.get(product.brandId) ?? []), product]);
   }
 
   return (
@@ -136,6 +155,66 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
           })}
           {payload.applicationBrands.length === 0 && (
             <p className="text-sm text-muted-foreground">Belum ada merek pada permohonan ini.</p>
+          )}
+        </div>
+      </Section>
+
+      <Section title="VIU Konsumsi — Informasi Produk">
+        <div className="flex flex-col gap-4">
+          {payload.applicationBrands.map((brandEntry) => {
+            const brandProducts = productsByBrand.get(brandEntry.brandId) ?? [];
+            if (brandProducts.length === 0) return null;
+
+            const groups = new Map<string, ApplicationKonsumsiProductValues[]>();
+            for (const product of brandProducts) {
+              groups.set(product.commodityGroupId, [...(groups.get(product.commodityGroupId) ?? []), product]);
+            }
+
+            return (
+              <div key={brandEntry.brandId} className="rounded-lg border border-border p-3">
+                <p className="text-sm font-semibold">
+                  {brandEntry.submissionSnapshot?.brandName ?? fallbackBrandName(brandEntry.brandId) ?? brandEntry.brandId}
+                </p>
+                <div className="mt-3 flex flex-col gap-3">
+                  {[...groups.entries()].map(([commodityGroupId, products]) => (
+                    <div key={commodityGroupId} className="rounded-lg border border-border bg-muted/10 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Sub Kelompok Komoditas
+                      </p>
+                      <p className="text-sm font-bold">
+                        {products[0].productSnapshot?.commodityName ?? products[0].commodityName ?? "—"}
+                      </p>
+                      <div className="mt-2 flex flex-col gap-3">
+                        {products.map((product) => (
+                          <dl key={product.id} className="grid gap-x-6 gap-y-2 border-t border-border pt-2 sm:grid-cols-2">
+                            <Item label="Nama Produk" value={product.productName} />
+                            <Item label="HS Code" value={product.hsCode} />
+                            <Item label="Uraian HS" value={product.productSnapshot?.hsDescription ?? product.hsDescription} />
+                            <Item
+                              label="Asal Negara"
+                              value={product.productSnapshot?.countryOfOriginName ?? product.countryOfOrigin}
+                            />
+                            <Item label="Jumlah" value={`${Number(product.quantity).toLocaleString("id-ID")} ${product.unit ?? ""}`} />
+                            <Item label="Harga Satuan Rata-rata" value={`${product.currency} ${formatMoney(Number(product.averageUnitPrice))}`} />
+                            <Item
+                              label="Total Harga"
+                              value={
+                                product.productSnapshot?.totalPrice
+                                  ? `${product.currency} ${formatMoney(Number(product.productSnapshot.totalPrice))}`
+                                  : `${product.currency} ${formatMoney(konsumsiProductTotal(product))}`
+                              }
+                            />
+                          </dl>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          {payload.konsumsiProducts.length === 0 && (
+            <p className="text-sm text-muted-foreground">Belum ada produk pada permohonan ini.</p>
           )}
         </div>
       </Section>

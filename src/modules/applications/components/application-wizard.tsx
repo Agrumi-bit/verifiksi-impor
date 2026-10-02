@@ -16,6 +16,7 @@ import { LOCATION_TYPES } from "@/modules/shared/schema";
 import { Step1ApplicationInformation } from "./steps/step1-application-information";
 import { StepBrandsUsed } from "../viu-schemes/konsumsi/components/step-brands-used/step-brands-used";
 import { StepQualityTest } from "../viu-schemes/konsumsi/components/step-quality-test";
+import { KonsumsiProductInformation } from "../viu-schemes/konsumsi/components/product-information/konsumsi-product-information";
 import { StepPartnerIndustri } from "./steps/step-partner-industri";
 import { Step5SupportDocument } from "./steps/step5-support-document";
 import { Step6ProductInformation } from "./steps/step6-product-information";
@@ -499,8 +500,21 @@ export function ApplicationWizard({
                 />
               )}
               {!isVki && currentStep === stepNumberByKey["support-document"] && <Step5SupportDocument form={form} />}
-              {!isVki && currentStep === stepNumberByKey["product-info"] && <Step6ProductInformation form={form} />}
-              {!isVki && currentStep === stepNumberByKey.preview && <Step7Preview form={form} onEditStep={goToStep} />}
+              {!isVki && currentStep === stepNumberByKey["product-info"] && (
+                <>
+                  <Step6ProductInformation form={form} />
+                  <KonsumsiProductInformation
+                    form={form}
+                    onNavigateToBrandsStep={() => {
+                      const brandsStepNumber = stepNumberByKey["brands-used"];
+                      if (brandsStepNumber) goToStep(brandsStepNumber);
+                    }}
+                  />
+                </>
+              )}
+              {!isVki && currentStep === stepNumberByKey.preview && (
+                <Step7Preview form={form} onEditStep={goToStep} stepNumberByKey={stepNumberByKey} />
+              )}
               {!isVki && currentStep === stepNumberByKey.submit && <Step8Submit form={form} />}
 
               {isVki && currentStep === 3 && <VkiStep3Legal form={form} />}

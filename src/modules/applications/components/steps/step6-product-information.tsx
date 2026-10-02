@@ -28,6 +28,7 @@ export function Step6ProductInformation({ form }: Step6Props) {
   const errors = formState.errors.products;
   const hsCodeOptions = useHsCodeOptions();
 
+  const importTypes = useWatch({ control, name: "importTypes" }) ?? [];
   const partnerIndustriEntries = useWatch({ control, name: "partnerIndustriEntries" }) ?? [];
   const companyId = useWatch({ control, name: "companyId" });
   const { data: partnerOptions } = usePartnerIndustriOptions(companyId);
@@ -35,6 +36,16 @@ export function Step6ProductInformation({ form }: Step6Props) {
     partnerIndustriEntries.filter((entry) => entry?.enabled).map((entry) => entry?.partnerId),
   );
   const enabledPartners = (partnerOptions ?? []).filter((option) => enabledPartnerIds.has(option.id));
+
+  // This generic material/bahan-baku product list is only meaningful for Bahan Baku Industri /
+  // Non Industri — a Barang-Konsumsi-only application has its own structured Brand > Sub
+  // Kelompok Komoditas > Produk section instead (KonsumsiProductInformation, rendered alongside
+  // this component by application-wizard.tsx) and should never also see this generic one. A
+  // mixed Industri+Konsumsi application still needs both (Industri's raw-material list is a
+  // separate concept from Konsumsi's per-brand commercial product list).
+  const needsGenericProducts =
+    importTypes.includes("BAHAN_BAKU_INDUSTRI") || importTypes.includes("BAHAN_BAKU_NON_INDUSTRI");
+  if (!needsGenericProducts) return null;
 
   return (
     <div className="flex flex-col gap-4">

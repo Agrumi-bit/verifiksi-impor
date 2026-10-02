@@ -96,7 +96,7 @@ export async function POST(request: Request) {
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
-    values = { ...values, applicationBrands: result.applicationBrands };
+    values = { ...values, applicationBrands: result.applicationBrands, konsumsiProducts: result.konsumsiProducts };
   }
 
   // Promote the draft row saved during the wizard instead of creating a

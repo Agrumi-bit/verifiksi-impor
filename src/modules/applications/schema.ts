@@ -16,7 +16,7 @@ import {
   type WarehouseRegistrationType,
 } from "@/modules/shared/schema";
 import { taxProofEntrySchema, COMPANY_AGES } from "@/modules/company/schema";
-import { brandsUsedSchema, brandQualityTestsSchema, konsumsiDocumentsSchema } from "./viu-schemes/konsumsi/schema";
+import { brandsUsedSchema, brandQualityTestsSchema, konsumsiDocumentsSchema, konsumsiProductsSchema } from "./viu-schemes/konsumsi/schema";
 import { applyKonsumsiSubmitRules } from "./viu-schemes/konsumsi/submit-rules";
 import { KONSUMSI_STEP_FIELD_NAMES } from "./viu-schemes/konsumsi/step-field-names";
 
@@ -281,9 +281,13 @@ export const productItemSchema = z.object({
   partnerIndustriId: z.string().trim().optional(),
 });
 
-/** Product list — Product Information step. */
+/** Product list — Product Information step. No static `.min(1)` here since the requirement is
+ * conditional (VKI always needs it; VIU only when Bahan Baku Industri/Non-Industri is selected —
+ * a Barang-Konsumsi-only application uses `konsumsiProducts` instead, see Step6ProductInformation's
+ * own gate). Enforced by `vkiSubmitSchema`'s own superRefine and `applyViuOnlySubmitRules` below,
+ * each applying the exact same "Tambahkan minimal satu produk" rule to their own scope. */
 export const productsSchema = z.object({
-  products: z.array(productItemSchema).min(1, "Tambahkan minimal satu produk"),
+  products: z.array(productItemSchema).default([]),
 });
 
 /** VIU submission declaration checkbox — Submit step. */
@@ -484,6 +488,7 @@ const applicationWizardShape = applicationMetaSchema
   .extend(brandsUsedSchema.shape)
   .extend(brandQualityTestsSchema.shape)
   .extend(productsSchema.shape)
+  .extend(konsumsiProductsSchema.shape)
   .extend(declarationSchema.shape)
   .extend(machinesSchema.shape)
   .extend(rawMaterialsSchema.shape)
@@ -524,6 +529,20 @@ export function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardSh
       code: "custom",
       path: ["partnerIndustriEntries"],
       message: "Aktifkan minimal satu Partner Industri tujuan",
+    });
+  }
+  // Generic material/bahan-baku product list — only required for Bahan Baku Industri/Non
+  // Industri (see Step6ProductInformation's own gate). A Barang-Konsumsi-only application has no
+  // use for it and is never required to fill it; `konsumsiProducts` is its own requirement,
+  // enforced by applyKonsumsiSubmitRules below.
+  if (
+    (data.importTypes.includes("BAHAN_BAKU_INDUSTRI") || data.importTypes.includes("BAHAN_BAKU_NON_INDUSTRI")) &&
+    data.products.length < 1
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["products"],
+      message: "Tambahkan minimal satu produk",
     });
   }
   if (
@@ -580,7 +599,18 @@ export const applicationWizardSchema = applicationWizardShape.superRefine((data,
 const viuSubmitSchema = applicationWizardShape
   .extend({ verificationType: z.literal("VIU") })
   .superRefine(applyViuOnlySubmitRules);
-const vkiSubmitSchema = applicationWizardShape.extend({ verificationType: z.literal("VKI") });
+// VKI always requires at least one product (no Konsumsi-style exception — VKI has no
+// `importTypes`/Konsumsi concept at all) — preserved explicitly now that `productsSchema` itself
+// no longer carries a static `.min(1)` (see that schema's own comment).
+const vkiSubmitSchema = applicationWizardShape.extend({ verificationType: z.literal("VKI") }).superRefine((data, ctx) => {
+  if (data.products.length < 1) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["products"],
+      message: "Tambahkan minimal satu produk",
+    });
+  }
+});
 export const applicationSubmitSchema = z.discriminatedUnion("verificationType", [
   viuSubmitSchema,
   vkiSubmitSchema,
@@ -735,7 +765,10 @@ export const VIU_STEP_FIELD_NAMES: Record<string, (keyof ApplicationWizardValues
   location: LOCATION_STEP_FIELDS,
   "partner-industri": ["partnerIndustriEntries"],
   "support-document": ["nonIndustriDocuments", "konsumsiDocuments"],
-  "product-info": ["products"],
+  // Konsumsi's own product structure (see KonsumsiProductInformation) is additive here, not
+  // owned by KONSUMSI_STEP_FIELD_NAMES below — "product-info" itself is a shared step, not one
+  // Konsumsi contributes to the step list, so it can't be spread in from that Konsumsi-owned map.
+  "product-info": ["products", "konsumsiProductGroups", "konsumsiProducts"],
   preview: [],
   submit: ["declarationAccepted"],
   ...KONSUMSI_STEP_FIELD_NAMES,

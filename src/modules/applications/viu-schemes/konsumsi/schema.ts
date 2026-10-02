@@ -148,3 +148,116 @@ const konsumsiSupportDocumentSchema = z.object({
 export const konsumsiDocumentsSchema = z.object({
   konsumsiDocuments: z.array(konsumsiSupportDocumentSchema),
 });
+
+/**
+ * Step "Product Information" (shared step, scheme-owned content) — Konsumsi products are
+ * structured as Merek (`applicationBrands[].brandId`) > Kelompok Komoditas (CommodityGroup
+ * master data, referenced by `commodityGroupId` — displayed as "Sub Kelompok Komoditas" per the
+ * app-wide commodity hierarchy naming) > Produk. This is entirely separate from the shared
+ * `products` field (free-text HS/volume, used by VKI/Industri/Non-Industri — never touched here)
+ * since the shapes are structurally incompatible: Konsumsi products carry a Brand/commodity
+ * relationship, master-data-backed HS Code + Country of Origin, and per-line pricing that the
+ * generic product list has no concept of.
+ */
+const positiveNumberString = (message: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, message)
+    .refine((value) => Number.isFinite(Number(value)) && Number(value) > 0, message);
+
+const nonNegativeNumberString = (message: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, message)
+    .refine((value) => Number.isFinite(Number(value)) && Number(value) >= 0, message);
+
+export const KONSUMSI_PRODUCT_CURRENCIES = ["USD", "IDR", "EUR", "CNY", "JPY"] as const;
+export type KonsumsiProductCurrency = (typeof KONSUMSI_PRODUCT_CURRENCIES)[number];
+
+/**
+ * One "Kelompok Komoditas" grouping slot under a selected Brand — exists independently of
+ * whether it has any Product rows yet (an empty group is a valid state: the user picks the
+ * group first, then adds products into it). `commodityGroupId` references CommodityGroup
+ * master data (System Configuration > "Sub Kelompok Komoditas"), never a free-text name.
+ */
+export const konsumsiProductGroupSchema = z.object({
+  id: z.string(),
+  brandId: requiredString("Merek wajib dipilih"),
+  commodityGroupId: requiredString("Kelompok komoditas wajib dipilih"),
+  commodityName: z.string().trim().optional(),
+});
+export type KonsumsiProductGroupValues = z.infer<typeof konsumsiProductGroupSchema>;
+
+export function createEmptyKonsumsiProductGroup(brandId: string): KonsumsiProductGroupValues {
+  return { id: crypto.randomUUID(), brandId, commodityGroupId: "" };
+}
+
+/** Server-authoritative snapshot of one Product line as it stood at final submit time — same
+ * pattern as `ApplicationBrandSubmissionSnapshot`. Populated only by the server (never trust a
+ * client-provided value), only once, at promotion from DRAFT to SUBMITTED. Absent on drafts. */
+export const konsumsiProductSnapshotSchema = z.object({
+  capturedAt: z.string(),
+  brandName: z.string(),
+  commodityName: z.string(),
+  hsDescription: z.string(),
+  countryOfOriginName: z.string(),
+  totalPrice: z.string(),
+});
+export type KonsumsiProductSnapshot = z.infer<typeof konsumsiProductSnapshotSchema>;
+
+export const konsumsiProductSchema = z.object({
+  id: z.string(),
+  brandId: requiredString("Merek wajib dipilih"),
+  commodityGroupId: requiredString("Kelompok komoditas wajib dipilih"),
+  // Display cache, resolved at selection time — never the source of truth (server re-resolves
+  // from commodityGroupId at submit, same pattern as the quality-test entries' commodityName).
+  commodityName: z.string().trim().optional(),
+  productName: requiredString("Nama produk wajib diisi"),
+  // References HS Code master data by its code string (the existing convention — see
+  // useHsCodeOptions/the shared productItemSchema, which both key HS Code by the code itself
+  // rather than a separate master-data id).
+  hsCode: requiredString("HS Code wajib dipilih"),
+  hsDescription: z.string().trim().optional(),
+  // References Country master data by its name — the existing convention (see
+  // useActiveCountries: "value is the country name... used for negara asal style fields").
+  countryOfOrigin: requiredString("Negara asal wajib dipilih"),
+  countryOfOriginCode: z.string().trim().optional(),
+  quantity: positiveNumberString("Jumlah harus lebih besar dari 0"),
+  // Derived from the selected HS Code's registered unit ("satuan mengikuti HS Code, bukan
+  // diketik bebas" — see use-hs-code-options.ts) — not independently editable.
+  unit: z.string().trim().optional(),
+  averageUnitPrice: nonNegativeNumberString("Harga satuan rata-rata tidak valid"),
+  currency: z.enum(KONSUMSI_PRODUCT_CURRENCIES).default("USD"),
+  productSnapshot: konsumsiProductSnapshotSchema.optional(),
+});
+export type ApplicationKonsumsiProductValues = z.infer<typeof konsumsiProductSchema>;
+
+export function createEmptyKonsumsiProduct(brandId: string, commodityGroupId: string): ApplicationKonsumsiProductValues {
+  return {
+    id: crypto.randomUUID(),
+    brandId,
+    commodityGroupId,
+    productName: "",
+    hsCode: "",
+    countryOfOrigin: "",
+    quantity: "",
+    averageUnitPrice: "",
+    currency: "USD",
+  };
+}
+
+/** Total is always derived (quantity x averageUnitPrice) — never stored as the source of truth,
+ * so it can't drift from its inputs. Returns 0 (not NaN) for incomplete rows mid-edit. */
+export function konsumsiProductTotal(product: Pick<ApplicationKonsumsiProductValues, "quantity" | "averageUnitPrice">): number {
+  const quantity = Number(product.quantity);
+  const price = Number(product.averageUnitPrice);
+  if (!Number.isFinite(quantity) || !Number.isFinite(price)) return 0;
+  return quantity * price;
+}
+
+export const konsumsiProductsSchema = z.object({
+  konsumsiProductGroups: z.array(konsumsiProductGroupSchema).default([]),
+  konsumsiProducts: z.array(konsumsiProductSchema).default([]),
+});

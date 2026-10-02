@@ -114,6 +114,9 @@ function runSubmitRules(data) {
       konsumsiDocuments: [],
       applicationBrands: [],
       brandQualityTests: [],
+      konsumsiProductGroups: [],
+      konsumsiProducts: [],
+      products: [],
       ...data,
     },
     { addIssue: (i) => issues.push(i) },
@@ -132,6 +135,7 @@ assert(
   JSON.stringify(runSubmitRules({ importTypes: ["BAHAN_BAKU_INDUSTRI"] })) === JSON.stringify([
     "nonIndustriDocuments: Unggah Surat Pernyataan Kepemilikan Modal Kerja",
     "partnerIndustriEntries: Aktifkan minimal satu Partner Industri tujuan",
+    "products: Tambahkan minimal satu produk",
   ]),
   "Industri alone, nothing filled -> both Industri-side issues (unaffected by Konsumsi extraction)",
 );
@@ -151,6 +155,7 @@ assert(
   ) === JSON.stringify([
     "applicationBrands.0.appointmentSource: Pilih sumber penunjukan importir",
     "brandQualityTests: 1 merek belum memiliki dokumen pendukung merek",
+    "konsumsiProducts: Tambahkan minimal satu produk",
   ]),
   "Konsumsi: brand missing appointmentSource + quality test -> applyKonsumsiSubmitRules fires correctly",
 );
@@ -159,9 +164,15 @@ assert(
   JSON.stringify(runSubmitRules({ importTypes: ["BARANG_KONSUMSI"] })) === JSON.stringify([
     "applicationBrands: Pilih atau tambahkan minimal satu merek yang digunakan",
     "konsumsiDocuments: Tambahkan minimal satu dokumen pendukung",
+    "konsumsiProducts: Tambahkan minimal satu produk",
     "nonIndustriDocuments: Unggah Surat Pernyataan Kepemilikan Modal Kerja",
   ]),
   "Konsumsi alone, nothing filled -> Bukti Kemampuan Finansial is now required too",
+);
+
+assert(
+  !runSubmitRules({ importTypes: ["BARANG_KONSUMSI"] }).some((issue) => issue.startsWith("products:")),
+  "Konsumsi-only is never required to fill the generic products list (Step6ProductInformation is hidden for it)",
 );
 
 assert(
@@ -172,6 +183,19 @@ assert(
       konsumsiDocuments: [{ id: "1", label: "x", documentPath: "x" }],
       applicationBrands: [{ brandId: "b1", applicantRole: "OWNER", relationshipDocuments: {} }],
       brandQualityTests: [{ brandId: "b1" }],
+      konsumsiProducts: [
+        {
+          id: "p1",
+          brandId: "b1",
+          commodityGroupId: "cg1",
+          productName: "Test Product",
+          hsCode: "61091000",
+          countryOfOrigin: "Vietnam",
+          quantity: "10",
+          averageUnitPrice: "5",
+          currency: "USD",
+        },
+      ],
     }),
   ) === JSON.stringify(["nonIndustriDocuments: Isi jumlah modal kerja pada Surat Pernyataan Kepemilikan Modal Kerja"]),
   "Statement letter uploaded but amount empty -> amount-specific issue fires",
@@ -186,6 +210,22 @@ assert(
       konsumsiDocuments: [{ id: "1", label: "x", documentPath: "x" }],
       applicationBrands: [{ brandId: "b1", applicantRole: "OWNER", relationshipDocuments: {} }],
       brandQualityTests: [{ brandId: "b1" }],
+      // Industri's own generic material list — separate from Konsumsi's structured
+      // konsumsiProducts below, both required simultaneously on a mixed application.
+      products: [{ id: "prod1", materialType: "Benang Katun", hsCode: "52053100" }],
+      konsumsiProducts: [
+        {
+          id: "p1",
+          brandId: "b1",
+          commodityGroupId: "cg1",
+          productName: "Test Product",
+          hsCode: "61091000",
+          countryOfOrigin: "Vietnam",
+          quantity: "10",
+          averageUnitPrice: "5",
+          currency: "USD",
+        },
+      ],
     }),
   ) === JSON.stringify([]),
   "Mixed Industri+Konsumsi, everything satisfied -> clean (no cross-talk between the two rule sets)",

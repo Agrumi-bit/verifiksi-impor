@@ -74,4 +74,34 @@ export function applyKonsumsiSubmitRules(data: ApplicationWizardValues, ctx: z.R
       message: `${brandIdsMissingQualityTest.length} merek belum memiliki dokumen pendukung merek`,
     });
   }
+  // Step "Product Information" — Konsumsi's own Merek > Kelompok Komoditas > Produk structure
+  // (konsumsiProducts), entirely separate from the shared free-text `products` field (VKI/
+  // Industri/Non-Industri, untouched by this scheme). Structural checks only here (presence +
+  // exact-duplicate lines); master-data existence (commodityGroupId/hsCode/countryOfOrigin) is a
+  // DB read, deliberately left to validateKonsumsiSubmit.
+  if (data.konsumsiProducts.length < 1) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["konsumsiProducts"],
+      message: "Tambahkan minimal satu produk",
+    });
+  }
+  const seenProductKeys = new Set<string>();
+  data.konsumsiProducts.forEach((product, index) => {
+    const key = [
+      product.brandId,
+      product.commodityGroupId,
+      product.hsCode.trim().toLowerCase(),
+      product.countryOfOrigin.trim().toLowerCase(),
+      product.productName.trim().toLowerCase(),
+    ].join("|");
+    if (seenProductKeys.has(key)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["konsumsiProducts", index, "productName"],
+        message: "Produk ini sudah ada untuk kombinasi merek, kelompok komoditas, HS Code, dan negara asal yang sama",
+      });
+    }
+    seenProductKeys.add(key);
+  });
 }
