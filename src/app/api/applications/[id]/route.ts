@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { normalizeKonsumsiPayload } from "@/modules/applications/viu-schemes/konsumsi/normalize";
+import { backfillKonsumsiHsCodes } from "@/modules/applications/viu-schemes/konsumsi/server/backfill-hs-codes";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 
 export async function GET(
@@ -18,7 +19,7 @@ export async function GET(
     );
   }
 
-  const payload = normalizeKonsumsiPayload(application.payload as ApplicationWizardValues);
+  const payload = await backfillKonsumsiHsCodes(normalizeKonsumsiPayload(application.payload as ApplicationWizardValues));
 
   return NextResponse.json({ data: { ...application, payload } });
 }

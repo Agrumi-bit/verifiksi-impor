@@ -138,7 +138,11 @@ export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle 
         const isDuplicate = [...currentProducts, ...newProducts].some(
           (product) =>
             product.brandId === brandId &&
-            product.hsCodeId === hsOption.hsCodeId &&
+            // Legacy rows (pre-refactor importer) have no hsCodeId — fall back to the HS Code string
+            // so re-importing the same sheet doesn't duplicate them.
+            (product.hsCodeId
+              ? product.hsCodeId === hsOption.hsCodeId
+              : (product.hsCode ?? "").replace(/\D/g, "") === hsOption.value.replace(/\D/g, "")) &&
             [...product.originCountries].map((c) => c.trim().toLowerCase()).sort().join(",") === rowCountryKey &&
             product.productName.trim().toLowerCase() === row.productName.trim().toLowerCase(),
         );

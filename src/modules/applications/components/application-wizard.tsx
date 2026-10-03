@@ -242,7 +242,41 @@ export function ApplicationWizard({
   }
 
   async function handleNext() {
-    await goNext();
+    const moved = await goNext();
+    if (moved !== false) {
+      setValidationIssues([]);
+      return;
+    }
+    // goNext() refused to move (a gated step failed validation). Never fail silently: say which
+    // step and what is wrong — including per-product messages for Konsumsi product rows, whose
+    // table has no per-cell error slot of its own.
+    const meta = activeSteps.find((step) => step.step === currentStep);
+    if (!meta) return;
+    const errorRecord = form.formState.errors as Record<string, unknown>;
+    const fields = activeFieldNames[meta.key] ?? [];
+    const messages: string[] = [];
+    for (const field of fields) {
+      const fieldErrors = errorRecord[field];
+      if (field === "konsumsiProducts" && Array.isArray(fieldErrors)) {
+        const products = form.getValues("konsumsiProducts") ?? [];
+        fieldErrors.forEach((productError, index) => {
+          if (!productError) return;
+          const name = products[index]?.productName?.trim() || `Produk #${index + 1}`;
+          const productMessages = [...new Set(collectErrorMessages(productError))];
+          if (productMessages.length > 0) messages.push(`${name}: ${productMessages.join(", ")}`);
+        });
+        continue;
+      }
+      messages.push(...collectErrorMessages(fieldErrors));
+    }
+    const uniqueMessages = [...new Set(messages)];
+    setValidationIssues([{ step: meta.step, title: meta.title, messages: uniqueMessages }]);
+    toast.error(
+      `Step ${meta.step} (${meta.title}) belum lengkap atau tidak valid${
+        uniqueMessages.length > 0 ? `: ${uniqueMessages.slice(0, 3).join("; ")}${uniqueMessages.length > 3 ? " …" : ""}` : ""
+      }`,
+    );
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function handleInvalidSubmit(errors: FieldErrors<ApplicationWizardValues>) {

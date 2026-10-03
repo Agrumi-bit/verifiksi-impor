@@ -1,11 +1,12 @@
 import type { ProductGroupCertificateValues } from "../../schema";
 
-export type CertificateStatus = "valid" | "expiring" | "missing" | "mismatched";
+export type CertificateStatus = "valid" | "expiring" | "missing" | "incomplete" | "mismatched";
 
 export const CERTIFICATE_STATUS_LABELS: Record<CertificateStatus, string> = {
   valid: "Ada & berlaku",
   expiring: "Akan kedaluwarsa",
   missing: "Belum ada",
+  incomplete: "Belum lengkap",
   mismatched: "Tidak sesuai cakupan",
 };
 
@@ -13,6 +14,7 @@ export const CERTIFICATE_STATUS_CLASSES: Record<CertificateStatus, string> = {
   valid: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
   expiring: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
   missing: "bg-destructive/10 text-destructive",
+  incomplete: "bg-destructive/10 text-destructive",
   mismatched: "bg-destructive/10 text-destructive",
 };
 
@@ -32,6 +34,14 @@ export function computeCertificateStatus(
 ): CertificateStatus {
   if (!certificate || !certificate.filePath) return "missing";
   if (certificate.brandId !== group.brandId || certificate.commodityGroupId !== group.commodityGroupId) return "mismatched";
+  // A freshly-uploaded certificate (no qualityTestId) must have every required field filled —
+  // a file alone is not enough (the schema rejects it at Lanjut/Submit), so never show it as valid.
+  if (
+    !certificate.qualityTestId &&
+    (!certificate.certificateNumber?.trim() || !certificate.laboratoryName?.trim() || !certificate.issueDate?.trim())
+  ) {
+    return "incomplete";
+  }
   if (!certificate.validUntil) return "valid";
   const validUntil = new Date(certificate.validUntil);
   if (Number.isNaN(validUntil.getTime())) return "valid";
