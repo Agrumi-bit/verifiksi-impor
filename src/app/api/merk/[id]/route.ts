@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
+import { requireAdminSession } from "@/lib/require-admin-session";
 import { buildMerkUpdateData, buildMerkUpdateDraftData } from "@/modules/merk/build-create-data";
 import { mapPrismaWriteError } from "@/modules/merk/prisma-error-message";
 import { merkDraftSchema, merkStatusUpdateSchema, merkWizardSchema } from "@/modules/merk/schema";
 import { resolveOwnershipReferences, validateQualityTestReferences } from "@/modules/merk/server-validation";
+import type { ApplicationBrandEntryValues } from "@/modules/applications/viu-schemes/konsumsi/schema";
 
 export async function GET(
   _request: Request,
@@ -136,6 +138,9 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const { error } = await requireAdminSession();
+  if (error) return error;
+
   const { id } = await params;
   const existing = await db.merk.findUnique({ where: { id } });
 
@@ -143,9 +148,51 @@ export async function DELETE(
     return NextResponse.json({ error: "Merek tidak ditemukan" }, { status: 404 });
   }
 
+  // `MerkImporter.sourceType = "APPLICATION"` rows are only ever written by
+  // syncMerkRelationshipsForApplication — which explicitly skips DRAFT
+  // applications (see that module's own comment). So the mere existence of
+  // one here already proves this Brand is tied to a non-DRAFT Application;
+  // no need to re-check that Application's current status. Deleting the
+  // Brand would cascade-delete that relationship history silently (see
+  // MerkImporter's `onDelete: Cascade`) — block it instead and point at
+  // Nonaktifkan, which is reversible.
+  const nonDraftUsage = await db.merkImporter.findMany({
+    where: { merkId: id, sourceType: "APPLICATION" },
+    include: { sourceApplication: { select: { applicationNumber: true } } },
+  });
+  if (nonDraftUsage.length > 0) {
+    const applicationNumbers = Array.from(
+      new Set(nonDraftUsage.map((row) => row.sourceApplication?.applicationNumber).filter((n): n is string => Boolean(n))),
+    );
+    return NextResponse.json(
+      {
+        error: `Merek "${existing.brandName}" masih digunakan pada permohonan ${applicationNumbers.join(", ")} dan tidak dapat dihapus. Nonaktifkan merek ini jika sudah tidak digunakan.`,
+      },
+      { status: 409 },
+    );
+  }
+
+  // A DRAFT application's `applicationBrands` never reaches MerkImporter (the sync skips
+  // drafts), so this is the only way to see "referenced by a draft" — scan payload directly.
+  // Not a block: a draft isn't final and can still change which brand it uses.
+  const draftApplications = await db.application.findMany({
+    where: { status: "DRAFT" },
+    select: { applicationNumber: true, payload: true },
+  });
+  const draftUsage = draftApplications.filter((app) => {
+    const payload = app.payload as { applicationBrands?: ApplicationBrandEntryValues[] } | null;
+    return (payload?.applicationBrands ?? []).some((entry) => entry.brandId === id);
+  });
+
   try {
     await db.merk.delete({ where: { id } });
-    return NextResponse.json({ data: { id } });
+    return NextResponse.json({
+      data: { id },
+      warning:
+        draftUsage.length > 0
+          ? `Merek ini masih dirujuk oleh draft permohonan ${draftUsage.map((d) => d.applicationNumber).join(", ")} — draft tersebut akan gagal disubmit sampai mereknya diganti.`
+          : null,
+    });
   } catch (error) {
     const message = mapPrismaWriteError(error);
     if (message) return NextResponse.json({ error: message }, { status: 400 });

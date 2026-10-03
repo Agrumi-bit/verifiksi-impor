@@ -1,7 +1,6 @@
 import * as XLSX from "xlsx";
 
 export const PRODUCT_EXCEL_COLUMNS = [
-  { key: "commodityName" as const, header: "Sub Kelompok Komoditas", example: "" },
   { key: "productName" as const, header: "Nama Produk", example: "Men's Cotton T-Shirt" },
   { key: "hsCode" as const, header: "HS Code", example: "61091000" },
   { key: "countryOfOrigin" as const, header: "Asal Negara", example: "Vietnam" },
@@ -19,32 +18,22 @@ function excelSheetName(name: string): string {
 }
 
 /**
- * Triggers a browser download of the per-Brand Produk Excel template. `groupNames` is that
- * Brand's own Sub Kelompok Komoditas list (derived from Step "Dokumen Pendukung Merek" — see
- * deriveKonsumsiProductGroups) so the example row and the sheet's own note reference groups that
- * actually exist for this Brand, never an arbitrary one.
+ * Triggers a browser download of the per-Brand Produk Excel template. No commodity-grouping
+ * column — Sub Kelompok Komoditas is derived automatically from each row's own HS Code at import
+ * time (see BrandProductSection's `handleImportFile`), the inverse of this template's previous
+ * design (grouping picked in Step "Dokumen Pendukung Merek" before any product existed).
  */
-export function downloadProductExcelTemplate(brandName: string, groupNames: string[]): void {
-  const exampleRow = PRODUCT_EXCEL_COLUMNS.map((c) => (c.key === "commodityName" ? (groupNames[0] ?? "") : c.example));
+export function downloadProductExcelTemplate(brandName: string): void {
+  const exampleRow = PRODUCT_EXCEL_COLUMNS.map((c) => c.example);
   const headerRow = PRODUCT_EXCEL_COLUMNS.map((c) => c.header);
   const sheet = XLSX.utils.aoa_to_sheet([headerRow, exampleRow]);
   sheet["!cols"] = PRODUCT_EXCEL_COLUMNS.map((c) => ({ wch: Math.max(c.header.length, c.example.length, 16) }));
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, sheet, excelSheetName(brandName));
-
-  if (groupNames.length > 0) {
-    const noteSheet = XLSX.utils.aoa_to_sheet([
-      ["Sub Kelompok Komoditas tersedia untuk merek ini"],
-      ...groupNames.map((name) => [name]),
-    ]);
-    XLSX.utils.book_append_sheet(workbook, noteSheet, "Sub Kelompok Komoditas");
-  }
-
   XLSX.writeFile(workbook, `Template_Produk_${excelSheetName(brandName).replace(/\s+/g, "_")}.xlsx`);
 }
 
 export type ProductImportRow = {
-  commodityName: string;
   productName: string;
   hsCode: string;
   countryOfOrigin: string;
@@ -56,13 +45,12 @@ export type ProductImportRow = {
 
 /**
  * Parses an uploaded per-Brand Produk Excel file (same layout as the template) — matches columns
- * by header text, not position. A row needs at least Sub Kelompok Komoditas, Nama Produk, HS
- * Code, Asal Negara, Jumlah Permohonan, and Harga Satuan Rata-rata to count; Mata Uang defaults to
- * "USD" and Jumlah Stock defaults to "0" when blank (same default as the manual Add Product
- * form) — neither is required for a row to count. Resolving Sub Kelompok Komoditas/HS
- * Code/Country against real data — and rejecting a Sub Kelompok Komoditas that isn't one of this
- * Brand's own (Step "Dokumen Pendukung Merek") groups — happens in the caller, which has that
- * live data; this function only does the spreadsheet-shape parsing.
+ * by header text, not position. A row needs at least Nama Produk, HS Code, Asal Negara, Jumlah
+ * Permohonan, and Harga Satuan Rata-rata to count; Mata Uang defaults to "USD" and Jumlah Stock
+ * defaults to "0" when blank (same default as the manual Add Product form) — neither is required
+ * for a row to count. Resolving HS Code/Country against real data — and deriving the Sub Kelompok
+ * Komoditas from the HS Code — happens in the caller, which has that live data; this function only
+ * does the spreadsheet-shape parsing.
  */
 export async function parseProductExcelFile(file: File): Promise<{ rows: ProductImportRow[]; skippedRows: number }> {
   const buffer = await file.arrayBuffer();
@@ -79,18 +67,16 @@ export async function parseProductExcelFile(file: File): Promise<{ rows: Product
   let skippedRows = 0;
 
   for (const sheetRow of sheetRows) {
-    const commodityName = String(sheetRow[headerFor("commodityName")] ?? "").trim();
     const productName = String(sheetRow[headerFor("productName")] ?? "").trim();
     const hsCode = String(sheetRow[headerFor("hsCode")] ?? "").trim();
     const countryOfOrigin = String(sheetRow[headerFor("countryOfOrigin")] ?? "").trim();
     const quantity = String(sheetRow[headerFor("quantity")] ?? "").trim();
     const averageUnitPrice = String(sheetRow[headerFor("averageUnitPrice")] ?? "").trim();
-    if (!commodityName || !productName || !hsCode || !countryOfOrigin || !quantity || !averageUnitPrice) {
+    if (!productName || !hsCode || !countryOfOrigin || !quantity || !averageUnitPrice) {
       skippedRows += 1;
       continue;
     }
     rows.push({
-      commodityName,
       productName,
       hsCode,
       countryOfOrigin,

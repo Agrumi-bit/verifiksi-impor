@@ -13,12 +13,15 @@ type VersionEntry = {
   path: string;
   uploadedByName: string | null;
   uploadedAt: string;
+  uploadedByRole: "CR" | "VERIFIKATOR" | null;
   isCurrent: boolean;
   verificationStatus: string;
   verifiedByName: string | null;
   verifiedAt: string | null;
   rejectionNote: string | null;
 };
+
+const UPLOADED_BY_ROLE_LABELS: Record<string, string> = { CR: "CR", VERIFIKATOR: "Verifikator" };
 
 function fmtDateTime(value: string | null): string {
   if (!value) return "—";
@@ -141,7 +144,11 @@ export function DocumentHistoryModal({ applicationId, docKey, docTitle, entityNa
                   </div>
                   <div>
                     <div className="text-[10.5px] text-[#a68f80]">Uploaded By</div>
-                    <div className="mt-0.5 text-[12px] font-bold text-[#20180f]">{v.uploadedByName ?? "—"}</div>
+                    <div className="mt-0.5 text-[12px] font-bold text-[#20180f]">
+                      {v.uploadedByRole
+                        ? `Diunggah oleh ${UPLOADED_BY_ROLE_LABELS[v.uploadedByRole]}${v.uploadedByName ? ` – ${v.uploadedByName}` : ""}`
+                        : (v.uploadedByName ?? "Perusahaan")}
+                    </div>
                   </div>
                 </div>
                 <a

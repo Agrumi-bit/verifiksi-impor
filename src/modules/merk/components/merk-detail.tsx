@@ -2,12 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs";
 import { DetailSection, DetailItem } from "@/components/layout/detail-section";
 import { ComingSoon } from "@/components/layout/coming-soon";
@@ -178,6 +186,8 @@ type Props = { id: string; surface: MerkSurface };
 
 export function MerkDetail({ id, surface }: Props) {
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const router = useRouter();
   const queryClient = useQueryClient();
   const detailKey = ["merk-surface", surface.apiBase, id];
   const { data, isLoading, isError } = useQuery({
@@ -210,6 +220,25 @@ export function MerkDetail({ id, surface }: Props) {
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Gagal memperbarui status merek");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`${surface.apiBase}/${id}`, { method: "DELETE" });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error ?? "Gagal menghapus merek");
+      return body as { warning?: string | null };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["merk-surface", surface.apiBase] });
+      toast.success("Merek berhasil dihapus.");
+      if (result.warning) toast.warning(result.warning);
+      router.push(surface.listHref);
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Gagal menghapus merek");
+      setIsDeleteOpen(false);
     },
   });
 
@@ -283,6 +312,11 @@ export function MerkDetail({ id, surface }: Props) {
           <Button variant="outline" size="sm" onClick={() => setIsEditOpen(true)}>
             Edit
           </Button>
+          {surface.canDelete && (
+            <Button variant="outline" size="sm" className="text-destructive" onClick={() => setIsDeleteOpen(true)}>
+              Hapus Merek
+            </Button>
+          )}
           <Button variant="outline" nativeButton={false} render={<Link href={surface.listHref} />}>
             Kembali ke Daftar
           </Button>
@@ -599,6 +633,28 @@ export function MerkDetail({ id, surface }: Props) {
           </TabsPanel>
         )}
       </Tabs>
+
+      {surface.canDelete && (
+        <Dialog open={isDeleteOpen} onOpenChange={(open) => { if (!open && !deleteMutation.isPending) setIsDeleteOpen(false); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Hapus merek ini?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Merek <b className="text-foreground">{data.brandName}</b> beserta seluruh dokumen, kepemilikan, dan data
+              kelas merek yang terkait akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsDeleteOpen(false)} disabled={deleteMutation.isPending}>
+                Batal
+              </Button>
+              <Button type="button" variant="destructive" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}>
+                {deleteMutation.isPending ? "Menghapus..." : "Ya, Hapus"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

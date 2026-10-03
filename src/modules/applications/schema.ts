@@ -18,10 +18,11 @@ import {
 import { taxProofEntrySchema, COMPANY_AGES } from "@/modules/company/schema";
 import {
   brandsUsedSchema,
-  brandQualityTestsSchema,
   konsumsiDocumentsSchema,
   konsumsiFinancialDocumentsSchema,
+  konsumsiLabelDocumentsSchema,
   konsumsiProductsSchema,
+  productGroupCertificatesSchema,
 } from "./viu-schemes/konsumsi/schema";
 import { applyKonsumsiSubmitRules } from "./viu-schemes/konsumsi/submit-rules";
 import { KONSUMSI_STEP_FIELD_NAMES } from "./viu-schemes/konsumsi/step-field-names";
@@ -441,9 +442,10 @@ const applicationWizardShape = applicationMetaSchema
   .extend(locationsSchema.shape)
   .extend(documentsSchema.shape)
   .extend(brandsUsedSchema.shape)
-  .extend(brandQualityTestsSchema.shape)
+  .extend(konsumsiLabelDocumentsSchema.shape)
   .extend(productsSchema.shape)
   .extend(konsumsiProductsSchema.shape)
+  .extend(productGroupCertificatesSchema.shape)
   .extend(declarationSchema.shape)
   .extend(machinesSchema.shape)
   .extend(rawMaterialsSchema.shape)

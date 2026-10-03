@@ -120,6 +120,9 @@ model Application {
   // Brand relationships (importir/perwakilan resmi/pemilik) this application established with
   // one or more Merk rows via its own applicationBrands — see MerkImporter's own comment.
   merkRelationships MerkImporter[]
+  // Hasil Uji Mutu certificates this application freshly uploaded (never ones it only
+  // referenced from an existing row) — see BrandQualityTest's own comment.
+  qualityTestCertifications BrandQualityTest[]
 
   // Customer Relation Workspace's own operational tracking — intentionally
   // separate from `status` (ApplicationStatus) above, which is driven by the
@@ -331,6 +334,10 @@ model ApplicationDocumentVersion {
   path          String?
   uploadedById  String?
   uploadedBy    User?       @relation(fields: [uploadedById], references: [id])
+  // "CR" vs "VERIFIKATOR" — set when this version was uploaded on the company's behalf by staff
+  // (see document-versions.ts's own `recordApplicationDocumentVersion`); null for a company's own
+  // upload, and for rows written before this field existed (same convention as `verifiedByRole`).
+  uploadedByRole String?
   createdAt     DateTime    @default(now())
 
   verificationStatus DocumentVerificationStatus @default(NOT_YET_VERIFIED)
@@ -721,6 +728,16 @@ model BrandDocument {
 // Step 3 "Hasil Uji Mutu" — structured, repeatable (not a generic
 // attachment). Links into the existing Commodity master data rather than
 // duplicating a commodity picker.
+//
+// A row is either MANUAL (entered directly in Merk Management's own "Tambah Dokumen" flow) or
+// APPLICATION (written by application-relationship-sync.ts's sibling sync service, from a VIU
+// Konsumsi application's own `productGroupCertificates` — see that schema's own comment) — never
+// both. Only a FRESHLY-UPLOADED application certificate gets its own APPLICATION row; one the
+// applicant picked via "Pilih sertifikat yang sudah ada" (`qualityTestId` set in the payload) is
+// never duplicated into a second row — the sync service skips it entirely, since the real row it
+// already references is already visible here. Same `(merkId, companyId, sourceApplicationId)`-
+// style key pattern as MerkImporter, scoped to commodityGroupId instead of companyId since a
+// certificate's identity is per Sub Kelompok Komoditas, not per company.
 model BrandQualityTest {
   id                  String             @id @default(cuid())
   merkId              String
@@ -735,12 +752,19 @@ model BrandQualityTest {
   expiryDate          DateTime?
   filePath            String
   fileName            String
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
 
+  sourceType          MerkRelationshipSource @default(MANUAL)
+  sourceApplicationId String?
+  sourceApplication   Application?           @relation(fields: [sourceApplicationId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([merkId, commodityGroupId, sourceApplicationId])
   @@index([merkId])
   @@index([commodityGroupId])
   @@index([commoditySubGroupId])
+  @@index([sourceApplicationId])
   @@map("brand_quality_test")
 }
 

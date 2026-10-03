@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/form/native-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatDate } from "./expiry-status";
 import { countryCodeToFlag } from "@/modules/master-data/country-flag";
 
@@ -86,17 +94,6 @@ export function BrandListTable({
   page, pageSize, onPageChange, onPageSizeChange,
   selected, onSelectedChange, selectedRows, hasDraftSelected, onRowAction, onExportCsv, onBulkStatus, onBulkDelete,
 }: Props) {
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
-  const [isColsOpen, setIsColsOpen] = useState(false);
-  const [isExportOpen, setIsExportOpen] = useState(false);
-
-  useEffect(() => {
-    function onDocClick(){ setOpenMenuId(null); setIsColsOpen(false); setIsExportOpen(false); }
-    document.addEventListener("click", onDocClick);
-    return () => document.removeEventListener("click", onDocClick);
-  }, []);
-
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const start = (page - 1) * pageSize;
   const selectedIds = Array.from(selected);
@@ -112,15 +109,6 @@ export function BrandListTable({
     onSelectedChange(next);
   }
 
-  function openMenu(e: React.MouseEvent, id: string) {
-    e.stopPropagation();
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setMenuPos({ top: rect.bottom + 4, left: Math.max(8, rect.right - 200) });
-    setOpenMenuId(openMenuId === id ? null : id);
-  }
-
-  const menuRow = rows.find((r) => r.id === openMenuId);
-
   function sortIndicator(key: SortKey) {
     if (sortKey !== key) return <span className="ml-1 text-[10px] text-muted-foreground/50">⇅</span>;
     return <span className="ml-1 text-[10px] text-primary">{sortDir === "asc" ? "↑" : "↓"}</span>;
@@ -134,43 +122,38 @@ export function BrandListTable({
           <b className="text-foreground">{totalCount}</b> merek
         </p>
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setIsExportOpen((v) => !v); setIsColsOpen(false); }}>
-              Export
-            </Button>
-            {isExportOpen && (
-              <div className="absolute right-0 top-full z-40 mt-1 w-44 rounded-lg border border-border bg-background p-1 shadow-lg" onClick={(e) => e.stopPropagation()}>
-                <button type="button" className="block w-full rounded-md px-3 py-1.5 text-left text-xs hover:bg-muted" onClick={() => { onExportCsv(selectedRows.length > 0 ? selectedRows : rows); setIsExportOpen(false); }}>
-                  Export CSV
-                </button>
-                <button type="button" className="block w-full rounded-md px-3 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted" onClick={() => { toast.info("Export Excel belum tersedia — gunakan CSV."); setIsExportOpen(false); }}>
-                  Export Excel
-                </button>
-                <button type="button" className="block w-full rounded-md px-3 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted" onClick={() => { toast.info("Export PDF belum tersedia — gunakan CSV."); setIsExportOpen(false); }}>
-                  Export PDF
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="relative">
-            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setIsColsOpen((v) => !v); setIsExportOpen(false); }}>
-              Atur Kolom
-            </Button>
-            {isColsOpen && (
-              <div className="absolute right-0 top-full z-40 mt-1 w-48 rounded-lg border border-border bg-background p-2 shadow-lg" onClick={(e) => e.stopPropagation()}>
-                <p className="mb-1 px-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Tampilkan Kolom</p>
-                {([
-                  ["owner", "Pemilik"], ["company", "Perusahaan"], ["country", "Negara"], ["cls", "Kelas"],
-                  ["tmNo", "Nomor Merek"], ["status", "Status"], ["completeness", "Kelengkapan"], ["updated", "Updated"],
-                ] as [keyof ColVisibility, string][]).map(([key, label]) => (
-                  <label key={key} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-muted">
-                    <input type="checkbox" checked={cols[key]} onChange={(e) => onColsChange({ ...cols, [key]: e.target.checked })} />
-                    {label}
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>Export</DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onExportCsv(selectedRows.length > 0 ? selectedRows : rows)}>
+                Export CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toast.info("Export Excel belum tersedia — gunakan CSV.")}>
+                Export Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toast.info("Export PDF belum tersedia — gunakan CSV.")}>
+                Export PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>Atur Kolom</DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Tampilkan Kolom</DropdownMenuLabel>
+              {([
+                ["owner", "Pemilik"], ["company", "Perusahaan"], ["country", "Negara"], ["cls", "Kelas"],
+                ["tmNo", "Nomor Merek"], ["status", "Status"], ["completeness", "Kelengkapan"], ["updated", "Updated"],
+              ] as [keyof ColVisibility, string][]).map(([key, label]) => (
+                <DropdownMenuCheckboxItem
+                  key={key}
+                  checked={cols[key]}
+                  onCheckedChange={(checked) => onColsChange({ ...cols, [key]: checked })}
+                >
+                  {label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -256,10 +239,38 @@ export function BrandListTable({
                     </TableCell>
                   )}
                   {cols.updated && <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDate(row.updatedAt)}</TableCell>}
-                  <TableCell className="text-right" onClick={(e) => { e.stopPropagation(); openMenu(e, row.id); }}>
-                    <button type="button" className="ml-auto flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted">
-                      ⋮
-                    </button>
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        className="ml-auto flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground"
+                        aria-label="Menu merek"
+                      >
+                        ⋮
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {isDraft ? (
+                          <>
+                            <DropdownMenuItem onClick={() => onRowAction("continueDraft", row)}>Lanjutkan Pengisian</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onRowAction("detail", row)}>Lihat Detail</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem variant="destructive" onClick={() => onRowAction("deleteDraft", row)}>Hapus Draft</DropdownMenuItem>
+                          </>
+                        ) : (
+                          <>
+                            <DropdownMenuItem onClick={() => onRowAction("detail", row)}>Lihat Detail</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onRowAction("edit", row)}>Edit</DropdownMenuItem>
+                            <DropdownMenuItem disabled title="Belum tersedia" onClick={() => toast.info("Fitur duplikasi merek belum tersedia.")}>
+                              Duplikasi / Gunakan sebagai Referensi
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onRowAction("status", row)}>Ubah Status</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onRowAction("documents", row)}>Lihat Dokumen</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onRowAction("activity", row)}>Riwayat Aktivitas</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem variant="destructive" onClick={() => onRowAction("delete", row)}>Hapus Merek</DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               );
@@ -310,48 +321,6 @@ export function BrandListTable({
           <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>Next</Button>
         </div>
       </div>
-
-      {openMenuId && menuRow && menuPos && (
-        <div
-          className="fixed z-50 w-52 rounded-lg border border-border bg-background p-1 shadow-lg"
-          style={{ top: menuPos.top, left: menuPos.left }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {menuRow.status === "DRAFT" ? (
-            <>
-              <MenuItem label="Lanjutkan Pengisian" onClick={() => { onRowAction("continueDraft", menuRow); setOpenMenuId(null); }} />
-              <MenuItem label="Lihat Detail" onClick={() => { onRowAction("detail", menuRow); setOpenMenuId(null); }} />
-              <div className="my-1 h-px bg-border" />
-              <MenuItem label="Hapus Draft" danger onClick={() => { onRowAction("deleteDraft", menuRow); setOpenMenuId(null); }} />
-            </>
-          ) : (
-            <>
-              <MenuItem label="Lihat Detail" onClick={() => { onRowAction("detail", menuRow); setOpenMenuId(null); }} />
-              <MenuItem label="Edit" onClick={() => { onRowAction("edit", menuRow); setOpenMenuId(null); }} />
-              <MenuItem label="Duplikasi / Gunakan sebagai Referensi" disabled title="Belum tersedia" onClick={() => { toast.info("Fitur duplikasi merek belum tersedia."); setOpenMenuId(null); }} />
-              <MenuItem label="Ubah Status" onClick={() => { onRowAction("status", menuRow); setOpenMenuId(null); }} />
-              <MenuItem label="Lihat Dokumen" onClick={() => { onRowAction("documents", menuRow); setOpenMenuId(null); }} />
-              <MenuItem label="Riwayat Aktivitas" onClick={() => { onRowAction("activity", menuRow); setOpenMenuId(null); }} />
-              <div className="my-1 h-px bg-border" />
-              <MenuItem label="Hapus Merek" danger onClick={() => { onRowAction("delete", menuRow); setOpenMenuId(null); }} />
-            </>
-          )}
-        </div>
-      )}
     </section>
-  );
-}
-
-function MenuItem({ label, onClick, danger, disabled, title }: { label: string; onClick: () => void; danger?: boolean; disabled?: boolean; title?: string }) {
-  return (
-    <button
-      type="button"
-      title={title}
-      disabled={disabled}
-      onClick={onClick}
-      className={`block w-full rounded-md px-3 py-1.5 text-left text-xs disabled:opacity-45 disabled:cursor-not-allowed hover:bg-muted ${danger ? "text-destructive" : "text-foreground"}`}
-    >
-      {label}
-    </button>
   );
 }

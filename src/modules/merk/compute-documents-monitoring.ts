@@ -115,19 +115,6 @@ export async function getDocumentsMonitoringSummary(): Promise<DocumentsMonitori
     },
   });
 
-  // VIU Konsumsi applications carry their own Hasil Uji Mutu entries
-  // (`brandQualityTests`, Step "Dokumen Pendukung Merek") — a JSON field on `Application.payload`,
-  // deliberately separate storage from this Brand's own `qualityTests` relation (see
-  // applicationBrandQualityTestEntrySchema's own comment: per-application test data, not a
-  // permanent Brand Master record). Monitoring must still SEE them to be genuinely
-  // platform-wide — excluded here is only DRAFT (not yet a real submission) and VKI (no Konsumsi
-  // concept there). This is read-only aggregation: nothing here writes back to either store.
-  const konsumsiApplications = await db.application.findMany({
-    where: { verificationType: "VIU", status: { not: "DRAFT" } },
-    select: { id: true, applicationNumber: true, company: { select: { companyName: true } }, payload: true },
-  });
-  const brandById = new Map(brands.map((b) => [b.id, b]));
-
   const priorityQueue: PriorityItem[] = [];
   let totalRequiredDocs = 0;
   let totalCompleteDocs = 0;
@@ -286,43 +273,12 @@ export async function getDocumentsMonitoringSummary(): Promise<DocumentsMonitori
     });
   }
 
-  // Flatten VIU Konsumsi applications' own Hasil Uji Mutu entries into the same qtSummary/
-  // priorityQueue/expiry-bucket aggregates as Merk's own `qualityTests` above — see this
-  // function's own comment on `konsumsiApplications` for why these live in a separate store.
-  type KonsumsiApplicationPayload = {
-    importTypes?: string[];
-    brandQualityTests?: { brandId: string; certificateNumber?: string; expiryDate?: string }[];
-  };
-  for (const application of konsumsiApplications) {
-    const payload = application.payload as KonsumsiApplicationPayload | null;
-    if (!payload?.importTypes?.includes("BARANG_KONSUMSI")) continue;
-    const companyName = application.company?.companyName ?? null;
-
-    for (const qt of payload.brandQualityTests ?? []) {
-      const brandName = brandById.get(qt.brandId)?.brandName ?? "Merek tidak ditemukan";
-      if (!qt.expiryDate) {
-        qtSummary.valid++;
-        continue;
-      }
-      const expiryDate = new Date(qt.expiryDate);
-      if (Number.isNaN(expiryDate.getTime())) continue;
-      const days = Math.round((expiryDate.getTime() - now.getTime()) / 86400000);
-      bucketExpiry(days);
-      const status = getExpiryStatus(expiryDate);
-      if (status === "expired") {
-        qtProblem++; qtExpiredOnly++; qtSummary.expired++;
-        priorityQueue.push({
-          priority: "Kritis", issue: "Hasil Uji Mutu Kedaluwarsa (VIU Konsumsi)", brandId: qt.brandId, brand: brandName, company: companyName,
-          category: "Hasil Uji Mutu", detail: `Sertifikat ${qt.certificateNumber ?? "—"} — Permohonan ${application.applicationNumber}`,
-          deadline: expiryDate.toISOString(), ageDays: Math.abs(days),
-        });
-      } else if (status === "expiring_soon") {
-        qtProblem++; qtSummary.expiring++;
-      } else {
-        qtSummary.valid++;
-      }
-    }
-  }
+  // VIU Konsumsi's own Hasil Uji Mutu entries (`productGroupCertificates`) sync into real
+  // `BrandQualityTest` rows at submit via `syncQualityTestCertificatesForApplication`
+  // (application-relationship-sync.ts) — so this Brand's own `qualityTests` loop above already
+  // picks them up with no further aggregation needed here. The old `brandQualityTests` JSON field
+  // this used to scrape directly off `Application.payload` is gone (the Step 7/9 refactor's own
+  // no-legacy-data decision).
 
   const normalize = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
   const byName = new Map<string, typeof brands>();

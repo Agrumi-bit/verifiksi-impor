@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { resolveKonsumsiBrandContexts, type ChecklistKonsumsiBrandContext } from "@/modules/verifikator-workspace/konsumsi-brand-context";
-import type { ApplicationBrandEntryValues } from "@/modules/applications/viu-schemes/konsumsi/schema";
+import type { ApplicationBrandEntryValues, ProductGroupCertificateValues } from "@/modules/applications/viu-schemes/konsumsi/schema";
 
 type SyncInput = {
   applicationId: string;
@@ -84,6 +84,80 @@ export async function syncMerkRelationshipsForApplication({
           appointmentSource: entry.appointmentSource ?? null,
           authorizationDocumentPath: document?.filePath ?? null,
           authorizationDocumentName: document?.fileName ?? null,
+        },
+      });
+    }
+  });
+}
+
+/**
+ * Keeps `BrandQualityTest` in sync with a VIU Konsumsi application's own
+ * `productGroupCertificates[]` — see that schema's own comment, and that model's own comment for
+ * the sync contract. Called at submit and at every subsequent non-draft save of the same
+ * application, same lifecycle as `syncMerkRelationshipsForApplication` above — never for a DRAFT.
+ *
+ * Only entries WITHOUT a `qualityTestId` (freshly uploaded, not referenced from an existing row)
+ * get written — one upserted row per (merkId, commodityGroupId, sourceApplicationId). An entry
+ * that referenced an existing certificate is intentionally skipped: that row already exists and is
+ * already visible in Hasil Uji Mutu, so syncing it again would duplicate it.
+ *
+ * No-op when `productGroupCertificates` is empty (not a Konsumsi application, or no certificates
+ * attached yet).
+ */
+export async function syncQualityTestCertificatesForApplication({
+  applicationId,
+  productGroupCertificates,
+}: {
+  applicationId: string;
+  productGroupCertificates: ProductGroupCertificateValues[];
+}): Promise<void> {
+  if (productGroupCertificates.length === 0) return;
+
+  const freshCertificates = productGroupCertificates.filter((certificate) => !certificate.qualityTestId);
+  const desiredGroupKeys = freshCertificates.map((certificate) => `${certificate.brandId}|${certificate.commodityGroupId}`);
+
+  await db.$transaction(async (tx) => {
+    // A certificate removed (or switched to "pilih existing") since the last sync — drop its
+    // stale APPLICATION row. Never touches MANUAL rows or other applications' own rows.
+    const existingAppRows = await tx.brandQualityTest.findMany({
+      where: { sourceApplicationId: applicationId, sourceType: "APPLICATION" },
+      select: { id: true, merkId: true, commodityGroupId: true },
+    });
+    const staleIds = existingAppRows
+      .filter((row) => !desiredGroupKeys.includes(`${row.merkId}|${row.commodityGroupId}`))
+      .map((row) => row.id);
+    if (staleIds.length > 0) {
+      await tx.brandQualityTest.deleteMany({ where: { id: { in: staleIds } } });
+    }
+
+    for (const certificate of freshCertificates) {
+      await tx.brandQualityTest.upsert({
+        where: {
+          merkId_commodityGroupId_sourceApplicationId: {
+            merkId: certificate.brandId,
+            commodityGroupId: certificate.commodityGroupId,
+            sourceApplicationId: applicationId,
+          },
+        },
+        create: {
+          merkId: certificate.brandId,
+          commodityGroupId: certificate.commodityGroupId,
+          certificateNumber: certificate.certificateNumber,
+          laboratoryName: certificate.laboratoryName,
+          issueDate: new Date(certificate.issueDate),
+          expiryDate: certificate.validUntil ? new Date(certificate.validUntil) : null,
+          filePath: certificate.filePath,
+          fileName: certificate.fileName,
+          sourceType: "APPLICATION",
+          sourceApplicationId: applicationId,
+        },
+        update: {
+          certificateNumber: certificate.certificateNumber,
+          laboratoryName: certificate.laboratoryName,
+          issueDate: new Date(certificate.issueDate),
+          expiryDate: certificate.validUntil ? new Date(certificate.validUntil) : null,
+          filePath: certificate.filePath,
+          fileName: certificate.fileName,
         },
       });
     }

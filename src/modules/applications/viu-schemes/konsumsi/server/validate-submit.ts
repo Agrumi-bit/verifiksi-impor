@@ -3,9 +3,9 @@ import type { MerkEvidenceType } from "@/modules/merk/schema";
 import { getVIUConsumptionBrandRequirements } from "../business-rules";
 import type {
   ApplicationBrandEntryValues,
-  ApplicationBrandQualityTestEntryValues,
   ApplicationBrandSubmissionSnapshot,
   ApplicationKonsumsiProductValues,
+  ProductGroupCertificateValues,
 } from "../schema";
 import type { ApplicationWizardValues } from "../../../schema";
 
@@ -22,29 +22,15 @@ function toEvidenceType(value: string | null): MerkEvidenceType | null {
   return value && SUPPORTED_EVIDENCE_TYPES.has(value) ? (value as MerkEvidenceType) : null;
 }
 
-/**
- * Quality Test commodity references, Konsumsi-specific shape: "Kelompok
- * Komoditas" (IndustryGroup) + "Sub Kelompok Komoditas" (CommodityGroup) —
- * one level higher than Brand Master's own CommodityGroup/CommoditySubGroup
- * pair (modules/merk/server-validation.ts's validateQualityTestReferences),
- * so this is its own check rather than a reuse of that one.
- */
-async function validateKonsumsiQualityTestReferences(
-  qualityTests: { industryGroupId: string; commodityGroupId: string }[] | undefined,
-): Promise<string | null> {
-  for (const qt of qualityTests ?? []) {
-    const group = await db.commodityGroup.findUnique({ where: { id: qt.commodityGroupId } });
-    if (!group) return "Sub Kelompok Komoditas pada Hasil Uji Mutu tidak ditemukan";
-    if (group.industryGroupId !== qt.industryGroupId) {
-      return "Sub Kelompok Komoditas pada Hasil Uji Mutu tidak sesuai dengan Kelompok Komoditas yang dipilih";
-    }
-  }
-  return null;
-}
-
 type ValidateKonsumsiSubmitInput = Pick<
   ApplicationWizardValues,
-  "verificationType" | "importTypes" | "applicationBrands" | "brandQualityTests" | "konsumsiProducts"
+  | "verificationType"
+  | "importTypes"
+  | "applicationBrands"
+  | "konsumsiProducts"
+  | "productGroupCertificates"
+  | "labelStatementDocument"
+  | "labelDocumentationDocument"
 >;
 
 type ValidateKonsumsiSubmitResult =
@@ -53,23 +39,19 @@ type ValidateKonsumsiSubmitResult =
       ok: true;
       applicationBrands: ApplicationBrandEntryValues[];
       konsumsiProducts: ApplicationKonsumsiProductValues[];
+      productGroupCertificates: ProductGroupCertificateValues[];
     };
 
 /**
- * Step "Product Information" — Konsumsi's own Merek > Kelompok Komoditas / Sub Kelompok
- * Komoditas > Produk structure. The commodity grouping is never picked independently in this
- * step (see `deriveKonsumsiProductGroups` in ../schema.ts), so every product's (brandId,
- * commodityGroupId) pair must match one already established in that same Brand's
- * `brandQualityTests` (Step "Dokumen Pendukung Merek") — never trusted from the client alone.
- * `hsCode` must be a real, active HS Code (keyed by code, the existing convention — see
- * useHsCodeOptions); `countryOfOrigin` a real, active country (keyed by name, the existing
- * convention — see useActiveCountries). Returns products with their display caches
- * (industryName/commodityName/hsDescription/unit/countryOfOriginCode) and a server-built
- * `productSnapshot` re-resolved from master data — never the client-submitted values for any of
- * these.
+ * Step "Product Information" — Konsumsi's own Merek > Sub Kelompok Komoditas > Produk structure.
+ * The commodity grouping is derived bottom-up from each product's own `hsCodeId`, never trusted
+ * from the client's cached names/ids — this re-resolves the entire chain
+ * (commoditySubGroup/commodityGroup/industryGroup) from the HS Code master-data row itself.
+ * `countryOfOrigin` stays keyed by name, the existing convention (see useActiveCountries). Returns
+ * products with their display caches and a server-built `productSnapshot` — never the
+ * client-submitted values for any of these.
  */
 async function validateKonsumsiProducts(
-  qualityTests: ApplicationBrandQualityTestEntryValues[],
   products: ApplicationKonsumsiProductValues[] | undefined,
   validBrandIds: Set<string>,
   brandNameById: Map<string, string>,
@@ -77,44 +59,35 @@ async function validateKonsumsiProducts(
   const list = products ?? [];
   if (list.length === 0) return { ok: true, products: list };
 
-  const validGroupKeys = new Set(qualityTests.map((qt) => `${qt.brandId}|${qt.commodityGroupId}`));
-  const industryNameByGroupKey = new Map(qualityTests.map((qt) => [`${qt.brandId}|${qt.commodityGroupId}`, qt.industryName ?? ""]));
-
   for (const product of list) {
     if (!validBrandIds.has(product.brandId)) {
       return { error: `Merek pada produk "${product.productName}" tidak terdaftar dalam permohonan ini.` };
     }
-    if (!validGroupKeys.has(`${product.brandId}|${product.commodityGroupId}`)) {
-      return {
-        error: `Kelompok komoditas pada produk "${product.productName}" tidak sesuai dengan Dokumen Pendukung Merek untuk merek ini.`,
-      };
-    }
   }
 
-  const commodityGroupIds = [...new Set(list.map((p) => p.commodityGroupId))];
-  const hsCodes = [...new Set(list.map((p) => p.hsCode))];
+  const hsCodeIds = [...new Set(list.map((p) => p.hsCodeId))];
   const countryNames = [...new Set(list.map((p) => p.countryOfOrigin))];
 
-  const [commodityGroups, hsCodeRows, countries] = await Promise.all([
-    db.commodityGroup.findMany({ where: { id: { in: commodityGroupIds } } }),
-    db.hsCodeMasterData.findMany({ where: { hsCode: { in: hsCodes } }, include: { unitOfMeasurement: true } }),
+  const [hsCodeRows, countries] = await Promise.all([
+    db.hsCodeMasterData.findMany({
+      where: { id: { in: hsCodeIds } },
+      include: { commodityGroup: { include: { industryGroup: true } }, commoditySubGroup: true, unitOfMeasurement: true },
+    }),
     db.countryMasterData.findMany({ where: { name: { in: countryNames } } }),
   ]);
-  const commodityGroupById = new Map(commodityGroups.map((group) => [group.id, group]));
-  const hsCodeByCode = new Map(hsCodeRows.map((row) => [row.hsCode, row]));
+  const hsCodeById = new Map(hsCodeRows.map((row) => [row.id, row]));
   const countryByName = new Map(countries.map((country) => [country.name, country]));
 
   const capturedAt = new Date().toISOString();
   const resolved: ApplicationKonsumsiProductValues[] = [];
 
   for (const product of list) {
-    const commodityGroup = commodityGroupById.get(product.commodityGroupId);
-    if (!commodityGroup || commodityGroup.status !== "ACTIVE") {
-      return { error: `Kelompok komoditas tidak ditemukan untuk produk "${product.productName}".` };
-    }
-    const hsRow = hsCodeByCode.get(product.hsCode);
+    const hsRow = hsCodeById.get(product.hsCodeId);
     if (!hsRow || hsRow.status !== "ACTIVE") {
-      return { error: `HS Code "${product.hsCode}" tidak ditemukan untuk produk "${product.productName}".` };
+      return { error: `HS Code pada produk "${product.productName}" tidak ditemukan atau tidak aktif.` };
+    }
+    if (hsRow.commodityGroup.status !== "ACTIVE") {
+      return { error: `Sub Kelompok Komoditas untuk HS Code "${hsRow.hsCode}" pada produk "${product.productName}" tidak aktif.` };
     }
     const country = countryByName.get(product.countryOfOrigin);
     if (!country || country.status !== "ACTIVE") {
@@ -129,20 +102,25 @@ async function validateKonsumsiProducts(
       return { error: `Harga satuan rata-rata pada produk "${product.productName}" tidak valid.` };
     }
 
-    const industryName = industryNameByGroupKey.get(`${product.brandId}|${product.commodityGroupId}`) ?? "";
+    const industryName = hsRow.commodityGroup.industryGroup?.name ?? "";
     const totalPrice = (quantity * averageUnitPrice).toFixed(2);
     resolved.push({
       ...product,
-      industryName,
-      commodityName: commodityGroup.name,
+      hsCode: hsRow.hsCode,
       hsDescription: hsRow.description,
       unit: hsRow.unitOfMeasurement?.symbol ?? hsRow.unitOfMeasurement?.name ?? product.unit ?? "",
+      commoditySubGroupId: hsRow.commoditySubGroupId,
+      commoditySubGroupName: hsRow.commoditySubGroup.name,
+      commodityGroupId: hsRow.commodityGroupId,
+      commodityName: hsRow.commodityGroup.name,
+      industryGroupId: hsRow.commodityGroup.industryGroupId ?? "",
+      industryName,
       countryOfOriginCode: country.code,
       productSnapshot: {
         capturedAt,
         brandName: brandNameById.get(product.brandId) ?? "",
         industryName,
-        commodityName: commodityGroup.name,
+        commodityName: hsRow.commodityGroup.name,
         hsDescription: hsRow.description,
         countryOfOriginName: country.name,
         totalPrice,
@@ -154,21 +132,104 @@ async function validateKonsumsiProducts(
 }
 
 /**
+ * Every (brandId, commodityGroupId) group with at least one Product needs exactly the Merek x Sub
+ * Kelompok certificate-coverage rule the matrix in Step "Product Information" shows: at least one
+ * `productGroupCertificates` entry, scope (commodityGroupId) matching, not expired. Mirrors
+ * `validateKonsumsiProducts`'s own "never trust the client" stance — a `qualityTestId` reference is
+ * re-resolved from `BrandQualityTest` here, never passed through from the client's own cache.
+ */
+async function validateProductGroupCertificates(
+  products: ApplicationKonsumsiProductValues[],
+  certificates: ProductGroupCertificateValues[] | undefined,
+  brandNameById: Map<string, string>,
+): Promise<{ error: string } | { ok: true; certificates: ProductGroupCertificateValues[] }> {
+  const list = certificates ?? [];
+  const requiredGroups = new Map<string, { brandId: string; commodityGroupId: string; commodityName: string }>();
+  for (const product of products) {
+    const key = `${product.brandId}|${product.commodityGroupId}`;
+    if (!requiredGroups.has(key)) {
+      requiredGroups.set(key, { brandId: product.brandId, commodityGroupId: product.commodityGroupId, commodityName: product.commodityName ?? "" });
+    }
+  }
+  if (requiredGroups.size === 0) return { ok: true, certificates: list };
+
+  const referencedIds = [...new Set(list.map((c) => c.qualityTestId).filter((id): id is string => Boolean(id)))];
+  const existingCertificates = referencedIds.length > 0
+    ? await db.brandQualityTest.findMany({ where: { id: { in: referencedIds } } })
+    : [];
+  const existingById = new Map(existingCertificates.map((c) => [c.id, c]));
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const resolved: ProductGroupCertificateValues[] = [];
+  for (const certificate of list) {
+    if (certificate.qualityTestId) {
+      const existing = existingById.get(certificate.qualityTestId);
+      if (!existing) {
+        return { error: `Sertifikat Hasil Uji Mutu yang dipilih untuk merek "${brandNameById.get(certificate.brandId) ?? certificate.brandId}" tidak ditemukan.` };
+      }
+      if (existing.merkId !== certificate.brandId || existing.commodityGroupId !== certificate.commodityGroupId) {
+        const group = requiredGroups.get(`${certificate.brandId}|${certificate.commodityGroupId}`);
+        return {
+          error: `Sertifikat yang dipilih tidak sesuai dengan merek atau Sub Kelompok Komoditas "${group?.commodityName || certificate.commodityGroupId}".`,
+        };
+      }
+      if (existing.expiryDate && existing.expiryDate < today) {
+        return { error: `Sertifikat "${existing.certificateNumber}" sudah kedaluwarsa dan tidak dapat digunakan.` };
+      }
+      resolved.push({
+        ...certificate,
+        commodityName: requiredGroups.get(`${certificate.brandId}|${certificate.commodityGroupId}`)?.commodityName || certificate.commodityName,
+        certificateNumber: existing.certificateNumber,
+        laboratoryName: existing.laboratoryName,
+        issueDate: existing.issueDate.toISOString(),
+        validUntil: existing.expiryDate?.toISOString(),
+        fileName: existing.fileName,
+        filePath: existing.filePath,
+      });
+      continue;
+    }
+
+    if (!certificate.filePath) {
+      return { error: `Unggah file sertifikat Hasil Uji Mutu untuk merek "${brandNameById.get(certificate.brandId) ?? certificate.brandId}".` };
+    }
+    if (certificate.validUntil) {
+      const validUntil = new Date(certificate.validUntil);
+      if (!Number.isNaN(validUntil.getTime()) && validUntil < today) {
+        return { error: `Sertifikat "${certificate.certificateNumber}" sudah melewati tanggal berlaku (${certificate.validUntil}).` };
+      }
+    }
+    resolved.push({
+      ...certificate,
+      commodityName: requiredGroups.get(`${certificate.brandId}|${certificate.commodityGroupId}`)?.commodityName || certificate.commodityName,
+    });
+  }
+
+  const coveredGroupKeys = new Set(resolved.map((c) => `${c.brandId}|${c.commodityGroupId}`));
+  for (const [key, group] of requiredGroups) {
+    if (!coveredGroupKeys.has(key)) {
+      return {
+        error: `Sertifikat Hasil Uji Mutu belum diunggah untuk "${group.commodityName || group.commodityGroupId}" (${brandNameById.get(group.brandId) ?? group.brandId}).`,
+      };
+    }
+  }
+
+  return { ok: true, certificates: resolved };
+}
+
+/**
  * Server-side enforcement for VIU Konsumsi's Step "Merek yang Digunakan" +
- * "Hasil Uji Mutu" — mirrors modules/merk/server-validation.ts's pattern (a
- * plain async function called after zod parse, not folded into the zod
- * schema itself, since it needs a DB read). Never trust the client's own
- * computed readiness, document count, or brand metadata: this re-validates
- * Brand ownership/status, the 9-month evidence rule, the relationship's
- * structural validity, and quality-test master-data references
- * independently, exactly the same rules `getVIUConsumptionBrandRequirements`
- * applies client-side.
+ * "Dokumen Label Produk" + "Product Information". Mirrors modules/merk/server-validation.ts's
+ * pattern (a plain async function called after zod parse, not folded into the zod schema itself,
+ * since it needs a DB read). Never trust the client's own computed readiness, document count, or
+ * brand/commodity/certificate metadata: this re-validates Brand ownership/status, the 9-month
+ * evidence rule, the relationship's structural validity, HS-Code-derived commodity grouping, and
+ * per-group certificate coverage independently, exactly the same rules the client UI applies.
  *
- * On success, returns `applicationBrands` with a server-built
- * `submissionSnapshot` attached to each entry (see
- * `buildSubmissionSnapshot` below) — the caller (POST /api/applications)
- * persists THIS returned array, never the client-submitted one, so the
- * snapshot is always server-authoritative.
+ * On success, returns `applicationBrands`/`konsumsiProducts`/`productGroupCertificates` all
+ * server-resolved — the caller (POST /api/applications) persists THESE returned values, never the
+ * client-submitted ones, so every derived field stays server-authoritative.
  */
 export async function validateKonsumsiSubmit(
   values: ValidateKonsumsiSubmitInput,
@@ -177,13 +238,22 @@ export async function validateKonsumsiSubmit(
   // whatever `importTypes` a payload happens to carry (see the same guard on
   // applicationWizardSchema's superRefine for why stale importTypes can't be trusted alone).
   if (values.verificationType !== "VIU") {
-    return { ok: true, applicationBrands: values.applicationBrands, konsumsiProducts: values.konsumsiProducts };
+    return { ok: true, applicationBrands: values.applicationBrands, konsumsiProducts: values.konsumsiProducts, productGroupCertificates: values.productGroupCertificates };
   }
   if (!values.importTypes.includes("BARANG_KONSUMSI")) {
-    return { ok: true, applicationBrands: values.applicationBrands, konsumsiProducts: values.konsumsiProducts };
+    return { ok: true, applicationBrands: values.applicationBrands, konsumsiProducts: values.konsumsiProducts, productGroupCertificates: values.productGroupCertificates };
   }
   if (values.applicationBrands.length === 0) {
     return { error: "Pilih atau tambahkan minimal satu merek yang digunakan." };
+  }
+  // Step "Dokumen Label Produk" — mirrors applyKonsumsiSubmitRules' client-side check. Re-checked
+  // here too since this server path is the actual submit gate (the client zod refinement alone is
+  // not trustworthy — a crafted request could skip it).
+  if (!values.labelStatementDocument?.filePath) {
+    return { error: "Unggah Surat Pernyataan Pemenuhan Ketentuan Label Berbahasa Indonesia." };
+  }
+  if (!values.labelDocumentationDocument?.filePath) {
+    return { error: "Unggah Dokumentasi Label Produk." };
   }
 
   const brandIds = values.applicationBrands.map((entry) => entry.brandId);
@@ -308,25 +378,26 @@ export async function validateKonsumsiSubmit(
     snapshotBrands.push({ ...entry, submissionSnapshot: snapshot });
   }
 
-  // Quality-test master-data references — Konsumsi's own shape (industryGroupId /
-  // commodityGroupId), see validateKonsumsiQualityTestReferences above.
-  const qualityTestError = await validateKonsumsiQualityTestReferences(values.brandQualityTests);
-  if (qualityTestError) {
-    return { error: qualityTestError };
-  }
-
   // Step "Product Information" — see validateKonsumsiProducts above. Reuses brandById (already
   // DB-validated above) instead of a second brand lookup.
   const brandNameById = new Map(brands.map((brand) => [brand.id, brand.brandName]));
-  const productsResult = await validateKonsumsiProducts(
-    values.brandQualityTests,
-    values.konsumsiProducts,
-    new Set(brandIds),
-    brandNameById,
-  );
+  const productsResult = await validateKonsumsiProducts(values.konsumsiProducts, new Set(brandIds), brandNameById);
   if ("error" in productsResult) {
     return { error: productsResult.error };
   }
 
-  return { ok: true, applicationBrands: snapshotBrands, konsumsiProducts: productsResult.products };
+  // Merek x Sub Kelompok certificate-coverage — see validateProductGroupCertificates above. Must
+  // run against the server-resolved products (real commodityGroupId per product), not the
+  // client-submitted ones.
+  const certificatesResult = await validateProductGroupCertificates(productsResult.products, values.productGroupCertificates, brandNameById);
+  if ("error" in certificatesResult) {
+    return { error: certificatesResult.error };
+  }
+
+  return {
+    ok: true,
+    applicationBrands: snapshotBrands,
+    konsumsiProducts: productsResult.products,
+    productGroupCertificates: certificatesResult.certificates,
+  };
 }

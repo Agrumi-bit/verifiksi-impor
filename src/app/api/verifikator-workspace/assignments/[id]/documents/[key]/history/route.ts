@@ -13,6 +13,12 @@ import { getVersionHistory, recordDocumentVersion } from "@/modules/company/docu
 import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS } from "@/modules/verifikator-workspace/schema";
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
 import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
+import {
+  applyCertificateUpload,
+  certificateUploadSchema,
+  parseQualityTestChecklistKey,
+  resyncQualityTestCertificates,
+} from "@/modules/applications/viu-schemes/konsumsi/server/certificate-upload";
 
 async function findOwnedAssignment(assignmentNumber: string, verifikatorId: string) {
   const assignment = await db.assignment.findUnique({
@@ -86,6 +92,37 @@ export async function PATCH(
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
   }
 
+  // "Sertifikat Uji Mutu" needs more than a bare file path — its own richer upload contract, see
+  // certificate-upload.ts's own comment. Every other key below keeps the generic {path} contract.
+  const qualityTestKey = parseQualityTestChecklistKey(key);
+  if (qualityTestKey) {
+    const body = certificateUploadSchema.safeParse(await request.json());
+    if (!body.success) {
+      return NextResponse.json({ error: "Data tidak valid", issues: z.treeifyError(body.error) }, { status: 400 });
+    }
+    const payload = assignment.application.payload as ApplicationWizardValues;
+    const previousCertificate = (payload.productGroupCertificates ?? []).find(
+      (c) => c.brandId === qualityTestKey.brandId && c.commodityGroupId === qualityTestKey.commodityGroupId,
+    );
+    const result = await applyCertificateUpload(payload, qualityTestKey.brandId, qualityTestKey.commodityGroupId, body.data);
+    if ("error" in result) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    await db.application.update({ where: { id: assignment.application.id }, data: { payload: result.payload } });
+    await resyncQualityTestCertificates(assignment.application.id, result.payload);
+
+    await recordApplicationDocumentVersion(
+      assignment.application.id,
+      key,
+      result.certificate.filePath,
+      verifikatorId,
+      previousCertificate?.filePath ? { previousPath: previousCertificate.filePath, createdAt: assignment.application.createdAt } : undefined,
+      "VERIFIKATOR",
+    );
+    const history = await getApplicationDocumentVersionHistory(assignment.application.id, key, result.certificate.filePath, assignment.application.createdAt);
+    return NextResponse.json({ data: history });
+  }
+
   const parsed = patchSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "Data tidak valid" }, { status: 400 });
@@ -143,6 +180,7 @@ export async function PATCH(
     path,
     verifikatorId,
     item.documentPath ? { previousPath: item.documentPath, createdAt: assignment.application.createdAt } : undefined,
+    "VERIFIKATOR",
   );
   const history = await getApplicationDocumentVersionHistory(assignment.application.id, key, path, assignment.application.createdAt);
   return NextResponse.json({ data: history });

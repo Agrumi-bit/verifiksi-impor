@@ -16,6 +16,8 @@ import {
 import { RequestDocumentModal } from "./request-document-modal";
 import { DocumentHistoryModal } from "./document-history-modal";
 import { DocumentReviewModal, type DocItem } from "./document-review-modal";
+import { CertificateReviewUploadModal } from "@/modules/applications/viu-schemes/konsumsi/components/certificate-review-upload-modal";
+import { parseQualityTestChecklistKey } from "@/modules/applications/viu-schemes/konsumsi/qt-checklist-key";
 
 type Props = {
   applicationId: string;
@@ -349,7 +351,20 @@ export function DocumentsTab({ applicationId, company, verificationType, documen
         />
       )}
 
-      {historyDoc && (
+      {historyDoc && parseQualityTestChecklistKey(historyDoc.key) && (
+        <CertificateReviewUploadModal
+          apiBase={`/api/customer-relation-workspace/applications/${applicationId}/documents`}
+          docKey={historyDoc.key}
+          docTitle={historyDoc.label}
+          onClose={() => setHistoryDoc(null)}
+          onUploaded={() => {
+            onChanged();
+            setHistoryDoc(null);
+          }}
+        />
+      )}
+
+      {historyDoc && !parseQualityTestChecklistKey(historyDoc.key) && (
         <DocumentHistoryModal
           applicationId={applicationId}
           docKey={historyDoc.key}

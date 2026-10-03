@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
-import { ChevronDown, Download, Upload } from "lucide-react";
+import { ChevronDown, Download, Plus, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,14 @@ import { useHsCodeOptions } from "../../../../hooks/use-hs-code-options";
 import type { ApplicationWizardValues } from "../../../../schema";
 import {
   createEmptyKonsumsiProduct,
-  deriveKonsumsiProductGroups,
+  deriveProductGroups,
   konsumsiProductTotal,
   KONSUMSI_PRODUCT_CURRENCIES,
   type ApplicationKonsumsiProductValues,
 } from "../../schema";
 import { downloadProductExcelTemplate, parseProductExcelFile } from "./product-excel";
 import { CommodityProductSection } from "./commodity-product-section";
+import { ProductFormSheet } from "./product-form-sheet";
 import { CurrencyTotals } from "./product-summary";
 
 type Props = {
@@ -25,40 +26,43 @@ type Props = {
   brandId: string;
   brandName: string;
   brandOwnerTitle: string | null;
-  /** Jumps the wizard to Step "Dokumen Pendukung Merek" — used by the empty state when this
-   * Brand has no commodity grouping to add products into yet. */
-  onNavigateToQualityTestStep: () => void;
 };
 
 /**
  * One Brand's section — collapsible (click the header), since a permohonan with several Brands
  * each carrying several commodity groups can get long. Kelompok Komoditas / Sub Kelompok
- * Komoditas groupings are never picked independently here. They're derived from this Brand's own
- * `brandQualityTests` entries (Step "Dokumen Pendukung Merek"), so Product Information always
- * stays in sync with whatever commodity groupings were already established there; this step only
- * ever adds Products into them. Does not duplicate Brand Master editing — owner info is display-
- * only, read from the same Brand options the "Merek yang Digunakan" step already resolves.
+ * Komoditas groupings are derived bottom-up from this Brand's own Products' HS Code picks (see
+ * `deriveProductGroups` — the inverse of this section's previous design, where groups came
+ * pre-established from Step "Dokumen Pendukung Merek" before any product existed). Does not
+ * duplicate Brand Master editing — owner info is display-only, read from the same Brand options
+ * the "Merek yang Digunakan" step already resolves.
  */
-export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle, onNavigateToQualityTestStep }: Props) {
+export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle }: Props) {
   const { control } = form;
-  const qualityTests = useWatch({ control, name: "brandQualityTests" }) ?? [];
   const allProducts = useWatch({ control, name: "konsumsiProducts" }) ?? [];
   const [collapsed, setCollapsed] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hsCodeOptions = useHsCodeOptions();
   const { options: countryOptions } = useActiveCountries();
 
-  const brandGroups = deriveKonsumsiProductGroups(qualityTests.filter((qt) => qt.brandId === brandId));
   const brandProducts = allProducts.filter((product) => product.brandId === brandId);
+  const brandGroups = deriveProductGroups(brandProducts);
 
   const totalsByCurrency = new Map<string, number>();
   for (const product of brandProducts) {
     totalsByCurrency.set(product.currency, (totalsByCurrency.get(product.currency) ?? 0) + konsumsiProductTotal(product));
   }
 
+  function handleAddProduct(values: ApplicationKonsumsiProductValues) {
+    const current = form.getValues("konsumsiProducts") ?? [];
+    form.setValue("konsumsiProducts", [...current, values], { shouldDirty: true });
+    setIsAddingProduct(false);
+  }
+
   function handleDownloadTemplate() {
-    downloadProductExcelTemplate(brandName, brandGroups.map((g) => g.commodityName ?? "").filter(Boolean));
+    downloadProductExcelTemplate(brandName);
   }
 
   async function handleImportFile(event: React.ChangeEvent<HTMLInputElement>) {
@@ -80,15 +84,9 @@ export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle,
 
       rows.forEach((row, rowIndex) => {
         const rowLabel = `Baris ${rowIndex + 2}`;
-        const group = brandGroups.find((g) => (g.commodityName ?? "").trim().toLowerCase() === row.commodityName.trim().toLowerCase());
-        if (!group) {
-          errors.push(`${rowLabel}: Sub Kelompok Komoditas "${row.commodityName}" tidak ditemukan untuk merek ini.`);
-          return;
-        }
-
         const hsOption = hsCodeOptions.find((o) => o.value.trim().toLowerCase() === row.hsCode.trim().toLowerCase());
         if (!hsOption) {
-          errors.push(`${rowLabel}: HS Code "${row.hsCode}" tidak ditemukan.`);
+          errors.push(`${rowLabel}: HS Code "${row.hsCode}" tidak ditemukan atau tidak aktif.`);
           return;
         }
 
@@ -124,8 +122,7 @@ export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle,
         const isDuplicate = [...currentProducts, ...newProducts].some(
           (product) =>
             product.brandId === brandId &&
-            product.commodityGroupId === group.commodityGroupId &&
-            product.hsCode.trim().toLowerCase() === hsOption.value.trim().toLowerCase() &&
+            product.hsCodeId === hsOption.hsCodeId &&
             product.countryOfOrigin.trim().toLowerCase() === countryOption.value.trim().toLowerCase() &&
             product.productName.trim().toLowerCase() === row.productName.trim().toLowerCase(),
         );
@@ -135,11 +132,18 @@ export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle,
         }
 
         newProducts.push({
-          ...createEmptyKonsumsiProduct(brandId, group),
+          ...createEmptyKonsumsiProduct(brandId),
           productName: row.productName,
           hsCode: hsOption.value,
+          hsCodeId: hsOption.hsCodeId,
           hsDescription: hsOption.hint ?? "",
           unit: hsOption.unit ?? "",
+          commoditySubGroupId: hsOption.commoditySubGroupId,
+          commoditySubGroupName: hsOption.commoditySubGroupName,
+          commodityGroupId: hsOption.commodityGroupId,
+          commodityName: hsOption.commodityGroupName,
+          industryGroupId: hsOption.industryGroupId ?? "",
+          industryName: hsOption.industryGroupName ?? "",
           countryOfOrigin: countryOption.value,
           countryOfOriginCode: countryOption.hint ?? "",
           quantity: row.quantity,
@@ -190,24 +194,26 @@ export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle,
               <p className="mt-0.5 text-xs text-muted-foreground">Pemilik Merek: {brandOwnerTitle}</p>
             )}
             <p className="mt-1 text-xs text-muted-foreground">
-              {brandGroups.length} Kelompok Komoditas &middot; {brandProducts.length} Produk
+              {brandGroups.length} Sub Kelompok Komoditas &middot; {brandProducts.length} Produk
             </p>
           </div>
         </div>
 
-        {brandGroups.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={handleDownloadTemplate}>
-              <Download className="size-3.5" />
-              Template
-            </Button>
-            <Button type="button" variant="outline" size="sm" disabled={isImporting} onClick={() => fileInputRef.current?.click()}>
-              <Upload className="size-3.5" />
-              {isImporting ? "Mengimpor..." : "Impor Excel"}
-            </Button>
-            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportFile} />
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={handleDownloadTemplate}>
+            <Download className="size-3.5" />
+            Template
+          </Button>
+          <Button type="button" variant="outline" size="sm" disabled={isImporting} onClick={() => fileInputRef.current?.click()}>
+            <Upload className="size-3.5" />
+            {isImporting ? "Mengimpor..." : "Impor Excel"}
+          </Button>
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportFile} />
+          <Button type="button" size="sm" onClick={() => setIsAddingProduct(true)}>
+            <Plus className="size-3.5" />
+            Tambah Produk
+          </Button>
+        </div>
 
         <div className="text-right">
           <p className="text-xs text-muted-foreground">Total Nilai</p>
@@ -223,8 +229,7 @@ export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle,
               form={form}
               brandId={brandId}
               brandName={brandName}
-              industryGroupId={group.industryGroupId}
-              industryName={group.industryName ?? "Kelompok Komoditas"}
+              industryName={group.industryName ?? ""}
               commodityGroupId={group.commodityGroupId}
               commodityName={group.commodityName ?? "Sub Kelompok Komoditas"}
             />
@@ -233,15 +238,22 @@ export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle,
           {brandGroups.length === 0 && (
             <div className="rounded-lg border border-dashed border-border p-4 text-center">
               <p className="text-xs text-muted-foreground">
-                Belum ada kelompok komoditas. Kelompok Komoditas &amp; Sub Kelompok Komoditas untuk
-                merek ini ditentukan di Step &quot;Dokumen Pendukung Merek&quot;.
+                Belum ada produk untuk merek ini. Tambahkan produk pertama — Sub Kelompok
+                Komoditasnya akan ditentukan otomatis dari HS Code yang dipilih.
               </p>
-              <Button type="button" variant="outline" size="sm" className="mt-3" onClick={onNavigateToQualityTestStep}>
-                Ke Step Dokumen Pendukung Merek
-              </Button>
             </div>
           )}
         </div>
+      )}
+
+      {isAddingProduct && (
+        <ProductFormSheet
+          brandId={brandId}
+          brandName={brandName}
+          existingProducts={allProducts}
+          onSave={handleAddProduct}
+          onClose={() => setIsAddingProduct(false)}
+        />
       )}
     </section>
   );

@@ -509,10 +509,6 @@ export function ApplicationWizard({
                       const brandsStepNumber = stepNumberByKey["brands-used"];
                       if (brandsStepNumber) goToStep(brandsStepNumber);
                     }}
-                    onNavigateToQualityTestStep={() => {
-                      const qualityTestStepNumber = stepNumberByKey["quality-test"];
-                      if (qualityTestStepNumber) goToStep(qualityTestStepNumber);
-                    }}
                   />
                 </>
               )}

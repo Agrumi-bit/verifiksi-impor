@@ -81,7 +81,9 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
 
   if (
     payload.applicationBrands.length === 0 &&
-    payload.brandQualityTests.length === 0 &&
+    payload.productGroupCertificates.length === 0 &&
+    !payload.labelStatementDocument?.filePath &&
+    !payload.labelDocumentationDocument?.filePath &&
     payload.konsumsiDocuments.length === 0 &&
     payload.konsumsiProducts.length === 0 &&
     (payload.konsumsiFinancialDocuments ?? []).every((doc) => !doc.enabled && !doc.documentPath && !doc.amount)
@@ -166,58 +168,65 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
         </div>
       </Section>
 
-      <Section title="VIU Konsumsi — Dokumen Pendukung Merek">
-        <div className="flex flex-col gap-3">
-          {payload.brandQualityTests.map((qt, index) => (
-            <div key={index} className="rounded-lg border border-border p-3">
-              <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-                <Item label="Merek" value={snapshotOrFallbackBrandName(payload, qt.brandId, fallbackBrandName)} />
-                <Item label="Kelompok Komoditas" value={qt.industryName} />
-                <Item label="Sub Kelompok Komoditas" value={qt.commodityName} />
-                <Item label="Nomor Sertifikat" value={qt.certificateNumber} />
-                <Item label="Laboratorium" value={qt.laboratoryName} />
-                <Item label="Tanggal Terbit" value={formatDate(qt.issueDate)} />
-                <Item label="Tanggal Kadaluarsa" value={qt.expiryDate ? formatDate(qt.expiryDate) : "—"} />
-              </dl>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {qt.filePath && (
-                  <a
-                    href={`/${qt.filePath}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
-                  >
-                    {qt.fileName || "Hasil Uji Mutu"}
-                  </a>
-                )}
-                {qt.labelStatementFilePath && (
-                  <a
-                    href={`/${qt.labelStatementFilePath}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
-                  >
-                    {qt.labelStatementFileName || "Surat Pernyataan Label Berbahasa Indonesia"}
-                  </a>
-                )}
-                {qt.labelDocumentationFilePath && (
-                  <a
-                    href={`/${qt.labelDocumentationFilePath}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
-                  >
-                    {qt.labelDocumentationFileName || "Dokumentasi Label Produk"}
-                  </a>
-                )}
-              </div>
-            </div>
-          ))}
-          {payload.brandQualityTests.length === 0 && (
-            <p className="text-sm text-muted-foreground">Belum ada dokumen pendukung merek pada permohonan ini.</p>
+      <Section title="VIU Konsumsi — Dokumen Label Produk">
+        <div className="flex flex-wrap gap-2">
+          {payload.labelStatementDocument?.filePath ? (
+            <a
+              href={`/${payload.labelStatementDocument.filePath}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
+            >
+              {payload.labelStatementDocument.fileName || "Surat Pernyataan Label Berbahasa Indonesia"}
+            </a>
+          ) : (
+            <p className="text-sm text-muted-foreground">Surat Pernyataan Label Berbahasa Indonesia belum diunggah.</p>
+          )}
+          {payload.labelDocumentationDocument?.filePath ? (
+            <a
+              href={`/${payload.labelDocumentationDocument.filePath}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
+            >
+              {payload.labelDocumentationDocument.fileName || "Dokumentasi Label Produk"}
+            </a>
+          ) : (
+            <p className="text-sm text-muted-foreground">Dokumentasi Label Produk belum diunggah.</p>
           )}
         </div>
       </Section>
+
+      {payload.productGroupCertificates.length > 0 && (
+        <Section title="VIU Konsumsi — Sertifikat Hasil Uji Mutu">
+          <div className="flex flex-col gap-3">
+            {payload.productGroupCertificates.map((certificate, index) => (
+              <div key={index} className="rounded-lg border border-border p-3">
+                <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                  <Item label="Merek" value={snapshotOrFallbackBrandName(payload, certificate.brandId, fallbackBrandName)} />
+                  <Item label="Sub Kelompok Komoditas" value={certificate.commodityName || certificate.commodityGroupId} />
+                  <Item label="Nomor Sertifikat" value={certificate.certificateNumber} />
+                  <Item label="Laboratorium" value={certificate.laboratoryName} />
+                  <Item label="Tanggal Terbit" value={formatDate(certificate.issueDate)} />
+                  <Item label="Berlaku Sampai" value={certificate.validUntil ? formatDate(certificate.validUntil) : "—"} />
+                </dl>
+                {certificate.filePath && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <a
+                      href={`/${certificate.filePath}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
+                    >
+                      {certificate.fileName || "Hasil Uji Mutu"}
+                    </a>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
       <Section title="VIU Konsumsi — Bukti Kemampuan Finansial">
         <div className="flex flex-col gap-4">

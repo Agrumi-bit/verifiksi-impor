@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { applicationSubmitSchema, type ApplicationWizardValues, type LocationValues } from "@/modules/applications/schema";
 import { konsumsiScheme } from "@/modules/applications/viu-schemes/konsumsi/registry";
-import { syncMerkRelationshipsForApplication } from "@/modules/merk/application-relationship-sync";
+import { syncMerkRelationshipsForApplication, syncQualityTestCertificatesForApplication } from "@/modules/merk/application-relationship-sync";
 
 /**
  * Schemes with a registered DB-aware server validator — only Konsumsi for
@@ -110,7 +110,12 @@ export async function POST(request: Request) {
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
-    values = { ...values, applicationBrands: result.applicationBrands, konsumsiProducts: result.konsumsiProducts };
+    values = {
+      ...values,
+      applicationBrands: result.applicationBrands,
+      konsumsiProducts: result.konsumsiProducts,
+      productGroupCertificates: result.productGroupCertificates,
+    };
   }
 
   // Promote the draft row saved during the wizard instead of creating a
@@ -149,6 +154,10 @@ export async function POST(request: Request) {
         companyName: values.companyName,
         applicationBrands: values.applicationBrands ?? [],
       });
+      await syncQualityTestCertificatesForApplication({
+        applicationId: promoted.id,
+        productGroupCertificates: values.productGroupCertificates ?? [],
+      });
       return NextResponse.json({
         applicationNumber: promoted.applicationNumber,
         id: promoted.id,
@@ -183,6 +192,10 @@ export async function POST(request: Request) {
     companyId: values.companyId,
     companyName: values.companyName,
     applicationBrands: values.applicationBrands ?? [],
+  });
+  await syncQualityTestCertificatesForApplication({
+    applicationId: application.id,
+    productGroupCertificates: values.productGroupCertificates ?? [],
   });
 
   return NextResponse.json({

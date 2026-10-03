@@ -4,7 +4,15 @@ import { useWatch, type UseFormReturn } from "react-hook-form";
 import { Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { deriveKonsumsiProductGroups, konsumsiProductTotal } from "../../viu-schemes/konsumsi/schema";
+import {
+  deriveProductGroups,
+  konsumsiProductTotal,
+  type ApplicationBrandEntryValues,
+  type ApplicationKonsumsiProductValues,
+  type ProductGroupCertificateValues,
+} from "../../viu-schemes/konsumsi/schema";
+import { ProductGroupMatrix } from "../../viu-schemes/konsumsi/components/product-information/product-group-matrix";
+import { useApplicationBrandOptions } from "../../hooks/use-application-brand-options";
 import type { ApplicationWizardValues } from "../../schema";
 
 type Step7Props = {
@@ -65,6 +73,7 @@ function SummaryItem({ label, value }: { label: string; value?: string }) {
 
 export function Step7Preview({ form, onEditStep, stepNumberByKey }: Step7Props) {
   const values = useWatch({ control: form.control });
+  const { data: brandOptions } = useApplicationBrandOptions();
 
   const konsumsiTotalsByCurrency = new Map<string, number>();
   for (const product of values.konsumsiProducts ?? []) {
@@ -146,10 +155,14 @@ export function Step7Preview({ form, onEditStep, stepNumberByKey }: Step7Props) 
       )}
 
       {(values.importTypes ?? []).includes("BARANG_KONSUMSI") && (
-        <SummarySection title="Dokumen Pendukung Merek" step={stepNumberByKey["quality-test"]} onEditStep={onEditStep}>
+        <SummarySection title="Dokumen Label Produk" step={stepNumberByKey["quality-test"]} onEditStep={onEditStep}>
           <SummaryItem
-            label="Sertifikat Uji Mutu Terunggah"
-            value={values.brandQualityTests?.filter((qt) => qt?.filePath).length?.toString()}
+            label="Surat Pernyataan Label Berbahasa Indonesia"
+            value={values.labelStatementDocument?.filePath ? "Terunggah" : "Belum diunggah"}
+          />
+          <SummaryItem
+            label="Dokumentasi Label Produk"
+            value={values.labelDocumentationDocument?.filePath ? "Terunggah" : "Belum diunggah"}
           />
         </SummarySection>
       )}
@@ -198,24 +211,14 @@ export function Step7Preview({ form, onEditStep, stepNumberByKey }: Step7Props) 
         <SummarySection title="Produk — VIU Barang Konsumsi" step={stepNumberByKey["product-info"]} onEditStep={onEditStep}>
           <SummaryItem label="Jumlah Merek" value={values.applicationBrands?.length?.toString()} />
           <SummaryItem
-            label="Jumlah Kelompok Komoditas"
-            value={deriveKonsumsiProductGroups(
-              (values.brandQualityTests ?? []).flatMap((qt) =>
-                qt?.brandId && qt.industryGroupId && qt.commodityGroupId
-                  ? [
-                      {
-                        brandId: qt.brandId,
-                        industryGroupId: qt.industryGroupId,
-                        industryName: qt.industryName,
-                        commodityGroupId: qt.commodityGroupId,
-                        commodityName: qt.commodityName ?? "",
-                      },
-                    ]
-                  : [],
-              ),
-            ).length.toString()}
+            label="Jumlah Sub Kelompok Komoditas"
+            value={deriveProductGroups(values.konsumsiProducts ?? []).length.toString()}
           />
           <SummaryItem label="Jumlah Produk" value={values.konsumsiProducts?.length?.toString()} />
+          <SummaryItem
+            label="Sertifikat Hasil Uji Mutu Terunggah"
+            value={values.productGroupCertificates?.filter((c) => c?.filePath).length?.toString()}
+          />
           <SummaryItem
             label="Total Nilai Produk"
             value={
@@ -225,6 +228,20 @@ export function Step7Preview({ form, onEditStep, stepNumberByKey }: Step7Props) 
             }
           />
         </SummarySection>
+      )}
+
+      {(values.importTypes ?? []).includes("BARANG_KONSUMSI") && (values.konsumsiProducts?.length ?? 0) > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Ringkasan Merek x Sub Kelompok Komoditas
+          </p>
+          <ProductGroupMatrix
+            applicationBrands={(values.applicationBrands ?? []) as ApplicationBrandEntryValues[]}
+            brandOptions={brandOptions}
+            products={(values.konsumsiProducts ?? []) as ApplicationKonsumsiProductValues[]}
+            certificates={(values.productGroupCertificates ?? []) as ProductGroupCertificateValues[]}
+          />
+        </div>
       )}
     </div>
   );

@@ -435,11 +435,10 @@ export function buildDocumentChecklist(
     });
   }
 
-  // Barang Konsumsi's "Dokumen Merek" — the brand's own bukti merek file and, per Brand, its
-  // quality-test certificates (Step "Dokumen Pendukung Merek") and any relationship document its
-  // applicantRole actually requires (Step "Merek yang Digunakan"). Brand identity/ownership
-  // itself lives on `Merk`, not the application payload, so this needs `konsumsiBrands` (resolved
-  // by the caller via `resolveKonsumsiBrandContexts` — a live DB read, same pattern as
+  // Barang Konsumsi's "Dokumen Merek" — the brand's own bukti merek file and any relationship
+  // document its applicantRole actually requires (Step "Merek yang Digunakan"). Brand identity/
+  // ownership itself lives on `Merk`, not the application payload, so this needs `konsumsiBrands`
+  // (resolved by the caller via `resolveKonsumsiBrandContexts` — a live DB read, same pattern as
   // `partners` above) rather than anything already on `payload`. Omitted entirely when the
   // caller doesn't pass that context (e.g. a workspace not yet wired up for it) rather than
   // rendering with blank brand names.
@@ -468,14 +467,37 @@ export function buildDocumentChecklist(
         }
       }
     }
+  }
 
-    for (const qt of payload.brandQualityTests ?? []) {
-      const brandLabel = brandContextById.get(qt.brandId)?.brandName ?? qt.brandId;
+  // Barang Konsumsi's "Dokumen Label" — exactly two documents, once per Application (Step
+  // "Dokumen Label Produk"). Separate category from "Dokumen Merek" (these aren't per-brand).
+  if (payload.importTypes?.includes("BARANG_KONSUMSI")) {
+    items.push({
+      key: "konsumsi-label:statement",
+      label: "Surat Pernyataan Pemenuhan Ketentuan Label Berbahasa Indonesia",
+      category: "Dokumen Label",
+      documentPath: payload.labelStatementDocument?.filePath ?? null,
+    });
+    items.push({
+      key: "konsumsi-label:documentation",
+      label: "Dokumentasi Label Produk",
+      category: "Dokumen Label",
+      documentPath: payload.labelDocumentationDocument?.filePath ?? null,
+    });
+  }
+
+  // Barang Konsumsi's "Sertifikat Uji Mutu" — one row per Merek x Sub Kelompok Komoditas group
+  // that has Products (Step "Product Information"'s own matrix). Separate category from "Dokumen
+  // Merek" (these are per commodity group, not per brand alone).
+  if (payload.importTypes?.includes("BARANG_KONSUMSI") && konsumsiBrands) {
+    const brandContextById = new Map(konsumsiBrands.map((brand) => [brand.brandId, brand]));
+    for (const certificate of payload.productGroupCertificates ?? []) {
+      const brandLabel = brandContextById.get(certificate.brandId)?.brandName ?? certificate.brandId;
       items.push({
-        key: `konsumsi-brand:${qt.brandId}:qt:${qt.commodityGroupId}`,
-        label: `Sertifikat Uji Mutu — ${brandLabel} · ${qt.commodityName}`,
-        category: "Dokumen Merek",
-        documentPath: qt.filePath || null,
+        key: `konsumsi-qt:${certificate.brandId}:${certificate.commodityGroupId}`,
+        label: `Sertifikat Uji Mutu — ${brandLabel} · ${certificate.commodityName ?? certificate.commodityGroupId}`,
+        category: "Sertifikat Uji Mutu",
+        documentPath: certificate.filePath || null,
       });
     }
   }

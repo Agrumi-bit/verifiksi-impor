@@ -5,5 +5,5 @@ import type { ApplicationWizardValues } from "../../schema";
  * `WizardStepMeta.key` values `konsumsi/steps.ts` declares. */
 export const KONSUMSI_STEP_FIELD_NAMES: Record<string, (keyof ApplicationWizardValues)[]> = {
   "brands-used": ["applicationBrands"],
-  "quality-test": ["brandQualityTests"],
+  "quality-test": ["labelStatementDocument", "labelDocumentationDocument"],
 };

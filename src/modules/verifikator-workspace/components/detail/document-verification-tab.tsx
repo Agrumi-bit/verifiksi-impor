@@ -19,6 +19,8 @@ import {
 import type { AssignmentStatusValue } from "../../status";
 import { COMPLIANCE_SECTION_DEFS, getComplianceDef } from "../../document-compliance-defs";
 import { getChecklistItems, type ChecklistItemDef, type ChecklistCompanyLegal } from "../../document-checklist-items";
+import { CertificateReviewUploadModal } from "@/modules/applications/viu-schemes/konsumsi/components/certificate-review-upload-modal";
+import { parseQualityTestChecklistKey } from "@/modules/applications/viu-schemes/konsumsi/qt-checklist-key";
 
 type ChecklistResultValue = "PASS" | "FAIL" | "NA";
 type ChecklistItemResult = { result: ChecklistResultValue | null; note: string | null; criteriaChecked: boolean[] };
@@ -54,12 +56,15 @@ type VersionEntry = {
   path: string;
   uploadedByName: string | null;
   uploadedAt: string;
+  uploadedByRole: "CR" | "VERIFIKATOR" | null;
   isCurrent: boolean;
   verificationStatus: string;
   verifiedByName: string | null;
   verifiedAt: string | null;
   rejectionNote: string | null;
 };
+
+const UPLOADED_BY_ROLE_LABELS: Record<string, string> = { CR: "CR", VERIFIKATOR: "Verifikator" };
 
 function fmtDate(value: string | null): string {
   if (!value) return "—";
@@ -505,7 +510,11 @@ function VersionHistoryModal({
                   </div>
                   <div>
                     <div className="text-[10.5px] text-[#a68f80]">Uploaded By</div>
-                    <div className="mt-0.5 text-[12px] font-bold text-[#20180f]">{v.uploadedByName ?? "—"}</div>
+                    <div className="mt-0.5 text-[12px] font-bold text-[#20180f]">
+                      {v.uploadedByRole
+                        ? `Diunggah oleh ${UPLOADED_BY_ROLE_LABELS[v.uploadedByRole]}${v.uploadedByName ? ` – ${v.uploadedByName}` : ""}`
+                        : (v.uploadedByName ?? "Perusahaan")}
+                    </div>
                   </div>
                 </div>
                 <div className="mt-3.5 flex gap-2.5">
@@ -815,7 +824,17 @@ function ReviewModal({
         </div>
       </div>
 
-      {showVersionHistory && (
+      {showVersionHistory && parseQualityTestChecklistKey(row.key) && (
+        <CertificateReviewUploadModal
+          apiBase={`/api/verifikator-workspace/assignments/${assignmentId}/documents`}
+          docKey={row.key}
+          docTitle={row.label}
+          onClose={() => setShowVersionHistory(false)}
+          onUploaded={onSaved}
+        />
+      )}
+
+      {showVersionHistory && !parseQualityTestChecklistKey(row.key) && (
         <VersionHistoryModal
           assignmentId={assignmentId}
           docKey={row.key}

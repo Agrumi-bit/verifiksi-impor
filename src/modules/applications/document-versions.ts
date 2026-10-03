@@ -18,6 +18,15 @@ function inferVerifiedByRole(row: { verifiedByRole: string | null; verifiedBy: {
   return null;
 }
 
+/** Same fallback shape as `inferVerifiedByRole`, for who actually uploaded this version (null =
+ * the company's own upload, never staff on its behalf). */
+function inferUploadedByRole(row: { uploadedByRole: string | null; uploadedBy: { role: string | null } | null }): VerifiedByRole | null {
+  if (row.uploadedByRole === "CR" || row.uploadedByRole === "VERIFIKATOR") return row.uploadedByRole;
+  if (row.uploadedBy?.role === "CUSTOMER_RELATIONSHIP") return "CR";
+  if (row.uploadedBy?.role === "VERIFIKATOR") return "VERIFIKATOR";
+  return null;
+}
+
 /**
  * Immutable write-back for a verifikator checklist `key` (the same keys
  * `buildDocumentChecklist` in modules/verifikator-workspace/schema.ts reads)
@@ -158,6 +167,18 @@ export function applyChecklistDocumentPath(
     };
   }
 
+  // VIU Konsumsi's "Dokumen Label Produk" — exactly two documents, once per Application (see
+  // konsumsiLabelDocumentsSchema's own comment). Unlike every other key here, the target field is
+  // `{fileName, filePath}` rather than a bare path string — this function only ever receives a
+  // bare `newPath`, so `fileName` is derived from the path's own last segment (same convention
+  // CR/Verifikator uploads already use elsewhere when the original filename isn't carried through
+  // this generic, path-only write-back).
+  if (key === "konsumsi-label:statement" || key === "konsumsi-label:documentation") {
+    const fileName = newPath.split("/").pop() || newPath;
+    const field = key === "konsumsi-label:statement" ? "labelStatementDocument" : "labelDocumentationDocument";
+    return { ...payload, [field]: { filePath: newPath, fileName } };
+  }
+
   // LHVKI is the one Partner Industri document that actually lives on the application payload
   // (see partnerIndustriEntrySchema) — the partner's NIB/NPWP/SK do not, they live on
   // `Partner.company` (a different Company row entirely) and can't be written here; the caller
@@ -188,6 +209,10 @@ export async function recordApplicationDocumentVersion(
   path: string,
   uploadedById: string | null,
   backfill?: { previousPath: string; createdAt: Date },
+  // Set when CR/Verifikator uploads on the company's own behalf (see applyChecklistDocumentPath's
+  // callers) — null for the company's own upload. Never implies a review decision: the new
+  // version still starts at the default `NOT_YET_VERIFIED`, same as any other upload.
+  uploadedByRole: VerifiedByRole | null = null,
 ): Promise<void> {
   const latest = await db.applicationDocumentVersion.findFirst({
     where: { applicationId, fieldKey },
@@ -218,7 +243,7 @@ export async function recordApplicationDocumentVersion(
   }
 
   await db.applicationDocumentVersion.create({
-    data: { applicationId, fieldKey, path, uploadedById, version: nextVersion },
+    data: { applicationId, fieldKey, path, uploadedById, uploadedByRole, version: nextVersion },
   });
 }
 
@@ -236,6 +261,7 @@ export type DocumentMetaEntry = {
   version: number;
   uploadedByName: string | null;
   uploadedAt: string;
+  uploadedByRole: VerifiedByRole | null;
   verificationStatus: VerificationStatusValue;
   verifiedByName: string | null;
   verifiedAt: string | null;
@@ -249,6 +275,7 @@ function fallbackMetaEntry(fallbackCreatedAt: Date): DocumentMetaEntry {
     version: 1,
     uploadedByName: null,
     uploadedAt: fallbackCreatedAt.toISOString(),
+    uploadedByRole: null,
     verificationStatus: "NOT_YET_VERIFIED",
     verifiedByName: null,
     verifiedAt: null,
@@ -267,7 +294,7 @@ export async function getApplicationDocumentMeta(
     ? await db.applicationDocumentVersion.findMany({
         where: { applicationId, fieldKey: { in: fieldKeys } },
         orderBy: { version: "desc" },
-        include: { uploadedBy: { select: { name: true } }, verifiedBy: { select: { name: true, role: true } } },
+        include: { uploadedBy: { select: { name: true, role: true } }, verifiedBy: { select: { name: true, role: true } } },
       })
     : [];
 
@@ -283,6 +310,7 @@ export async function getApplicationDocumentMeta(
       version: row.version,
       uploadedByName: row.uploadedBy?.name ?? null,
       uploadedAt: row.createdAt.toISOString(),
+      uploadedByRole: inferUploadedByRole(row),
       verificationStatus: row.verificationStatus,
       verifiedByName: row.verifiedBy?.name ?? null,
       verifiedAt: row.verifiedAt?.toISOString() ?? null,
@@ -300,6 +328,7 @@ export type DocumentVersionEntry = {
   path: string | null;
   uploadedByName: string | null;
   uploadedAt: string;
+  uploadedByRole: VerifiedByRole | null;
   isCurrent: boolean;
   verificationStatus: VerificationStatusValue;
   verifiedByName: string | null;
@@ -317,7 +346,7 @@ export async function getApplicationDocumentVersionHistory(
   const rows = await db.applicationDocumentVersion.findMany({
     where: { applicationId, fieldKey },
     orderBy: { version: "desc" },
-    include: { uploadedBy: { select: { name: true } }, verifiedBy: { select: { name: true, role: true } } },
+    include: { uploadedBy: { select: { name: true, role: true } }, verifiedBy: { select: { name: true, role: true } } },
   });
 
   if (rows.length === 0) {
@@ -330,6 +359,7 @@ export async function getApplicationDocumentVersionHistory(
     path: row.path,
     uploadedByName: row.uploadedBy?.name ?? null,
     uploadedAt: row.createdAt.toISOString(),
+    uploadedByRole: inferUploadedByRole(row),
     isCurrent: row.path === currentPath,
     verificationStatus: row.verificationStatus,
     verifiedByName: row.verifiedBy?.name ?? null,

@@ -1,4 +1,4 @@
-import { BadgeCheck, FlaskConical } from "lucide-react";
+import { BadgeCheck, Tag } from "lucide-react";
 
 import type { WizardStepMeta } from "../../wizard-steps-meta";
 
@@ -21,9 +21,9 @@ export const KONSUMSI_STEPS: WizardStepMeta[] = [
   {
     key: "quality-test",
     step: 0,
-    title: "Dokumen Pendukung Merek",
-    subtitle: "Impor barang konsumsi — uji mutu & label berbahasa Indonesia per merek",
-    icon: FlaskConical,
+    title: "Dokumen Label Produk",
+    subtitle: "Impor barang konsumsi — label berbahasa Indonesia untuk seluruh permohonan",
+    icon: Tag,
     implemented: true,
   },
 ];

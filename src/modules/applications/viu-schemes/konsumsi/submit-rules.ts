@@ -76,18 +76,22 @@ export function applyKonsumsiSubmitRules(data: ApplicationWizardValues, ctx: z.R
       });
     }
   });
-  // Every Brand used in this application needs at least one Dokumen
-  // Pendukung Merek entry of its own (quality-test certificate + label
-  // compliance documents — see brandQualityTestsSchema's own comment on why
-  // this isn't Merk's qualityTests reused as-is).
-  const brandIdsMissingQualityTest = data.applicationBrands
-    .map((entry) => entry.brandId)
-    .filter((brandId) => !data.brandQualityTests.some((qt) => qt.brandId === brandId));
-  if (brandIdsMissingQualityTest.length > 0) {
+  // Step "Dokumen Label Produk" — exactly two documents, once per Application (not per Brand or
+  // per commodity grouping, see konsumsiLabelDocumentsSchema's own comment). Per-group quality-test
+  // certificate completeness is enforced separately in Step "Product Information" (the Merek × Sub
+  // Kelompok matrix), not here.
+  if (!data.labelStatementDocument?.filePath) {
     ctx.addIssue({
       code: "custom",
-      path: ["brandQualityTests"],
-      message: `${brandIdsMissingQualityTest.length} merek belum memiliki dokumen pendukung merek`,
+      path: ["labelStatementDocument"],
+      message: "Unggah Surat Pernyataan Pemenuhan Ketentuan Label Berbahasa Indonesia",
+    });
+  }
+  if (!data.labelDocumentationDocument?.filePath) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["labelDocumentationDocument"],
+      message: "Unggah Dokumentasi Label Produk",
     });
   }
   // Step "Product Information" — Konsumsi's own Merek > Kelompok Komoditas > Produk structure
@@ -120,4 +124,25 @@ export function applyKonsumsiSubmitRules(data: ApplicationWizardValues, ctx: z.R
     }
     seenProductKeys.add(key);
   });
+
+  // Merek x Sub Kelompok certificate-coverage — every group with at least one Product needs at
+  // least one `productGroupCertificates` entry. Structural presence check only (DB-backed checks —
+  // scope match, expiry — are deliberately left to validateKonsumsiSubmit, same pattern as above).
+  const requiredGroupKeys = new Map<string, string>();
+  data.konsumsiProducts.forEach((product) => {
+    const key = `${product.brandId}|${product.commodityGroupId}`;
+    if (!requiredGroupKeys.has(key)) requiredGroupKeys.set(key, product.commodityName || product.commodityGroupId);
+  });
+  const coveredGroupKeys = new Set(
+    (data.productGroupCertificates ?? []).map((certificate) => `${certificate.brandId}|${certificate.commodityGroupId}`),
+  );
+  for (const [key, commodityName] of requiredGroupKeys) {
+    if (!coveredGroupKeys.has(key)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["productGroupCertificates"],
+        message: `Sertifikat Hasil Uji Mutu belum diunggah untuk "${commodityName}"`,
+      });
+    }
+  }
 }

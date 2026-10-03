@@ -7,16 +7,16 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ApplicationWizardValues } from "../../../../schema";
-import { konsumsiProductTotal, type ApplicationKonsumsiProductValues } from "../../schema";
+import { konsumsiProductTotal, type ApplicationKonsumsiProductValues, type ProductGroupCertificateValues } from "../../schema";
 import { ProductFormSheet } from "./product-form-sheet";
 import { ProductTable } from "./product-table";
 import { CurrencyTotals } from "./product-summary";
+import { CertificatePanel } from "./certificate-panel";
 
 type Props = {
   form: UseFormReturn<ApplicationWizardValues>;
   brandId: string;
   brandName: string;
-  industryGroupId: string;
   industryName: string;
   commodityGroupId: string;
   commodityName: string;
@@ -24,25 +24,37 @@ type Props = {
 
 type SheetState = { mode: "add" } | { mode: "edit"; index: number };
 
-/** One Sub Kelompok Komoditas slot under a Brand (part of a Kelompok Komoditas / Sub Kelompok
- * Komoditas pair derived from Step "Dokumen Pendukung Merek" — see BrandProductSection) — its own
- * product table, scoped to rows matching both `brandId` and `commodityGroupId`. Reads/writes
- * `konsumsiProducts` directly via getValues/setValue rather than a nested `useFieldArray` (the
- * rendered rows are a filtered view over one flat array shared across every Brand x Commodity
- * Group combination, same pattern StepQualityTest already uses for its own per-brand grouping). */
+/** One Sub Kelompok Komoditas group under a Brand — derived bottom-up from its own products' HS
+ * Code picks (see `deriveProductGroups` in ../../schema.ts and BrandProductSection, its caller) —
+ * its own product table plus certificate panel, scoped to rows matching both `brandId` and
+ * `commodityGroupId`. Reads/writes `konsumsiProducts`/`productGroupCertificates` directly via
+ * getValues/setValue rather than a nested `useFieldArray` (the rendered rows are a filtered view
+ * over one flat array shared across every Brand x Commodity Group combination, same pattern
+ * StepQualityTest used for its own per-brand grouping). */
 export function CommodityProductSection({
   form,
   brandId,
   brandName,
-  industryGroupId,
   industryName,
   commodityGroupId,
   commodityName,
 }: Props) {
   const { control } = form;
   const allProducts = useWatch({ control, name: "konsumsiProducts" }) ?? [];
+  const allCertificates = useWatch({ control, name: "productGroupCertificates" }) ?? [];
   const [sheetState, setSheetState] = useState<SheetState | null>(null);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
+
+  const certificate = allCertificates.find((c) => c.brandId === brandId && c.commodityGroupId === commodityGroupId);
+
+  function handleCertificateChange(next: ProductGroupCertificateValues) {
+    const current = form.getValues("productGroupCertificates") ?? [];
+    const exists = current.some((c) => c.brandId === brandId && c.commodityGroupId === commodityGroupId);
+    const updated = exists
+      ? current.map((c) => (c.brandId === brandId && c.commodityGroupId === commodityGroupId ? next : c))
+      : [...current, next];
+    form.setValue("productGroupCertificates", updated, { shouldDirty: true });
+  }
 
   const rows = allProducts
     .map((product, index) => ({ product, index }))
@@ -81,11 +93,11 @@ export function CommodityProductSection({
   const editingProduct = sheetState?.mode === "edit" ? rows.find((row) => row.index === sheetState.index)?.product : undefined;
 
   return (
-    <div className="rounded-lg border border-border bg-muted/10 p-4">
+    <div id={`konsumsi-group-${brandId}-${commodityGroupId}`} className="scroll-mt-20 rounded-lg border border-border bg-muted/10 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kelompok Komoditas</p>
-          <p className="text-sm font-bold">{industryName}</p>
+          <p className="text-sm font-bold">{industryName || "—"}</p>
           <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sub Kelompok Komoditas</p>
           <p className="text-sm font-bold">{commodityName}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">{rows.length} Produk</p>
@@ -96,9 +108,15 @@ export function CommodityProductSection({
         </div>
       </div>
 
-      <p className="mt-3 flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[11px] text-muted-foreground">
-        Hasil Uji Mutu akan dikelola berdasarkan Merek + Kelompok Komoditas.
-      </p>
+      <div className="mt-3">
+        <CertificatePanel
+          brandId={brandId}
+          commodityGroupId={commodityGroupId}
+          commodityName={commodityName}
+          certificate={certificate}
+          onChange={handleCertificateChange}
+        />
+      </div>
 
       <div className="mt-3">
         {rows.length === 0 ? (
@@ -119,10 +137,6 @@ export function CommodityProductSection({
         <ProductFormSheet
           brandId={brandId}
           brandName={brandName}
-          industryGroupId={industryGroupId}
-          industryName={industryName}
-          commodityGroupId={commodityGroupId}
-          commodityName={commodityName}
           initialValues={editingProduct}
           existingProducts={allProducts}
           excludeIndex={sheetState.mode === "edit" ? sheetState.index : undefined}

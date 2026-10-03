@@ -20,10 +20,6 @@ import {
 type Props = {
   brandId: string;
   brandName: string;
-  industryGroupId: string;
-  industryName: string;
-  commodityGroupId: string;
-  commodityName: string;
   initialValues?: ApplicationKonsumsiProductValues;
   existingProducts: ApplicationKonsumsiProductValues[];
   excludeIndex?: number;
@@ -39,21 +35,19 @@ function formatMoney(value: number): string {
 
 /**
  * Add/Edit Product — a right-side Sheet rather than a centered Dialog (a form this long reads
- * better sliding in from the edge). Brand and Kelompok Komoditas / Sub Kelompok Komoditas are
- * fixed, read-only context (never silently re-parented — delete + re-add elsewhere if a product
- * genuinely belongs under a different Brand/group). HS Code and Country of Origin are master-
- * data-backed selections, never free text — Uraian HS Code and Satuan are derived read-only
- * displays from the selected HS Code, never independently editable. Total Harga is always derived
- * (Jumlah x Harga Satuan Rata-rata), recalculated server-side at submit — this sheet never lets
- * the user type a total directly.
+ * better sliding in from the edge). Only Brand is fixed context (set by whichever
+ * BrandProductSection opened this sheet) — HS Code is the PRIMARY driver here: picking one
+ * auto-fills Komoditas/Sub Kelompok Komoditas/Kelompok Komoditas/Uraian/Satuan in one step (see
+ * `handleHsCodeChange`), all shown read-only. This is the inverse of this sheet's previous design
+ * (Kelompok/Sub Kelompok fixed context, HS Code picked within it) — see the Step 7/9 refactor: a
+ * product's commodity group is now a *consequence* of its HS Code, not a precondition. Country of
+ * Origin is likewise a master-data-backed selection, never free text. Total Harga is always
+ * derived (Jumlah x Harga Satuan Rata-rata), recalculated server-side at submit — this sheet never
+ * lets the user type a total directly.
  */
 export function ProductFormSheet({
   brandId,
   brandName,
-  industryGroupId,
-  industryName,
-  commodityGroupId,
-  commodityName,
   initialValues,
   existingProducts,
   excludeIndex,
@@ -63,7 +57,7 @@ export function ProductFormSheet({
   const hsCodeOptions = useHsCodeOptions();
   const { options: countryOptions } = useActiveCountries();
   const [form, setForm] = useState<ApplicationKonsumsiProductValues>(
-    initialValues ?? createEmptyKonsumsiProduct(brandId, { brandId, industryGroupId, industryName, commodityGroupId, commodityName }),
+    initialValues ?? createEmptyKonsumsiProduct(brandId),
   );
   const [errors, setErrors] = useState<FieldErrors>({});
 
@@ -73,7 +67,19 @@ export function ProductFormSheet({
 
   function handleHsCodeChange(value: string) {
     const option = hsCodeOptions.find((o) => o.value === value);
-    update({ hsCode: value, hsDescription: option?.hint ?? "", unit: option?.unit ?? "" });
+    if (!option) return;
+    update({
+      hsCode: option.value,
+      hsCodeId: option.hsCodeId,
+      hsDescription: option.hint,
+      unit: option.unit,
+      commoditySubGroupId: option.commoditySubGroupId,
+      commoditySubGroupName: option.commoditySubGroupName,
+      commodityGroupId: option.commodityGroupId,
+      commodityName: option.commodityGroupName,
+      industryGroupId: option.industryGroupId ?? "",
+      industryName: option.industryGroupName ?? "",
+    });
     setErrors((e) => ({ ...e, hsCode: undefined }));
   }
 
@@ -86,7 +92,7 @@ export function ProductFormSheet({
   function handleSubmit() {
     const nextErrors: FieldErrors = {};
     if (!form.productName.trim()) nextErrors.productName = "Nama produk wajib diisi.";
-    if (!form.hsCode) nextErrors.hsCode = "HS Code wajib dipilih.";
+    if (!form.hsCodeId) nextErrors.hsCode = "HS Code wajib dipilih.";
     if (!form.countryOfOrigin) nextErrors.countryOfOrigin = "Negara asal wajib dipilih.";
     const quantity = Number(form.quantity);
     if (!Number.isFinite(quantity) || quantity <= 0) nextErrors.quantity = "Jumlah permohonan harus lebih besar dari 0.";
@@ -106,13 +112,12 @@ export function ProductFormSheet({
       (product, index) =>
         index !== excludeIndex &&
         product.brandId === form.brandId &&
-        product.commodityGroupId === form.commodityGroupId &&
-        product.hsCode.trim().toLowerCase() === form.hsCode.trim().toLowerCase() &&
+        product.hsCodeId === form.hsCodeId &&
         product.countryOfOrigin.trim().toLowerCase() === form.countryOfOrigin.trim().toLowerCase() &&
         product.productName.trim().toLowerCase() === form.productName.trim().toLowerCase(),
     );
     if (isDuplicate) {
-      setErrors({ duplicate: "Produk dengan HS Code dan negara asal yang sama sudah terdapat pada kelompok ini." });
+      setErrors({ duplicate: "Produk dengan HS Code, negara asal, dan nama yang sama sudah ada untuk merek ini." });
       return;
     }
 
@@ -129,19 +134,9 @@ export function ProductFormSheet({
           <SheetTitle>{initialValues ? "Edit Produk" : "Tambah Produk"}</SheetTitle>
         </SheetHeader>
         <SheetBody className="flex flex-col gap-3.5">
-          <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/30 p-3 text-sm">
-            <div>
-              <p className="text-xs text-muted-foreground">Merek</p>
-              <p className="font-semibold">{brandName}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Kelompok Komoditas</p>
-              <p className="font-semibold">{industryName}</p>
-            </div>
-            <div className="col-span-2">
-              <p className="text-xs text-muted-foreground">Sub Kelompok Komoditas</p>
-              <p className="font-semibold">{commodityName}</p>
-            </div>
+          <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
+            <p className="text-xs text-muted-foreground">Merek</p>
+            <p className="font-semibold">{brandName}</p>
           </div>
 
           <FormField label="Nama Produk" required error={errors.productName}>
@@ -165,9 +160,26 @@ export function ProductFormSheet({
             />
           </FormField>
 
-          <FormField label="Uraian HS Code" hint="Otomatis dari HS Code terpilih.">
-            <Input value={form.hsDescription ?? ""} readOnly disabled />
-          </FormField>
+          {form.hsCodeId && (
+            <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/30 p-3 text-sm">
+              <div className="col-span-2">
+                <p className="text-xs text-muted-foreground">Uraian HS Code</p>
+                <p className="font-medium">{form.hsDescription || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Kelompok Komoditas</p>
+                <p className="font-medium">{form.industryName || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Sub Kelompok Komoditas</p>
+                <p className="font-medium">{form.commodityName || "—"}</p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-xs text-muted-foreground">Komoditas</p>
+                <p className="font-medium">{form.commoditySubGroupName || "—"}</p>
+              </div>
+            </div>
+          )}
 
           <FormField label="Asal Negara" required error={errors.countryOfOrigin}>
             <SearchSelectInput

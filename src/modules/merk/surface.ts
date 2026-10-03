@@ -32,6 +32,11 @@ export type MerkSurface = {
   /** Shows the "Perusahaan" column on the brand list — meaningless on the
    * Company surface, where every row is already the caller's own company. */
   showCompanyColumn: boolean;
+  /** Gates Brand Detail's "Hapus Merek" button — `DELETE ${apiBase}/${id}` only
+   * exists on the internal admin route; the Company surface has no delete
+   * capability at all, and the server itself also enforces admin-only via
+   * `requireAdminSession`. */
+  canDelete: boolean;
 };
 
 export const INTERNAL_MERK_SURFACE: MerkSurface = {
@@ -46,6 +51,7 @@ export const INTERNAL_MERK_SURFACE: MerkSurface = {
   wizardSubtitle: "Tambah Merek Baru",
   showAudit: true,
   showCompanyColumn: true,
+  canDelete: true,
 };
 
 export const COMPANY_BRAND_SURFACE: MerkSurface = {
@@ -63,4 +69,5 @@ export const COMPANY_BRAND_SURFACE: MerkSurface = {
   wizardSubtitle: "Register New Brand",
   showAudit: false,
   showCompanyColumn: false,
+  canDelete: false,
 };

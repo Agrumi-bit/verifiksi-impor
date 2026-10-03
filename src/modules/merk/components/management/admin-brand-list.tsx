@@ -232,11 +232,11 @@ export function AdminBrandList() {
         deleteTargets.map(async (target) => {
           try {
             const response = await fetch(`${SURFACE.apiBase}/${target.id}`, { method: "DELETE" });
+            const body = await response.json().catch(() => null);
             if (!response.ok) {
-              const body = await response.json().catch(() => null);
               throw new Error(body?.error ?? `Gagal menghapus "${target.brandName}"`);
             }
-            return { ok: true as const, target };
+            return { ok: true as const, target, warning: body?.warning as string | null | undefined };
           } catch (error) {
             return { ok: false as const, target, message: error instanceof Error ? error.message : "Gagal menghapus merek" };
           }
@@ -250,6 +250,7 @@ export function AdminBrandList() {
             ? `Merek "${succeeded[0].target.brandName}" berhasil dihapus.`
             : `${succeeded.length} merek berhasil dihapus.`,
         );
+        succeeded.forEach((s) => { if (s.warning) toast.warning(s.warning); });
         queryClient.invalidateQueries({ queryKey: LIST_KEY });
         setSelected(new Set());
       }

@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { qualityTestEntrySchema } from "@/modules/merk/schema";
 import { MODAL_STATEMENT_LETTER_DOC_DEF, NON_INDUSTRI_SUPPORT_DOC_DEFS } from "../../financial-capability-defs";
 import { APPLICANT_BRAND_ROLES, IMPORT_APPOINTMENT_SOURCES } from "./business-rules";
 
@@ -75,63 +74,18 @@ export function createEmptyApplicationBrand(brandId: string): ApplicationBrandEn
 }
 
 /**
- * Step "Dokumen Pendukung Merek" — one entry per Brand + Sub Kelompok
- * Komoditas combination used in THIS application, bundling its quality-test
- * certificate together with the two Indonesian-labeling documents regulation
- * requires for the same combination (Surat Pernyataan Pemenuhan Ketentuan
- * Label Berbahasa Indonesia + Dokumentasi Label Produk). Deliberately its own
- * field on the Application payload rather than reusing Merk's own
- * `qualityTests`: most of the rich shape (`qualityTestEntrySchema` — lab,
- * dates, file) applies, but this test result is specific to what's being
- * imported under this application, not a permanent Brand Master record.
- * `brandId` must match one of this application's own `applicationBrands`
- * entries.
- *
- * Classifies by the top two commodity hierarchy levels — "Kelompok
- * Komoditas" (IndustryGroup) and "Sub Kelompok Komoditas" (CommodityGroup) —
- * rather than Brand Master's own CommodityGroup/CommoditySubGroup pair, so
- * `commoditySubGroupId`/`commoditySubGroupName` are dropped in favor of a new
- * `industryGroupId`/`industryName`. `commodityGroupId`/`commodityName` are
- * kept as-is (same CommodityGroup target), now cascading from the selected
- * `industryGroupId` instead of standing alone.
+ * Step "Dokumen Label Produk" (formerly "Dokumen Pendukung Merek") — exactly two documents,
+ * once per Application, not per Brand or per commodity grouping: Surat Pernyataan Pemenuhan
+ * Ketentuan Label Berbahasa Indonesia and Dokumentasi Label Produk. Optional at the schema level
+ * (the wizard's own "Continue past an incomplete step" rule) — required-ness for actual Submit is
+ * enforced in `applyKonsumsiSubmitRules`, same deferred-validation pattern every other Konsumsi
+ * document uses.
  */
-export const applicationBrandQualityTestEntrySchema = qualityTestEntrySchema
-  .omit({ commoditySubGroupId: true, commoditySubGroupName: true })
-  .extend({
-    brandId: requiredString("Merek wajib dipilih"),
-    industryGroupId: requiredString("Kelompok Komoditas wajib dipilih"),
-    industryName: z.string().trim().optional(),
-    labelStatementFilePath: requiredString("Surat Pernyataan Pemenuhan Ketentuan Label Berbahasa Indonesia wajib diunggah"),
-    labelStatementFileName: requiredString("Nama file tidak valid"),
-    labelDocumentationFilePath: requiredString("Dokumentasi Label Produk wajib diunggah"),
-    labelDocumentationFileName: requiredString("Nama file tidak valid"),
-  });
-export type ApplicationBrandQualityTestEntryValues = z.infer<typeof applicationBrandQualityTestEntrySchema>;
-
-export function createEmptyApplicationBrandQualityTest(brandId: string): ApplicationBrandQualityTestEntryValues {
-  return {
-    brandId,
-    industryGroupId: "",
-    industryName: "",
-    commodityGroupId: "",
-    commodityName: "",
-    certificateNumber: "",
-    laboratoryName: "",
-    labelStatementFilePath: "",
-    labelStatementFileName: "",
-    labelDocumentationFilePath: "",
-    labelDocumentationFileName: "",
-    issueDate: "",
-    filePath: "",
-    fileName: "",
-  };
-}
-
-/** Step "Hasil Uji Mutu" — only meaningful when Jenis Impor includes
- * BARANG_KONSUMSI, same gate as `brandsUsedSchema`. */
-export const brandQualityTestsSchema = z.object({
-  brandQualityTests: z.array(applicationBrandQualityTestEntrySchema).default([]),
+export const konsumsiLabelDocumentsSchema = z.object({
+  labelStatementDocument: applicationRelationshipDocumentSchema.optional(),
+  labelDocumentationDocument: applicationRelationshipDocumentSchema.optional(),
 });
+export type KonsumsiLabelDocumentsValues = z.infer<typeof konsumsiLabelDocumentsSchema>;
 
 /** Konsumsi's own "Support Document" field — kept as its own schema object
  * (not declared inline in the shared documents shape) so it has exactly one
@@ -176,15 +130,16 @@ export const konsumsiFinancialDocumentsSchema = z.object({
 
 /**
  * Step "Product Information" (shared step, scheme-owned content) — Konsumsi products are
- * structured as Merek (`applicationBrands[].brandId`) > Kelompok Komoditas / Sub Kelompok
- * Komoditas > Produk. The commodity grouping is never picked independently in this step — it's
- * always one of that Brand's own `brandQualityTests` combinations (Step "Dokumen Pendukung
- * Merek"), kept in sync via `deriveKonsumsiProductGroups` below, so a product can never reference
- * a grouping that doesn't also exist there. Entirely separate from the shared `products` field
- * (free-text HS/volume, used by VKI/Industri/Non-Industri — never touched here) since the shapes
- * are structurally incompatible: Konsumsi products carry a Brand/commodity relationship, master-
- * data-backed HS Code + Country of Origin, and per-line pricing the generic product list has no
- * concept of.
+ * structured as Merek (`applicationBrands[].brandId`) > Sub Kelompok Komoditas > Produk. The
+ * commodity grouping is NEVER picked independently in this step — it's always derived bottom-up
+ * from each product's own selected HS Code (`hsCodeId` → its master-data
+ * commoditySubGroupId/commodityGroupId/industryGroupId chain), see `deriveProductGroups` below.
+ * This is the inverse of this step's previous design (grouping picked first in Step "Dokumen
+ * Pendukung Merek", products filed into it after) — that step no longer exists in that form; see
+ * the Step 7/9 refactor. Entirely separate from the shared `products` field (free-text HS/volume,
+ * used by VKI/Industri/Non-Industri — never touched here) since the shapes are structurally
+ * incompatible: Konsumsi products carry a Brand/commodity relationship, master-data-backed HS Code
+ * + Country of Origin, and per-line pricing the generic product list has no concept of.
  */
 const positiveNumberString = (message: string) =>
   z
@@ -204,39 +159,42 @@ export const KONSUMSI_PRODUCT_CURRENCIES = ["USD", "IDR", "EUR", "CNY", "JPY"] a
 export type KonsumsiProductCurrency = (typeof KONSUMSI_PRODUCT_CURRENCIES)[number];
 
 /**
- * A Brand's Kelompok Komoditas / Sub Kelompok Komoditas grouping is never picked independently in
- * this step — it's always derived from that Brand's own `brandQualityTests` entries (Step "Dokumen
- * Pendukung Merek"), so Product Information stays in sync with whatever commodity groupings were
- * already established there. See `deriveKonsumsiProductGroups` below.
+ * A Brand's Sub Kelompok Komoditas grouping is derived bottom-up from its own products' HS Code
+ * selections — never picked independently. `industryGroupId`/`industryName` are shown as "context"
+ * only (and may be absent: `CommodityGroup.industryGroupId` is nullable in master data for rows
+ * that predate that level — see use-hs-code-options.ts's own comment).
  */
 export type KonsumsiProductGroup = {
   brandId: string;
-  industryGroupId: string;
-  industryName?: string;
   commodityGroupId: string;
   commodityName?: string;
+  industryGroupId?: string;
+  industryName?: string;
 };
 
-/** Distinct (industryGroupId, commodityGroupId) pairs per Brand, taken from `brandQualityTests` —
- * the single source of truth for which commodity groupings a Brand has. Dedupes by
- * `commodityGroupId` (it already uniquely implies its parent `industryGroupId`), preserving first-
- * seen order so the UI lists groups in the same order they were added in Step "Dokumen Pendukung
- * Merek". */
-export function deriveKonsumsiProductGroups(
-  qualityTests: Pick<ApplicationBrandQualityTestEntryValues, "brandId" | "industryGroupId" | "industryName" | "commodityGroupId" | "commodityName">[],
+/** Distinct (brandId, commodityGroupId) pairs, taken from `konsumsiProducts` — the single source
+ * of truth for which commodity groupings a Brand has (replaces the old Step "Dokumen Pendukung
+ * Merek"-sourced `deriveKonsumsiProductGroups`). Dedupes by `commodityGroupId` (it already
+ * uniquely implies its parent `industryGroupId`), preserving first-seen order. */
+export function deriveProductGroups(
+  // Loosely-typed on purpose: callers commonly pass a react-hook-form `useWatch` snapshot, whose
+  // deep-partial type makes every field `| undefined` mid-edit — never trust it as a guarantee of
+  // completeness, hence the `!product.commodityGroupId` guard below.
+  products: { brandId?: string; commodityGroupId?: string; commodityName?: string; industryGroupId?: string; industryName?: string }[],
 ): KonsumsiProductGroup[] {
   const seen = new Set<string>();
   const groups: KonsumsiProductGroup[] = [];
-  for (const qt of qualityTests) {
-    const key = `${qt.brandId}|${qt.commodityGroupId}`;
+  for (const product of products) {
+    if (!product.brandId || !product.commodityGroupId) continue;
+    const key = `${product.brandId}|${product.commodityGroupId}`;
     if (seen.has(key)) continue;
     seen.add(key);
     groups.push({
-      brandId: qt.brandId,
-      industryGroupId: qt.industryGroupId,
-      industryName: qt.industryName,
-      commodityGroupId: qt.commodityGroupId,
-      commodityName: qt.commodityName,
+      brandId: product.brandId,
+      commodityGroupId: product.commodityGroupId,
+      commodityName: product.commodityName,
+      industryGroupId: product.industryGroupId || undefined,
+      industryName: product.industryName,
     });
   }
   return groups;
@@ -259,21 +217,31 @@ export type KonsumsiProductSnapshot = z.infer<typeof konsumsiProductSnapshotSche
 export const konsumsiProductSchema = z.object({
   id: z.string(),
   brandId: requiredString("Merek wajib dipilih"),
-  // Both of these always come from a matching `brandQualityTests` entry (same brandId +
-  // commodityGroupId) — never picked independently here — so Product Information can't drift out
-  // of sync with Step "Dokumen Pendukung Merek". Cached directly on the product (not re-derived by
-  // joining against brandQualityTests at render time) so a row stays self-describing even if that
-  // quality-test entry is later edited or removed.
-  industryGroupId: requiredString("Kelompok komoditas wajib dipilih"),
-  industryName: z.string().trim().optional(),
-  commodityGroupId: requiredString("Sub kelompok komoditas wajib dipilih"),
-  commodityName: z.string().trim().optional(),
-  productName: requiredString("Nama produk wajib diisi"),
-  // References HS Code master data by its code string (the existing convention — see
-  // useHsCodeOptions/the shared productItemSchema, which both key HS Code by the code itself
-  // rather than a separate master-data id).
+  // The entire commodity chain is derived from `hsCodeId` (master-data FK) at selection time —
+  // never picked independently — so Product Information can't drift out of sync with HS Code
+  // master data. Cached directly on the product (not re-derived by joining at render time) so a
+  // row stays self-describing even if the master-data row is later changed; re-validated against
+  // live master data server-side at submit (see validateKonsumsiProducts).
+  hsCodeId: requiredString("HS Code wajib dipilih"),
+  // Kept alongside `hsCodeId` as the display/snapshot/Excel-export convention (the code string
+  // itself, e.g. "6109.10.00") — `hsCodeId` is the source of truth, this is a cache.
   hsCode: requiredString("HS Code wajib dipilih"),
   hsDescription: z.string().trim().optional(),
+  // "Komoditas" — CommoditySubGroup, the 3rd/deepest hierarchy level. Konsumsi's matrix groups by
+  // the 2nd level (commodityGroupId) only; this is carried for completeness/display and for a
+  // future deeper breakdown, never required independently of hsCodeId.
+  commoditySubGroupId: z.string().trim().optional(),
+  commoditySubGroupName: z.string().trim().optional(),
+  // "Sub Kelompok Komoditas" — CommodityGroup. This is the level the Merek x Sub Kelompok matrix
+  // and the certificate-coverage requirement both key off.
+  commodityGroupId: requiredString("Sub kelompok komoditas wajib dipilih"),
+  commodityName: z.string().trim().optional(),
+  // "Kelompok Komoditas" — IndustryGroup, shown as context only. May be absent: `CommodityGroup.
+  // industryGroupId` is nullable in master data (rows predating that level) — render "—", never an
+  // error, when empty (see use-hs-code-options.ts's own comment).
+  industryGroupId: z.string().trim().optional(),
+  industryName: z.string().trim().optional(),
+  productName: requiredString("Nama produk wajib diisi"),
   // References Country master data by its name — the existing convention (see
   // useActiveCountries: "value is the country name... used for negara asal style fields").
   countryOfOrigin: requiredString("Negara asal wajib dipilih"),
@@ -294,16 +262,21 @@ export const konsumsiProductSchema = z.object({
 });
 export type ApplicationKonsumsiProductValues = z.infer<typeof konsumsiProductSchema>;
 
-export function createEmptyKonsumsiProduct(brandId: string, group: KonsumsiProductGroup): ApplicationKonsumsiProductValues {
+/** A brand-new Product line, with no HS Code picked yet — every commodity-chain field starts
+ * empty and is filled in all at once the moment the user picks an HS Code (see
+ * ProductFormSheet's own `handleHsCodeChange`). Unlike the old (pre-refactor) shape, this never
+ * takes a pre-existing group — a product's group is a *consequence* of its HS Code pick, not a
+ * precondition for creating it. */
+export function createEmptyKonsumsiProduct(brandId: string): ApplicationKonsumsiProductValues {
   return {
     id: crypto.randomUUID(),
     brandId,
-    industryGroupId: group.industryGroupId,
-    industryName: group.industryName,
-    commodityGroupId: group.commodityGroupId,
-    commodityName: group.commodityName,
-    productName: "",
+    hsCodeId: "",
     hsCode: "",
+    commoditySubGroupId: "",
+    commodityGroupId: "",
+    industryGroupId: "",
+    productName: "",
     countryOfOrigin: "",
     quantity: "",
     stockQuantity: "0",
@@ -323,4 +296,53 @@ export function konsumsiProductTotal(product: Pick<ApplicationKonsumsiProductVal
 
 export const konsumsiProductsSchema = z.object({
   konsumsiProducts: z.array(konsumsiProductSchema).default([]),
+});
+
+/**
+ * One Hasil Uji Mutu certificate per (Brand x Sub Kelompok Komoditas) group that has at least one
+ * Product — the requirement the Merek x Sub Kelompok matrix enforces. Either references an
+ * existing `BrandQualityTest` row (`qualityTestId` set — merk & commodityGroup must match, never
+ * duplicated into a new row) or carries a freshly-uploaded certificate's own fields. `validUntil`
+ * maps 1:1 to `BrandQualityTest.expiryDate` at sync time (see application-relationship-sync.ts's
+ * sibling service for this data) — kept as its own name here since "berlaku sampai" reads more
+ * naturally than "kedaluwarsa" on a certificate the applicant is actively attaching, but it is the
+ * same concept, never a second field on the Prisma side.
+ */
+export const productGroupCertificateSchema = z.object({
+  brandId: requiredString("Merek wajib dipilih"),
+  commodityGroupId: requiredString("Sub Kelompok Komoditas wajib dipilih"),
+  // Display cache only (same convention as konsumsiProductSchema's own commodityName) — never the
+  // source of truth, re-resolved from commodityGroupId wherever it matters (validation, sync).
+  commodityName: z.string().trim().optional(),
+  // Set only when "Pilih sertifikat yang sudah ada" was used — references a real BrandQualityTest
+  // row id. When set, certificateNumber/laboratoryName/issueDate/validUntil/fileName/filePath below
+  // are a read-only display cache of that row (re-resolved from the DB at submit — see
+  // validateKonsumsiSubmit — never trusted from the client alone), not independently editable.
+  qualityTestId: z.string().trim().optional(),
+  certificateNumber: requiredString("Nomor sertifikat wajib diisi"),
+  laboratoryName: requiredString("Nama laboratorium wajib diisi"),
+  issueDate: requiredString("Tanggal terbit wajib diisi"),
+  // Optional — an empty value is a warning ("sertifikat tidak punya batas berlaku, verifikator
+  // perlu konfirmasi ulang"), never a submit-blocking error (see applyKonsumsiSubmitRules).
+  validUntil: z.string().trim().optional(),
+  fileName: requiredString("Nama file tidak valid"),
+  filePath: requiredString("File sertifikat wajib diunggah"),
+});
+export type ProductGroupCertificateValues = z.infer<typeof productGroupCertificateSchema>;
+
+export function createEmptyProductGroupCertificate(brandId: string, commodityGroupId: string, commodityName?: string): ProductGroupCertificateValues {
+  return {
+    brandId,
+    commodityGroupId,
+    commodityName,
+    certificateNumber: "",
+    laboratoryName: "",
+    issueDate: "",
+    fileName: "",
+    filePath: "",
+  };
+}
+
+export const productGroupCertificatesSchema = z.object({
+  productGroupCertificates: z.array(productGroupCertificateSchema).default([]),
 });

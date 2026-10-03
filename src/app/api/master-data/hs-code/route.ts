@@ -7,7 +7,7 @@ export const { GET, POST } = createMasterDataListRoute(
   hsCodeMasterDataSchema,
   {
     include: {
-      commodityGroup: true,
+      commodityGroup: { include: { industryGroup: true } },
       commoditySubGroup: true,
       unitOfMeasurement: true,
     },

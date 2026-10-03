@@ -5,18 +5,16 @@ import { useWatch, type UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { useApplicationBrandOptions } from "../../../../hooks/use-application-brand-options";
 import type { ApplicationWizardValues } from "../../../../schema";
-import { deriveKonsumsiProductGroups, konsumsiProductTotal } from "../../schema";
+import { deriveProductGroups, konsumsiProductTotal } from "../../schema";
 import { BrandProductSection } from "./brand-product-section";
 import { CurrencyTotals } from "./product-summary";
+import { ProductGroupMatrix } from "./product-group-matrix";
 
 type Props = {
   form: UseFormReturn<ApplicationWizardValues>;
   /** Jumps the wizard to Step "Merek yang Digunakan" — used by the empty state below when no
    * Brand has been selected yet, so the user isn't stuck on this step with nothing to do. */
   onNavigateToBrandsStep: () => void;
-  /** Jumps the wizard to Step "Dokumen Pendukung Merek" — forwarded to each BrandProductSection
-   * for its own empty state (a Brand with no commodity grouping yet). */
-  onNavigateToQualityTestStep: () => void;
 };
 
 function SummaryStat({ label, value }: { label: string; value: number }) {
@@ -35,16 +33,17 @@ function SummaryStat({ label, value }: { label: string; value: number }) {
  * before, including on a mixed Industri+Konsumsi application.
  *
  * Structure: Merek (`applicationBrands`, selected in Step "Merek yang Digunakan" — never typed
- * here) > Kelompok Komoditas / Sub Kelompok Komoditas (derived from `brandQualityTests`, Step
- * "Dokumen Pendukung Merek" — never picked independently here) > Produk. Brand source is always
- * `applicationBrands[].brandId`; this component never lets the user type an arbitrary brand name.
+ * here) > Sub Kelompok Komoditas (derived bottom-up from each Product's own HS Code — see
+ * `deriveProductGroups`) > Produk. Brand source is always `applicationBrands[].brandId`; this
+ * component never lets the user type an arbitrary brand name. The Merek x Sub Kelompok matrix
+ * above the Brand sections surfaces each group's certificate-coverage status at a glance.
  */
-export function KonsumsiProductInformation({ form, onNavigateToBrandsStep, onNavigateToQualityTestStep }: Props) {
+export function KonsumsiProductInformation({ form, onNavigateToBrandsStep }: Props) {
   const { control } = form;
   const importTypes = useWatch({ control, name: "importTypes" }) ?? [];
   const applicationBrands = useWatch({ control, name: "applicationBrands" }) ?? [];
-  const qualityTests = useWatch({ control, name: "brandQualityTests" }) ?? [];
   const products = useWatch({ control, name: "konsumsiProducts" }) ?? [];
+  const certificates = useWatch({ control, name: "productGroupCertificates" }) ?? [];
   const { data: brandOptions } = useApplicationBrandOptions();
 
   if (!importTypes.includes("BARANG_KONSUMSI")) return null;
@@ -69,19 +68,21 @@ export function KonsumsiProductInformation({ form, onNavigateToBrandsStep, onNav
   }
 
   const productsError = form.formState.errors.konsumsiProducts?.message;
+  const certificatesError = form.formState.errors.productGroupCertificates?.message;
 
   return (
     <div className="mt-8 flex flex-col gap-6 border-t border-border pt-8">
       <div>
         <h2 className="text-lg font-bold">Produk — VIU Barang Konsumsi</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Tambahkan produk yang akan diimpor untuk setiap merek dan kelompok komoditas.
+          Tambahkan produk yang akan diimpor untuk setiap merek. Sub Kelompok Komoditas ditentukan
+          otomatis dari HS Code yang dipilih pada setiap produk.
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <SummaryStat label="Jumlah Merek" value={applicationBrands.length} />
-        <SummaryStat label="Jumlah Kelompok Komoditas" value={deriveKonsumsiProductGroups(qualityTests).length} />
+        <SummaryStat label="Jumlah Sub Kelompok Komoditas" value={deriveProductGroups(products).length} />
         <SummaryStat label="Jumlah Produk" value={products.length} />
         <div className="rounded-xl border border-border p-3">
           <p className="text-xs text-muted-foreground">Total Nilai Produk</p>
@@ -89,11 +90,14 @@ export function KonsumsiProductInformation({ form, onNavigateToBrandsStep, onNav
         </div>
       </div>
 
-      {typeof productsError === "string" && (
-        <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
-          {productsError}
-        </p>
+      {(typeof productsError === "string" || typeof certificatesError === "string") && (
+        <div className="flex flex-col gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+          {typeof productsError === "string" && <p>{productsError}</p>}
+          {typeof certificatesError === "string" && <p>{certificatesError}</p>}
+        </div>
       )}
+
+      <ProductGroupMatrix applicationBrands={applicationBrands} brandOptions={brandOptions} products={products} certificates={certificates} />
 
       <div className="flex flex-col gap-5">
         {applicationBrands.map((brand) => {
@@ -105,7 +109,6 @@ export function KonsumsiProductInformation({ form, onNavigateToBrandsStep, onNav
               brandId={brand.brandId}
               brandName={brandOption?.brandName ?? "Merek"}
               brandOwnerTitle={brandOption?.ownerTitle ?? null}
-              onNavigateToQualityTestStep={onNavigateToQualityTestStep}
             />
           );
         })}
