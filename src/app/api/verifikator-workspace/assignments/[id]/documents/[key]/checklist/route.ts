@@ -9,6 +9,7 @@ import { patchDocumentChecklistItem } from "@/modules/company/document-versions"
 import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS } from "@/modules/verifikator-workspace/schema";
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
 import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
+import { resolveKonsumsiChecklistContext } from "@/modules/verifikator-workspace/konsumsi-brand-context";
 
 async function findOwnedAssignment(assignmentNumber: string, verifikatorId: string) {
   const assignment = await db.assignment.findUnique({
@@ -63,7 +64,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const company = assignment.application.companyId
     ? await db.company.findUnique({ where: { id: assignment.application.companyId } })
     : null;
-  const item = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload)).find((c) => c.key === key);
+  const { konsumsiBrands, konsumsiHsCodeLookup } = await resolveKonsumsiChecklistContext(payload);
+  const item = buildDocumentChecklist(
+    payload,
+    toChecklistCompanyContext(company),
+    await resolvePartnerContexts(payload),
+    konsumsiBrands,
+    konsumsiHsCodeLookup,
+  ).find((c) => c.key === key);
   if (!item) {
     return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
   }

@@ -12,6 +12,20 @@ function formatMoney(value: number): string {
   return value.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+const MAX_VISIBLE_COUNTRIES = 3;
+
+function OriginCountriesCell({ names }: { names: string[] }) {
+  if (names.length === 0) return <span className="text-muted-foreground">—</span>;
+  const visible = names.slice(0, MAX_VISIBLE_COUNTRIES);
+  const hiddenCount = names.length - visible.length;
+  return (
+    <span title={names.join(", ")}>
+      {visible.join(", ")}
+      {hiddenCount > 0 ? ` +${hiddenCount}` : ""}
+    </span>
+  );
+}
+
 const COLUMNS = [
   "Nama Produk",
   "HS Code",
@@ -58,7 +72,9 @@ export function ProductTable({
               <td className="px-3 py-2">{product.productName}</td>
               <td className="px-3 py-2 font-mono">{product.hsCode}</td>
               <td className="px-3 py-2 text-xs text-muted-foreground">{product.hsDescription}</td>
-              <td className="px-3 py-2">{product.countryOfOrigin}</td>
+              <td className="px-3 py-2">
+                <OriginCountriesCell names={product.originCountryNames ?? product.originCountries} />
+              </td>
               <td className="px-3 py-2">{Number(product.quantity).toLocaleString("id-ID")}</td>
               <td className="px-3 py-2">{product.unit}</td>
               <td className="px-3 py-2">{Number(product.stockQuantity ?? 0).toLocaleString("id-ID")}</td>

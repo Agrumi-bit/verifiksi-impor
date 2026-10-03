@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, ChevronLeft, ChevronRight, HelpCircle, History, MailQuestion, X, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, HelpCircle, History, MailQuestion, Upload, X, XCircle } from "lucide-react";
 
 import { PdfViewer } from "@/components/pdf-viewer";
 import { buildDisplayFileName } from "@/lib/document-filename";
@@ -211,25 +211,36 @@ export function DocumentReviewModal({ company, doc, isSaving, onClose, onDecide,
                     {reviewLabel}
                   </span>
                 </InfoRow>
-                {doc.lengkap && (
-                  <div className={collapsed ? "" : "border-t border-[#f5ebe1] pt-3"}>
-                    {collapsed ? (
-                      <button type="button" onClick={onShowHistory} title="Version" className="flex w-full justify-center py-0.5">
-                        <History className="size-4 text-[#8a7565]" />
+                {/* Previously gated on `doc.lengkap` — hid the only entry point to upload a
+                    document that has never been uploaded at all (no "Version" to show yet is not
+                    a reason to hide "Unggah"). Always shown; label/icon adapt to whether this is
+                    a first upload or a replace. */}
+                <div className={collapsed ? "" : "border-t border-[#f5ebe1] pt-3"}>
+                  {collapsed ? (
+                    <button type="button" onClick={onShowHistory} title={doc.lengkap ? "Ganti File" : "Unggah"} className="flex w-full justify-center py-0.5">
+                      {doc.lengkap ? <History className="size-4 text-[#8a7565]" /> : <Upload className="size-4 text-[#c14a1f]" />}
+                    </button>
+                  ) : doc.lengkap ? (
+                    <InfoRow icon="history" label="Version">
+                      <button
+                        type="button"
+                        onClick={onShowHistory}
+                        className="flex items-center gap-1 text-[#2f6fd6] underline decoration-dotted underline-offset-2"
+                      >
+                        <History className="size-3.25" />v{doc.version}
                       </button>
-                    ) : (
-                      <InfoRow icon="history" label="Version">
-                        <button
-                          type="button"
-                          onClick={onShowHistory}
-                          className="flex items-center gap-1 text-[#2f6fd6] underline decoration-dotted underline-offset-2"
-                        >
-                          <History className="size-3.25" />v{doc.version}
-                        </button>
-                      </InfoRow>
-                    )}
-                  </div>
-                )}
+                    </InfoRow>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={onShowHistory}
+                      className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#e8b89a] bg-[#fdeadd] px-3 py-2 text-[12.5px] font-bold text-[#c14a1f]"
+                    >
+                      <Upload className="size-4" />
+                      Unggah Dokumen
+                    </button>
+                  )}
+                </div>
                 <InfoRow icon="person" label="Uploaded By" collapsed={collapsed}>
                   {doc.uploadedByName ?? (doc.documentPath ? "Company" : "—")}
                 </InfoRow>

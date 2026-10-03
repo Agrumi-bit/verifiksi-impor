@@ -52,3 +52,6 @@ next-env.d.ts
 .graphify/
 src/.graphify/
 .engram/
+
+# One-off data-migration script backups — contain real application/company payloads, never commit
+/backups/

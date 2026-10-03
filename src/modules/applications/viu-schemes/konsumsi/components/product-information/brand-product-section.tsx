@@ -6,7 +6,6 @@ import { ChevronDown, Download, Plus, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { useActiveCountries } from "@/modules/master-data/use-active-countries";
 import { useHsCodeOptions } from "../../../../hooks/use-hs-code-options";
 import type { ApplicationWizardValues } from "../../../../schema";
 import {
@@ -18,6 +17,7 @@ import {
 } from "../../schema";
 import { downloadProductExcelTemplate, parseProductExcelFile } from "./product-excel";
 import { CommodityProductSection } from "./commodity-product-section";
+import { useActiveCountriesByCode } from "./country-multi-select";
 import { ProductFormSheet } from "./product-form-sheet";
 import { CurrencyTotals } from "./product-summary";
 
@@ -45,7 +45,7 @@ export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle 
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hsCodeOptions = useHsCodeOptions();
-  const { options: countryOptions } = useActiveCountries();
+  const countries = useActiveCountriesByCode();
 
   const brandProducts = allProducts.filter((product) => product.brandId === brandId);
   const brandGroups = deriveProductGroups(brandProducts);
@@ -90,11 +90,26 @@ export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle 
           return;
         }
 
-        const countryOption = countryOptions.find((o) => o.value.trim().toLowerCase() === row.countryOfOrigin.trim().toLowerCase());
-        if (!countryOption) {
-          errors.push(`${rowLabel}: Negara asal "${row.countryOfOrigin}" tidak ditemukan.`);
+        const countryTokens = row.countryOfOrigin.split(";").map((token) => token.trim()).filter(Boolean);
+        if (countryTokens.length === 0) {
+          errors.push(`${rowLabel}: Negara asal wajib diisi.`);
           return;
         }
+        const resolvedCountries: { code: string; name: string }[] = [];
+        const unresolvedTokens: string[] = [];
+        for (const token of countryTokens) {
+          const match = countries.find(
+            (c) => c.name.trim().toLowerCase() === token.toLowerCase() || c.code.trim().toLowerCase() === token.toLowerCase(),
+          );
+          if (match) resolvedCountries.push({ code: match.code, name: match.name });
+          else unresolvedTokens.push(token);
+        }
+        if (unresolvedTokens.length > 0) {
+          errors.push(`${rowLabel}: Negara asal "${unresolvedTokens.join("; ")}" tidak ditemukan.`);
+          return;
+        }
+        const originCountries = [...new Set(resolvedCountries.map((c) => c.code))];
+        const originCountryNames = originCountries.map((code) => resolvedCountries.find((c) => c.code === code)!.name);
 
         const quantity = Number(row.quantity);
         if (!Number.isFinite(quantity) || quantity <= 0) {
@@ -119,11 +134,12 @@ export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle 
           return;
         }
 
+        const rowCountryKey = [...originCountries].map((c) => c.toLowerCase()).sort().join(",");
         const isDuplicate = [...currentProducts, ...newProducts].some(
           (product) =>
             product.brandId === brandId &&
             product.hsCodeId === hsOption.hsCodeId &&
-            product.countryOfOrigin.trim().toLowerCase() === countryOption.value.trim().toLowerCase() &&
+            [...product.originCountries].map((c) => c.trim().toLowerCase()).sort().join(",") === rowCountryKey &&
             product.productName.trim().toLowerCase() === row.productName.trim().toLowerCase(),
         );
         if (isDuplicate) {
@@ -144,8 +160,8 @@ export function BrandProductSection({ form, brandId, brandName, brandOwnerTitle 
           commodityName: hsOption.commodityGroupName,
           industryGroupId: hsOption.industryGroupId ?? "",
           industryName: hsOption.industryGroupName ?? "",
-          countryOfOrigin: countryOption.value,
-          countryOfOriginCode: countryOption.hint ?? "",
+          originCountries,
+          originCountryNames,
           quantity: row.quantity,
           stockQuantity: row.stockQuantity,
           averageUnitPrice: row.averageUnitPrice,

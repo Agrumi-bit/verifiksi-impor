@@ -17,7 +17,7 @@ function DocumentUpload({
   uploadLabel,
   onChange,
 }: {
-  value: ApplicationRelationshipDocumentValues | undefined;
+  value: ApplicationRelationshipDocumentValues | null | undefined;
   uploadLabel: string;
   onChange: (value: ApplicationRelationshipDocumentValues | undefined) => void;
 }) {

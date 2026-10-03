@@ -24,7 +24,11 @@ export type ApplicationRelationshipDocumentValues = z.infer<typeof applicationRe
 
 export const applicationBrandEntrySchema = z.object({
   brandId: requiredString("Merek wajib dipilih"),
-  applicantRole: z.enum(APPLICANT_BRAND_ROLES, { message: "Pilih peran pemohon" }),
+  // No default — a newly-added Brand must have its role explicitly chosen (see
+  // createEmptyApplicationBrand's own comment), never silently defaulted to a role that implies
+  // a relationship the applicant never actually confirmed. Required at submit via
+  // applyKonsumsiSubmitRules, same deferred-validation pattern every other Konsumsi field uses.
+  applicantRole: z.enum(APPLICANT_BRAND_ROLES, { message: "Pilih peran pemohon" }).optional(),
   appointmentSource: z.enum(IMPORT_APPOINTMENT_SOURCES).optional(),
   officialRepresentativeCompanyId: z.string().trim().optional(),
   // Keyed by the same document codes getVIUConsumptionBrandRequirements /
@@ -70,7 +74,8 @@ export const brandsUsedSchema = z.object({
 });
 
 export function createEmptyApplicationBrand(brandId: string): ApplicationBrandEntryValues {
-  return { brandId, applicantRole: "OFFICIAL_REPRESENTATIVE", relationshipDocuments: {} };
+  // Role intentionally left unset — see applicationBrandEntrySchema's own comment.
+  return { brandId, relationshipDocuments: {} };
 }
 
 /**
@@ -82,8 +87,13 @@ export function createEmptyApplicationBrand(brandId: string): ApplicationBrandEn
  * document uses.
  */
 export const konsumsiLabelDocumentsSchema = z.object({
-  labelStatementDocument: applicationRelationshipDocumentSchema.optional(),
-  labelDocumentationDocument: applicationRelationshipDocumentSchema.optional(),
+  // `.nullable()` matters here: a draft/submitted application re-opened after Stage D's cleanup
+  // (or any server round-trip) stores an un-set document as `null`, not `undefined` — without
+  // `.nullable()` that null fails base type validation with zod's raw "Invalid input: expected
+  // object, received null" before `applyKonsumsiSubmitRules`'s own friendly required-message
+  // issue ever gets a chance to surface.
+  labelStatementDocument: applicationRelationshipDocumentSchema.nullable().optional(),
+  labelDocumentationDocument: applicationRelationshipDocumentSchema.nullable().optional(),
 });
 export type KonsumsiLabelDocumentsValues = z.infer<typeof konsumsiLabelDocumentsSchema>;
 
@@ -209,7 +219,7 @@ export const konsumsiProductSnapshotSchema = z.object({
   industryName: z.string(),
   commodityName: z.string(),
   hsDescription: z.string(),
-  countryOfOriginName: z.string(),
+  countryOfOriginNames: z.array(z.string()),
   totalPrice: z.string(),
 });
 export type KonsumsiProductSnapshot = z.infer<typeof konsumsiProductSnapshotSchema>;
@@ -242,10 +252,17 @@ export const konsumsiProductSchema = z.object({
   industryGroupId: z.string().trim().optional(),
   industryName: z.string().trim().optional(),
   productName: requiredString("Nama produk wajib diisi"),
-  // References Country master data by its name — the existing convention (see
-  // useActiveCountries: "value is the country name... used for negara asal style fields").
-  countryOfOrigin: requiredString("Negara asal wajib dipilih"),
-  countryOfOriginCode: z.string().trim().optional(),
+  // Multi-select, unlike every other "negara asal" field in this app (VKI/Industri's own
+  // `products[].countryOfOrigin` stays single-value and name-keyed via useActiveCountries — this
+  // is Konsumsi's own field, deliberately diverging). Stores ISO codes (the master data's own
+  // `code` column), not names — codes are stable identifiers; names are a display cache only (see
+  // `originCountryNames` below), re-resolved from live master data server-side at submit.
+  originCountries: z
+    .array(z.string().trim().min(1))
+    .min(1, "Pilih minimal satu negara asal")
+    .refine((codes) => new Set(codes).size === codes.length, "Negara asal tidak boleh duplikat"),
+  // Display cache parallel to `originCountries` (same index order) — never the source of truth.
+  originCountryNames: z.array(z.string()).optional(),
   // "Jumlah Permohonan" — how much of this product THIS application is requesting to import,
   // never the company's on-hand stock (see `stockQuantity` below, a separate concept).
   quantity: positiveNumberString("Jumlah permohonan harus lebih besar dari 0"),
@@ -277,7 +294,7 @@ export function createEmptyKonsumsiProduct(brandId: string): ApplicationKonsumsi
     commodityGroupId: "",
     industryGroupId: "",
     productName: "",
-    countryOfOrigin: "",
+    originCountries: [],
     quantity: "",
     stockQuantity: "0",
     averageUnitPrice: "",

@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/form/form-field";
 import { NativeSelect } from "@/components/form/native-select";
 import { SearchSelectInput } from "@/components/form/search-select-input";
-import { useActiveCountries } from "@/modules/master-data/use-active-countries";
 import { useHsCodeOptions } from "../../../../hooks/use-hs-code-options";
 import {
   createEmptyKonsumsiProduct,
@@ -16,6 +15,7 @@ import {
   konsumsiProductTotal,
   type ApplicationKonsumsiProductValues,
 } from "../../schema";
+import { CountryMultiSelect, useActiveCountriesByCode } from "./country-multi-select";
 
 type Props = {
   brandId: string;
@@ -27,7 +27,7 @@ type Props = {
   onClose: () => void;
 };
 
-type FieldErrors = Partial<Record<"productName" | "hsCode" | "countryOfOrigin" | "quantity" | "stockQuantity" | "averageUnitPrice" | "duplicate", string>>;
+type FieldErrors = Partial<Record<"productName" | "hsCode" | "originCountries" | "quantity" | "stockQuantity" | "averageUnitPrice" | "duplicate", string>>;
 
 function formatMoney(value: number): string {
   return value.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -55,7 +55,7 @@ export function ProductFormSheet({
   onClose,
 }: Props) {
   const hsCodeOptions = useHsCodeOptions();
-  const { options: countryOptions } = useActiveCountries();
+  const countries = useActiveCountriesByCode();
   const [form, setForm] = useState<ApplicationKonsumsiProductValues>(
     initialValues ?? createEmptyKonsumsiProduct(brandId),
   );
@@ -83,17 +83,16 @@ export function ProductFormSheet({
     setErrors((e) => ({ ...e, hsCode: undefined }));
   }
 
-  function handleCountryChange(value: string) {
-    const option = countryOptions.find((o) => o.value === value);
-    update({ countryOfOrigin: value, countryOfOriginCode: option?.hint ?? "" });
-    setErrors((e) => ({ ...e, countryOfOrigin: undefined }));
+  function handleCountriesChange(next: string[]) {
+    update({ originCountries: next, originCountryNames: next.map((code) => countries.find((c) => c.code === code)?.name ?? code) });
+    setErrors((e) => ({ ...e, originCountries: undefined }));
   }
 
   function handleSubmit() {
     const nextErrors: FieldErrors = {};
     if (!form.productName.trim()) nextErrors.productName = "Nama produk wajib diisi.";
     if (!form.hsCodeId) nextErrors.hsCode = "HS Code wajib dipilih.";
-    if (!form.countryOfOrigin) nextErrors.countryOfOrigin = "Negara asal wajib dipilih.";
+    if (form.originCountries.length === 0) nextErrors.originCountries = "Pilih minimal satu negara asal.";
     const quantity = Number(form.quantity);
     if (!Number.isFinite(quantity) || quantity <= 0) nextErrors.quantity = "Jumlah permohonan harus lebih besar dari 0.";
     const stockQuantity = Number(form.stockQuantity ?? "0");
@@ -108,12 +107,13 @@ export function ProductFormSheet({
       return;
     }
 
+    const formCountryKey = [...form.originCountries].map((c) => c.trim().toLowerCase()).sort().join(",");
     const isDuplicate = existingProducts.some(
       (product, index) =>
         index !== excludeIndex &&
         product.brandId === form.brandId &&
         product.hsCodeId === form.hsCodeId &&
-        product.countryOfOrigin.trim().toLowerCase() === form.countryOfOrigin.trim().toLowerCase() &&
+        [...product.originCountries].map((c) => c.trim().toLowerCase()).sort().join(",") === formCountryKey &&
         product.productName.trim().toLowerCase() === form.productName.trim().toLowerCase(),
     );
     if (isDuplicate) {
@@ -181,14 +181,8 @@ export function ProductFormSheet({
             </div>
           )}
 
-          <FormField label="Asal Negara" required error={errors.countryOfOrigin}>
-            <SearchSelectInput
-              value={form.countryOfOrigin}
-              onChange={handleCountryChange}
-              options={countryOptions}
-              allowFreeText={false}
-              placeholder="Cari negara..."
-            />
+          <FormField label="Asal Negara" required error={errors.originCountries}>
+            <CountryMultiSelect value={form.originCountries} onChange={handleCountriesChange} />
           </FormField>
 
           <div className="grid grid-cols-2 gap-3">

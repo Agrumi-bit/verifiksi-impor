@@ -728,7 +728,10 @@ export const VIU_STEP_FIELD_NAMES: Record<string, (keyof ApplicationWizardValues
   // Konsumsi's own product structure (see KonsumsiProductInformation) is additive here, not
   // owned by KONSUMSI_STEP_FIELD_NAMES below — "product-info" itself is a shared step, not one
   // Konsumsi contributes to the step list, so it can't be spread in from that Konsumsi-owned map.
-  "product-info": ["products", "konsumsiProducts"],
+  // `productGroupCertificates` must be listed here too — its own zod issues (Merek x Sub Kelompok
+  // certificate coverage) are raised against this field, and an unclaimed field falls into
+  // handleInvalidSubmit's generic "Lainnya" bucket instead of pointing at this step.
+  "product-info": ["products", "konsumsiProducts", "productGroupCertificates"],
   preview: [],
   submit: ["declarationAccepted"],
   ...KONSUMSI_STEP_FIELD_NAMES,

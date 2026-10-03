@@ -164,11 +164,17 @@ const LOCATION_TYPE_NAMES: Record<string, string> = {
  * stably-keyed checklist so verification decisions can be stored against
  * real payload paths instead of an invented document model.
  */
+/** HS Code text → its master-data commodity group, for resolving a Konsumsi product's Sub
+ * Kelompok Komoditas when its own cached `commodityGroupId` is empty (pre-refactor product rows —
+ * see buildDocumentChecklist's own "Sertifikat Uji Mutu" section). */
+export type ChecklistHsCodeLookup = Map<string, { commodityGroupId: string; commodityName: string }>;
+
 export function buildDocumentChecklist(
   payload: ApplicationWizardValues,
   company?: ChecklistCompanyContext | null,
   partners?: ChecklistPartnerContext[],
   konsumsiBrands?: ChecklistKonsumsiBrandContext[],
+  konsumsiHsCodeLookup?: ChecklistHsCodeLookup,
 ): DocumentChecklistItem[] {
   const items: DocumentChecklistItem[] = [];
 
@@ -489,15 +495,38 @@ export function buildDocumentChecklist(
   // Barang Konsumsi's "Sertifikat Uji Mutu" — one row per Merek x Sub Kelompok Komoditas group
   // that has Products (Step "Product Information"'s own matrix). Separate category from "Dokumen
   // Merek" (these are per commodity group, not per brand alone).
+  //
+  // Derived from `konsumsiProducts` (the REQUIRED groups), never from `productGroupCertificates`
+  // alone — a group with products but no certificate yet must still show a "Belum Diunggah" row,
+  // not be silently absent from the checklist. A product's own `commodityGroupId` may be empty on
+  // pre-refactor rows (submitted before Step 9's HS-Code-driven grouping existed) — `hsCode` text
+  // still resolves it via `konsumsiHsCodeLookup` when the caller supplies one.
   if (payload.importTypes?.includes("BARANG_KONSUMSI") && konsumsiBrands) {
     const brandContextById = new Map(konsumsiBrands.map((brand) => [brand.brandId, brand]));
-    for (const certificate of payload.productGroupCertificates ?? []) {
-      const brandLabel = brandContextById.get(certificate.brandId)?.brandName ?? certificate.brandId;
+    const certificateByGroupKey = new Map(
+      (payload.productGroupCertificates ?? []).map((certificate) => [`${certificate.brandId}|${certificate.commodityGroupId}`, certificate]),
+    );
+    const seenGroupKeys = new Set<string>();
+    for (const product of payload.konsumsiProducts ?? []) {
+      let commodityGroupId = product.commodityGroupId;
+      let commodityName = product.commodityName;
+      if (!commodityGroupId) {
+        const resolved = konsumsiHsCodeLookup?.get(product.hsCode);
+        if (!resolved) continue; // can't place this product in any group — nothing to show
+        commodityGroupId = resolved.commodityGroupId;
+        commodityName = resolved.commodityName;
+      }
+      const groupKey = `${product.brandId}|${commodityGroupId}`;
+      if (seenGroupKeys.has(groupKey)) continue;
+      seenGroupKeys.add(groupKey);
+
+      const brandLabel = brandContextById.get(product.brandId)?.brandName ?? product.brandId;
+      const certificate = certificateByGroupKey.get(groupKey);
       items.push({
-        key: `konsumsi-qt:${certificate.brandId}:${certificate.commodityGroupId}`,
-        label: `Sertifikat Uji Mutu — ${brandLabel} · ${certificate.commodityName ?? certificate.commodityGroupId}`,
+        key: `konsumsi-qt:${product.brandId}:${commodityGroupId}`,
+        label: `Sertifikat Uji Mutu — ${brandLabel} · ${commodityName ?? commodityGroupId}`,
         category: "Sertifikat Uji Mutu",
-        documentPath: certificate.filePath || null,
+        documentPath: certificate?.filePath || null,
       });
     }
   }

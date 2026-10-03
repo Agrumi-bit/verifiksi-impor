@@ -89,6 +89,22 @@ export function useApplicationWizard() {
         setGatePassed(true);
       }
     }
+
+    // VIU Konsumsi's "Dokumen Label Produk" (2 documents) and "Product Information" (Merek x Sub
+    // Kelompok certificate coverage) feed real Submit-blocking rules that are easy to silently
+    // skip past — unlike every other step here, these two are gated moving forward (never
+    // backward; going back is never blocked). Triggering validation here also populates
+    // `form.formState.errors` for these fields, which is what the step circle's own
+    // done/invalid checkmark reads — so this single gate fixes both "Lanjut past an incomplete
+    // step" and "false ✓ on an incomplete step" at once.
+    if (target > currentStep && !isVki && (importTypes ?? []).includes("BARANG_KONSUMSI")) {
+      const currentKey = activeSteps.find((s) => s.step === currentStep)?.key;
+      if (currentKey === "quality-test" || currentKey === "product-info") {
+        const stepValid = await form.trigger(activeFieldNames[currentKey] ?? []);
+        if (!stepValid) return false;
+      }
+    }
+
     setCurrentStep(target);
     return true;
   }

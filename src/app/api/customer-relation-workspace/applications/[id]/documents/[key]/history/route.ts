@@ -13,6 +13,7 @@ import { getVersionHistory, recordDocumentVersion } from "@/modules/company/docu
 import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS } from "@/modules/verifikator-workspace/schema";
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
 import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
+import { resolveKonsumsiChecklistContext } from "@/modules/verifikator-workspace/konsumsi-brand-context";
 import {
   applyCertificateUpload,
   certificateUploadSchema,
@@ -35,7 +36,14 @@ export async function GET(
 
   const payload = application.payload as ApplicationWizardValues;
   const company = application.companyId ? await db.company.findUnique({ where: { id: application.companyId } }) : null;
-  const item = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload)).find((c) => c.key === key);
+  const { konsumsiBrands, konsumsiHsCodeLookup } = await resolveKonsumsiChecklistContext(payload);
+  const item = buildDocumentChecklist(
+    payload,
+    toChecklistCompanyContext(company),
+    await resolvePartnerContexts(payload),
+    konsumsiBrands,
+    konsumsiHsCodeLookup,
+  ).find((c) => c.key === key);
   if (!item) {
     return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
   }

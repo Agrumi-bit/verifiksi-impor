@@ -20,6 +20,7 @@ import {
   toCompanyLocationsContext,
 } from "@/modules/verifikator-workspace/company-context";
 import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
+import { resolveKonsumsiChecklistContext } from "@/modules/verifikator-workspace/konsumsi-brand-context";
 
 async function loadAssignment(assignmentNumber: string, verifikatorId: string) {
   const found = await db.assignment.findUnique({
@@ -116,7 +117,14 @@ export async function GET(
   const company = assignment.application.companyId
     ? await db.company.findUnique({ where: { id: assignment.application.companyId } })
     : null;
-  const documentChecklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload));
+  const { konsumsiBrands, konsumsiHsCodeLookup } = await resolveKonsumsiChecklistContext(payload);
+  const documentChecklist = buildDocumentChecklist(
+    payload,
+    toChecklistCompanyContext(company),
+    await resolvePartnerContexts(payload),
+    konsumsiBrands,
+    konsumsiHsCodeLookup,
+  );
   const productChecklist = buildProductChecklist(payload);
   const productVerifications = productVerificationsSchema.parse(assignment.productVerifications ?? {});
 

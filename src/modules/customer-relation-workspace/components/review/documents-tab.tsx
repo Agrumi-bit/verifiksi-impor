@@ -264,19 +264,19 @@ export function DocumentsTab({ applicationId, company, verificationType, documen
               const docStatus = docStatusLabel(doc);
               return (
                 <div key={doc.key} className="grid grid-cols-[0.4fr_1.5fr_1.4fr_1fr_1fr_1.2fr_0.8fr] items-center gap-2 border-t border-[#f5ebe1] px-1 py-3 text-[13px]">
-                  <div className="text-[#6b5b4c]">{index + 1}</div>
-                  <div className="font-bold text-[#20180f]">{doc.label}</div>
-                  <div className="text-[#c14a1f]">{doc.category}</div>
-                  <div className="text-[#4a4038]">{fmtDate(doc.uploadedAt)}</div>
-                  <div>
-                    <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: docStatus.bg, color: docStatus.color }}>
+                  <div className="min-w-0 text-[#6b5b4c]">{index + 1}</div>
+                  <div className="min-w-0 truncate font-bold text-[#20180f]" title={doc.label}>{doc.label}</div>
+                  <div className="min-w-0 truncate text-[#c14a1f]" title={doc.category}>{doc.category}</div>
+                  <div className="min-w-0 text-[#4a4038]">{fmtDate(doc.uploadedAt)}</div>
+                  <div className="min-w-0">
+                    <span className="inline-block rounded-full px-2.5 py-1 text-[11px] font-bold whitespace-nowrap" style={{ background: docStatus.bg, color: docStatus.color }}>
                       {docStatus.label}
                     </span>
                   </div>
-                  <div>
-                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${DOC_VERIFICATION_STATUS_BADGE[doc.status]}`}>{reviewLabel(doc)}</span>
+                  <div className="min-w-0">
+                    <span className={`inline-block rounded-full px-2.5 py-1 text-[11px] font-bold whitespace-nowrap ${DOC_VERIFICATION_STATUS_BADGE[doc.status]}`}>{reviewLabel(doc)}</span>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <button
                       type="button"
                       onClick={() => setReviewingDoc(doc)}

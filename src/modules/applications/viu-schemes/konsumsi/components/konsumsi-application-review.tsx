@@ -94,7 +94,7 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
   // Group by Brand, then by Sub Kelompok Komoditas — same structure Step "Product Information"
   // itself uses. Submitted applications show the server-built `productSnapshot` (never live
   // master data); drafts have no snapshot yet, so they fall back to the display caches captured
-  // at selection time (commodityName/hsDescription/countryOfOriginCode on the product itself).
+  // at selection time (commodityName/hsDescription/originCountryNames on the product itself).
   const productsByBrand = new Map<string, ApplicationKonsumsiProductValues[]>();
   for (const product of payload.konsumsiProducts) {
     productsByBrand.set(product.brandId, [...(productsByBrand.get(product.brandId) ?? []), product]);
@@ -128,7 +128,7 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
                   <Item label="Nomor Pendaftaran" value={snapshot?.registrationNumber} />
                   <Item label="Kelas Merek" value={snapshot?.trademarkClass} />
                   <Item label="Tanggal Pendaftaran" value={snapshot ? formatDate(snapshot.registrationDate) : undefined} />
-                  <Item label="Peran Pemohon" value={APPLICANT_BRAND_ROLE_LABELS[entry.applicantRole]} />
+                  <Item label="Peran Pemohon" value={entry.applicantRole ? APPLICANT_BRAND_ROLE_LABELS[entry.applicantRole] : undefined} />
                   <Item
                     label="Sumber Penunjukan"
                     value={entry.appointmentSource ? IMPORT_APPOINTMENT_SOURCE_LABELS[entry.appointmentSource] : null}
@@ -295,7 +295,7 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
                             <Item label="Uraian HS" value={product.productSnapshot?.hsDescription ?? product.hsDescription} />
                             <Item
                               label="Asal Negara"
-                              value={product.productSnapshot?.countryOfOriginName ?? product.countryOfOrigin}
+                              value={(product.productSnapshot?.countryOfOriginNames ?? product.originCountryNames ?? product.originCountries).join(", ")}
                             />
                             <Item label="Jumlah Permohonan" value={`${Number(product.quantity).toLocaleString("id-ID")} ${product.unit ?? ""}`} />
                             <Item label="Jumlah Stock" value={`${Number(product.stockQuantity ?? 0).toLocaleString("id-ID")} ${product.unit ?? ""}`} />

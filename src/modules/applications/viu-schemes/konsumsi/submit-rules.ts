@@ -61,6 +61,13 @@ export function applyKonsumsiSubmitRules(data: ApplicationWizardValues, ctx: z.R
     });
   }
   data.applicationBrands.forEach((entry, index) => {
+    if (!entry.applicantRole) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["applicationBrands", index, "applicantRole"],
+        message: "Pilih peran pemohon",
+      });
+    }
     if (entry.applicantRole === "IMPORTER_ONLY" && !entry.appointmentSource) {
       ctx.addIssue({
         code: "custom",
@@ -97,7 +104,7 @@ export function applyKonsumsiSubmitRules(data: ApplicationWizardValues, ctx: z.R
   // Step "Product Information" — Konsumsi's own Merek > Kelompok Komoditas > Produk structure
   // (konsumsiProducts), entirely separate from the shared free-text `products` field (VKI/
   // Industri/Non-Industri, untouched by this scheme). Structural checks only here (presence +
-  // exact-duplicate lines); master-data existence (commodityGroupId/hsCode/countryOfOrigin) is a
+  // exact-duplicate lines); master-data existence (commodityGroupId/hsCode/originCountries) is a
   // DB read, deliberately left to validateKonsumsiSubmit.
   if (data.konsumsiProducts.length < 1) {
     ctx.addIssue({
@@ -108,11 +115,13 @@ export function applyKonsumsiSubmitRules(data: ApplicationWizardValues, ctx: z.R
   }
   const seenProductKeys = new Set<string>();
   data.konsumsiProducts.forEach((product, index) => {
+    // Country set compared order-independently — [CN, VN] and [VN, CN] are the same product.
+    const countryKey = [...product.originCountries].map((c) => c.trim().toLowerCase()).sort().join(",");
     const key = [
       product.brandId,
       product.commodityGroupId,
       product.hsCode.trim().toLowerCase(),
-      product.countryOfOrigin.trim().toLowerCase(),
+      countryKey,
       product.productName.trim().toLowerCase(),
     ].join("|");
     if (seenProductKeys.has(key)) {
@@ -128,20 +137,31 @@ export function applyKonsumsiSubmitRules(data: ApplicationWizardValues, ctx: z.R
   // Merek x Sub Kelompok certificate-coverage — every group with at least one Product needs at
   // least one `productGroupCertificates` entry. Structural presence check only (DB-backed checks —
   // scope match, expiry — are deliberately left to validateKonsumsiSubmit, same pattern as above).
-  const requiredGroupKeys = new Map<string, string>();
+  // Brand name is resolved from this entry's own `submissionSnapshot` when available (a RETURNED
+  // application being resubmitted) — on a brand-new submission there is no snapshot yet and no DB
+  // access from this synchronous refinement, so it falls back to the brandId itself. The step's
+  // own UI (KonsumsiProductInformation) shows the real name, resolved client-side from
+  // `useApplicationBrandOptions`, regardless of which fallback this message uses.
+  const brandNameById = new Map(
+    data.applicationBrands.map((entry) => [entry.brandId, entry.submissionSnapshot?.brandName ?? entry.brandId]),
+  );
+  const requiredGroups = new Map<string, { brandId: string; commodityName: string }>();
   data.konsumsiProducts.forEach((product) => {
     const key = `${product.brandId}|${product.commodityGroupId}`;
-    if (!requiredGroupKeys.has(key)) requiredGroupKeys.set(key, product.commodityName || product.commodityGroupId);
+    if (!requiredGroups.has(key)) {
+      requiredGroups.set(key, { brandId: product.brandId, commodityName: product.commodityName || product.commodityGroupId });
+    }
   });
   const coveredGroupKeys = new Set(
     (data.productGroupCertificates ?? []).map((certificate) => `${certificate.brandId}|${certificate.commodityGroupId}`),
   );
-  for (const [key, commodityName] of requiredGroupKeys) {
+  for (const [key, group] of requiredGroups) {
     if (!coveredGroupKeys.has(key)) {
+      const brandName = brandNameById.get(group.brandId) ?? group.brandId;
       ctx.addIssue({
         code: "custom",
         path: ["productGroupCertificates"],
-        message: `Sertifikat Hasil Uji Mutu belum diunggah untuk "${commodityName}"`,
+        message: `Sertifikat Hasil Uji Mutu belum diunggah untuk ${brandName} · ${group.commodityName}`,
       });
     }
   }

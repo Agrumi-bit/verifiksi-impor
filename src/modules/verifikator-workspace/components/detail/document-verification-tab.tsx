@@ -797,10 +797,10 @@ function ReviewModal({
                 </InfoRow>
                 <div className={collapsed ? "" : "border-t border-[#f5ebe1] pt-3"}>
                   {collapsed ? (
-                    <button type="button" onClick={() => setShowVersionHistory(true)} title="Version" className="flex w-full justify-center py-0.5">
-                      <MaterialIcon name="history" className="text-[16px] text-[#8a7565]" />
+                    <button type="button" onClick={() => setShowVersionHistory(true)} title={row.documentPath ? "Ganti File" : "Unggah"} className="flex w-full justify-center py-0.5">
+                      <MaterialIcon name={row.documentPath ? "history" : "upload"} className="text-[16px] text-[#8a7565]" />
                     </button>
-                  ) : (
+                  ) : row.documentPath ? (
                     <InfoRow icon="history" label="Version">
                       <button
                         type="button"
@@ -810,6 +810,15 @@ function ReviewModal({
                         v{row.version}
                       </button>
                     </InfoRow>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowVersionHistory(true)}
+                      className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#e8b89a] bg-[#fdeadd] px-3 py-2 text-[12.5px] font-bold text-[#c14a1f]"
+                    >
+                      <MaterialIcon name="upload" className="text-[16px]" />
+                      Unggah Dokumen
+                    </button>
                   )}
                 </div>
                 <InfoRow icon="person" label="Uploaded By" collapsed={collapsed}>

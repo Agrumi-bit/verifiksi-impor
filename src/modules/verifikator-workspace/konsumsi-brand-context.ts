@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getVIUConsumptionBrandRequirements } from "@/modules/applications/viu-schemes/konsumsi/business-rules";
-import type { ApplicationBrandEntryValues } from "@/modules/applications/viu-schemes/konsumsi/schema";
+import type { ApplicationBrandEntryValues, ApplicationKonsumsiProductValues } from "@/modules/applications/viu-schemes/konsumsi/schema";
+import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import type { MerkEvidenceType } from "@/modules/merk/schema";
 
 // Mirrors validate-submit.ts's own guard — Prisma's MerkCertificateType enum still carries the
@@ -59,7 +60,7 @@ export async function resolveKonsumsiBrandContexts(
       evidenceType: toEvidenceType(brand.certificateType),
       registrationDate: brand.registrationDate?.toISOString() ?? null,
       ownerLocation,
-      applicantRole: entry.applicantRole,
+      applicantRole: entry.applicantRole ?? null,
       appointmentSource: entry.appointmentSource ?? null,
       officialRepresentativeCompanyId: entry.officialRepresentativeCompanyId ?? null,
       availableDocumentCodes: new Set(Object.keys(entry.relationshipDocuments ?? {})),
@@ -73,4 +74,44 @@ export async function resolveKonsumsiBrandContexts(
         .map((requirement) => ({ code: requirement.code, label: requirement.label })),
     };
   });
+}
+
+/**
+ * HS Code text → its master-data Sub Kelompok Komoditas, for `buildDocumentChecklist`'s own
+ * "Sertifikat Uji Mutu" section — a fallback for `konsumsiProducts` rows whose cached
+ * `commodityGroupId` is empty (pre-refactor rows submitted before Step 9's HS-Code-driven
+ * grouping existed; see that function's own comment). Only called when the application actually
+ * has such products — no point loading all of master data otherwise.
+ */
+export async function resolveKonsumsiHsCodeLookup(
+  products: { hsCode: string; commodityGroupId?: string }[],
+): Promise<Map<string, { commodityGroupId: string; commodityName: string }>> {
+  const codesNeedingLookup = [...new Set(products.filter((p) => !p.commodityGroupId).map((p) => p.hsCode).filter(Boolean))];
+  if (codesNeedingLookup.length === 0) return new Map();
+
+  const rows = await db.hsCodeMasterData.findMany({
+    where: { hsCode: { in: codesNeedingLookup } },
+    include: { commodityGroup: true },
+  });
+  return new Map(rows.map((row) => [row.hsCode, { commodityGroupId: row.commodityGroupId, commodityName: row.commodityGroup.name }]));
+}
+
+/** Convenience wrapper over the two resolvers above — every `buildDocumentChecklist` caller that
+ * cares about Konsumsi's "Dokumen Merek"/"Sertifikat Uji Mutu" sections needs both (or neither),
+ * so this is the one call site-level helper to reach for instead of repeating the
+ * `importTypes?.includes("BARANG_KONSUMSI") ? await resolve...() : undefined` pair inline. */
+export async function resolveKonsumsiChecklistContext(
+  payload: Pick<ApplicationWizardValues, "importTypes" | "applicationBrands" | "konsumsiProducts">,
+): Promise<{
+  konsumsiBrands: Awaited<ReturnType<typeof resolveKonsumsiBrandContexts>> | undefined;
+  konsumsiHsCodeLookup: Awaited<ReturnType<typeof resolveKonsumsiHsCodeLookup>> | undefined;
+}> {
+  if (!payload.importTypes?.includes("BARANG_KONSUMSI")) {
+    return { konsumsiBrands: undefined, konsumsiHsCodeLookup: undefined };
+  }
+  const [konsumsiBrands, konsumsiHsCodeLookup] = await Promise.all([
+    resolveKonsumsiBrandContexts(payload.applicationBrands ?? []),
+    resolveKonsumsiHsCodeLookup((payload.konsumsiProducts ?? []) as ApplicationKonsumsiProductValues[]),
+  ]);
+  return { konsumsiBrands, konsumsiHsCodeLookup };
 }

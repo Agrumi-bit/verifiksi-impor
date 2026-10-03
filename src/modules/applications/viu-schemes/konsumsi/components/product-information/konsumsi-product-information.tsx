@@ -68,7 +68,16 @@ export function KonsumsiProductInformation({ form, onNavigateToBrandsStep }: Pro
   }
 
   const productsError = form.formState.errors.konsumsiProducts?.message;
-  const certificatesError = form.formState.errors.productGroupCertificates?.message;
+  // Computed fresh from form state (not the raw zod message, which only has commodityGroupId —
+  // no brand name, since applyKonsumsiSubmitRules is a synchronous refinement with no DB/network
+  // access to resolve one). Shown proactively, not just after a failed "Lanjut" attempt.
+  const missingCertificateGroups = deriveProductGroups(products).filter(
+    (group) =>
+      !certificates.some(
+        (certificate) =>
+          certificate.brandId === group.brandId && certificate.commodityGroupId === group.commodityGroupId && certificate.filePath,
+      ),
+  );
 
   return (
     <div className="mt-8 flex flex-col gap-6 border-t border-border pt-8">
@@ -90,10 +99,21 @@ export function KonsumsiProductInformation({ form, onNavigateToBrandsStep }: Pro
         </div>
       </div>
 
-      {(typeof productsError === "string" || typeof certificatesError === "string") && (
+      {(typeof productsError === "string" || missingCertificateGroups.length > 0) && (
         <div className="flex flex-col gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
           {typeof productsError === "string" && <p>{productsError}</p>}
-          {typeof certificatesError === "string" && <p>{certificatesError}</p>}
+          {missingCertificateGroups.length > 0 && (
+            <div>
+              <p className="font-semibold">Sertifikat Hasil Uji Mutu belum lengkap untuk:</p>
+              <ul className="mt-1 list-disc pl-4">
+                {missingCertificateGroups.map((group) => (
+                  <li key={`${group.brandId}-${group.commodityGroupId}`}>
+                    {brandOptions?.find((option) => option.id === group.brandId)?.brandName ?? group.brandId} · {group.commodityName ?? group.commodityGroupId}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 

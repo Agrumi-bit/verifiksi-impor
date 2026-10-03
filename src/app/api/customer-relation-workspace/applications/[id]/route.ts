@@ -9,7 +9,7 @@ import { getDocumentMeta } from "@/modules/company/document-versions";
 import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS, toChecklistStatus } from "@/modules/verifikator-workspace/schema";
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
 import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
-import { resolveKonsumsiBrandContexts } from "@/modules/verifikator-workspace/konsumsi-brand-context";
+import { resolveKonsumsiChecklistContext } from "@/modules/verifikator-workspace/konsumsi-brand-context";
 import {
   crDocumentRequestsSchema,
   editApplicationFieldsSchema,
@@ -54,10 +54,8 @@ export async function GET(
   // every other workspace's buildDocumentChecklist call passes, so CR's "Kelengkapan Dokumen"
   // check doesn't show stale paths or silently drop the Dokumen Partner Industri category.
   const company = application.companyId ? await db.company.findUnique({ where: { id: application.companyId } }) : null;
-  const konsumsiBrands = payload.importTypes?.includes("BARANG_KONSUMSI")
-    ? await resolveKonsumsiBrandContexts(payload.applicationBrands ?? [])
-    : undefined;
-  const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload), konsumsiBrands);
+  const { konsumsiBrands, konsumsiHsCodeLookup } = await resolveKonsumsiChecklistContext(payload);
+  const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload), konsumsiBrands, konsumsiHsCodeLookup);
   const requests = crDocumentRequestsSchema.parse(application.crDocumentVerifications ?? {});
   const docsTotal = checklist.length;
   const docsLengkap = checklist.filter((d) => d.documentPath).length;

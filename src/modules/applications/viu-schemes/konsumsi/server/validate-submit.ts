@@ -47,9 +47,10 @@ type ValidateKonsumsiSubmitResult =
  * The commodity grouping is derived bottom-up from each product's own `hsCodeId`, never trusted
  * from the client's cached names/ids — this re-resolves the entire chain
  * (commoditySubGroup/commodityGroup/industryGroup) from the HS Code master-data row itself.
- * `countryOfOrigin` stays keyed by name, the existing convention (see useActiveCountries). Returns
- * products with their display caches and a server-built `productSnapshot` — never the
- * client-submitted values for any of these.
+ * `originCountries` is Konsumsi's own multi-select field, keyed by ISO code (not name — a
+ * deliberate divergence from every other "negara asal" field in this app, which stay single-value
+ * and name-keyed via useActiveCountries). Returns products with their display caches and a
+ * server-built `productSnapshot` — never the client-submitted values for any of these.
  */
 async function validateKonsumsiProducts(
   products: ApplicationKonsumsiProductValues[] | undefined,
@@ -63,20 +64,23 @@ async function validateKonsumsiProducts(
     if (!validBrandIds.has(product.brandId)) {
       return { error: `Merek pada produk "${product.productName}" tidak terdaftar dalam permohonan ini.` };
     }
+    if (product.originCountries.length === 0) {
+      return { error: `Pilih minimal satu negara asal untuk produk "${product.productName}".` };
+    }
   }
 
   const hsCodeIds = [...new Set(list.map((p) => p.hsCodeId))];
-  const countryNames = [...new Set(list.map((p) => p.countryOfOrigin))];
+  const countryCodes = [...new Set(list.flatMap((p) => p.originCountries))];
 
   const [hsCodeRows, countries] = await Promise.all([
     db.hsCodeMasterData.findMany({
       where: { id: { in: hsCodeIds } },
       include: { commodityGroup: { include: { industryGroup: true } }, commoditySubGroup: true, unitOfMeasurement: true },
     }),
-    db.countryMasterData.findMany({ where: { name: { in: countryNames } } }),
+    db.countryMasterData.findMany({ where: { code: { in: countryCodes } } }),
   ]);
   const hsCodeById = new Map(hsCodeRows.map((row) => [row.id, row]));
-  const countryByName = new Map(countries.map((country) => [country.name, country]));
+  const countryByCode = new Map(countries.map((country) => [country.code, country]));
 
   const capturedAt = new Date().toISOString();
   const resolved: ApplicationKonsumsiProductValues[] = [];
@@ -89,10 +93,12 @@ async function validateKonsumsiProducts(
     if (hsRow.commodityGroup.status !== "ACTIVE") {
       return { error: `Sub Kelompok Komoditas untuk HS Code "${hsRow.hsCode}" pada produk "${product.productName}" tidak aktif.` };
     }
-    const country = countryByName.get(product.countryOfOrigin);
-    if (!country || country.status !== "ACTIVE") {
-      return { error: `Negara asal tidak ditemukan untuk produk "${product.productName}".` };
+    const resolvedCountries = product.originCountries.map((code) => countryByCode.get(code));
+    const missingIndex = resolvedCountries.findIndex((country) => !country || country.status !== "ACTIVE");
+    if (missingIndex !== -1) {
+      return { error: `Negara asal "${product.originCountries[missingIndex]}" tidak ditemukan atau tidak aktif untuk produk "${product.productName}".` };
     }
+    const countryNames = resolvedCountries.map((country) => country!.name);
     const quantity = Number(product.quantity);
     if (!Number.isFinite(quantity) || quantity <= 0) {
       return { error: `Jumlah pada produk "${product.productName}" harus lebih besar dari 0.` };
@@ -115,14 +121,14 @@ async function validateKonsumsiProducts(
       commodityName: hsRow.commodityGroup.name,
       industryGroupId: hsRow.commodityGroup.industryGroupId ?? "",
       industryName,
-      countryOfOriginCode: country.code,
+      originCountryNames: countryNames,
       productSnapshot: {
         capturedAt,
         brandName: brandNameById.get(product.brandId) ?? "",
         industryName,
         commodityName: hsRow.commodityGroup.name,
         hsDescription: hsRow.description,
-        countryOfOriginName: country.name,
+        countryOfOriginNames: countryNames,
         totalPrice,
       },
     });
@@ -326,7 +332,7 @@ export async function validateKonsumsiSubmit(
       evidenceType: toEvidenceType(brand.certificateType),
       registrationDate: brand.registrationDate?.toISOString() ?? null,
       ownerLocation,
-      applicantRole: entry.applicantRole,
+      applicantRole: entry.applicantRole ?? null,
       appointmentSource: entry.appointmentSource ?? null,
       officialRepresentativeCompanyId: entry.officialRepresentativeCompanyId ?? null,
       availableDocumentCodes: new Set(Object.keys(entry.relationshipDocuments ?? {})),
