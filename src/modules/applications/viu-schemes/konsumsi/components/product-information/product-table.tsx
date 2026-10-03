@@ -73,7 +73,7 @@ export function ProductTable({
               <td className="px-3 py-2 font-mono">{product.hsCode}</td>
               <td className="px-3 py-2 text-xs text-muted-foreground">{product.hsDescription}</td>
               <td className="px-3 py-2">
-                <OriginCountriesCell names={product.originCountryNames ?? product.originCountries} />
+                <OriginCountriesCell names={product.originCountryNames ?? product.originCountries ?? []} />
               </td>
               <td className="px-3 py-2">{Number(product.quantity).toLocaleString("id-ID")}</td>
               <td className="px-3 py-2">{product.unit}</td>

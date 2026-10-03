@@ -65,7 +65,7 @@ type Props = {
  * clearly labeled as such rather than silently passed off as historical.
  */
 export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props) {
-  const brandsNeedingFallback = payload.applicationBrands.filter((entry) => !entry.submissionSnapshot);
+  const brandsNeedingFallback = (payload.applicationBrands ?? []).filter((entry) => !entry.submissionSnapshot);
 
   const { data: fallbackBrands } = useQuery({
     queryKey: ["applications", "konsumsi-review-fallback", brandLookupApiBase, brandsNeedingFallback.map((e) => e.brandId)],
@@ -79,13 +79,23 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
   });
   const fallbackBrandName = (brandId: string) => fallbackBrands?.find((b) => b.id === brandId)?.brandName;
 
+  // `?? []` everywhere below: a payload saved before the Step 7/9 refactor or the multi-country
+  // feature has none of these fields at all (`undefined`, not `[]`) — see
+  // normalizeKonsumsiPayload's own comment for the full story. The API routes that hand this
+  // component its `payload` already normalize it; these are a second line of defense so this
+  // component never crashes even if a future call site forgets to.
+  const applicationBrands = payload.applicationBrands ?? [];
+  const productGroupCertificates = payload.productGroupCertificates ?? [];
+  const konsumsiDocuments = payload.konsumsiDocuments ?? [];
+  const konsumsiProducts = payload.konsumsiProducts ?? [];
+
   if (
-    payload.applicationBrands.length === 0 &&
-    payload.productGroupCertificates.length === 0 &&
+    applicationBrands.length === 0 &&
+    productGroupCertificates.length === 0 &&
     !payload.labelStatementDocument?.filePath &&
     !payload.labelDocumentationDocument?.filePath &&
-    payload.konsumsiDocuments.length === 0 &&
-    payload.konsumsiProducts.length === 0 &&
+    konsumsiDocuments.length === 0 &&
+    konsumsiProducts.length === 0 &&
     (payload.konsumsiFinancialDocuments ?? []).every((doc) => !doc.enabled && !doc.documentPath && !doc.amount)
   ) {
     return null;
@@ -96,7 +106,7 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
   // master data); drafts have no snapshot yet, so they fall back to the display caches captured
   // at selection time (commodityName/hsDescription/originCountryNames on the product itself).
   const productsByBrand = new Map<string, ApplicationKonsumsiProductValues[]>();
-  for (const product of payload.konsumsiProducts) {
+  for (const product of konsumsiProducts) {
     productsByBrand.set(product.brandId, [...(productsByBrand.get(product.brandId) ?? []), product]);
   }
 
@@ -104,7 +114,7 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
     <>
       <Section title="VIU Konsumsi — Merek yang Digunakan">
         <div className="flex flex-col gap-4">
-          {payload.applicationBrands.map((entry, index) => {
+          {applicationBrands.map((entry, index) => {
             const snapshot = entry.submissionSnapshot;
             return (
               <div key={`${entry.brandId}-${index}`} className="rounded-lg border border-border p-3">
@@ -162,7 +172,7 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
               </div>
             );
           })}
-          {payload.applicationBrands.length === 0 && (
+          {applicationBrands.length === 0 && (
             <p className="text-sm text-muted-foreground">Belum ada merek pada permohonan ini.</p>
           )}
         </div>
@@ -197,10 +207,10 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
         </div>
       </Section>
 
-      {payload.productGroupCertificates.length > 0 && (
+      {productGroupCertificates.length > 0 && (
         <Section title="VIU Konsumsi — Sertifikat Hasil Uji Mutu">
           <div className="flex flex-col gap-3">
-            {payload.productGroupCertificates.map((certificate, index) => (
+            {productGroupCertificates.map((certificate, index) => (
               <div key={index} className="rounded-lg border border-border p-3">
                 <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
                   <Item label="Merek" value={snapshotOrFallbackBrandName(payload, certificate.brandId, fallbackBrandName)} />
@@ -237,7 +247,7 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
               Dokumen Impor Barang Konsumsi
             </p>
             <div className="flex flex-col gap-2">
-              {payload.konsumsiDocuments.map((doc) => (
+              {konsumsiDocuments.map((doc) => (
                 <a
                   key={doc.id}
                   href={`/${doc.documentPath}`}
@@ -248,7 +258,7 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
                   {doc.label}
                 </a>
               ))}
-              {payload.konsumsiDocuments.length === 0 && (
+              {konsumsiDocuments.length === 0 && (
                 <p className="text-sm text-muted-foreground">Belum ada dokumen pendukung pada permohonan ini.</p>
               )}
             </div>
@@ -258,7 +268,7 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
 
       <Section title="VIU Konsumsi — Informasi Produk">
         <div className="flex flex-col gap-4">
-          {payload.applicationBrands.map((brandEntry) => {
+          {applicationBrands.map((brandEntry) => {
             const brandProducts = productsByBrand.get(brandEntry.brandId) ?? [];
             if (brandProducts.length === 0) return null;
 
@@ -295,7 +305,7 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
                             <Item label="Uraian HS" value={product.productSnapshot?.hsDescription ?? product.hsDescription} />
                             <Item
                               label="Asal Negara"
-                              value={(product.productSnapshot?.countryOfOriginNames ?? product.originCountryNames ?? product.originCountries).join(", ")}
+                              value={(product.productSnapshot?.countryOfOriginNames ?? product.originCountryNames ?? product.originCountries ?? []).join(", ")}
                             />
                             <Item label="Jumlah Permohonan" value={`${Number(product.quantity).toLocaleString("id-ID")} ${product.unit ?? ""}`} />
                             <Item label="Jumlah Stock" value={`${Number(product.stockQuantity ?? 0).toLocaleString("id-ID")} ${product.unit ?? ""}`} />
@@ -317,7 +327,7 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
               </div>
             );
           })}
-          {payload.konsumsiProducts.length === 0 && (
+          {konsumsiProducts.length === 0 && (
             <p className="text-sm text-muted-foreground">Belum ada produk pada permohonan ini.</p>
           )}
         </div>
@@ -381,6 +391,6 @@ function snapshotOrFallbackBrandName(
   brandId: string,
   fallbackBrandName: (brandId: string) => string | undefined,
 ): string {
-  const entry = payload.applicationBrands.find((b) => b.brandId === brandId);
+  const entry = (payload.applicationBrands ?? []).find((b) => b.brandId === brandId);
   return entry?.submissionSnapshot?.brandName ?? fallbackBrandName(brandId) ?? brandId;
 }

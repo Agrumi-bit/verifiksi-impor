@@ -10,6 +10,7 @@ import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS, toChecklistStatus
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
 import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
 import { resolveKonsumsiChecklistContext } from "@/modules/verifikator-workspace/konsumsi-brand-context";
+import { normalizeKonsumsiPayload } from "@/modules/applications/viu-schemes/konsumsi/normalize";
 import {
   crDocumentRequestsSchema,
   editApplicationFieldsSchema,
@@ -48,7 +49,7 @@ export async function GET(
     return NextResponse.json({ error: "Permohonan tidak ditemukan" }, { status: 404 });
   }
 
-  const payload = application.payload as ApplicationWizardValues;
+  const payload = normalizeKonsumsiPayload(application.payload as ApplicationWizardValues);
   // Prefer the live Company row (legal/tax/location docs a company edited via its own profile
   // after submission) and resolve VIU-industri Partner Industri docs — same live-data context
   // every other workspace's buildDocumentChecklist call passes, so CR's "Kelengkapan Dokumen"

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
+import { normalizeKonsumsiPayload } from "@/modules/applications/viu-schemes/konsumsi/normalize";
+import type { ApplicationWizardValues } from "@/modules/applications/schema";
 
 export async function GET(
   _request: Request,
@@ -16,5 +18,7 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ data: application });
+  const payload = normalizeKonsumsiPayload(application.payload as ApplicationWizardValues);
+
+  return NextResponse.json({ data: { ...application, payload } });
 }

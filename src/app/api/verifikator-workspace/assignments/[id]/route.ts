@@ -21,6 +21,7 @@ import {
 } from "@/modules/verifikator-workspace/company-context";
 import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
 import { resolveKonsumsiChecklistContext } from "@/modules/verifikator-workspace/konsumsi-brand-context";
+import { normalizeKonsumsiPayload } from "@/modules/applications/viu-schemes/konsumsi/normalize";
 
 async function loadAssignment(assignmentNumber: string, verifikatorId: string) {
   const found = await db.assignment.findUnique({
@@ -113,7 +114,7 @@ export async function GET(
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
   }
 
-  const payload = assignment.application.payload as ApplicationWizardValues;
+  const payload = normalizeKonsumsiPayload(assignment.application.payload as ApplicationWizardValues);
   const company = assignment.application.companyId
     ? await db.company.findUnique({ where: { id: assignment.application.companyId } })
     : null;

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ApplicationWizardValues } from "../schema";
 import { KonsumsiApplicationReview } from "../viu-schemes/konsumsi/components/konsumsi-application-review";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
 
 type ApplicationDetailData = {
   id: string;
@@ -134,7 +135,9 @@ export function ApplicationDetail({ id }: Props) {
       )}
 
       {payload.importTypes?.includes("BARANG_KONSUMSI") && (
-        <KonsumsiApplicationReview payload={payload} brandLookupApiBase="/api/merk" />
+        <SectionErrorBoundary label="VIU Konsumsi">
+          <KonsumsiApplicationReview payload={payload} brandLookupApiBase="/api/merk" />
+        </SectionErrorBoundary>
       )}
     </div>
   );

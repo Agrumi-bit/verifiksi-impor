@@ -7,6 +7,7 @@ import { TERMINAL_STATUSES } from "@/modules/company-workspace/status";
 import { getDocumentMeta } from "@/modules/company/document-versions";
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import { normalizeKonsumsiPayload } from "@/modules/applications/viu-schemes/konsumsi/normalize";
 import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS } from "@/modules/verifikator-workspace/schema";
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
 import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
@@ -58,7 +59,7 @@ export async function GET(
   }
 
   const company = await db.company.findUnique({ where: { id: companyId } });
-  const payload = application.payload as ApplicationWizardValues;
+  const payload = normalizeKonsumsiPayload(application.payload as ApplicationWizardValues);
   const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload));
   const companyKeys = checklist.filter((item) => item.key in COMPANY_MAPPED_DOCUMENT_KEYS).map((item) => item.key);
   const appOnlyKeys = checklist.filter((item) => !(item.key in COMPANY_MAPPED_DOCUMENT_KEYS)).map((item) => item.key);
@@ -79,6 +80,7 @@ export async function GET(
   return NextResponse.json({
     data: {
       ...application,
+      payload,
       displayStatus,
       assignedSurveyorName: latestAssignment?.surveyor?.name ?? null,
       surveyDate: latestAssignment?.scheduledDate ?? null,

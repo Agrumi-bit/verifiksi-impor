@@ -10,6 +10,7 @@ import {
 import { documentFieldCode, type DocumentFieldKey } from "@/modules/company/document-fields";
 import { slugify } from "@/lib/document-filename";
 import { OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS, type LocationValues } from "@/modules/shared/schema";
+import { normalizeKonsumsiPayload } from "@/modules/applications/viu-schemes/konsumsi/normalize";
 import {
   PRODUCT_VERIFICATION_STATUSES,
   MACHINE_VERIFICATION_STATUSES,
@@ -176,6 +177,9 @@ export function buildDocumentChecklist(
   konsumsiBrands?: ChecklistKonsumsiBrandContext[],
   konsumsiHsCodeLookup?: ChecklistHsCodeLookup,
 ): DocumentChecklistItem[] {
+  // Defends every caller (20+ workspaces/routes) against a payload saved before the Step 7/9
+  // refactor or the multi-country feature — see normalizeKonsumsiPayload's own comment.
+  payload = normalizeKonsumsiPayload(payload);
   const items: DocumentChecklistItem[] = [];
 
   items.push({
