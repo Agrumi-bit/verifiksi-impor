@@ -76,6 +76,12 @@ export const kbliMasterDataSchema = z.object({
   version: z.enum(KBLI_VERSIONS).default("KBLI 2020"),
 });
 
+export const apiUKbliUtamaSchema = z.object({
+  code: requiredString("Kode KBLI wajib diisi"),
+  description: requiredString("Judul KBLI wajib diisi"),
+  version: z.enum(KBLI_VERSIONS, { message: "Pilih versi KBLI" }),
+});
+
 export const hsCodeMasterDataSchema = z.object({
   hsCode: requiredString("Pos Tarif / HS Code wajib diisi"),
   description: requiredString("Uraian barang wajib diisi"),
@@ -114,5 +120,7 @@ export const commoditySubGroupUpdateSchema =
   commoditySubGroupSchema.extend(statusSchema.shape);
 export const kbliMasterDataUpdateSchema =
   kbliMasterDataSchema.extend(statusWithReasonSchema.shape);
+export const apiUKbliUtamaUpdateSchema =
+  apiUKbliUtamaSchema.extend(statusWithReasonSchema.shape);
 export const hsCodeMasterDataUpdateSchema =
   hsCodeMasterDataSchema.extend(statusSchema.shape);

@@ -5,14 +5,13 @@ import type { Company } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { locationsSchema, type LocationValues } from "@/modules/shared/schema";
 import {
-  API_U_KBLI_UTAMA_ERROR,
   companyContactsSchema,
   companyDataSchema,
   companyLegalSchema,
   companyTaxSchema,
-  findDisallowedApiUKbliUtama,
   type TaxProofEntryValues,
 } from "@/modules/company/schema";
+import { checkApiUKbliUtama } from "@/modules/company/api-u-kbli";
 import { recordDocumentVersion } from "@/modules/company/document-versions";
 import { recordApplicationDocumentVersion } from "@/modules/applications/document-versions";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
@@ -106,9 +105,8 @@ export async function patchCompanyProfileSection(
     const parsed = companyLegalSchema.safeParse(body);
     if (!parsed.success) return invalidResponse(parsed.error);
     const v = parsed.data;
-    if (company.apiType === "API-U" && findDisallowedApiUKbliUtama(v.kbliEntries) !== -1) {
-      return { error: NextResponse.json({ error: API_U_KBLI_UTAMA_ERROR }, { status: 400 }) };
-    }
+    const apiUError = await checkApiUKbliUtama(company.apiType, v.kbliEntries);
+    if (apiUError) return { error: apiUError };
     await db.company.update({
       where: { id: companyId },
       data: {

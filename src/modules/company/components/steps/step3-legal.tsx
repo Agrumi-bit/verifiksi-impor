@@ -8,9 +8,9 @@ import { toast } from "sonner";
 import { KBLI_VERSIONS } from "@/modules/master-data/schema";
 
 import { Field, TextInput, CollapsibleCard, UploadBox } from "../wizard-ui";
+import { useApiUKbliUtamaOptions } from "../../hooks/use-api-u-kbli-utama";
 import {
   API_U_KBLI_UTAMA_ERROR,
-  API_U_KBLI_UTAMA_OPTIONS,
   isAllowedApiUKbliUtama,
   type CompanyWizardValues,
   type CompanyKbliEntryValues,
@@ -18,13 +18,6 @@ import {
 } from "../../schema";
 
 type KbliMasterDataRow = { id: string; code: string; description: string; version: string; status: "ACTIVE" | "INACTIVE" };
-
-/** API-U's fixed KBLI Utama list in the same shape as master data rows, so it can feed the same suggestion list. */
-const API_U_KBLI_UTAMA_ROWS: KbliMasterDataRow[] = API_U_KBLI_UTAMA_OPTIONS.map((option) => ({
-  id: `api-u-${option.code}-${option.version}`,
-  ...option,
-  status: "ACTIVE",
-}));
 
 /** Newest KBLI version first (KBLI_VERSIONS order), then by code — so suggestions lead with current codes. */
 function versionOrdered(rows: KbliMasterDataRow[]): KbliMasterDataRow[] {
@@ -216,7 +209,12 @@ export function Step3Legal({ form }: { form: UseFormReturn<CompanyWizardValues> 
   const kbliPendukungItems = kbliItems.filter((item) => item.entry?.category !== "UTAMA");
 
   const isApiU = watch("apiType") === "API-U";
-  const utamaOptions = isApiU ? API_U_KBLI_UTAMA_ROWS : kbliOptions;
+  const apiUAllowed = useApiUKbliUtamaOptions(isApiU);
+  // An empty API-U list (every row deactivated in System Configuration) means no restriction.
+  const isApiURestricted = isApiU && apiUAllowed.length > 0;
+  const utamaOptions: KbliMasterDataRow[] = isApiURestricted
+    ? apiUAllowed.map((option) => ({ ...option, id: `api-u-${option.code}-${option.version}`, status: "ACTIVE" }))
+    : kbliOptions;
 
   function handleAddKbli(category: KbliCategory, query: string, option?: KbliMasterDataRow) {
     const trimmed = query.trim();
@@ -224,7 +222,7 @@ export function Step3Legal({ form }: { form: UseFormReturn<CompanyWizardValues> 
     const options = category === "UTAMA" ? utamaOptions : kbliOptions;
     // Typed code + "Add KBLI" without picking a suggestion: take the newest version that has it.
     const match = option ?? versionOrdered(options).find((k) => k.code === trimmed);
-    if (category === "UTAMA" && isApiU && !match) {
+    if (category === "UTAMA" && isApiURestricted && !match) {
       toast.error(API_U_KBLI_UTAMA_ERROR);
       return;
     }
@@ -293,8 +291,8 @@ export function Step3Legal({ form }: { form: UseFormReturn<CompanyWizardValues> 
             category="UTAMA"
             items={kbliUtamaItems}
             kbliOptions={utamaOptions}
-            note={isApiU ? "API-U: KBLI Utama hanya dapat dipilih dari daftar yang diizinkan." : undefined}
-            isEntryAllowed={isApiU ? isAllowedApiUKbliUtama : undefined}
+            note={isApiURestricted ? "API-U: KBLI Utama hanya dapat dipilih dari daftar yang diizinkan." : undefined}
+            isEntryAllowed={isApiURestricted ? (entry) => isAllowedApiUKbliUtama(entry, apiUAllowed) : undefined}
             onAdd={handleAddKbli}
             onRemove={removeKbli}
             emptyHint="Belum ada KBLI Utama — cari dan tambahkan kode di atas."

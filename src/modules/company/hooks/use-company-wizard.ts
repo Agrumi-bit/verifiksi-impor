@@ -5,6 +5,7 @@ import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { createEmptyLocation } from "@/modules/shared/schema";
+import { useApiUKbliUtamaOptions } from "./use-api-u-kbli-utama";
 import {
   API_U_KBLI_UTAMA_ERROR,
   companyWizardSchema,
@@ -19,6 +20,7 @@ const TOTAL_STEPS = 6;
 
 export function useCompanyWizard() {
   const [currentStep, setCurrentStep] = useState(1);
+  const apiUAllowed = useApiUKbliUtamaOptions();
 
   const form = useForm<CompanyWizardValues>({
     resolver: zodResolver(companyWizardSchema) as Resolver<CompanyWizardValues>,
@@ -38,12 +40,12 @@ export function useCompanyWizard() {
     const fields = COMPANY_STEP_FIELD_NAMES[currentStep] ?? [];
     const isValid = await form.trigger(fields);
     if (!isValid) return false;
-    // The schema-level API-U KBLI Utama rule only runs once every step's fields are valid, so
-    // the Legal step checks it itself rather than letting a disallowed code through to Review.
+    // The API-U KBLI Utama list lives in the database, so it can't be part of the Zod schema —
+    // the Legal step checks it here (and the server checks it again on save).
     if (
       currentStep === 3 &&
       form.getValues("apiType") === "API-U" &&
-      findDisallowedApiUKbliUtama(form.getValues("kbliEntries") ?? []) !== -1
+      findDisallowedApiUKbliUtama(form.getValues("kbliEntries") ?? [], apiUAllowed) !== -1
     ) {
       form.setError("kbliEntries", { type: "custom", message: API_U_KBLI_UTAMA_ERROR });
       return false;

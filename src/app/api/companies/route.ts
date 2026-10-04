@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
+import { checkApiUKbliUtama } from "@/modules/company/api-u-kbli";
 import { companyWizardSchema, type TaxProofEntryValues } from "@/modules/company/schema";
 import { recordDocumentVersion } from "@/modules/company/document-versions";
 import { ACTIVE_STATUSES } from "@/modules/company-workspace/status";
@@ -36,6 +37,9 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+
+  const apiUError = await checkApiUKbliUtama(parsed.data.apiType, parsed.data.kbliEntries);
+  if (apiUError) return apiUError;
 
   const values = parsed.data;
   const firstContact = values.contacts[0];

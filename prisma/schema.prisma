@@ -896,6 +896,24 @@ model KbliMasterData {
   @@map("kbli_master_data")
 }
 
+/// KBLI Utama an API-U (Angka Pengenal Importir Umum) company may register, managed under
+/// System Configuration. One row per (code, version) pair — a code can be allowed in one KBLI
+/// version only, or carry a different title per version. Only ACTIVE rows count; when none are
+/// active, API-U KBLI Utama isn't restricted at all.
+model ApiUKbliUtama {
+  id                 String           @id @default(cuid())
+  status             MasterDataStatus @default(ACTIVE)
+  code               String
+  description        String
+  version            String
+  deactivationReason String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@unique([code, version])
+  @@map("api_u_kbli_utama")
+}
+
 model HsCodeMasterData {
   id                  String            @id @default(cuid())
   status              MasterDataStatus  @default(ACTIVE)

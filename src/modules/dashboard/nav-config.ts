@@ -89,6 +89,7 @@ export const NAV_SECTIONS: NavSection[] = [
     children: [
       { label: "HS Code Master Data", href: "/system-configuration/hs-code" },
       { label: "KBLI Master Data", href: "/system-configuration/kbli" },
+      { label: "KBLI Utama API-U", href: "/system-configuration/api-u-kbli" },
       { label: "Lartas", href: "/system-configuration/lartas" },
       {
         label: "Kelompok Komoditas",
