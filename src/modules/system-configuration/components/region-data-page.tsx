@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDown, ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Download, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
+import { downloadRegionExcelTemplate, parseRegionExcelFile } from "../region-excel";
 import { RegionDataFormDrawer } from "./region-data-form-drawer";
 
 type RegionRow = {
@@ -140,6 +141,8 @@ export function RegionDataPage() {
   const [deleteTargets, setDeleteTargets] = useState<RegionRow[] | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const provincesQuery = useRegionOptions("/api/master-data/regions/provinces", ["regions", "provinces"]);
   const citiesQuery = useRegionOptions(
@@ -229,6 +232,60 @@ export function RegionDataPage() {
     setSelected(checked ? new Set(pageRows.map((row) => row.id)) : new Set());
   }
 
+  async function handleImportFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setIsImporting(true);
+    try {
+      const { rows, skippedRows, missingHeaders } = await parseRegionExcelFile(file);
+      if (missingHeaders.length > 0) {
+        toast.error(`Kolom tidak ditemukan: ${missingHeaders.join(", ")}. Gunakan Template Excel.`);
+        return;
+      }
+      if (rows.length === 0) {
+        toast.error("Tidak ada baris valid ditemukan. Pastikan kolom Provinsi, Kota / Kabupaten, Kecamatan, Desa / Kelurahan, dan Kode Pos terisi.");
+        return;
+      }
+
+      const response = await fetch("/api/system-configuration/regions/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows }),
+      });
+      if (!response.ok) {
+        const errBody = (await response.json().catch(() => null)) as { error?: string } | null;
+        toast.error(errBody?.error ?? "Gagal mengimpor data wilayah");
+        return;
+      }
+      const { data: result } = (await response.json()) as {
+        data: { created: number; duplicateCount: number; duplicateSamples: string[] };
+      };
+
+      queryClient.invalidateQueries({ queryKey: ["system-configuration", "regions"] });
+      queryClient.invalidateQueries({ queryKey: ["regions"] });
+
+      const notes: string[] = [];
+      if (result.duplicateCount > 0) {
+        notes.push(
+          `${result.duplicateCount.toLocaleString("id-ID")} duplikat dilewati (${result.duplicateSamples.join(", ")}${result.duplicateCount > result.duplicateSamples.length ? ", ..." : ""})`,
+        );
+      }
+      if (skippedRows > 0) notes.push(`${skippedRows.toLocaleString("id-ID")} baris tidak lengkap dilewati`);
+      const suffix = notes.length > 0 ? ` ${notes.join("; ")}.` : "";
+
+      if (result.created > 0) {
+        toast.success(`${result.created.toLocaleString("id-ID")} data wilayah berhasil diimpor.${suffix}`);
+      } else {
+        toast.error(`Tidak ada data baru — semua baris sudah terdaftar.${suffix}`);
+      }
+    } catch {
+      toast.error("Gagal membaca file Excel. Pastikan format file sesuai template.");
+    } finally {
+      setIsImporting(false);
+    }
+  }
+
   async function handleConfirmDelete() {
     if (!deleteTargets || deleteTargets.length === 0) return;
     setIsDeleting(true);
@@ -281,14 +338,34 @@ export function RegionDataPage() {
               dalamnya, lalu drill down ke Kecamatan dan Desa/Kelurahan.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setEditing("new")}
-            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[#e0662e] px-3.5 py-2 text-[12.5px] font-bold text-white"
-          >
-            <Plus className="size-3.5" />
-            Tambah Data
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={downloadRegionExcelTemplate}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-3.5 py-2 text-[12.5px] font-semibold text-[#261813]"
+            >
+              <Download className="size-3.5" />
+              Unduh Template Excel
+            </button>
+            <button
+              type="button"
+              disabled={isImporting}
+              onClick={() => fileInputRef.current?.click()}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-3.5 py-2 text-[12.5px] font-semibold text-[#261813] disabled:opacity-60"
+            >
+              <Upload className="size-3.5" />
+              {isImporting ? "Mengimpor..." : "Impor dari Excel"}
+            </button>
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportFile} />
+            <button
+              type="button"
+              onClick={() => setEditing("new")}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[#e0662e] px-3.5 py-2 text-[12.5px] font-bold text-white"
+            >
+              <Plus className="size-3.5" />
+              Tambah Data
+            </button>
+          </div>
         </div>
         <div className="relative mt-4 max-w-md">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a68f80]" />
