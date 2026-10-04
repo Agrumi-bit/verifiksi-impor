@@ -215,8 +215,6 @@ export function docTypeDefs(kind: FieldKind): { key: string; label: string }[] {
   ];
 }
 
-export const MIN_DOCUMENTATION_REQUIRED = 3;
-
 export function sectionTitles(kind: FieldKind): string[] {
   const label = LOCATION_LABEL[kind];
   const titles = [
@@ -290,10 +288,8 @@ export function computeSectionKinds(
 
   result.push(kindForKeys(SECTION6_QUESTIONS[kind].map((q) => q.key), values.section6Answers));
 
-  const docCount =
-    Object.values(values.documentation).filter((d) => d.filePath).length +
-    values.documentationOther.filter((d) => d.filePath).length;
-  result.push(docCount >= MIN_DOCUMENTATION_REQUIRED ? "ok" : "unfilled");
+  // Dokumentasi Lapangan is optional — no minimum count, so this section is never "unfilled".
+  result.push("ok");
 
   const findingsCount = computeFindings(kind, values).length;
   result.push(findingsCount > 0 ? "issue" : "ok");

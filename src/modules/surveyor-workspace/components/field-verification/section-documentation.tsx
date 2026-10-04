@@ -6,7 +6,6 @@ import { MaterialIcon } from "../material-icon";
 import { SectionShell } from "../office-verification/section-shell";
 import {
   docTypeDefs,
-  MIN_DOCUMENTATION_REQUIRED,
   type FieldKind,
   type DocumentationItemValues,
   type DocumentationOtherItemValues,
@@ -99,15 +98,12 @@ export function SectionDocumentation({
   return (
     <SectionShell index={index} title="Dokumentasi Lapangan" onSave={onSave} onSaveNext={onSaveNext} isSaving={isSaving}>
       <p className="mb-4 text-[13.5px] leading-relaxed text-[#4a5568]">
-        Surveyor diwajibkan untuk mengunggah dokumentasi visual yang menunjukkan kondisi {kind === "GUDANG" ? "gudang" : "pabrik"}{" "}
-        perusahaan pada saat verifikasi lapangan dilakukan. Dokumentasi ini berfungsi sebagai bukti pendukung hasil
-        verifikasi.
+        Surveyor dapat mengunggah dokumentasi visual yang menunjukkan kondisi {kind === "GUDANG" ? "gudang" : "pabrik"}{" "}
+        perusahaan pada saat verifikasi lapangan dilakukan sebagai bukti pendukung hasil verifikasi (opsional).
       </p>
 
-      {filledCount < MIN_DOCUMENTATION_REQUIRED && (
-        <div className="mb-4 text-[13px] font-bold text-[#dc2626]">
-          Minimal {MIN_DOCUMENTATION_REQUIRED} dokumentasi wajib diunggah ({filledCount}/{MIN_DOCUMENTATION_REQUIRED}).
-        </div>
+      {filledCount > 0 && (
+        <div className="mb-4 text-[13px] font-semibold text-[#4a5568]">Dokumentasi diunggah: {filledCount}</div>
       )}
 
       <div className="mb-1 flex flex-col gap-3.5">

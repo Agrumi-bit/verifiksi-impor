@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { MaterialIcon } from "../material-icon";
 import { SectionShell } from "./section-shell";
-import { DOC_TYPE_DEFS, MIN_DOCUMENTATION_REQUIRED, type DocumentationItemValues, type DocumentationOtherItemValues } from "./schema";
+import { DOC_TYPE_DEFS, type DocumentationItemValues, type DocumentationOtherItemValues } from "./schema";
 
 type UploadState = { uploading: boolean; error?: string; previewUrl?: string };
 
@@ -89,14 +89,12 @@ export function Section6Documentation({
   return (
     <SectionShell index={6} title="Dokumentasi Lapangan" onSave={onSave} onSaveNext={onSaveNext} isSaving={isSaving}>
       <p className="mb-4 text-[13.5px] leading-relaxed text-[#4a5568]">
-        Surveyor diwajibkan untuk mengunggah dokumentasi visual yang menunjukkan kondisi kantor perusahaan pada saat
-        verifikasi lapangan dilakukan. Dokumentasi ini berfungsi sebagai bukti pendukung hasil verifikasi.
+        Surveyor dapat mengunggah dokumentasi visual yang menunjukkan kondisi kantor perusahaan pada saat verifikasi
+        lapangan dilakukan sebagai bukti pendukung hasil verifikasi (opsional).
       </p>
 
-      {filledCount < MIN_DOCUMENTATION_REQUIRED && (
-        <div className="mb-4 text-[13px] font-bold text-[#dc2626]">
-          Minimal {MIN_DOCUMENTATION_REQUIRED} dokumentasi wajib diunggah ({filledCount}/{MIN_DOCUMENTATION_REQUIRED}).
-        </div>
+      {filledCount > 0 && (
+        <div className="mb-4 text-[13px] font-semibold text-[#4a5568]">Dokumentasi diunggah: {filledCount}</div>
       )}
 
       <div className="mb-1 flex flex-col gap-3.5">

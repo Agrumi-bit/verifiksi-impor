@@ -21,7 +21,6 @@ import {
   ownershipQuestion,
   sectionTitles,
   sewaQuestions,
-  MIN_DOCUMENTATION_REQUIRED,
   type AnswerValues,
   type FieldKind,
   type FieldVerificationValues,
@@ -1029,7 +1028,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
           </h2>
           <p className="rd-lede">
             Dokumentasi visual yang menunjukkan kondisi {label.toLowerCase()} perusahaan pada saat verifikasi
-            lapangan dilakukan ({docsFilled} dari {fixedDocTypes.length + fv.documentationOther.length} diunggah, minimal {MIN_DOCUMENTATION_REQUIRED}).
+            lapangan dilakukan ({docsFilled} dari {fixedDocTypes.length + fv.documentationOther.length} diunggah, opsional).
           </p>
           <div className="rd-photo-grid">
             {fixedDocTypes.map((dt) => {

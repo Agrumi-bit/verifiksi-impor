@@ -140,8 +140,6 @@ export const DOC_TYPE_DEFS: { key: string; label: string }[] = [
   { key: "other", label: "Dokumentasi Lainnya" },
 ];
 
-export const MIN_DOCUMENTATION_REQUIRED = 3;
-
 export const SECTION_TITLES = [
   "Tanggal Verifikasi",
   "Kesesuaian Lokasi Berdasarkan Dokumen Resmi",
@@ -222,10 +220,8 @@ export function computeSectionKinds(
   const s4 = kindForKeys(SECTION4_QUESTIONS.map((q) => q.key), values.section4Answers);
   const s5 = kindForKeys(SECTION5_QUESTIONS.map((q) => q.key), values.section5Answers);
 
-  const docCount =
-    Object.values(values.documentation).filter((d) => d.filePath).length +
-    values.documentationOther.filter((d) => d.filePath).length;
-  const s6: SectionKind = docCount >= MIN_DOCUMENTATION_REQUIRED ? "ok" : "unfilled";
+  // Dokumentasi Lapangan is optional — no minimum count, so this section is never "unfilled".
+  const s6: SectionKind = "ok";
 
   const findingsCount = computeFindings(values).length;
   const s7: SectionKind = findingsCount > 0 ? "issue" : "ok";

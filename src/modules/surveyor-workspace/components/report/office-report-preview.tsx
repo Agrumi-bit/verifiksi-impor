@@ -11,7 +11,6 @@ import {
   emptyOfficeVerification,
   officeVerificationSchema,
   DOC_TYPE_DEFS,
-  MIN_DOCUMENTATION_REQUIRED,
   OWNERSHIP_QUESTION,
   SECTION2_QUESTIONS,
   SECTION4_QUESTIONS,
@@ -909,7 +908,7 @@ export function OfficeReportPreview({
           </h2>
           <p className="rd-lede">
             Dokumentasi visual yang menunjukkan kondisi kantor perusahaan pada saat verifikasi lapangan dilakukan (
-            {docsFilled} dari {fixedDocTypeDefs.length + ov.documentationOther.length} diunggah, minimal {MIN_DOCUMENTATION_REQUIRED}).
+            {docsFilled} dari {fixedDocTypeDefs.length + ov.documentationOther.length} diunggah, opsional).
           </p>
           <div className="rd-photo-grid">
             {fixedDocTypeDefs.map((dt) => {
