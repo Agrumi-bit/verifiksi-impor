@@ -51,10 +51,10 @@ export type CompanyProfileData = {
   nibDocumentPath: string;
   kbliEntries: KbliEntryValues[];
   kbliDocumentPath: string;
-  notarialDeedNumber: string;
-  notarialDeedIssueDate: string;
-  notarialIssuingAuthority: string;
-  notarialDocumentPath: string;
+  notarialDeedNumber: string | null;
+  notarialDeedIssueDate: string | null;
+  notarialIssuingAuthority: string | null;
+  notarialDocumentPath: string | null;
   notarialAmendmentNumber: string | null;
   notarialAmendmentDate: string | null;
   notarialAmendmentAuthority: string | null;
@@ -141,10 +141,10 @@ function toDefaultValues(data: CompanyProfileData): CompanyWizardValues {
     // positional convention (first entry = Utama) so existing data still renders correctly.
     kbliEntries: (data.kbliEntries ?? []).map((k, i) => ({ ...k, category: (i === 0 ? "UTAMA" : "PENDUKUNG") as KbliCategory })),
     kbliDocumentPath: data.kbliDocumentPath,
-    notarialDeedNumber: data.notarialDeedNumber,
-    notarialDeedIssueDate: data.notarialDeedIssueDate.slice(0, 10),
-    notarialIssuingAuthority: data.notarialIssuingAuthority,
-    notarialDocumentPath: data.notarialDocumentPath,
+    notarialDeedNumber: data.notarialDeedNumber ?? "",
+    notarialDeedIssueDate: data.notarialDeedIssueDate?.slice(0, 10) ?? "",
+    notarialIssuingAuthority: data.notarialIssuingAuthority ?? "",
+    notarialDocumentPath: data.notarialDocumentPath ?? "",
     hasAmendment: Boolean(data.notarialAmendmentNumber),
     notarialAmendmentNumber: data.notarialAmendmentNumber ?? "",
     notarialAmendmentDate: data.notarialAmendmentDate?.slice(0, 10) ?? "",

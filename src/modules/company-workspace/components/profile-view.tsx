@@ -787,8 +787,8 @@ function LegalTab({ data, onView }: { data: CompanyProfileData; onView: (doc: Vi
         verificationStatus={documentMetaFor(data, "notarialDocumentPath").verificationStatus}
         verifiedByRole={documentMetaFor(data, "notarialDocumentPath").verifiedByRole}
         fields={[
-          { label: "Nomor Akta", value: data.notarialDeedNumber },
-          { label: "Nama Notaris", value: data.notarialIssuingAuthority },
+          { label: "Nomor Akta", value: data.notarialDeedNumber ?? "" },
+          { label: "Nama Notaris", value: data.notarialIssuingAuthority ?? "" },
         ]}
       />
       {data.notarialAmendmentNumber && (

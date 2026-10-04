@@ -78,9 +78,9 @@ export function VkiStep3Legal({ form }: Props) {
         title="Akta Pendirian"
         desc="Akta pendirian perusahaan dari notaris"
         fields={[
-          { label: "Nomor Akta", value: values.notarialDeedNumber },
-          { label: "Tanggal Terbit", value: fmtDate(values.notarialDeedIssueDate) },
-          { label: "Notaris", value: values.notarialIssuingAuthority },
+          { label: "Nomor Akta", value: values.notarialDeedNumber ?? "" },
+          { label: "Tanggal Terbit", value: fmtDate(values.notarialDeedIssueDate ?? "") },
+          { label: "Notaris", value: values.notarialIssuingAuthority ?? "" },
         ]}
         documentPath={values.notarialDocumentPath}
       />

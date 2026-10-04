@@ -92,11 +92,11 @@ export const legalInformationSchema = z.object({
   nibDocumentPath: requiredString("Dokumen NIB wajib diunggah"),
   kbliEntries: z.array(kbliEntrySchema).min(1, "Tambahkan minimal satu KBLI"),
   kbliDocumentPath: requiredString("Dokumen daftar KBLI wajib diunggah"),
-  notarialDeedNumber: requiredString("Nomor akta notaris wajib diisi"),
-  notarialDeedIssueDate: requiredString("Tanggal terbit akta wajib diisi"),
-  notarialIssuingAuthority: requiredString("Nama notaris wajib diisi"),
+  notarialDeedNumber: z.string().trim().optional(),
+  notarialDeedIssueDate: z.string().trim().optional(),
+  notarialIssuingAuthority: z.string().trim().optional(),
   notarialAmendmentInfo: z.string().trim().optional(),
-  notarialDocumentPath: requiredString("Dokumen akta notaris wajib diunggah"),
+  notarialDocumentPath: z.string().trim().optional(),
 });
 export type LegalInformationValues = z.infer<typeof legalInformationSchema>;
 

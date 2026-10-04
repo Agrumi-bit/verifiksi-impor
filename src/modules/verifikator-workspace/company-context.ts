@@ -42,10 +42,10 @@ export function toCompanyLegalContext(
     nibNumber: string;
     nibIssueDate: Date;
     nibDocumentPath: string;
-    notarialDeedNumber: string;
-    notarialDeedIssueDate: Date;
-    notarialIssuingAuthority: string;
-    notarialDocumentPath: string;
+    notarialDeedNumber: string | null;
+    notarialDeedIssueDate: Date | null;
+    notarialIssuingAuthority: string | null;
+    notarialDocumentPath: string | null;
     notarialAmendmentNumber: string | null;
     notarialAmendmentDate: Date | null;
     notarialAmendmentAuthority: string | null;
@@ -68,7 +68,7 @@ export function toCompanyLegalContext(
     nibIssueDate: company.nibIssueDate.toISOString(),
     nibDocumentPath: company.nibDocumentPath,
     notarialDeedNumber: company.notarialDeedNumber,
-    notarialDeedIssueDate: company.notarialDeedIssueDate.toISOString(),
+    notarialDeedIssueDate: company.notarialDeedIssueDate ? company.notarialDeedIssueDate.toISOString() : null,
     notarialIssuingAuthority: company.notarialIssuingAuthority,
     notarialDocumentPath: company.notarialDocumentPath,
     notarialAmendmentNumber: company.notarialAmendmentNumber,

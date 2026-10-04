@@ -81,17 +81,17 @@ export function Step6Review({
         <Row label="NIB" value={values.nibNumber} />
         <Row label="NIB Tanggal Terbit" value={values.nibIssueDate} />
         <Row label="KBLI" value={kbliSummary} />
-        <Row label="Notarial Deed No." value={values.notarialDeedNumber} />
-        <Row label="Notarial Deed Tanggal" value={values.notarialDeedIssueDate} />
-        <Row label="Issuing Authority" value={values.notarialIssuingAuthority} />
+        <Row label="Notarial Deed No." value={values.notarialDeedNumber ?? ""} />
+        <Row label="Notarial Deed Tanggal" value={values.notarialDeedIssueDate ?? ""} />
+        <Row label="Issuing Authority" value={values.notarialIssuingAuthority ?? ""} />
         {values.hasAmendment && (
           <>
             <Row label="Akta Perubahan No." value={values.notarialAmendmentNumber ?? ""} />
             <Row label="Akta Perubahan Tanggal" value={values.notarialAmendmentDate ?? ""} />
           </>
         )}
-        <Row label="SK Kemenkumham No." value={values.skNumber} />
-        <Row label="SK Tanggal Terbit" value={values.skDate} />
+        <Row label="SK Kemenkumham No." value={values.skNumber ?? ""} />
+        <Row label="SK Tanggal Terbit" value={values.skDate ?? ""} />
       </ReviewCard>
 
       <ReviewCard title="Pajak" onEdit={() => onEditStep(4)}>

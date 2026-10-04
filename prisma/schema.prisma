@@ -236,11 +236,11 @@ model Company {
   nibDocumentPath          String
   kbliEntries              Json
   kbliDocumentPath         String
-  notarialDeedNumber       String
-  notarialDeedIssueDate    DateTime
-  notarialIssuingAuthority String
+  notarialDeedNumber       String?
+  notarialDeedIssueDate    DateTime?
+  notarialIssuingAuthority String?
   notarialAmendmentInfo    String?
-  notarialDocumentPath     String
+  notarialDocumentPath     String?
 
   notarialAmendmentNumber    String?
   notarialAmendmentDate      DateTime?

@@ -112,26 +112,26 @@ export async function patchCompanyProfileSection(
         nibDocumentPath: v.nibDocumentPath,
         kbliEntries: v.kbliEntries,
         kbliDocumentPath: v.kbliDocumentPath,
-        notarialDeedNumber: v.notarialDeedNumber,
-        notarialDeedIssueDate: new Date(v.notarialDeedIssueDate),
-        notarialIssuingAuthority: v.notarialIssuingAuthority,
-        notarialDocumentPath: v.notarialDocumentPath,
+        notarialDeedNumber: v.notarialDeedNumber || null,
+        notarialDeedIssueDate: v.notarialDeedIssueDate ? new Date(v.notarialDeedIssueDate) : null,
+        notarialIssuingAuthority: v.notarialIssuingAuthority || null,
+        notarialDocumentPath: v.notarialDocumentPath || null,
         notarialAmendmentNumber: v.hasAmendment ? v.notarialAmendmentNumber || null : null,
         notarialAmendmentDate: v.hasAmendment && v.notarialAmendmentDate ? new Date(v.notarialAmendmentDate) : null,
         notarialAmendmentAuthority: v.hasAmendment ? v.notarialAmendmentAuthority || null : null,
         notarialAmendmentDocPath: v.hasAmendment ? v.notarialAmendmentDocPath || null : null,
-        skNumber: v.skNumber,
-        skDate: new Date(v.skDate),
-        skDocumentPath: v.skDocumentPath,
+        skNumber: v.skNumber || null,
+        skDate: v.skDate ? new Date(v.skDate) : null,
+        skDocumentPath: v.skDocumentPath || null,
       },
     });
 
     const newLegalDocs: Record<string, string | null> = {
       nibDocumentPath: v.nibDocumentPath,
       kbliDocumentPath: v.kbliDocumentPath,
-      notarialDocumentPath: v.notarialDocumentPath,
+      notarialDocumentPath: v.notarialDocumentPath || null,
       notarialAmendmentDocPath: v.hasAmendment ? v.notarialAmendmentDocPath || null : null,
-      skDocumentPath: v.skDocumentPath,
+      skDocumentPath: v.skDocumentPath || null,
     };
     await Promise.all(
       Object.entries(newLegalDocs)

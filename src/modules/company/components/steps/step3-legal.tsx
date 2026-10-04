@@ -215,21 +215,21 @@ export function Step3Legal({ form }: { form: UseFormReturn<CompanyWizardValues> 
 
       <CollapsibleCard
         title="Notarial Deed (Akta Notaris)"
-        description="Dokumen akta pendirian perusahaan yang diterbitkan oleh notaris"
+        description="Opsional — dokumen akta pendirian perusahaan yang diterbitkan oleh notaris"
         saved={deedSaved}
         open={deedOpen}
         onToggle={() => setDeedOpen((v) => !v)}
       >
         <div className="grid grid-cols-2 gap-3.5">
-          <Field label="Notarial Deed Number" required error={errors.notarialDeedNumber?.message} hint="Nomor akta notaris.">
+          <Field label="Notarial Deed Number" error={errors.notarialDeedNumber?.message} hint="Nomor akta notaris.">
             <TextInput variant="white" placeholder="e.g. No. 15" {...register("notarialDeedNumber")} />
           </Field>
-          <Field label="Date of Issue" required error={errors.notarialDeedIssueDate?.message}>
+          <Field label="Date of Issue" error={errors.notarialDeedIssueDate?.message}>
             <TextInput variant="white" type="date" {...register("notarialDeedIssueDate")} />
           </Field>
         </div>
         <div className="mt-3.5">
-          <Field label="Issuing Authority" required error={errors.notarialIssuingAuthority?.message}>
+          <Field label="Issuing Authority" error={errors.notarialIssuingAuthority?.message}>
             <TextInput variant="white" placeholder="e.g. Notaris Budi Santoso, SH., M.Kn" {...register("notarialIssuingAuthority")} />
           </Field>
         </div>
@@ -276,7 +276,7 @@ export function Step3Legal({ form }: { form: UseFormReturn<CompanyWizardValues> 
           </div>
         )}
         <div className="mt-3.5">
-          <Field label="Upload Document" required error={errors.notarialDocumentPath?.message}>
+          <Field label="Upload Document" error={errors.notarialDocumentPath?.message}>
             <Controller
               control={control}
               name="notarialDocumentPath"
@@ -295,21 +295,21 @@ export function Step3Legal({ form }: { form: UseFormReturn<CompanyWizardValues> 
 
       <CollapsibleCard
         title="SK Kemenkumham"
-        description="Surat Keputusan pengesahan badan hukum dari Kementerian Hukum dan HAM"
+        description="Opsional — Surat Keputusan pengesahan badan hukum dari Kementerian Hukum dan HAM"
         saved={skSaved}
         open={skOpen}
         onToggle={() => setSkOpen((v) => !v)}
       >
         <div className="grid grid-cols-2 gap-3.5">
-          <Field label="SK Number" required error={errors.skNumber?.message} hint="Nomor SK pengesahan Kemenkumham.">
+          <Field label="SK Number" error={errors.skNumber?.message} hint="Nomor SK pengesahan Kemenkumham.">
             <TextInput variant="white" placeholder="e.g. AHU-0012345.AH.01.01.Tahun 2018" {...register("skNumber")} />
           </Field>
-          <Field label="Date of Issue" required error={errors.skDate?.message}>
+          <Field label="Date of Issue" error={errors.skDate?.message}>
             <TextInput variant="white" type="date" {...register("skDate")} />
           </Field>
         </div>
         <div className="mt-3.5">
-          <Field label="Upload Document" required error={errors.skDocumentPath?.message}>
+          <Field label="Upload Document" error={errors.skDocumentPath?.message}>
             <Controller
               control={control}
               name="skDocumentPath"

@@ -84,18 +84,20 @@ export const companyLegalSchema = z.object({
     .min(1, "Tambahkan minimal satu KBLI")
     .refine((entries) => entries.some((e) => e.category === "UTAMA"), "Tambahkan minimal satu KBLI Utama"),
   kbliDocumentPath: requiredString("Dokumen daftar KBLI wajib diunggah"),
-  notarialDeedNumber: requiredString("Nomor akta notaris wajib diisi"),
-  notarialDeedIssueDate: requiredString("Tanggal terbit akta wajib diisi"),
-  notarialIssuingAuthority: requiredString("Nama notaris wajib diisi"),
-  notarialDocumentPath: requiredString("Dokumen akta notaris wajib diunggah"),
+  // Akta Pendirian + SK Kemenkumham are optional — only NIB and KBLI are
+  // mandatory for the Legal step.
+  notarialDeedNumber: z.string().trim().optional(),
+  notarialDeedIssueDate: z.string().trim().optional(),
+  notarialIssuingAuthority: z.string().trim().optional(),
+  notarialDocumentPath: z.string().trim().optional(),
   hasAmendment: z.boolean().default(false),
   notarialAmendmentNumber: z.string().trim().optional(),
   notarialAmendmentDate: z.string().trim().optional(),
   notarialAmendmentAuthority: z.string().trim().optional(),
   notarialAmendmentDocPath: z.string().trim().optional(),
-  skNumber: requiredString("Nomor SK Kemenkumham wajib diisi"),
-  skDate: requiredString("Tanggal terbit SK wajib diisi"),
-  skDocumentPath: requiredString("Dokumen SK Kemenkumham wajib diunggah"),
+  skNumber: z.string().trim().optional(),
+  skDate: z.string().trim().optional(),
+  skDocumentPath: z.string().trim().optional(),
 });
 export type CompanyLegalValues = z.infer<typeof companyLegalSchema>;
 
