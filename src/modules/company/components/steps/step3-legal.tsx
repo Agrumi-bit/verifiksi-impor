@@ -3,13 +3,28 @@
 import { useState } from "react";
 import { Controller, useFieldArray, type UseFormReturn } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { KBLI_VERSIONS } from "@/modules/master-data/schema";
 
 import { Field, TextInput, CollapsibleCard, UploadBox } from "../wizard-ui";
-import type { CompanyWizardValues, CompanyKbliEntryValues, KbliCategory } from "../../schema";
+import {
+  API_U_KBLI_UTAMA_ERROR,
+  API_U_KBLI_UTAMA_OPTIONS,
+  isAllowedApiUKbliUtama,
+  type CompanyWizardValues,
+  type CompanyKbliEntryValues,
+  type KbliCategory,
+} from "../../schema";
 
 type KbliMasterDataRow = { id: string; code: string; description: string; version: string; status: "ACTIVE" | "INACTIVE" };
+
+/** API-U's fixed KBLI Utama list in the same shape as master data rows, so it can feed the same suggestion list. */
+const API_U_KBLI_UTAMA_ROWS: KbliMasterDataRow[] = API_U_KBLI_UTAMA_OPTIONS.map((option) => ({
+  id: `api-u-${option.code}-${option.version}`,
+  ...option,
+  status: "ACTIVE",
+}));
 
 /** Newest KBLI version first (KBLI_VERSIONS order), then by code — so suggestions lead with current codes. */
 function versionOrdered(rows: KbliMasterDataRow[]): KbliMasterDataRow[] {
@@ -46,6 +61,8 @@ function KbliCategoryCard({
   onAdd,
   onRemove,
   emptyHint,
+  note,
+  isEntryAllowed,
 }: {
   title: string;
   category: KbliCategory;
@@ -54,6 +71,10 @@ function KbliCategoryCard({
   onAdd: (category: KbliCategory, query: string, option?: KbliMasterDataRow) => void;
   onRemove: (index: number) => void;
   emptyHint: string;
+  /** Shown under the title — e.g. that API-U limits which KBLI Utama can be picked. */
+  note?: string;
+  /** Entries failing this are flagged in red (e.g. picked before the API type changed). */
+  isEntryAllowed?: (entry: CompanyKbliEntryValues) => boolean;
 }) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -76,6 +97,7 @@ function KbliCategoryCard({
   return (
     <div className="rounded-lg border border-[#e8dccd] bg-[#fbf8f4] p-3.5">
       <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[#a68f80]">{title}</div>
+      {note && <p className="-mt-1 mb-2 text-[11px] font-semibold text-[#c14a1f]">{note}</p>}
       <div className="mb-2.5 flex gap-2">
         <div className="relative flex-1">
           <TextInput
@@ -136,7 +158,12 @@ function KbliCategoryCard({
       {items.length > 0 ? (
         <div className="flex flex-col gap-2">
           {items.map(({ id, entry, index }) => (
-            <div key={id} className="flex items-start justify-between gap-2 rounded-md border border-[#f0ded0] bg-white p-2.5">
+            <div
+              key={id}
+              className={`flex items-start justify-between gap-2 rounded-md border bg-white p-2.5 ${
+                entry && isEntryAllowed && !isEntryAllowed(entry) ? "border-[#e5a5a5]" : "border-[#f0ded0]"
+              }`}
+            >
               <div>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-[12.5px] font-bold text-[#c14a1f]">{entry?.code}</span>
@@ -145,6 +172,9 @@ function KbliCategoryCard({
                   )}
                 </div>
                 <div className="mt-0.5 text-[11.5px] text-[#6b5b4c]">{entry?.description}</div>
+                {entry && isEntryAllowed && !isEntryAllowed(entry) && (
+                  <div className="mt-1 text-[11px] font-semibold text-[#ba1a1a]">Tidak diizinkan untuk API-U — hapus dan pilih dari daftar.</div>
+                )}
               </div>
               <button type="button" onClick={() => onRemove(index)} aria-label={`Hapus KBLI ${entry?.code}`} className="shrink-0 text-[#a68f80]">
                 ✕
@@ -185,11 +215,19 @@ export function Step3Legal({ form }: { form: UseFormReturn<CompanyWizardValues> 
   const kbliUtamaItems = kbliItems.filter((item) => item.entry?.category === "UTAMA");
   const kbliPendukungItems = kbliItems.filter((item) => item.entry?.category !== "UTAMA");
 
+  const isApiU = watch("apiType") === "API-U";
+  const utamaOptions = isApiU ? API_U_KBLI_UTAMA_ROWS : kbliOptions;
+
   function handleAddKbli(category: KbliCategory, query: string, option?: KbliMasterDataRow) {
     const trimmed = query.trim();
     if (!trimmed) return;
+    const options = category === "UTAMA" ? utamaOptions : kbliOptions;
     // Typed code + "Add KBLI" without picking a suggestion: take the newest version that has it.
-    const match = option ?? versionOrdered(kbliOptions).find((k) => k.code === trimmed);
+    const match = option ?? versionOrdered(options).find((k) => k.code === trimmed);
+    if (category === "UTAMA" && isApiU && !match) {
+      toast.error(API_U_KBLI_UTAMA_ERROR);
+      return;
+    }
     appendKbli(
       match
         ? { code: match.code, description: match.description, category, version: match.version }
@@ -254,7 +292,9 @@ export function Step3Legal({ form }: { form: UseFormReturn<CompanyWizardValues> 
             title="KBLI Utama"
             category="UTAMA"
             items={kbliUtamaItems}
-            kbliOptions={kbliOptions}
+            kbliOptions={utamaOptions}
+            note={isApiU ? "API-U: KBLI Utama hanya dapat dipilih dari daftar yang diizinkan." : undefined}
+            isEntryAllowed={isApiU ? isAllowedApiUKbliUtama : undefined}
             onAdd={handleAddKbli}
             onRemove={removeKbli}
             emptyHint="Belum ada KBLI Utama — cari dan tambahkan kode di atas."

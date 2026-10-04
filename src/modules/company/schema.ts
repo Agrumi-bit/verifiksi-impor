@@ -16,6 +16,45 @@ const optionalUrl = z.string().trim().url("URL tidak valid").optional().or(z.lit
 export const API_TYPES = ["API-P", "API-U"] as const;
 export type ApiType = (typeof API_TYPES)[number];
 
+/**
+ * The only KBLI Utama an API-U (Angka Pengenal Importir Umum) company may register — one entry
+ * per (code, version) pair, since a few codes are allowed in one KBLI version only or carry a
+ * different title per version (46414). API-P companies are not restricted.
+ */
+export const API_U_KBLI_UTAMA_OPTIONS = [
+  { code: "46411", description: "Perdagangan Besar Tekstil", version: "KBLI 2025" },
+  { code: "46411", description: "Perdagangan Besar Tekstil", version: "KBLI 2020" },
+  { code: "46412", description: "Perdagangan Besar Pakaian", version: "KBLI 2025" },
+  { code: "46412", description: "Perdagangan Besar Pakaian", version: "KBLI 2020" },
+  { code: "46414", description: "Perdagangan Besar Barang Jadi Tekstil", version: "KBLI 2025" },
+  { code: "46414", description: "Perdagangan Besar Barang Lainnya Dari Tekstil", version: "KBLI 2020" },
+  { code: "46499", description: "Perdagangan Besar Berbagai Barang dan Perlengkapan Rumah Tangga Lainnya YTDL", version: "KBLI 2025" },
+  { code: "46499", description: "Perdagangan Besar Berbagai Barang dan Perlengkapan Rumah Tangga Lainnya YTDL", version: "KBLI 2020" },
+  { code: "46691", description: "Perdagangan Besar Alat Laboratorium, Alat Farmasi Dan Alat Kedokteran Untuk Manusia", version: "KBLI 2020" },
+  { code: "46699", description: "Perdagangan Besar Produk Lainnya YTDL", version: "KBLI 2020" },
+  { code: "46100", description: "Perdagangan Besar Atas Dasar Balas Jasa (Fee) Atau Kontrak", version: "KBLI 2025" },
+  { code: "46100", description: "Perdagangan Besar Atas Dasar Balas Jasa (Fee) Atau Kontrak", version: "KBLI 2020" },
+  { code: "45301", description: "Perdagangan Besar Suku Cadang Dan Aksesori Mobil", version: "KBLI 2020" },
+  { code: "46795", description: "Perdagangan Besar Barang dari Kertas dan Karton", version: "KBLI 2025" },
+] as const;
+
+/**
+ * Whether a KBLI Utama entry is allowed for an API-U company. An entry saved before KBLI
+ * versions were recorded has no `version`; it passes as long as its code is on the list.
+ */
+export function isAllowedApiUKbliUtama(entry: { code: string; version?: string }): boolean {
+  return API_U_KBLI_UTAMA_OPTIONS.some(
+    (option) => option.code === entry.code.trim() && (!entry.version || option.version === entry.version),
+  );
+}
+
+export const API_U_KBLI_UTAMA_ERROR = "Perusahaan API-U hanya dapat memilih KBLI Utama dari daftar yang diizinkan";
+
+/** Index of the first KBLI Utama entry an API-U company may not register, or -1 when all are allowed. */
+export function findDisallowedApiUKbliUtama(entries: { code: string; category?: string; version?: string }[]): number {
+  return entries.findIndex((entry) => entry.category === "UTAMA" && !isAllowedApiUKbliUtama(entry));
+}
+
 export const COMPANY_LEGAL_TYPES = ["PT", "CV", "Firma", "Koperasi", "Perusahaan Perorangan"] as const;
 export type CompanyLegalType = (typeof COMPANY_LEGAL_TYPES)[number];
 
@@ -139,6 +178,9 @@ export const companyWizardSchema = companyDataSchema
     // applies to API-U — API-P companies skip the whole question.
     if (data.apiType === "API-U" && !data.companyAge) {
       ctx.addIssue({ code: "custom", path: ["companyAge"], message: "Pilih usia perusahaan" });
+    }
+    if (data.apiType === "API-U" && findDisallowedApiUKbliUtama(data.kbliEntries) !== -1) {
+      ctx.addIssue({ code: "custom", path: ["kbliEntries"], message: API_U_KBLI_UTAMA_ERROR });
     }
   });
 

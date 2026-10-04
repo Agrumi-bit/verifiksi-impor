@@ -6,10 +6,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { createEmptyLocation } from "@/modules/shared/schema";
 import {
+  API_U_KBLI_UTAMA_ERROR,
   companyWizardSchema,
   createEmptyContact,
   createEmptyTaxProofs,
   COMPANY_STEP_FIELD_NAMES,
+  findDisallowedApiUKbliUtama,
   type CompanyWizardValues,
 } from "../schema";
 
@@ -36,6 +38,16 @@ export function useCompanyWizard() {
     const fields = COMPANY_STEP_FIELD_NAMES[currentStep] ?? [];
     const isValid = await form.trigger(fields);
     if (!isValid) return false;
+    // The schema-level API-U KBLI Utama rule only runs once every step's fields are valid, so
+    // the Legal step checks it itself rather than letting a disallowed code through to Review.
+    if (
+      currentStep === 3 &&
+      form.getValues("apiType") === "API-U" &&
+      findDisallowedApiUKbliUtama(form.getValues("kbliEntries") ?? []) !== -1
+    ) {
+      form.setError("kbliEntries", { type: "custom", message: API_U_KBLI_UTAMA_ERROR });
+      return false;
+    }
     setCurrentStep((step) => Math.min(TOTAL_STEPS, step + 1));
     return true;
   }
