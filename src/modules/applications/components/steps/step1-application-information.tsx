@@ -233,8 +233,8 @@ export function Step1ApplicationInformation({ form }: Step1Props) {
           <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
             Berdasarkan Pasal 26 dan Pasal 37 Permenperin No. 27 Tahun 2025, terdapat 3 jenis
             permohonan VIU untuk Perusahaan API-U, masing-masing mensyaratkan KBLI tertentu.
-            Jenis permohonan hanya dapat dipilih bila perusahaan memiliki salah satu KBLI yang
-            dipersyaratkan. Dokumen pendukung akan disesuaikan otomatis berdasarkan pilihan ini.
+            Jenis permohonan hanya dapat dipilih bila KBLI Utama perusahaan termasuk salah satu KBLI
+            yang dipersyaratkan. Dokumen pendukung akan disesuaikan otomatis berdasarkan pilihan ini.
             Multi-pilih diperbolehkan.
           </p>
           <Controller
@@ -286,17 +286,17 @@ export function Step1ApplicationInformation({ form }: Step1Props) {
                               {option.description}
                             </p>
                             <p className="text-xs">
-                              <span className="font-semibold">KBLI yang dipersyaratkan:</span>{" "}
+                              <span className="font-semibold">KBLI Utama yang dipersyaratkan:</span>{" "}
                               {VIU_REQUIRED_KBLI[type].join(", ")}
                             </p>
                             {isApiU &&
                               (isAllowed ? (
                                 <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                                  ✓ KBLI perusahaan yang memenuhi: {matched.join(", ")}
+                                  ✓ KBLI Utama perusahaan yang memenuhi: {matched.join(", ")}
                                 </p>
                               ) : (
                                 <p className="text-xs font-medium text-destructive">
-                                  Tidak dapat dipilih — perusahaan belum memiliki KBLI yang dipersyaratkan.
+                                  Tidak dapat dipilih — KBLI Utama perusahaan tidak termasuk KBLI yang dipersyaratkan.
                                 </p>
                               ))}
                           </div>

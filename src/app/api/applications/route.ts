@@ -93,7 +93,7 @@ export async function POST(request: Request) {
       where: { id: values.companyId },
       select: { apiType: true, kbliEntries: true },
     });
-    const companyKbli = Array.isArray(company?.kbliEntries) ? (company.kbliEntries as { code: string }[]) : [];
+    const companyKbli = Array.isArray(company?.kbliEntries) ? (company.kbliEntries as { code: string; category?: "UTAMA" | "PENDUKUNG" }[]) : [];
     const disallowed = company ? findDisallowedViuImportType(values.importTypes, company.apiType, companyKbli) : undefined;
     if (disallowed) {
       return NextResponse.json({ error: viuKbliRequirementMessage(disallowed) }, { status: 400 });

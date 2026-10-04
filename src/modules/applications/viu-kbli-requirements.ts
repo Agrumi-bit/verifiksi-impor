@@ -1,7 +1,9 @@
+import { splitKbliEntries, type KbliCategory } from "@/modules/shared/schema";
+
 /**
  * KBLI an API-U company must hold for each VIU application type — Pasal 26 and Pasal 37
- * Permenperin No. 27 Tahun 2025. A company qualifies for a type when any of its registered KBLI
- * (Utama or Pendukung) is in that type's list; the KBLI version doesn't matter here.
+ * Permenperin No. 27 Tahun 2025. A company qualifies for a type when one of its KBLI *Utama* is
+ * in that type's list — KBLI Pendukung don't count; the KBLI version doesn't matter here.
  *
  * Keys mirror `IMPORT_TYPES` in ./schema.ts — kept as plain literals so this module has no
  * import from schema.ts, which itself imports this file for its submit rules.
@@ -14,11 +16,16 @@ export const VIU_REQUIRED_KBLI = {
 
 type ViuImportType = keyof typeof VIU_REQUIRED_KBLI;
 
-type KbliLike = { code: string };
+type KbliLike = { code: string; category?: KbliCategory };
 
-/** The company's KBLI codes that satisfy `importType`'s requirement, in the requirement's order. */
+/**
+ * The company's KBLI Utama codes that satisfy `importType`'s requirement, in the requirement's
+ * order. Entries saved before the Utama/Pendukung split carry no category; `splitKbliEntries`
+ * then treats the first entry as Utama, same as everywhere else in the app.
+ */
 export function matchingViuKbli(importType: ViuImportType, kbliEntries: readonly KbliLike[] | null | undefined): string[] {
-  const held = new Set((kbliEntries ?? []).map((entry) => entry.code.trim()));
+  const { utama } = splitKbliEntries([...(kbliEntries ?? [])]);
+  const held = new Set(utama.map((entry) => entry.code.trim()));
   return VIU_REQUIRED_KBLI[importType].filter((code) => held.has(code));
 }
 
@@ -51,5 +58,5 @@ const VIU_IMPORT_TYPE_SHORT_LABELS: Record<ViuImportType, string> = {
 };
 
 export function viuKbliRequirementMessage(importType: ViuImportType): string {
-  return `Jenis permohonan VIU API-U – ${VIU_IMPORT_TYPE_SHORT_LABELS[importType]} mensyaratkan perusahaan memiliki salah satu KBLI: ${VIU_REQUIRED_KBLI[importType].join(", ")}.`;
+  return `Jenis permohonan VIU API-U – ${VIU_IMPORT_TYPE_SHORT_LABELS[importType]} mensyaratkan KBLI Utama perusahaan salah satu dari: ${VIU_REQUIRED_KBLI[importType].join(", ")}.`;
 }
