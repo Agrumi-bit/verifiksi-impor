@@ -10,6 +10,7 @@ import {
   type ImportType,
   type VerificationType,
 } from "../../schema";
+import { isViuImportTypeAllowed, matchingViuKbli, VIU_REQUIRED_KBLI } from "../../viu-kbli-requirements";
 
 const REQUIRED_VERIFICATION_TYPE: Record<string, VerificationType> = {
   "API-P": "VKI",
@@ -67,23 +68,21 @@ const IMPORT_TYPE_OPTIONS: Record<
   { title: string; tags: string[]; docCount: string; description: string }
 > = {
   BAHAN_BAKU_INDUSTRI: {
-    title:
-      "Impor Bahan Baku dan/atau Bahan Penolong – Perusahaan Industri (API-U)",
+    title: "VIU API-U – Bahan Baku dan/atau Bahan Penolong bagi Perusahaan Industri",
     tags: ["API-U", "INDUSTRI"],
     docCount: "7 dok",
     description:
       "Digunakan untuk impor bahan baku yang akan diproses dalam kegiatan produksi industri.",
   },
   BAHAN_BAKU_NON_INDUSTRI: {
-    title:
-      "Impor Bahan Baku dan/atau Bahan Penolong – Perusahaan Non Industri (API-U)",
+    title: "VIU API-U – Bahan Baku dan/atau Bahan Penolong bagi Perusahaan Non Industri",
     tags: ["API-U", "NON INDUSTRI"],
     docCount: "4 dok",
     description:
       "Digunakan untuk perusahaan non industri yang mengimpor bahan baku untuk disalurkan kepada perusahaan non industri.",
   },
   BARANG_KONSUMSI: {
-    title: "Impor Barang Konsumsi",
+    title: "VIU API-U – Produk Tekstil sebagai Barang Konsumsi",
     tags: ["KONSUMSI", "RITEL"],
     docCount: "7 dok",
     description: "Digunakan untuk impor produk tekstil jadi untuk dijual di pasar.",
@@ -100,6 +99,18 @@ export function Step1ApplicationInformation({ form }: Step1Props) {
   const companyName = watch("companyName");
   const companyApiType = watch("companyApiType");
   const requiredType = companyApiType ? REQUIRED_VERIFICATION_TYPE[companyApiType] : undefined;
+  const kbliEntries = watch("kbliEntries");
+  const importTypes = watch("importTypes");
+  const isApiU = companyApiType === "API-U";
+
+  // A type the company doesn't qualify for renders disabled, so it couldn't be unticked by hand —
+  // drop it when the picked company (and with it the KBLI list) changes.
+  useEffect(() => {
+    const current = importTypes ?? [];
+    const allowed = current.filter((type) => isViuImportTypeAllowed(type, companyApiType, kbliEntries));
+    if (allowed.length !== current.length) setValue("importTypes", allowed, { shouldValidate: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyApiType, kbliEntries]);
 
   useEffect(() => {
     if (requiredType && verificationType !== requiredType) {
@@ -220,10 +231,11 @@ export function Step1ApplicationInformation({ form }: Step1Props) {
             Jenis Impor (Multi-select)
           </h2>
           <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
-            Field ini hanya berlaku untuk Application Type = VIU. Pilih satu
-            atau lebih jenis impor sesuai dengan kegiatan impor yang diajukan.
-            Dokumen pendukung di Step 6 akan disesuaikan otomatis berdasarkan
-            pilihan ini. Multi-pilih diperbolehkan.
+            Berdasarkan Pasal 26 dan Pasal 37 Permenperin No. 27 Tahun 2025, terdapat 3 jenis
+            permohonan VIU untuk Perusahaan API-U, masing-masing mensyaratkan KBLI tertentu.
+            Jenis permohonan hanya dapat dipilih bila perusahaan memiliki salah satu KBLI yang
+            dipersyaratkan. Dokumen pendukung akan disesuaikan otomatis berdasarkan pilihan ini.
+            Multi-pilih diperbolehkan.
           </p>
           <Controller
             control={control}
@@ -234,10 +246,13 @@ export function Step1ApplicationInformation({ form }: Step1Props) {
                   {IMPORT_TYPES.map((type, index) => {
                     const option = IMPORT_TYPE_OPTIONS[type];
                     const isSelected = field.value?.includes(type) ?? false;
+                    const isAllowed = isViuImportTypeAllowed(type, companyApiType, kbliEntries);
+                    const matched = matchingViuKbli(type, kbliEntries);
                     return (
                       <SelectableCard
                         key={type}
                         selected={isSelected}
+                        disabled={!isAllowed}
                         onSelect={() => {
                           const current = field.value ?? [];
                           const next = isSelected
@@ -270,6 +285,20 @@ export function Step1ApplicationInformation({ form }: Step1Props) {
                             <p className="text-xs text-muted-foreground">
                               {option.description}
                             </p>
+                            <p className="text-xs">
+                              <span className="font-semibold">KBLI yang dipersyaratkan:</span>{" "}
+                              {VIU_REQUIRED_KBLI[type].join(", ")}
+                            </p>
+                            {isApiU &&
+                              (isAllowed ? (
+                                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                                  ✓ KBLI perusahaan yang memenuhi: {matched.join(", ")}
+                                </p>
+                              ) : (
+                                <p className="text-xs font-medium text-destructive">
+                                  Tidak dapat dipilih — perusahaan belum memiliki KBLI yang dipersyaratkan.
+                                </p>
+                              ))}
                           </div>
                         </div>
                       </SelectableCard>

@@ -26,6 +26,7 @@ import {
 } from "./viu-schemes/konsumsi/schema";
 import { applyKonsumsiSubmitRules } from "./viu-schemes/konsumsi/submit-rules";
 import { KONSUMSI_STEP_FIELD_NAMES } from "./viu-schemes/konsumsi/step-field-names";
+import { findDisallowedViuImportType, viuKbliRequirementMessage } from "./viu-kbli-requirements";
 
 export {
   companyProfileSchema,
@@ -473,6 +474,13 @@ export function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardSh
       path: ["declarationAccepted"],
       message: "Anda harus menyetujui pernyataan ini sebelum submit",
     });
+  }
+  // Permenperin 27/2025 Pasal 26 & 37: each VIU type needs one of its listed KBLI on an API-U
+  // company. Checked here against the payload's company snapshot; POST /api/applications
+  // re-checks against the Company row itself.
+  const disallowedImportType = findDisallowedViuImportType(data.importTypes, data.companyApiType, data.kbliEntries);
+  if (disallowedImportType) {
+    ctx.addIssue({ code: "custom", path: ["importTypes"], message: viuKbliRequirementMessage(disallowedImportType) });
   }
   // Industri/Non-Industri rules — not yet separated into their own scheme
   // modules (Konsumsi is the first; see the VIU Konsumsi implementation

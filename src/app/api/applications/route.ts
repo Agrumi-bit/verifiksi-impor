@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { db } from "@/lib/db";
 import { applicationSubmitSchema, type ApplicationWizardValues, type LocationValues } from "@/modules/applications/schema";
+import { findDisallowedViuImportType, viuKbliRequirementMessage } from "@/modules/applications/viu-kbli-requirements";
 import { konsumsiScheme } from "@/modules/applications/viu-schemes/konsumsi/registry";
 import { syncMerkRelationshipsForApplication, syncQualityTestCertificatesForApplication } from "@/modules/merk/application-relationship-sync";
 
@@ -84,6 +85,20 @@ export async function POST(request: Request) {
   }
 
   let values: ApplicationWizardValues = parsed.data;
+
+  // The schema checked the VIU type ↔ KBLI rule against the payload's own company snapshot;
+  // re-check it against the Company row so a stale or edited payload can't bypass it.
+  if (values.verificationType === "VIU" && values.companyId) {
+    const company = await db.company.findUnique({
+      where: { id: values.companyId },
+      select: { apiType: true, kbliEntries: true },
+    });
+    const companyKbli = Array.isArray(company?.kbliEntries) ? (company.kbliEntries as { code: string }[]) : [];
+    const disallowed = company ? findDisallowedViuImportType(values.importTypes, company.apiType, companyKbli) : undefined;
+    if (disallowed) {
+      return NextResponse.json({ error: viuKbliRequirementMessage(disallowed) }, { status: 400 });
+    }
+  }
 
   // The generic `products` list is only meaningful for Bahan Baku Industri/Non Industri — a
   // Barang-Konsumsi-only (or VKI-only-fields-irrelevant) submission may still carry a stray

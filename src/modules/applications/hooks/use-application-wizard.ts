@@ -14,6 +14,7 @@ import {
   type ApplicationWizardValues,
 } from "../schema";
 import { createEmptyKonsumsiFinancialDocuments } from "../viu-schemes/konsumsi/schema";
+import { findDisallowedViuImportType, viuKbliRequirementMessage } from "../viu-kbli-requirements";
 import { getViuWizardSteps, VKI_WIZARD_STEPS } from "../wizard-steps-meta";
 
 export function useApplicationWizard() {
@@ -85,6 +86,20 @@ export function useApplicationWizard() {
         if (!step2Valid) {
           setCurrentStep(2);
           return false;
+        }
+        // VIU type ↔ company KBLI (Permenperin 27/2025) — the schema only runs this rule at
+        // Submit, so gate it here too rather than letting an ineligible type through.
+        if (!isVki) {
+          const disallowed = findDisallowedViuImportType(
+            form.getValues("importTypes") ?? [],
+            form.getValues("companyApiType"),
+            form.getValues("kbliEntries"),
+          );
+          if (disallowed) {
+            form.setError("importTypes", { type: "custom", message: viuKbliRequirementMessage(disallowed) });
+            setCurrentStep(2);
+            return false;
+          }
         }
         setGatePassed(true);
       }
