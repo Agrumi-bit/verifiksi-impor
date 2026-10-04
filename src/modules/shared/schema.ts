@@ -63,6 +63,9 @@ export const kbliEntrySchema = z.object({
   code: requiredString("Kode KBLI wajib diisi"),
   description: requiredString("Deskripsi KBLI wajib diisi"),
   category: z.enum(KBLI_CATEGORIES).optional(),
+  // e.g. "KBLI 2025" — the KbliMasterData version the code was picked from. Optional because
+  // entries saved before versions were tracked (and codes typed in freehand) carry none.
+  version: z.string().trim().optional(),
 });
 export type KbliEntryValues = z.infer<typeof kbliEntrySchema>;
 

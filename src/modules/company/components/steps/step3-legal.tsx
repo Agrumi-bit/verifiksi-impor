@@ -4,10 +4,12 @@ import { useState } from "react";
 import { Controller, useFieldArray, type UseFormReturn } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 
+import { KBLI_VERSIONS } from "@/modules/master-data/schema";
+
 import { Field, TextInput, CollapsibleCard, UploadBox } from "../wizard-ui";
 import type { CompanyWizardValues, CompanyKbliEntryValues, KbliCategory } from "../../schema";
 
-type KbliMasterDataRow = { id: string; code: string; description: string; status: "ACTIVE" | "INACTIVE" };
+type KbliMasterDataRow = { id: string; code: string; description: string; version: string; status: "ACTIVE" | "INACTIVE" };
 
 function useKbliOptions() {
   const { data } = useQuery({
@@ -79,7 +81,12 @@ function KbliCategoryCard({
           {items.map(({ id, entry, index }) => (
             <div key={id} className="flex items-start justify-between gap-2 rounded-md border border-[#f0ded0] bg-white p-2.5">
               <div>
-                <div className="text-[12.5px] font-bold text-[#c14a1f]">{entry?.code}</div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[12.5px] font-bold text-[#c14a1f]">{entry?.code}</span>
+                  {entry?.version && (
+                    <span className="rounded-full bg-[#fdeadd] px-1.5 py-px text-[10px] font-bold text-[#c14a1f]">{entry.version}</span>
+                  )}
+                </div>
                 <div className="mt-0.5 text-[11.5px] text-[#6b5b4c]">{entry?.description}</div>
               </div>
               <button type="button" onClick={() => onRemove(index)} aria-label={`Hapus KBLI ${entry?.code}`} className="shrink-0 text-[#a68f80]">
@@ -116,7 +123,12 @@ export function Step3Legal({ form }: { form: UseFormReturn<CompanyWizardValues> 
     control,
     name: "kbliEntries",
   });
-  const kbliOptions = useKbliOptions();
+  const allKbliOptions = useKbliOptions();
+  // Only offer versions that actually have active master data; default to the newest of those.
+  const availableVersions = KBLI_VERSIONS.filter((v) => allKbliOptions.some((k) => k.version === v));
+  const [pickedVersion, setPickedVersion] = useState<string | null>(null);
+  const kbliVersion = pickedVersion ?? availableVersions[0] ?? KBLI_VERSIONS[0];
+  const kbliOptions = allKbliOptions.filter((k) => k.version === kbliVersion);
   const kbliItems: KbliItem[] = kbliFields.map((field, index) => ({ id: field.id, entry: kbliEntries[index], index }));
   const kbliUtamaItems = kbliItems.filter((item) => item.entry?.category === "UTAMA");
   const kbliPendukungItems = kbliItems.filter((item) => item.entry?.category !== "UTAMA");
@@ -125,7 +137,11 @@ export function Step3Legal({ form }: { form: UseFormReturn<CompanyWizardValues> 
     const trimmed = query.trim();
     if (!trimmed) return;
     const match = kbliOptions.find((k) => k.code === trimmed);
-    appendKbli(match ? { code: match.code, description: match.description, category } : { code: trimmed, description: trimmed, category });
+    appendKbli(
+      match
+        ? { code: match.code, description: match.description, category, version: match.version }
+        : { code: trimmed, description: trimmed, category, version: kbliVersion },
+    );
   }
 
   const deedNumber = watch("notarialDeedNumber");
@@ -177,6 +193,22 @@ export function Step3Legal({ form }: { form: UseFormReturn<CompanyWizardValues> 
         open={kbliOpen}
         onToggle={() => setKbliOpen((v) => !v)}
       >
+        <div className="mb-3 max-w-60">
+          <Field label="Versi KBLI" hint="Daftar kode KBLI di bawah mengikuti versi yang dipilih.">
+            <select
+              value={kbliVersion}
+              onChange={(e) => setPickedVersion(e.target.value)}
+              className="w-full rounded-lg border border-[#e8dccd] bg-white px-3 py-2.5 text-[12.5px] text-[#20180f] outline-none"
+            >
+              {KBLI_VERSIONS.map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                  {availableVersions.length > 0 && !availableVersions.includes(v) ? " (belum ada data)" : ""}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <KbliCategoryCard
             title="KBLI Utama"

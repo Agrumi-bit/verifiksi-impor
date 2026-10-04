@@ -46,7 +46,7 @@ export function Step6Review({
   const address = [values.addressJalan, values.addressDesa, values.addressKecamatan, values.addressKota, values.addressProvinsi, values.addressKodePos]
     .filter(Boolean)
     .join(", ");
-  const kbliSummary = (values.kbliEntries ?? []).map((k) => k.code).join(", ");
+  const kbliSummary = (values.kbliEntries ?? []).map((k) => (k.version ? `${k.code} (${k.version})` : k.code)).join(", ");
 
   return (
     <div className="flex flex-col gap-4.5">

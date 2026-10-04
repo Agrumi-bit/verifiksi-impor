@@ -532,7 +532,7 @@ function AddressField({ label, value }: { label: string; value: string }) {
 type DocField = { label: string; value: string };
 
 /** Multiple KBLI codes side by side on one line is unreadable — one row per entry instead. */
-function KbliEntryList({ entries }: { entries: { code: string; description: string }[] }) {
+function KbliEntryList({ entries }: { entries: { code: string; description: string; version?: string }[] }) {
   if (entries.length === 0) {
     return <div className="text-[13px] text-[#9c8a79]">—</div>;
   }
@@ -540,7 +540,12 @@ function KbliEntryList({ entries }: { entries: { code: string; description: stri
     <div className="flex flex-col gap-2">
       {entries.map((entry, index) => (
         <div key={`${entry.code}-${index}`} className="rounded-lg bg-[#faf7f4] px-3 py-2">
-          <div className="text-[13px] font-bold text-[#20180f]">{entry.code || "—"}</div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[13px] font-bold text-[#20180f]">{entry.code || "—"}</span>
+            {entry.version && (
+              <span className="rounded-full bg-[#fdeadd] px-1.5 py-px text-[10.5px] font-bold text-[#c14a1f]">{entry.version}</span>
+            )}
+          </div>
           <div className="mt-0.5 text-[12px] text-[#594138]">{entry.description || "—"}</div>
         </div>
       ))}
