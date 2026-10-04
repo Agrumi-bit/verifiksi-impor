@@ -11,6 +11,15 @@ import type { CompanyWizardValues, CompanyKbliEntryValues, KbliCategory } from "
 
 type KbliMasterDataRow = { id: string; code: string; description: string; version: string; status: "ACTIVE" | "INACTIVE" };
 
+/** Newest KBLI version first (KBLI_VERSIONS order), then by code — so suggestions lead with current codes. */
+function versionOrdered(rows: KbliMasterDataRow[]): KbliMasterDataRow[] {
+  const rank = (version: string) => {
+    const i = (KBLI_VERSIONS as readonly string[]).indexOf(version);
+    return i === -1 ? KBLI_VERSIONS.length : i;
+  };
+  return [...rows].sort((a, b) => rank(a.version) - rank(b.version) || a.code.localeCompare(b.code));
+}
+
 function useKbliOptions() {
   const { data } = useQuery({
     queryKey: ["master-data-kbli", "options"],
@@ -18,11 +27,13 @@ function useKbliOptions() {
       const response = await fetch("/api/master-data/kbli");
       if (!response.ok) throw new Error("Gagal memuat data KBLI");
       const json = (await response.json()) as { data: KbliMasterDataRow[] };
-      return json.data;
+      return versionOrdered(json.data.filter((row) => row.status === "ACTIVE"));
     },
   });
-  return (data ?? []).filter((row) => row.status === "ACTIVE");
+  return data ?? [];
 }
+
+const MAX_KBLI_SUGGESTIONS = 50;
 
 type KbliItem = { id: string; entry: CompanyKbliEntryValues; index: number };
 
@@ -40,31 +51,77 @@ function KbliCategoryCard({
   category: KbliCategory;
   items: KbliItem[];
   kbliOptions: KbliMasterDataRow[];
-  onAdd: (category: KbliCategory, query: string) => void;
+  onAdd: (category: KbliCategory, query: string, option?: KbliMasterDataRow) => void;
   onRemove: (index: number) => void;
   emptyHint: string;
 }) {
   const [query, setQuery] = useState("");
-  const datalistId = `kbli-options-${category}`;
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Every version is listed side by side — a code present in both KBLI 2020 and 2025 shows up
+  // once per version, so picking the suggestion is what picks the version.
+  const needle = query.trim().toLowerCase();
+  const suggestions = (
+    needle
+      ? kbliOptions.filter((k) => k.code.toLowerCase().includes(needle) || k.description.toLowerCase().includes(needle))
+      : kbliOptions
+  ).slice(0, MAX_KBLI_SUGGESTIONS);
+
+  function pick(option: KbliMasterDataRow) {
+    onAdd(category, option.code, option);
+    setQuery("");
+    setIsOpen(false);
+  }
 
   return (
     <div className="rounded-lg border border-[#e8dccd] bg-[#fbf8f4] p-3.5">
       <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[#a68f80]">{title}</div>
       <div className="mb-2.5 flex gap-2">
-        <TextInput
-          variant="white"
-          placeholder="e.g. 13121 or Pertenunan"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          list={datalistId}
-        />
-        <datalist id={datalistId}>
-          {kbliOptions.map((k) => (
-            <option key={k.id} value={k.code}>
-              {k.description}
-            </option>
-          ))}
-        </datalist>
+        <div className="relative flex-1">
+          <TextInput
+            variant="white"
+            placeholder="e.g. 13121 or Pertenunan"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setIsOpen(true);
+            }}
+            onFocus={() => setIsOpen(true)}
+            onBlur={() => setIsOpen(false)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setIsOpen(false);
+            }}
+            role="combobox"
+            aria-expanded={isOpen}
+            aria-autocomplete="list"
+          />
+          {isOpen && suggestions.length > 0 && (
+            <ul
+              role="listbox"
+              className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-[#e8dccd] bg-white py-1 shadow-lg"
+            >
+              {suggestions.map((k) => (
+                <li
+                  key={k.id}
+                  role="option"
+                  aria-selected={false}
+                  // mousedown (not click) so the pick lands before the input's blur closes the list
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    pick(k);
+                  }}
+                  className="cursor-pointer px-3 py-2 hover:bg-[#fdeadd]/60"
+                >
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[12.5px] font-bold text-[#c14a1f]">{k.code}</span>
+                    <span className="rounded-full bg-[#fdeadd] px-1.5 py-px text-[10px] font-bold text-[#c14a1f]">{k.version}</span>
+                  </div>
+                  <div className="mt-0.5 text-[11.5px] text-[#6b5b4c]">{k.description}</div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => {
@@ -123,24 +180,20 @@ export function Step3Legal({ form }: { form: UseFormReturn<CompanyWizardValues> 
     control,
     name: "kbliEntries",
   });
-  const allKbliOptions = useKbliOptions();
-  // Only offer versions that actually have active master data; default to the newest of those.
-  const availableVersions = KBLI_VERSIONS.filter((v) => allKbliOptions.some((k) => k.version === v));
-  const [pickedVersion, setPickedVersion] = useState<string | null>(null);
-  const kbliVersion = pickedVersion ?? availableVersions[0] ?? KBLI_VERSIONS[0];
-  const kbliOptions = allKbliOptions.filter((k) => k.version === kbliVersion);
+  const kbliOptions = useKbliOptions();
   const kbliItems: KbliItem[] = kbliFields.map((field, index) => ({ id: field.id, entry: kbliEntries[index], index }));
   const kbliUtamaItems = kbliItems.filter((item) => item.entry?.category === "UTAMA");
   const kbliPendukungItems = kbliItems.filter((item) => item.entry?.category !== "UTAMA");
 
-  function handleAddKbli(category: KbliCategory, query: string) {
+  function handleAddKbli(category: KbliCategory, query: string, option?: KbliMasterDataRow) {
     const trimmed = query.trim();
     if (!trimmed) return;
-    const match = kbliOptions.find((k) => k.code === trimmed);
+    // Typed code + "Add KBLI" without picking a suggestion: take the newest version that has it.
+    const match = option ?? versionOrdered(kbliOptions).find((k) => k.code === trimmed);
     appendKbli(
       match
         ? { code: match.code, description: match.description, category, version: match.version }
-        : { code: trimmed, description: trimmed, category, version: kbliVersion },
+        : { code: trimmed, description: trimmed, category },
     );
   }
 
@@ -193,22 +246,9 @@ export function Step3Legal({ form }: { form: UseFormReturn<CompanyWizardValues> 
         open={kbliOpen}
         onToggle={() => setKbliOpen((v) => !v)}
       >
-        <div className="mb-3 max-w-60">
-          <Field label="Versi KBLI" hint="Daftar kode KBLI di bawah mengikuti versi yang dipilih.">
-            <select
-              value={kbliVersion}
-              onChange={(e) => setPickedVersion(e.target.value)}
-              className="w-full rounded-lg border border-[#e8dccd] bg-white px-3 py-2.5 text-[12.5px] text-[#20180f] outline-none"
-            >
-              {KBLI_VERSIONS.map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                  {availableVersions.length > 0 && !availableVersions.includes(v) ? " (belum ada data)" : ""}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
+        <p className="mb-3 text-[11.5px] text-[#8a7565]">
+          Ketik kode atau nama kegiatan, lalu pilih dari daftar — setiap kode ditampilkan beserta versi KBLI-nya (mis. KBLI 2025 / KBLI 2020).
+        </p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <KbliCategoryCard
             title="KBLI Utama"
