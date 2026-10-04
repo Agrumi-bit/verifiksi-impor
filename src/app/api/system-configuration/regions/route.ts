@@ -146,3 +146,26 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ data: row }, { status: 201 });
 }
+
+const MAX_BULK_DELETE = 500;
+
+const bulkDeleteSchema = z.object({
+  ids: z
+    .array(z.string().trim().min(1))
+    .min(1, "Pilih minimal satu data")
+    .max(MAX_BULK_DELETE, `Maksimal ${MAX_BULK_DELETE} data sekali hapus`),
+});
+
+/** Bulk delete for the rows ticked in the admin table — see the single-row DELETE in `[id]/route.ts` for why this is safe. */
+export async function DELETE(request: Request) {
+  const { error } = await requireAdminSession();
+  if (error) return error;
+
+  const parsed = bulkDeleteSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Data tidak valid" }, { status: 400 });
+  }
+
+  const { count } = await db.indonesiaRegion.deleteMany({ where: { id: { in: parsed.data.ids } } });
+  return NextResponse.json({ data: { count } });
+}

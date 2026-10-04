@@ -55,3 +55,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const updated = await db.indonesiaRegion.findUnique({ where: { id } });
   return NextResponse.json({ data: updated });
 }
+
+/**
+ * Removes this one (subdistrict, postal code) row. Nothing references `IndonesiaRegion` by id —
+ * companies and applications store the region names as plain text — so deleting a row only
+ * removes it from the location pickers; existing records keep the names they already saved.
+ */
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { error } = await requireAdminSession();
+  if (error) return error;
+
+  const { id } = await params;
+  const existing = await db.indonesiaRegion.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) {
+    return NextResponse.json({ error: "Data tidak ditemukan" }, { status: 404 });
+  }
+
+  await db.indonesiaRegion.delete({ where: { id } });
+  return NextResponse.json({ data: { id } });
+}

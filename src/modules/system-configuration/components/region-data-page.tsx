@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronLeft, ChevronRight, Pencil, Plus, Search } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { ChevronDown, ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2 } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { RegionDataFormDrawer } from "./region-data-form-drawer";
 
@@ -130,6 +134,12 @@ export function RegionDataPage() {
   const [cityId, setCityId] = useState("");
   const [districtId, setDistrictId] = useState("");
   const [subdistrictId, setSubdistrictId] = useState("");
+  // Selection is scoped to the rows currently on screen — every filter/search/page change
+  // clears it, so "Hapus Terpilih" can never delete rows the admin can no longer see.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleteTargets, setDeleteTargets] = useState<RegionRow[] | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const queryClient = useQueryClient();
 
   const provincesQuery = useRegionOptions("/api/master-data/regions/provinces", ["regions", "provinces"]);
   const citiesQuery = useRegionOptions(
@@ -171,9 +181,18 @@ export function RegionDataPage() {
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
+  const pageRows = data?.data ?? [];
+  const selectedRows = pageRows.filter((row) => selected.has(row.id));
+  const allOnPageSelected = pageRows.length > 0 && pageRows.every((row) => selected.has(row.id));
+
+  function goToPage(next: number) {
+    setPage(next);
+    setSelected(new Set());
+  }
+
   function handleSearchChange(value: string) {
     setSearch(value);
-    setPage(1);
+    goToPage(1);
   }
 
   function handleProvinceChange(value: string) {
@@ -181,22 +200,70 @@ export function RegionDataPage() {
     setCityId("");
     setDistrictId("");
     setSubdistrictId("");
-    setPage(1);
+    goToPage(1);
   }
   function handleCityChange(value: string) {
     setCityId(value);
     setDistrictId("");
     setSubdistrictId("");
-    setPage(1);
+    goToPage(1);
   }
   function handleDistrictChange(value: string) {
     setDistrictId(value);
     setSubdistrictId("");
-    setPage(1);
+    goToPage(1);
   }
   function handleSubdistrictChange(value: string) {
     setSubdistrictId(value);
-    setPage(1);
+    goToPage(1);
+  }
+
+  function toggleOne(id: string, checked: boolean) {
+    const next = new Set(selected);
+    if (checked) next.add(id);
+    else next.delete(id);
+    setSelected(next);
+  }
+
+  function toggleAllOnPage(checked: boolean) {
+    setSelected(checked ? new Set(pageRows.map((row) => row.id)) : new Set());
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteTargets || deleteTargets.length === 0) return;
+    setIsDeleting(true);
+    let response: Response;
+    try {
+      response =
+        deleteTargets.length === 1
+          ? await fetch(`/api/system-configuration/regions/${deleteTargets[0].id}`, { method: "DELETE" })
+          : await fetch("/api/system-configuration/regions", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ids: deleteTargets.map((row) => row.id) }),
+            });
+    } catch {
+      toast.error("Gagal menghapus data wilayah");
+      return;
+    } finally {
+      setIsDeleting(false);
+    }
+
+    if (!response.ok) {
+      const errBody = (await response.json().catch(() => null)) as { error?: string } | null;
+      toast.error(errBody?.error ?? "Gagal menghapus data wilayah");
+      return;
+    }
+
+    toast.success(
+      deleteTargets.length === 1 ? "Data wilayah dihapus." : `${deleteTargets.length.toLocaleString("id-ID")} data wilayah dihapus.`,
+    );
+    setDeleteTargets(null);
+    setSelected(new Set());
+    // A deleted row may have been the last one under its Desa/Kecamatan/Kota/Provinsi, so the
+    // drill-down option lists (["regions", ...]) are refreshed along with the table itself.
+    queryClient.invalidateQueries({ queryKey: ["system-configuration", "regions"] });
+    queryClient.invalidateQueries({ queryKey: ["regions"] });
   }
 
   const provinceName = provincesQuery.data?.find((o) => String(o.id) === provinceId)?.name;
@@ -310,11 +377,43 @@ export function RegionDataPage() {
         </div>
       )}
 
+      {atLeaf && selected.size > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-[#f3c7b0] bg-[#fdeadd] px-4 py-2.5">
+          <span className="text-[12.5px] font-bold text-[#c14a1f]">{selected.size.toLocaleString("id-ID")} data dipilih</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="rounded-lg border border-[#e1bfb3] bg-white px-2.5 py-1.5 text-[12px] font-semibold text-[#261813]"
+            >
+              Batal Pilih
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeleteTargets(selectedRows)}
+              className="flex items-center gap-1.5 rounded-lg bg-[#dc2626] px-3 py-1.5 text-[12px] font-bold text-white"
+            >
+              <Trash2 className="size-3.5" />
+              Hapus Terpilih
+            </button>
+          </div>
+        </div>
+      )}
+
       {atLeaf && data && data.data.length > 0 && (
         <div className="overflow-x-auto rounded-[10px] border border-[#f0ded0] bg-white">
           <table className="w-full min-w-200 border-collapse text-[12px]">
             <thead>
               <tr style={{ background: "#e0662e" }}>
+                <th className="w-9 border border-[#c14a1f] px-3 py-2 text-left">
+                  <input
+                    type="checkbox"
+                    aria-label="Pilih semua data di halaman ini"
+                    checked={allOnPageSelected}
+                    onChange={(event) => toggleAllOnPage(event.target.checked)}
+                    className="size-3.5 accent-white"
+                  />
+                </th>
                 {["Provinsi", "Kota / Kabupaten", "Kecamatan", "Desa / Kelurahan", "Kode Pos", "Aksi"].map((h) => (
                   <th key={h} className="whitespace-nowrap border border-[#c14a1f] px-3 py-2 text-left text-[11px] font-bold text-white">
                     {h}
@@ -324,16 +423,30 @@ export function RegionDataPage() {
             </thead>
             <tbody>
               {data.data.map((row) => (
-                <tr key={row.id} className="border-t border-[#efe2d4]">
+                <tr key={row.id} className={`border-t border-[#efe2d4] ${selected.has(row.id) ? "bg-[#fdeadd]/50" : ""}`}>
+                  <td className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      aria-label={`Pilih ${row.subdistrictName} ${row.postalCode}`}
+                      checked={selected.has(row.id)}
+                      onChange={(event) => toggleOne(row.id, event.target.checked)}
+                      className="size-3.5 accent-[#e0662e]"
+                    />
+                  </td>
                   <td className="px-3 py-2 text-[#4a4038]">{row.provinceName}</td>
                   <td className="px-3 py-2 text-[#4a4038]">{row.cityName}</td>
                   <td className="px-3 py-2 text-[#4a4038]">{row.districtName}</td>
                   <td className="px-3 py-2 font-semibold text-[#20180f]">{row.subdistrictName}</td>
                   <td className="whitespace-nowrap px-3 py-2 font-mono text-[#4a4038]">{row.postalCode}</td>
                   <td className="whitespace-nowrap px-3 py-2">
-                    <button type="button" onClick={() => setEditing(row)} aria-label="Edit" className="text-[#2f6fe0]">
-                      <Pencil className="size-4" />
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={() => setEditing(row)} aria-label="Edit" className="text-[#2f6fe0]">
+                        <Pencil className="size-4" />
+                      </button>
+                      <button type="button" onClick={() => setDeleteTargets([row])} aria-label="Hapus" className="text-[#dc2626]">
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -351,7 +464,7 @@ export function RegionDataPage() {
             <button
               type="button"
               disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              onClick={() => goToPage(Math.max(1, page - 1))}
               className="flex items-center gap-1 rounded-lg border border-[#e1bfb3] bg-white px-2.5 py-1.5 text-[12px] font-semibold text-[#261813] disabled:opacity-40"
             >
               <ChevronLeft className="size-3.5" />
@@ -360,7 +473,7 @@ export function RegionDataPage() {
             <button
               type="button"
               disabled={page >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              onClick={() => goToPage(Math.min(totalPages, page + 1))}
               className="flex items-center gap-1 rounded-lg border border-[#e1bfb3] bg-white px-2.5 py-1.5 text-[12px] font-semibold text-[#261813] disabled:opacity-40"
             >
               Berikutnya
@@ -371,6 +484,39 @@ export function RegionDataPage() {
       )}
 
       {editing !== null && <RegionDataFormDrawer row={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}
+
+      <Dialog open={deleteTargets !== null} onOpenChange={(open) => { if (!open && !isDeleting) setDeleteTargets(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {deleteTargets && deleteTargets.length > 1
+                ? `Hapus ${deleteTargets.length.toLocaleString("id-ID")} data wilayah ini?`
+                : "Hapus data wilayah ini?"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-sm text-muted-foreground">
+            <p className="mb-2">
+              Data berikut akan dihapus permanen dari master data dan tidak lagi muncul sebagai pilihan lokasi. Data
+              perusahaan dan aplikasi yang sudah tersimpan tidak berubah. Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <ul className="max-h-40 list-disc overflow-y-auto pl-5">
+              {deleteTargets?.map((row) => (
+                <li key={row.id} className="text-foreground">
+                  {row.subdistrictName}, {row.districtName}, {row.cityName} — {row.postalCode}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeleteTargets(null)} disabled={isDeleting}>
+              Batal
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
+              {isDeleting ? "Menghapus..." : "Ya, Hapus"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
