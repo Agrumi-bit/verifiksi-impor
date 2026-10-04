@@ -88,9 +88,13 @@ type Props = {
    * this component knowing anything about VIU applications itself. Distinct
    * from `onClose`, which also fires on a plain cancel. */
   onBrandSaved?: (result: { id: string; status: "ACTIVE" | "DRAFT" }) => void;
+  /** Owning company for a brand created on the internal (admin) surface on someone's behalf —
+   * e.g. from an admin-filed VIU application, where it's the applying company. Sent with the
+   * create request only; the Company surface always uses the session's own company instead. */
+  companyId?: string;
 };
 
-export function MerkWizard({ surface, onClose, draftId, contextBanner, onBrandSaved }: Props) {
+export function MerkWizard({ surface, onClose, draftId, contextBanner, onBrandSaved, companyId }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(1);
@@ -278,7 +282,7 @@ export function MerkWizard({ surface, onClose, draftId, contextBanner, onBrandSa
       const response = await fetch(draftId ? `${surface.apiBase}/${draftId}` : surface.apiBase, {
         method: draftId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, draft: true }),
+        body: JSON.stringify({ ...values, draft: true, ...(!draftId && companyId ? { companyId } : {}) }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => null);
@@ -304,7 +308,7 @@ export function MerkWizard({ surface, onClose, draftId, contextBanner, onBrandSa
       const response = await fetch(draftId ? `${surface.apiBase}/${draftId}` : surface.apiBase, {
         method: draftId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ ...values, ...(!draftId && companyId ? { companyId } : {}) }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => null);

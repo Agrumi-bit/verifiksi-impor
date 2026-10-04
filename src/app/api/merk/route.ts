@@ -16,8 +16,26 @@ export async function GET() {
   return NextResponse.json({ data: merkList.map(toMerkListItem) });
 }
 
+/**
+ * Optional owning company for an admin-created brand (e.g. "+ Tambah Merek Baru" inside an
+ * admin-filed VIU application, on behalf of the applying company). Not part of the wizard
+ * schemas — read straight off the body, and only kept when it names a real Company.
+ */
+async function resolveOwningCompanyId(body: unknown): Promise<string | undefined | { error: string }> {
+  const raw = (body as { companyId?: unknown } | null)?.companyId;
+  if (typeof raw !== "string" || !raw.trim()) return undefined;
+  const company = await db.company.findUnique({ where: { id: raw.trim() }, select: { id: true } });
+  return company ? company.id : { error: "Perusahaan pemilik merek tidak ditemukan." };
+}
+
 export async function POST(request: Request) {
   const body = await request.json();
+
+  const owningCompanyId = await resolveOwningCompanyId(body);
+  if (typeof owningCompanyId === "object") {
+    return NextResponse.json({ error: owningCompanyId.error }, { status: 400 });
+  }
+  const companyData = owningCompanyId ? { companyId: owningCompanyId } : {};
 
   try {
     if (body?.draft === true) {
@@ -38,7 +56,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: qualityTestError }, { status: 400 });
       }
       const merk = await db.merk.create({
-        data: await buildMerkDraftData(values, resolved.ownerCompanyName),
+        data: { ...(await buildMerkDraftData(values, resolved.ownerCompanyName)), ...companyData },
       });
       return NextResponse.json({ data: merk }, { status: 201 });
     }
@@ -62,7 +80,7 @@ export async function POST(request: Request) {
     }
 
     const merk = await db.merk.create({
-      data: await buildMerkCreateData(values, resolved.ownerCompanyName),
+      data: { ...(await buildMerkCreateData(values, resolved.ownerCompanyName)), ...companyData },
     });
 
     return NextResponse.json({ data: merk }, { status: 201 });

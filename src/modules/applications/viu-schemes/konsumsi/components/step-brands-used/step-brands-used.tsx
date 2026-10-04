@@ -153,6 +153,8 @@ export function StepBrandsUsed({ form, apiBase, brandDetailHrefBase, application
       <div className="flex flex-wrap gap-2.5">
         <Button type="button" onClick={() => setIsSelectOpen(true)}>+ Pilih Merek</Button>
         <AddBrandLauncher
+          isAdminSurface={isAdminSurface}
+          companyId={form.getValues("companyId") || undefined}
           applicationNumber={applicationNumber}
           onBrandCreated={handleBrandCreated}
           onBrandSavedAsDraft={handleBrandSavedAsDraft}
