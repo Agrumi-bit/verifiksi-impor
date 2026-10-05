@@ -1,10 +1,12 @@
 import { MaterialIcon } from "../material-icon";
 import { LOCATION_TYPE_LABELS } from "../../status";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import { LOCATION_SOURCE_BADGE_STYLE, locationSourceBadge } from "@/modules/shared/location-meta";
+import { AddFieldLocationButton } from "./add-field-location";
 
-type Props = { payload: ApplicationWizardValues };
+type Props = { payload: ApplicationWizardValues; assignmentNumber?: string };
 
-export function LocationTab({ payload }: Props) {
+export function LocationTab({ payload, assignmentNumber }: Props) {
   const locations = payload.locations ?? [];
 
   return (
@@ -15,7 +17,10 @@ export function LocationTab({ payload }: Props) {
         </div>
         <h3 className="font-sv-headline-lg text-[19px] font-bold">Location Information</h3>
       </div>
-      <div className="mb-6 ml-[56px] text-sm text-[#8a7565]">Lokasi yang akan diverifikasi</div>
+      <div className="mb-6 ml-[56px] flex flex-wrap items-center justify-between gap-3">
+        <div className="text-sm text-[#8a7565]">Lokasi yang akan diverifikasi</div>
+        {assignmentNumber && <AddFieldLocationButton assignmentNumber={assignmentNumber} />}
+      </div>
 
       {locations.length === 0 ? (
         <p className="ml-[56px] text-sm text-[#8a7565]">Belum ada lokasi terdaftar.</p>
@@ -40,9 +45,20 @@ export function LocationTab({ payload }: Props) {
                 </span>
               </div>
               <div className="flex flex-1 flex-col p-5">
-                <span className="mb-2.5 w-fit rounded-full border border-[#e8d5c5] bg-white px-3 py-0.5 text-xs font-semibold text-[#4a4038]">
-                  {LOCATION_TYPE_LABELS[loc.locationType]?.replace(/ \(.+\)/, "") ?? loc.locationType}
-                </span>
+                <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
+                  <span className="w-fit rounded-full border border-[#e8d5c5] bg-white px-3 py-0.5 text-xs font-semibold text-[#4a4038]">
+                    {LOCATION_TYPE_LABELS[loc.locationType]?.replace(/ \(.+\)/, "") ?? loc.locationType}
+                  </span>
+                  {(() => {
+                    const badge = locationSourceBadge(loc);
+                    const style = LOCATION_SOURCE_BADGE_STYLE[badge.tone];
+                    return (
+                      <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: style.bg, color: style.color }}>
+                        {badge.label}
+                      </span>
+                    );
+                  })()}
+                </div>
                 <div className="mb-0.5 text-base font-bold">{loc.address}</div>
                 <div className="mb-4 text-[13px] text-[#8a7565]">
                   {loc.city}, {loc.province}

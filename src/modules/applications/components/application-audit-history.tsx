@@ -20,6 +20,7 @@ const ACTION_LABEL: Record<string, { label: string; color: string; bg: string }>
   RETURN: { label: "Dikembalikan untuk Revisi", color: "#b42318", bg: "#fdecea" },
   EDIT: { label: "Data Diubah oleh Admin", color: "#1f3f7a", bg: "#eef3fd" },
   RESUBMIT: { label: "Revisi Dikirim Ulang", color: "#1a7a4c", bg: "#e2f7ea" },
+  FIELD_LOCATION: { label: "Lokasi Temuan Lapangan", color: "#7a4a10", bg: "#fdf0d5" },
 };
 
 function fmtDateTime(value: string): string {

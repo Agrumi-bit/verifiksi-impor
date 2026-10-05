@@ -1169,6 +1169,10 @@ model LocationVisit {
   address      String
   city         String?
   description  String?
+  // The Company.locations entry this visit is for (same id the application's payload location
+  // carries as companyLocationId). Null for visits created before this existed, which are still
+  // matched by locationType + address.
+  companyLocationId String?
 
   scheduledDate DateTime?
   scheduledTime String?

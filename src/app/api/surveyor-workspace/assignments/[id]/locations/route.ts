@@ -5,6 +5,8 @@ import { getServerSession } from "@/lib/get-session";
 import { composeLocationAddress, matchLocationTypeLabel } from "@/modules/shared/schema";
 
 type PayloadLocation = {
+  id?: string;
+  companyLocationId?: string;
   locationType: string;
   address: string;
   addressDesa?: string;
@@ -46,12 +48,18 @@ export async function GET(
   const existingByKey = new Map(
     assignment.locationVisits.map((visit) => [`${visit.locationType}::${visit.address}`, visit]),
   );
+  // Visits are tied to the company location id when known (so an edited address doesn't spawn a
+  // second visit); type + address is the fallback for visits created before that link existed.
+  const existingByCompanyLocationId = new Map(
+    assignment.locationVisits.filter((visit) => visit.companyLocationId).map((visit) => [visit.companyLocationId as string, visit]),
+  );
 
   const visits = [];
   for (const loc of payloadLocations) {
     const fullAddress = composeLocationAddress(loc);
     const key = `${loc.locationType}::${fullAddress}`;
-    let visit = existingByKey.get(key);
+    const companyLocationId = loc.companyLocationId || loc.id || null;
+    let visit = (companyLocationId ? existingByCompanyLocationId.get(companyLocationId) : undefined) ?? existingByKey.get(key);
     if (!visit) {
       visit = await db.locationVisit.create({
         data: {
@@ -59,8 +67,11 @@ export async function GET(
           locationType: loc.locationType,
           address: fullAddress,
           city: loc.city ?? null,
+          companyLocationId,
         },
       });
+    } else if (!visit.companyLocationId && companyLocationId) {
+      visit = await db.locationVisit.update({ where: { id: visit.id }, data: { companyLocationId } });
     }
     visits.push(visit);
   }

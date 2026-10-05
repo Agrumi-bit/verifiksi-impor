@@ -217,7 +217,7 @@ export function AssignmentDetail({ id }: Props) {
       <main className="mx-auto w-full max-w-[1440px] box-border flex-1 px-6 pb-10 pt-7">
         {activeTab === "Overview" && <OverviewTab data={data} />}
         {activeTab === "Company" && <CompanyTab payload={payload} />}
-        {activeTab === "Location" && <LocationTab payload={payload} />}
+        {activeTab === "Location" && <LocationTab payload={payload} assignmentNumber={data.assignmentNumber} />}
         {activeTab === "Scope" && <ScopeTab />}
         {activeTab === "Schedule" && <ScheduleTab assignmentId={id} payload={payload} />}
         {activeTab === "Team" && (
