@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
+import { findApplicationEditAfter } from "@/modules/applications/server/edited-after";
 import { requireTechnicalAnalystSession } from "@/lib/require-technical-analyst-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { allModulesDecided, overallTechnicalStatus, technicalAnalysisDataSchema } from "@/modules/technical-analyst-workspace/schema";
@@ -81,11 +82,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   const kantorLocation = payload.locations?.find((loc) => loc.locationType === "KANTOR") ?? payload.locations?.[0];
 
+  const applicationEditedAfterAssignment = await findApplicationEditAfter(assignment.applicationId, assignment.createdAt);
+
   return NextResponse.json({
     data: {
       id: assignment.id,
       assignmentNumber: assignment.assignmentNumber,
       status: assignment.status,
+      applicationEditedAfterAssignment,
       priority: assignment.priority,
       createdAt: assignment.createdAt,
       dueDate: assignment.dueDate,

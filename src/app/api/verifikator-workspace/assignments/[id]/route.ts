@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { LocationVisit } from "@/generated/prisma/client";
 
 import { db } from "@/lib/db";
+import { findApplicationEditAfter } from "@/modules/applications/server/edited-after";
 import { getServerSession } from "@/lib/get-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { computeFindings, type OfficeVerificationValues } from "@/modules/surveyor-workspace/components/office-verification/schema";
@@ -215,11 +216,14 @@ export async function GET(
 
   const kantorLocation = payload.locations?.find((loc) => loc.locationType === "KANTOR") ?? payload.locations?.[0];
 
+  const applicationEditedAfterAssignment = await findApplicationEditAfter(assignment.applicationId, assignment.createdAt);
+
   return NextResponse.json({
     data: {
       id: assignment.id,
       assignmentNumber: assignment.assignmentNumber,
       status: assignment.status,
+      applicationEditedAfterAssignment,
       priority: assignment.priority,
       createdAt: assignment.createdAt,
       dueDate: assignment.dueDate,

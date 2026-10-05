@@ -1,5 +1,7 @@
 "use client";
 
+import { ApplicationEditedNotice } from "@/modules/applications/components/application-edited-notice";
+import type { ApplicationEditedNotice as ApplicationEditedNoticeData } from "@/modules/applications/server/edited-after";
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -44,6 +46,7 @@ export type TeamMemberSummary = {
 } | null;
 
 export type AssignmentDetailData = {
+  applicationEditedAfterAssignment?: ApplicationEditedNoticeData;
   id: string;
   assignmentNumber: string;
   status: AssignmentStatusValue;
@@ -172,6 +175,10 @@ export function AssignmentDetail({ id }: Props) {
         <MaterialIcon name="arrow_back" className="text-[18px]" />
         Back to Assignments
       </Link>
+
+      <div className="mb-4 empty:hidden">
+        <ApplicationEditedNotice notice={data.applicationEditedAfterAssignment} />
+      </div>
 
       <div className="mb-4 rounded-[10px] border border-[#f0ded0] bg-white p-5 pl-6" style={{ borderLeft: "4px solid #2f6fe0" }}>
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3.5">

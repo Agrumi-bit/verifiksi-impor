@@ -26,6 +26,7 @@ async function loadApplication(id: string) {
         include: { surveyor: true, verifikator: true, technicalReviewer: true },
         orderBy: { createdAt: "asc" },
       },
+      auditLogs: { orderBy: { createdAt: "desc" } },
     },
   });
 }
@@ -142,6 +143,7 @@ export async function GET(
       documents,
       schedules,
       workflowStages,
+      auditLogs: application.auditLogs,
     },
   });
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { ApplicationEditedNotice } from "@/modules/applications/components/application-edited-notice";
+import type { ApplicationEditedNotice as ApplicationEditedNoticeData } from "@/modules/applications/server/edited-after";
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -47,6 +49,7 @@ export type DocumentChecklistItem = {
 };
 
 export type AssignmentDetailData = {
+  applicationEditedAfterAssignment?: ApplicationEditedNoticeData;
   id: string;
   assignmentNumber: string;
   status: AssignmentStatusValue;
@@ -141,6 +144,9 @@ export function AssignmentDetail({ id }: Props) {
       </header>
 
       <div className="mx-auto w-full max-w-[1440px] box-border px-6 pt-6">
+        <div className="mb-4 empty:hidden">
+          <ApplicationEditedNotice notice={data.applicationEditedAfterAssignment} />
+        </div>
         <Link
           href="/surveyor-workspace/assignments"
           className="mb-4 flex items-center gap-1.5 text-[13px] font-semibold text-[#5f5e5e]"

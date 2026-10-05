@@ -5,9 +5,12 @@ import type { FieldErrors } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, X } from "lucide-react";
 
 import { useApplicationWizard } from "../hooks/use-application-wizard";
+import { EDIT_REASON_MIN_LENGTH, getAdminEditBlockReason, isActiveAssignmentStatus } from "../edit-rules";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CompanyProfileFields } from "@/components/wizard/company-profile-fields";
 import { CompanyPickerField } from "./company-picker-field";
 import { LockedCompanyField } from "./locked-company-field";
@@ -82,6 +85,17 @@ type Props = {
   backHref?: string;
   /** Continuing an existing Application(DRAFT) row from the Application List (admin or company-workspace). */
   resumeDraftId?: string;
+  /** Admin "Edit Permohonan" (/applications/[id]/edit): loads an application in any status but
+   * COMPLETED/REJECTED/WITHDRAWN and saves it in place via PUT /api/applications/[id] — status,
+   * number and submission date unchanged; no Save as Draft. */
+  adminEditApplicationId?: string;
+};
+
+type AdminEditState = {
+  status: string;
+  applicationNumber: string;
+  activeAssignmentCount: number;
+  blockReason: string | null;
 };
 
 export function ApplicationWizard({
@@ -89,6 +103,7 @@ export function ApplicationWizard({
   hideCompanyPicker,
   backHref = "/applications",
   resumeDraftId,
+  adminEditApplicationId,
 }: Props) {
   const router = useRouter();
   const {
@@ -129,6 +144,71 @@ export function ApplicationWizard({
   // user see everything that needs fixing across the whole wizard instead of
   // discovering one step at a time on repeated submit attempts.
   const [validationIssues, setValidationIssues] = useState<StepValidationIssue[]>([]);
+  const isAdminEdit = Boolean(adminEditApplicationId);
+  const [adminEdit, setAdminEdit] = useState<AdminEditState | null>(null);
+  const [pendingEditValues, setPendingEditValues] = useState<ApplicationWizardValues | null>(null);
+  const [editReason, setEditReason] = useState("");
+
+  useEffect(() => {
+    if (!adminEditApplicationId || hasLoadedDraft.current) return;
+    hasLoadedDraft.current = true;
+    (async () => {
+      const response = await fetch(`/api/applications/${adminEditApplicationId}`);
+      if (!response.ok) {
+        toast.error("Permohonan tidak ditemukan, atau tidak dapat diakses.");
+        return;
+      }
+      const { data } = (await response.json()) as {
+        data: {
+          status: string;
+          applicationNumber: string;
+          payload: ApplicationWizardValues;
+          assignments: { status: string }[];
+        };
+      };
+      const blockReason = getAdminEditBlockReason(data.status);
+      setAdminEdit({
+        status: data.status,
+        applicationNumber: data.applicationNumber,
+        activeAssignmentCount: data.assignments.filter((a) => isActiveAssignmentStatus(a.status)).length,
+        blockReason,
+      });
+      setApplicationNumber(data.applicationNumber);
+      if (!blockReason) form.reset(data.payload);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminEditApplicationId]);
+
+  async function saveAdminEdit() {
+    if (!adminEditApplicationId || !pendingEditValues) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/applications/${adminEditApplicationId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ values: pendingEditValues, reason: editReason.trim() }),
+      });
+      const body = (await response.json().catch(() => null)) as { error?: string; data?: { changedCount: number } } | null;
+      if (!response.ok) throw new Error(body?.error ?? "Gagal menyimpan perubahan");
+      toast.success(`Perubahan disimpan (${body?.data?.changedCount ?? 0} data diubah).`);
+      setPendingEditValues(null);
+      router.push(`/applications/${adminEditApplicationId}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal menyimpan perubahan");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  /** Final form submit — a real submit normally, the "Alasan perubahan" dialog in Admin edit. */
+  function handleValidSubmit(values: ApplicationWizardValues) {
+    if (isAdminEdit) {
+      setEditReason("");
+      setPendingEditValues(values);
+      return;
+    }
+    return handleSubmitApplication(values);
+  }
 
   useEffect(() => {
     if (!resumeDraftId || hasLoadedDraft.current) return;
@@ -358,7 +438,7 @@ export function ApplicationWizard({
 
   // VKI's last step (13, Submit) is a self-contained screen with its own
   // "Submit Permohonan" button + confirm modal — no Kembali/Lanjut footer.
-  const showFooter = !(isVki && isLastImplementedStep);
+  const showFooter = isAdminEdit || !(isVki && isLastImplementedStep);
 
   if (receipt) {
     return (
@@ -387,7 +467,7 @@ export function ApplicationWizard({
             ←
           </button>
           <div className="text-[20px] font-extrabold text-[#2b2420]">
-            Create New Application
+            {isAdminEdit ? `Edit Permohonan ${adminEdit?.applicationNumber ?? ""}` : "Create New Application"}
             {lockedVerificationType && (
               <span className="ml-2 rounded-full bg-[#fdeadd] px-2.5 py-1 align-middle text-[11px] font-bold text-[#c14a1f]">
                 {lockedVerificationType}
@@ -396,6 +476,38 @@ export function ApplicationWizard({
           </div>
         </div>
 
+        {isAdminEdit && adminEdit && !adminEdit.blockReason && (
+          <div className="mb-4 flex flex-col gap-2">
+            <div className="rounded-lg border border-[#c9d8f5] bg-[#eef3fd] p-3.5 text-[12.5px] text-[#1f3f7a]">
+              <strong>Mode Edit Admin</strong> — perubahan akan langsung diterapkan pada permohonan berstatus{" "}
+              <strong>{adminEdit.status}</strong>. Status, nomor permohonan dan tanggal pengajuan tidak berubah; perusahaan
+              pemohon dan jenis verifikasi tidak dapat diganti. Setiap penyimpanan wajib disertai alasan perubahan.
+            </div>
+            {adminEdit.activeAssignmentCount > 0 && (
+              <div className="flex items-start gap-2 rounded-lg border border-[#f0c78a] bg-[#fdf0d5] p-3.5 text-[12.5px] text-[#7a4a10]">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                <span>
+                  Permohonan ini memiliki <strong>{adminEdit.activeAssignmentCount} penugasan aktif</strong>. Data yang sedang
+                  diverifikasi akan berubah, dan penugasan terkait akan diberi penanda &quot;Data permohonan diubah setelah
+                  penugasan dibuat&quot;.
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+        {isAdminEdit && adminEdit?.blockReason ? (
+          <div className="rounded-[14px] border border-[#f0ded0] bg-white p-6.5 text-[13px] text-[#594138]">
+            <p className="font-bold text-[#20180f]">Permohonan berstatus {adminEdit.status} — hanya dapat dilihat.</p>
+            <p className="mt-1">{adminEdit.blockReason}</p>
+            <button
+              type="button"
+              onClick={() => router.push(`/applications/${adminEditApplicationId}`)}
+              className="mt-4 rounded-lg border border-[#e1bfb3] bg-white px-4 py-2 text-[12.5px] font-semibold text-[#261813]"
+            >
+              Lihat Detail Permohonan
+            </button>
+          </div>
+        ) : (
         <div className="flex flex-col rounded-[14px] border border-[#f0ded0] bg-white">
           <div className="px-6.5 pt-5.5">
             <div className="mb-5 flex items-center">
@@ -446,7 +558,7 @@ export function ApplicationWizard({
             </div>
           </div>
 
-          <form onSubmit={form.handleSubmit(handleSubmitApplication, handleInvalidSubmit)} className="flex flex-col">
+          <form onSubmit={form.handleSubmit(handleValidSubmit, handleInvalidSubmit)} className="flex flex-col">
             {validationIssues.length > 0 && (
               <div className="mx-6.5 mt-5 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-[13px]">
                 <div className="flex items-start justify-between gap-3">
@@ -562,7 +674,7 @@ export function ApplicationWizard({
               {isVki && currentStep === 11 && <VkiStep11RawMaterialUsage form={form} />}
               {isVki && currentStep === 12 && <VkiStep12Sales form={form} />}
               {isVki && currentStep === 13 && <VkiStep13Preview form={form} onEditStep={goToStep} />}
-              {isVki && currentStep === 14 && (
+              {isVki && currentStep === 14 && !isAdminEdit && (
                 <VkiStep14Submit
                   isSubmitting={isSubmitting}
                   onConfirmSubmit={() => form.handleSubmit(handleSubmitApplication, handleInvalidSubmit)()}
@@ -581,15 +693,25 @@ export function ApplicationWizard({
                   Kembali
                 </button>
                 <div className="flex gap-2.5">
-                  <button
-                    type="button"
-                    onClick={handleSaveDraft}
-                    disabled={isSavingDraft}
-                    className="rounded-lg border border-[#e1bfb3] bg-white px-4.5 py-2.5 text-[13px] font-semibold text-[#594138] disabled:opacity-60"
-                  >
-                    {isSavingDraft ? "Menyimpan..." : "Save as Draft"}
-                  </button>
-                  {isLastImplementedStep ? (
+                  {isAdminEdit ? (
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="rounded-lg border border-[#e0662e] bg-white px-4.5 py-2.5 text-[13px] font-bold text-[#c14a1f] disabled:opacity-60"
+                    >
+                      Simpan Perubahan
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSaveDraft}
+                      disabled={isSavingDraft}
+                      className="rounded-lg border border-[#e1bfb3] bg-white px-4.5 py-2.5 text-[13px] font-semibold text-[#594138] disabled:opacity-60"
+                    >
+                      {isSavingDraft ? "Menyimpan..." : "Save as Draft"}
+                    </button>
+                  )}
+                  {isAdminEdit && isLastImplementedStep ? null : isLastImplementedStep ? (
                     <button
                       type="submit"
                       disabled={isSubmitting}
@@ -611,7 +733,39 @@ export function ApplicationWizard({
             )}
           </form>
         </div>
+        )}
       </div>
+
+      <Dialog open={pendingEditValues !== null} onOpenChange={(open) => !open && !isSubmitting && setPendingEditValues(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Simpan Perubahan — {adminEdit?.applicationNumber}</DialogTitle>
+          </DialogHeader>
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-semibold">
+              Alasan perubahan <span className="text-destructive">*</span>
+            </span>
+            <textarea
+              value={editReason}
+              onChange={(e) => setEditReason(e.target.value)}
+              rows={4}
+              placeholder="Mis. koreksi data sesuai surat permohonan perubahan dari perusahaan..."
+              className="rounded-lg border border-border bg-background p-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+            />
+            <span className="text-xs text-muted-foreground">
+              Minimal {EDIT_REASON_MIN_LENGTH} karakter. Alasan ini dicatat di Riwayat Perubahan dan dikirim ke perusahaan.
+            </span>
+          </label>
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => setPendingEditValues(null)}>
+              Batal
+            </Button>
+            <Button type="button" disabled={isSubmitting || editReason.trim().length < EDIT_REASON_MIN_LENGTH} onClick={saveAdminEdit}>
+              {isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

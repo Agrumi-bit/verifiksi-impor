@@ -232,6 +232,11 @@ export function ApplicationTable() {
                   <Link href={`/applications/${application.id}`} className="text-[12.5px] font-semibold text-[#c14a1f]">
                     Detail
                   </Link>
+                  {!["COMPLETED", "REJECTED", "WITHDRAWN"].includes(application.status) && (
+                    <Link href={`/applications/${application.id}/edit`} className="text-[11.5px] font-semibold text-[#2f6fe0] hover:underline">
+                      Edit
+                    </Link>
+                  )}
                   <ReturnForRevisionDialog
                     variant="menu-item"
                     endpoint={`/api/applications/${application.id}/return`}

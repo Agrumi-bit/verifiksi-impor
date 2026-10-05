@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
+import { findApplicationEditAfter } from "@/modules/applications/server/edited-after";
 import { getServerSession } from "@/lib/get-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS, toChecklistStatus } from "@/modules/verifikator-workspace/schema";
@@ -82,9 +83,12 @@ export async function GET(
     return { ...item, status: meta ? toChecklistStatus(meta.verificationStatus) : "PENDING" };
   });
 
+  const applicationEditedAfterAssignment = await findApplicationEditAfter(assignment.applicationId, assignment.createdAt);
+
   return NextResponse.json({
     data: {
       ...assignment,
+      applicationEditedAfterAssignment,
       documentChecklist,
       team: {
         surveyor: teamMemberSummary(assignment.surveyor?.name, assignment),

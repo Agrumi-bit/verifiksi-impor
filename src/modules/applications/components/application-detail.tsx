@@ -9,6 +9,8 @@ import type { ApplicationWizardValues } from "../schema";
 import { KonsumsiApplicationReview } from "../viu-schemes/konsumsi/components/konsumsi-application-review";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { ReturnForRevisionDialog } from "./return-for-revision-dialog";
+import { ApplicationAuditHistory, type ApplicationAuditEntry } from "./application-audit-history";
+import { getAdminEditBlockReason } from "../edit-rules";
 
 type ApplicationDetailData = {
   id: string;
@@ -19,6 +21,7 @@ type ApplicationDetailData = {
   createdAt: string;
   payload: ApplicationWizardValues;
   assignments: { status: string }[];
+  auditLogs: ApplicationAuditEntry[];
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -86,6 +89,11 @@ export function ApplicationDetail({ id }: Props) {
             importTypes={payload.importTypes ?? []}
             onReturned={() => queryClient.invalidateQueries({ queryKey: ["applications"] })}
           />
+          {!getAdminEditBlockReason(data.status) && data.status !== "DRAFT" && (
+            <Button variant="outline" nativeButton={false} render={<Link href={`/applications/${data.id}/edit`} />}>
+              Edit Permohonan
+            </Button>
+          )}
           <Button variant="outline" nativeButton={false} render={<Link href="/applications" />}>
             Kembali ke Daftar
           </Button>
@@ -151,6 +159,8 @@ export function ApplicationDetail({ id }: Props) {
           <KonsumsiApplicationReview payload={payload} brandLookupApiBase="/api/merk" />
         </SectionErrorBoundary>
       )}
+
+      <ApplicationAuditHistory entries={data.auditLogs} />
     </div>
   );
 }

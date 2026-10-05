@@ -1,5 +1,7 @@
 "use client";
 
+import { ApplicationEditedNotice } from "@/modules/applications/components/application-edited-notice";
+import type { ApplicationEditedNotice as ApplicationEditedNoticeData } from "@/modules/applications/server/edited-after";
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -22,6 +24,7 @@ import { AnalysisTab } from "./detail/analysis-tab";
 import { DecisionPanel } from "./detail/decision-panel";
 
 export type AssignmentDetailData = {
+  applicationEditedAfterAssignment?: ApplicationEditedNoticeData;
   id: string;
   assignmentNumber: string;
   status: AssignmentStatusValue;
@@ -96,6 +99,10 @@ export function AssignmentDetail({ id }: { id: string }) {
         <MaterialIcon name="arrow_back" className="text-base" />
         Kembali ke My Assignment
       </Link>
+
+      <div className="mb-3.5 empty:hidden">
+        <ApplicationEditedNotice notice={data.applicationEditedAfterAssignment} />
+      </div>
 
       <div className="mb-5 rounded-[10px] border border-[#f0ded0] bg-white p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

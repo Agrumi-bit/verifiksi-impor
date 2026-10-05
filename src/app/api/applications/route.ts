@@ -1,54 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import { ADMIN_ROLES, requireAdminSession } from "@/lib/require-admin-session";
-import { applicationSubmitSchema, type ApplicationWizardValues, type LocationValues } from "@/modules/applications/schema";
-import { findDisallowedViuImportType, viuKbliRequirementMessage } from "@/modules/applications/viu-kbli-requirements";
-import { konsumsiScheme } from "@/modules/applications/viu-schemes/konsumsi/registry";
-import { syncMerkRelationshipsForApplication, syncQualityTestCertificatesForApplication } from "@/modules/merk/application-relationship-sync";
-
-/**
- * Schemes with a registered DB-aware server validator — only Konsumsi for
- * now (Industri/Non-Industri aren't separated into scheme modules yet, see
- * the VIU Konsumsi implementation plan). Each validator may return a
- * replacement `applicationBrands`-shaped slice of `values` (e.g. Konsumsi
- * attaches a server-built submission snapshot) — when it does, that
- * replacement is what gets persisted, never the client-submitted payload
- * for that slice.
- */
-const REGISTERED_VIU_SCHEMES = [konsumsiScheme];
+import { type ApplicationWizardValues } from "@/modules/applications/schema";
+import { prepareApplicationSubmission, runApplicationSubmissionSyncs } from "@/modules/applications/server/submission";
 
 function generateApplicationNumber(verificationType: string): string {
   const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const suffix = randomUUID().split("-")[0].toUpperCase();
   return `APP-${verificationType}-${datePart}-${suffix}`;
-}
-
-const locationKey = (loc: LocationValues) => `${loc.locationType}::${loc.address}`;
-
-/**
- * A wizard applicant can add a new facility (e.g. Pabrik) directly in the
- * application's Location step without ever visiting Company Profile — that
- * facility only lives in Application.payload.locations until we mirror it
- * back here. Existing facilities are left untouched; only genuinely new
- * ones (by locationType+address) get appended.
- */
-async function syncNewFacilitiesToCompany(companyId: string, submittedLocations: LocationValues[]): Promise<void> {
-  const company = await db.company.findUnique({ where: { id: companyId }, select: { locations: true } });
-  if (!company) return;
-
-  const existingLocations = (company.locations as LocationValues[] | null) ?? [];
-  const existingKeys = new Set(existingLocations.map(locationKey));
-  const newLocations = submittedLocations.filter((loc) => !existingKeys.has(locationKey(loc)));
-  if (newLocations.length === 0) return;
-
-  await db.company.update({
-    where: { id: companyId },
-    data: { locations: [...existingLocations, ...newLocations] },
-  });
 }
 
 export async function GET() {
@@ -90,69 +52,13 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const { draftApplicationId, ...wizardBody } = body ?? {};
-  // Discriminated by verificationType — the authoritative gate, structurally unable to run
-  // a VIU-only rule against a VKI payload (see applicationSubmitSchema's own comment).
-  const parsed = applicationSubmitSchema.safeParse(wizardBody);
-
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Data tidak valid", issues: z.treeifyError(parsed.error) },
-      { status: 400 },
-    );
-  }
-
-  let values: ApplicationWizardValues = parsed.data;
-
-  if (!isAdmin && (!session.user.companyId || values.companyId !== session.user.companyId)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  // The schema checked the VIU type ↔ KBLI rule against the payload's own company snapshot;
-  // re-check it against the Company row so a stale or edited payload can't bypass it.
-  if (values.verificationType === "VIU" && values.companyId) {
-    const company = await db.company.findUnique({
-      where: { id: values.companyId },
-      select: { apiType: true, kbliEntries: true },
-    });
-    const companyKbli = Array.isArray(company?.kbliEntries) ? (company.kbliEntries as { code: string; category?: "UTAMA" | "PENDUKUNG" }[]) : [];
-    const disallowed = company ? findDisallowedViuImportType(values.importTypes, company.apiType, companyKbli) : undefined;
-    if (disallowed) {
-      return NextResponse.json({ error: viuKbliRequirementMessage(disallowed) }, { status: 400 });
-    }
-  }
-
-  // The generic `products` list is only meaningful for Bahan Baku Industri/Non Industri — a
-  // Barang-Konsumsi-only (or VKI-only-fields-irrelevant) submission may still carry a stray
-  // leftover row (e.g. an empty default item from before this list stopped requiring
-  // materialType/hsCode unconditionally); normalize it away before persisting rather than storing
-  // dead data forever. Validation already passed either way — this is cleanup, not a gate.
-  if (
-    values.verificationType === "VIU" &&
-    !values.importTypes.includes("BAHAN_BAKU_INDUSTRI") &&
-    !values.importTypes.includes("BAHAN_BAKU_NON_INDUSTRI")
-  ) {
-    values = { ...values, products: [] };
-  }
-
-  // Run every registered scheme's server-side validator whose key is
-  // actually enabled on this application — never the client's own computed
-  // readiness/document count/brand metadata. A scheme's validator may
-  // return a server-authoritative replacement for its own slice of
-  // `values` (Konsumsi attaches a submission snapshot to each brand entry
-  // here); when it does, that replacement is what gets persisted below.
-  for (const scheme of REGISTERED_VIU_SCHEMES) {
-    if (!values.importTypes.includes(scheme.key)) continue;
-    const result = await scheme.validateServerSide(values);
-    if ("error" in result) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
-    }
-    values = {
-      ...values,
-      applicationBrands: result.applicationBrands,
-      konsumsiProducts: result.konsumsiProducts,
-      productGroupCertificates: result.productGroupCertificates,
-    };
-  }
+  const prepared = await prepareApplicationSubmission(wizardBody, (values) =>
+    !isAdmin && (!session.user.companyId || values.companyId !== session.user.companyId)
+      ? NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      : null,
+  );
+  if (!prepared.ok) return prepared.response;
+  const values: ApplicationWizardValues = prepared.values;
 
   // Promote the draft row saved during the wizard instead of creating a
   // second, orphaned Application — same applicationNumber carries over.
@@ -179,21 +85,9 @@ export async function POST(request: Request) {
             : `Permohonan ${promoted.applicationNumber} berhasil diajukan.`,
         },
       });
-      if (values.companyId) {
-        await syncNewFacilitiesToCompany(values.companyId, values.locations);
-      }
       // "Every non-draft update of the application" — a RETURNED application resubmitted
       // through this same promote-draft path counts, since its status becomes SUBMITTED here.
-      await syncMerkRelationshipsForApplication({
-        applicationId: promoted.id,
-        companyId: values.companyId,
-        companyName: values.companyName,
-        applicationBrands: values.applicationBrands ?? [],
-      });
-      await syncQualityTestCertificatesForApplication({
-        applicationId: promoted.id,
-        productGroupCertificates: values.productGroupCertificates ?? [],
-      });
+      await runApplicationSubmissionSyncs(promoted.id, values);
       return NextResponse.json({
         applicationNumber: promoted.applicationNumber,
         id: promoted.id,
@@ -220,19 +114,7 @@ export async function POST(request: Request) {
       text: `Permohonan ${application.applicationNumber} berhasil diajukan.`,
     },
   });
-  if (values.companyId) {
-    await syncNewFacilitiesToCompany(values.companyId, values.locations);
-  }
-  await syncMerkRelationshipsForApplication({
-    applicationId: application.id,
-    companyId: values.companyId,
-    companyName: values.companyName,
-    applicationBrands: values.applicationBrands ?? [],
-  });
-  await syncQualityTestCertificatesForApplication({
-    applicationId: application.id,
-    productGroupCertificates: values.productGroupCertificates ?? [],
-  });
+  await runApplicationSubmissionSyncs(application.id, values);
 
   return NextResponse.json({
     applicationNumber: application.applicationNumber,

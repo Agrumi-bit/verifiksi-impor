@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Pencil } from "lucide-react";
 
 import { ReturnForRevisionDialog } from "@/modules/applications/components/return-for-revision-dialog";
+import { ApplicationAuditHistory, type ApplicationAuditEntry } from "@/modules/applications/components/application-audit-history";
 
 import { DocumentsTab } from "./review/documents-tab";
 import { AssignTab } from "./review/assign-tab";
@@ -57,6 +58,7 @@ export type ApplicationDetail = {
     letterStatus: "DRAFT" | "PENDING" | "APPROVED";
   }[];
   workflowStages: { key: string; label: string; done: boolean; active: boolean }[];
+  auditLogs: ApplicationAuditEntry[];
 };
 
 const TABS = [
@@ -258,7 +260,12 @@ export function ApplicationReview({ id }: { id: string }) {
         />
       )}
       {tab === "assign" && <AssignTab applicationId={id} schedules={data.schedules} onChanged={invalidate} />}
-      {tab === "timeline" && <TimelineTab stages={data.workflowStages} />}
+      {tab === "timeline" && (
+        <div className="flex flex-col gap-4.5">
+          <TimelineTab stages={data.workflowStages} />
+          <ApplicationAuditHistory entries={data.auditLogs} />
+        </div>
+      )}
     </div>
   );
 }
