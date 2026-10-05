@@ -20,6 +20,7 @@ import {
   assignmentStatusBadgeVariant,
   type AssignmentStatusValue,
 } from "../status";
+import { formatAssignmentDate } from "@/lib/assignment-date";
 
 type AssignmentListItem = {
   id: string;
@@ -63,9 +64,7 @@ function AssignmentRow({ assignment }: { assignment: AssignmentListItem }) {
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span className="font-mono">{assignment.applicationNumber}</span>
         <span>
-          {assignment.scheduledDate
-            ? new Date(assignment.scheduledDate).toLocaleDateString("id-ID")
-            : "Belum dijadwalkan"}
+          {assignment.scheduledDate ? formatAssignmentDate(assignment.scheduledDate, "numeric") : "Belum dijadwalkan"}
           {assignment.scheduledTime ? ` · ${assignment.scheduledTime}` : ""}
         </span>
       </div>

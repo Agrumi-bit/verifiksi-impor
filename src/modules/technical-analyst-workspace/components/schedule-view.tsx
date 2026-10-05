@@ -8,6 +8,7 @@ import { SCHEDULE_STATUS_META, mapToScheduleStatus, type ScheduleStatusValue } f
 import { ScheduleCalendarView } from "./schedule/schedule-calendar";
 import { ScheduleListView } from "./schedule/schedule-list";
 import type { ScheduleItem } from "./schedule/schedule-types";
+import { assignmentDateKey } from "@/lib/assignment-date";
 
 function useScheduleQuery() {
   return useQuery({
@@ -48,7 +49,7 @@ export function ScheduleView() {
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
       if (dateFilter && item.scheduledDate) {
-        const key = new Date(item.scheduledDate).toISOString().slice(0, 10);
+        const key = assignmentDateKey(item.scheduledDate);
         if (key !== dateFilter) return false;
       }
       if (jenisFilter !== "ALL" && item.verificationType !== jenisFilter) return false;

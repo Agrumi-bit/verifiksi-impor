@@ -7,6 +7,7 @@ import { X } from "lucide-react";
 
 import { SCHEDULE_TYPE_DEFS } from "../status";
 import { useSuratTugasTemplate } from "@/modules/surat-tugas-template/use-template";
+import { formatAssignmentDate } from "@/lib/assignment-date";
 
 function fileHref(path: string): string {
   return `/api/files?path=${encodeURIComponent(path)}`;
@@ -32,7 +33,7 @@ const LETTER_STATUS_LABEL: Record<Schedule["letterStatus"], { label: string; bg:
 
 function fmtDate(value: string | null): string {
   if (!value) return "-";
-  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  return formatAssignmentDate(value);
 }
 
 type Props = {

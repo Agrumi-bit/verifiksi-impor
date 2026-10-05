@@ -4,6 +4,7 @@ import { MaterialIcon } from "../material-icon";
 import { SCHEDULE_TYPE_DEFS, type ScheduleType } from "@/modules/customer-relation-workspace/status";
 import { LETTER_STATUS_BADGE, LETTER_STATUS_LABELS } from "../../status";
 import { useSuratTugasTemplate } from "@/modules/surat-tugas-template/use-template";
+import { formatAssignmentDate } from "@/lib/assignment-date";
 
 type LetterInfo = {
   letterNumber: string | null;
@@ -11,11 +12,6 @@ type LetterInfo = {
   location: string | null;
   scheduledDate: string | null;
 };
-
-function fmtDate(value: string | null): string {
-  if (!value) return "-";
-  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-}
 
 function fileHref(path: string): string {
   return `/api/files?path=${encodeURIComponent(path)}`;
@@ -216,7 +212,7 @@ export function SuratTugasView({
                 )}
                 <tr>
                   <td className="py-0.5 align-top">{template?.tanggalLabel ?? "Tanggal Pelaksanaan"}</td>
-                  <td className="align-top">: {fmtDate(letter.scheduledDate)}</td>
+                  <td className="align-top">: {formatAssignmentDate(letter.scheduledDate)}</td>
                 </tr>
               </tbody>
             </table>

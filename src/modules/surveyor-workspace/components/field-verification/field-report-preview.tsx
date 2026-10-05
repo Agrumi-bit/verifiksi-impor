@@ -30,6 +30,7 @@ import {
 import { REPORT_CHECKLIST_SECTIONS, reportResultLabels, type ReportChecklistContext } from "@/modules/verifikator-workspace/report-checklist-items";
 import type { ReportVerificationState } from "@/modules/verifikator-workspace/report-verification";
 import "../report/office-report-preview.css";
+import { formatAssignmentDate } from "@/lib/assignment-date";
 
 type PayloadLocation = {
   buildingStatus?: "MILIK_SENDIRI" | "SEWA" | null;
@@ -84,9 +85,9 @@ const DECISION_META: Record<
   REVISION: { label: "Revisi Diminta", icon: "◐", color: "var(--gold-soft-ink)" },
 };
 
+// Asia/Jakarta, so a "YYYY-MM-DD" date (e.g. Tanggal Penugasan) never shifts a day.
 function fmtDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+  return formatAssignmentDate(value, "full");
 }
 
 function basename(path: string | null | undefined): string {
@@ -699,7 +700,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
                   <td style={{ color: "var(--ink-faint)" }}>Status Kepemilikan</td>
                   <td style={{ fontWeight: 600 }}>{buildingStatus === "SEWA" ? "Sewa" : buildingStatus === "MILIK_SENDIRI" ? "Milik Sendiri" : "—"}</td>
                 </tr>
-                <tr><td style={{ color: "var(--ink-faint)" }}>Tanggal Ditugaskan</td><td style={{ fontWeight: 600 }}>{fmtDate(fv.assignedDate)}</td></tr>
+                <tr><td style={{ color: "var(--ink-faint)" }}>Tanggal Penugasan</td><td style={{ fontWeight: 600 }}>{fmtDate(fv.assignedDate)}</td></tr>
                 <tr><td style={{ color: "var(--ink-faint)" }}>Tanggal Kunjungan Aktual</td><td style={{ fontWeight: 600 }}>{fmtDate(fv.actualVisitDate)}</td></tr>
                 <tr><td style={{ color: "var(--ink-faint)" }}>Nama Surveyor</td><td style={{ fontWeight: 600 }}>{surveyorName}</td></tr>
                 <tr><td style={{ color: "var(--ink-faint)" }}>Tanggal Laporan Diterbitkan</td><td style={{ fontWeight: 600 }}>{fmtDate(data.submittedAt)}</td></tr>

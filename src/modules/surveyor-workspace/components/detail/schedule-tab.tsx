@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { MaterialIcon } from "../material-icon";
 import { LOCATION_TYPE_LABELS } from "../../status";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import { formatAssignmentDate } from "@/lib/assignment-date";
 
 type LocationVisitItem = {
   id: string;
@@ -67,9 +68,7 @@ export function ScheduleTab({ assignmentId }: Props) {
                     <div className="mb-0.5 flex items-center gap-2.5">
                       <span className="text-[15px] font-bold">{label}</span>
                       <span className="rounded-full border border-[#e8d5c5] bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#4a4038]">
-                        {loc.scheduledDate
-                          ? new Date(loc.scheduledDate).toLocaleDateString("id-ID")
-                          : "Belum dijadwalkan"}
+                        {loc.scheduledDate ? formatAssignmentDate(loc.scheduledDate, "numeric") : "Belum dijadwalkan"}
                       </span>
                     </div>
                     <div className="text-[13px] text-[#8a7565]">{loc.scheduledTime ?? "—"}</div>
@@ -92,9 +91,7 @@ export function ScheduleTab({ assignmentId }: Props) {
                           Verification Date
                         </div>
                         <div className="text-[15px] font-bold">
-                          {loc.scheduledDate
-                            ? new Date(loc.scheduledDate).toLocaleDateString("id-ID")
-                            : "—"}
+                          {formatAssignmentDate(loc.scheduledDate, "long")}
                         </div>
                       </div>
                     </div>

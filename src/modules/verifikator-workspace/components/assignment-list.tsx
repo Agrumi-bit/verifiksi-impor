@@ -18,6 +18,7 @@ import {
   type AssignmentStatusValue,
 } from "../status";
 import type { AssignmentStatCounts } from "../assignment-stats";
+import { formatAssignmentDate } from "@/lib/assignment-date";
 
 type AssignmentListItem = {
   revisionCount?: number;
@@ -234,7 +235,7 @@ export function AssignmentList() {
                 <div className="flex flex-wrap gap-4 text-xs text-[#8a7565]">
                   <span className="flex items-center gap-1">
                     <MaterialIcon name="event" className="text-sm" />
-                    Assigned: {fmtDate(assignment.createdAt)}
+                    Tanggal Penugasan: {formatAssignmentDate(assignment.scheduledDate)}
                   </span>
                   <span className="flex items-center gap-1">
                     <MaterialIcon name="schedule" className="text-sm" />

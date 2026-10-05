@@ -44,6 +44,7 @@ import { buildDisplayFileName } from "@/lib/document-filename";
 import { composeLocationAddress, OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS } from "@/modules/shared/schema";
 import { TERMINAL_STATUSES, type ApplicationStatusValue } from "../status";
 import { getApplicationStatusDisplay, WORKFLOW_STAGE_LABELS } from "../application-status-display";
+import { formatAssignmentDate, formatRecordedAt } from "@/lib/assignment-date";
 
 type VerificationStatusValue = "NOT_YET_VERIFIED" | "VERIFIED" | "NEED_REVISION" | "REJECTED" | "NOT_APPLICABLE" | "EXPIRED";
 
@@ -1246,7 +1247,7 @@ export function CompanyApplicationDetail({ id }: Props) {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="text-[14px] font-extrabold text-[#20180f]">{assignment.assignmentNumber}</div>
-                    <div className="mt-0.5 text-[11.5px] text-[#8a7565]">Dibuat {fmtDate(assignment.createdAt)}</div>
+                    <div className="mt-0.5 text-[11.5px] text-[#8a7565]">Dicatat di sistem {formatRecordedAt(assignment.createdAt)}</div>
                   </div>
                   <span className="rounded-full px-3 py-1 text-[11px] font-bold" style={{ background: statusStyle.bg, color: statusStyle.color }}>
                     {statusStyle.label}
@@ -1256,7 +1257,7 @@ export function CompanyApplicationDetail({ id }: Props) {
                   <TabField label="Surveyor" value={assignment.surveyor?.name} />
                   <TabField label="Verifikator" value={assignment.verifikator?.name} />
                   <TabField label="Technical Reviewer" value={assignment.technicalReviewer?.name} />
-                  <TabField label="Jadwal Survey" value={fmtDate(assignment.scheduledDate)} />
+                  <TabField label="Tanggal Penugasan" value={formatAssignmentDate(assignment.scheduledDate, "long")} />
                 </div>
                 {assignment.locationVisits.length > 0 && (
                   <div className="mt-4 flex flex-col gap-2">

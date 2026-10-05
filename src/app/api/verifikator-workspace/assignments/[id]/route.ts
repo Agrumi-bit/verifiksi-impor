@@ -236,6 +236,8 @@ export async function GET(
       lastReturnNotes: assignment.lastReturnNotes,
       priority: assignment.priority,
       createdAt: assignment.createdAt,
+      // Tanggal Penugasan (entered by Customer Relationship) — see src/lib/assignment-date.ts.
+      scheduledDate: assignment.scheduledDate,
       dueDate: assignment.dueDate,
       validationNotes: assignment.validationNotes,
       validatedAt: assignment.validatedAt,

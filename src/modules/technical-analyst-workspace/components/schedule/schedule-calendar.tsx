@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { MaterialIcon } from "../material-icon";
 import { SCHEDULE_STATUS_META, mapToScheduleStatus, type ScheduleStatusValue } from "../../status";
 import type { ScheduleItem } from "./schedule-types";
+import { assignmentDateKey } from "@/lib/assignment-date";
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTH_LABELS = [
@@ -49,7 +50,8 @@ export function ScheduleCalendarView({ items }: { items: ScheduleItem[] }) {
     const map = new Map<string, Event[]>();
     for (const item of items) {
       if (!item.scheduledDate) continue;
-      const key = dateKey(new Date(item.scheduledDate));
+      // Tanggal Penugasan is a Jakarta calendar date — never re-derive it in the browser's zone.
+      const key = assignmentDateKey(item.scheduledDate);
       const events = map.get(key) ?? [];
       events.push({ company: item.companyName, time: item.scheduledTime, status: mapToScheduleStatus(item.status) });
       map.set(key, events);

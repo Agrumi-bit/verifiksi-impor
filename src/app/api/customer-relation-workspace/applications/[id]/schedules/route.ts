@@ -9,6 +9,7 @@ import { createScheduleSchema } from "@/modules/customer-relation-workspace/sche
 import { SCHEDULE_TYPE_DEFS } from "@/modules/customer-relation-workspace/status";
 import { REQUIRED_LOCATION_TYPE_LABELS, type LocationValues } from "@/modules/shared/schema";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import { formatAssignmentDate } from "@/lib/assignment-date";
 
 function generateAssignmentNumber(scheduleType: string): string {
   const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -89,7 +90,7 @@ export async function POST(
   });
 
   const def = SCHEDULE_TYPE_DEFS[scheduleType];
-  const messageText = `Jadwal ditambahkan: ${def.label}${facility ? " — " + facility : ""} pada ${date} oleh ${person.name}`;
+  const messageText = `Jadwal ditambahkan: ${def.label}${facility ? " — " + facility : ""} pada ${formatAssignmentDate(date, "long")} oleh ${person.name}`;
   await db.applicationMessage.create({
     data: { applicationId: id, direction: "SYSTEM", text: messageText },
   });
