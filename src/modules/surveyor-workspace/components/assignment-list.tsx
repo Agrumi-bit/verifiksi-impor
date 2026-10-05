@@ -14,6 +14,7 @@ import {
   type AssignmentPriorityValue,
   type AssignmentStatusValue,
 } from "../status";
+import { formatAssignmentDate, formatRecordedAt } from "@/lib/assignment-date";
 
 type AssignmentListItem = {
   id: string;
@@ -293,8 +294,8 @@ export function AssignmentList() {
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#f5ebe1] pt-2.5">
               <div className="flex flex-wrap gap-4 text-xs text-[#8a7565]">
-                <span>🗓 Assigned: {fmtDate(assignment.createdAt)}</span>
-                <span>🗓 Verification: {fmtDate(assignment.scheduledDate)}</span>
+                <span>🗓 Tanggal Penugasan: {formatAssignmentDate(assignment.scheduledDate)}</span>
+                <span title="Dicatat di sistem">🕓 Dicatat: {formatRecordedAt(assignment.createdAt)}</span>
                 <span>⏰ Due: {fmtDate(assignment.dueDate)}</span>
               </div>
               <Link

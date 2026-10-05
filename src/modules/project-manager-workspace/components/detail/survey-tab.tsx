@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { MaterialIcon } from "../material-icon";
 import type { PmApplicationDetail } from "./types";
+import { formatAssignmentDate } from "@/lib/assignment-date";
 
 function fmtDate(value: string | null): string {
   if (!value) return "—";
@@ -166,7 +167,7 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
                       <MaterialIcon name="event" className="text-[13px]" />
                       Survey Date
                     </div>
-                    <div className="mt-0.75 text-[12.5px] font-bold text-[#20180f]">{fmtDate(visit.scheduledDate)}</div>
+                    <div className="mt-0.75 text-[12.5px] font-bold text-[#20180f]">{formatAssignmentDate(visit.scheduledDate)}</div>
                   </div>
                   <div>
                     <div className="flex items-center gap-1 text-[10.5px] font-bold text-[#a68f80]">

@@ -16,6 +16,7 @@ import {
   type TechnicalModuleStatusValue,
   type TechnicalStatCounts,
 } from "../status";
+import { formatAssignmentDate } from "@/lib/assignment-date";
 
 type AssignmentListItem = {
   revisionCount?: number;
@@ -28,6 +29,7 @@ type AssignmentListItem = {
   status: AssignmentStatusValue;
   priority: AssignmentPriorityValue;
   createdAt: string;
+  scheduledDate?: string | null;
   dueDate: string | null;
   validatedAt: string | null;
   overallStatus: TechnicalModuleStatusValue;
@@ -196,7 +198,7 @@ export function AssignmentList() {
             <div className="flex flex-wrap items-center gap-4 border-t border-[#f5ebe1] pt-2.5 text-xs text-[#8a7565]">
               <span className="flex items-center gap-1">
                 <MaterialIcon name="event" className="text-sm" />
-                Assigned: {fmtDate(assignment.createdAt)}
+                Tanggal Penugasan: {formatAssignmentDate(assignment.scheduledDate)}
               </span>
               <span className="flex items-center gap-1">
                 <MaterialIcon name="schedule" className="text-sm" />

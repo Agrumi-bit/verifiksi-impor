@@ -1,5 +1,6 @@
 import { MaterialIcon } from "../material-icon";
 import type { AssignmentDetailData } from "../assignment-detail";
+import { formatAssignmentDate } from "@/lib/assignment-date";
 
 type Props = { data: AssignmentDetailData };
 
@@ -26,10 +27,10 @@ export function OverviewTab({ data }: Props) {
           <Row icon="category" label="Tipe Verifikasi" value={data.application.verificationType} />
           <Row
             icon="event_available"
-            label="Tanggal Verifikasi"
-            value={data.scheduledDate ? new Date(data.scheduledDate).toLocaleDateString("id-ID") : undefined}
+            label="Tanggal Penugasan"
+            value={data.scheduledDate ? formatAssignmentDate(data.scheduledDate, "long") : undefined}
           />
-          <Row icon="schedule" label="Jatuh Tempo" value={data.dueDate ? new Date(data.dueDate).toLocaleDateString("id-ID") : undefined} />
+          <Row icon="schedule" label="Jatuh Tempo" value={data.dueDate ? formatAssignmentDate(data.dueDate, "numeric") : undefined} />
         </div>
       </div>
       <div className="rounded-[14px] border border-[#e8d5c5] bg-white p-7 shadow-sm">

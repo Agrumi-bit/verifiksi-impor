@@ -30,6 +30,7 @@ import { DraftReportTab } from "./detail/draft-report-tab";
 import { TeamTab } from "./detail/team-tab";
 import { CommunicationTab } from "./detail/communication-tab";
 import { DecisionPanel } from "./detail/decision-panel";
+import { formatAssignmentDate } from "@/lib/assignment-date";
 
 export type LocationVisitSummary = {
   id: string;
@@ -59,6 +60,8 @@ export type AssignmentDetailData = {
   status: AssignmentStatusValue;
   priority: AssignmentPriorityValue;
   createdAt: string;
+  /** Tanggal Penugasan entered by Customer Relationship. */
+  scheduledDate?: string | null;
   dueDate: string | null;
   validationNotes: string | null;
   validatedAt: string | null;
@@ -240,7 +243,7 @@ export function AssignmentDetail({ id }: Props) {
           <HeaderStat label="Nama Perusahaan" value={data.company.companyName} />
           <HeaderStat label="Jenis Permohonan" value={data.application.applicationCategory} />
           <HeaderStat label="Klasifikasi" value={data.application.verificationType} />
-          <HeaderStat label="Assigned Date" value={fmtDate(data.createdAt)} />
+          <HeaderStat label="Tanggal Penugasan" value={formatAssignmentDate(data.scheduledDate)} />
           <HeaderStat label="Due Date" value={fmtDate(data.dueDate)} accent />
         </div>
       </div>

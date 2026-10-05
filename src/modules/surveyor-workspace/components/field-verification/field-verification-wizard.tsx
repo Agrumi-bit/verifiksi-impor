@@ -30,6 +30,7 @@ import { SectionFindings } from "./section-findings";
 import { SectionConclusion } from "./section-conclusion";
 import { FieldVerificationSidebar } from "./sidebar";
 import { SECTION4_QUESTIONS, SECTION6_QUESTIONS } from "./schema";
+import { assignmentDateKey } from "@/lib/assignment-date";
 
 type PayloadLocation = {
   address?: string | null;
@@ -141,7 +142,9 @@ export function FieldVerificationWizard({ kind, assignmentId, locationId }: Prop
       ...base,
       // Pre-fill from Customer Relation's actual assignment date (synced regardless of Surat
       // Tugas draft/approval status) whenever the surveyor hasn't already set one themselves.
-      assignedDate: base.assignedDate || data.scheduledDate?.slice(0, 10) || "",
+      // Tanggal Penugasan is CR's date (scheduledDate, as a Jakarta calendar date) — it wins
+      // over whatever a draft saved earlier, so a later CR correction reaches the report.
+      assignedDate: assignmentDateKey(data.scheduledDate) || base.assignedDate || "",
     });
   }
 

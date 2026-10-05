@@ -8,6 +8,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { SCHEDULE_TYPE_DEFS, SCHEDULE_TYPES, type ScheduleType } from "../../status";
 import { REQUIRED_LOCATION_TYPE_LABELS } from "@/modules/shared/schema";
 import { SuratTugasModal } from "../surat-tugas-modal";
+import { assignmentDateKey, BACKDATE_NOTICE_DAYS, daysBeforeToday, formatAssignmentDate } from "@/lib/assignment-date";
 
 type Schedule = {
   id: string;
@@ -33,7 +34,7 @@ const LETTER_STATUS_LABEL: Record<Schedule["letterStatus"], { label: string; bg:
 
 function fmtDate(value: string | null): string {
   if (!value) return "-";
-  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  return formatAssignmentDate(value);
 }
 
 type Props = {
@@ -47,7 +48,9 @@ export function AssignTab({ applicationId, schedules, locations, onChanged }: Pr
   const [showForm, setShowForm] = useState(false);
   const [scheduleType, setScheduleType] = useState<ScheduleType>("survey");
   const [locationId, setLocationId] = useState<string | null>(null);
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  // Today in Asia/Jakarta (toISOString would give the UTC date — yesterday before 07:00 WIB).
+  const [date, setDate] = useState(() => assignmentDateKey(new Date()));
+  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [personId, setPersonId] = useState("");
   const [showPersonMenu, setShowPersonMenu] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -73,7 +76,7 @@ export function AssignTab({ applicationId, schedules, locations, onChanged }: Pr
     setScheduleType("survey");
     setLocationId(null);
     setPersonId("");
-    setDate(new Date().toISOString().slice(0, 10));
+    setDate(assignmentDateKey(new Date()));
   }
 
   async function handleSave() {
@@ -130,6 +133,17 @@ export function AssignTab({ applicationId, schedules, locations, onChanged }: Pr
                 <div className="mt-1.5 text-[13px] text-[#20180f]">
                   {fmtDate(s.date)} · {s.person}
                 </div>
+                {editingSchedule?.id === s.id && (
+                  <EditScheduleDate
+                    applicationId={applicationId}
+                    schedule={s}
+                    onClose={() => setEditingSchedule(null)}
+                    onSaved={() => {
+                      setEditingSchedule(null);
+                      onChanged();
+                    }}
+                  />
+                )}
               </div>
               <div className="flex items-center gap-2.5">
                 <span className="whitespace-nowrap rounded-md px-2 py-0.75 text-[10.5px] font-bold" style={{ background: letter.bg, color: letter.color }}>
@@ -142,6 +156,15 @@ export function AssignTab({ applicationId, schedules, locations, onChanged }: Pr
                 >
                   Surat Tugas
                 </button>
+                {s.status !== "COMPLETED" && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingSchedule(s)}
+                    className="whitespace-nowrap rounded-lg border border-[#e1bfb3] bg-white px-3 py-1.75 text-[12px] font-bold text-[#594138]"
+                  >
+                    Ubah tanggal
+                  </button>
+                )}
                 <button type="button" onClick={() => handleRemove(s.id)} aria-label="Hapus jadwal" className="text-[#a68f80]">
                   <Trash2 className="size-4.5" />
                 </button>
@@ -240,6 +263,7 @@ export function AssignTab({ applicationId, schedules, locations, onChanged }: Pr
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full rounded-lg border-none bg-[#f7f2ec] px-3 py-2.25 text-[12.5px] text-[#20180f] outline-none"
               />
+              <ScheduleDateHint dateKey={date} />
             </div>
             <div className="relative">
               <div className="mb-1.5 text-[12px] font-bold text-[#20180f]">
@@ -305,6 +329,96 @@ export function AssignTab({ applicationId, schedules, locations, onChanged }: Pr
           onChanged={onChanged}
         />
       )}
+    </div>
+  );
+}
+
+/** The picked date spelled out ("Kamis, 26 Februari 2026") so CR can double-check it, plus an info
+ * note — never an error — when it's well in the past (a backdated assignment is allowed). */
+function ScheduleDateHint({ dateKey }: { dateKey: string }) {
+  if (!dateKey) return null;
+  const backdated = daysBeforeToday(dateKey) > BACKDATE_NOTICE_DAYS;
+  return (
+    <div className="mt-1.5 text-[11.5px]">
+      <div className="font-semibold text-[#20180f]">{formatAssignmentDate(dateKey, "long")}</div>
+      {backdated && (
+        <div className="mt-0.5 rounded-md bg-[#eef3fd] px-2 py-1 text-[#1f3f7a]">
+          Tanggal penugasan dicatat mundur ({daysBeforeToday(dateKey)} hari yang lalu).
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Changes an existing assignment's Tanggal Penugasan (allowed until it's COMPLETED); the server
+ * keeps the change in the application's history and posts a system message. */
+function EditScheduleDate({
+  applicationId,
+  schedule,
+  onClose,
+  onSaved,
+}: {
+  applicationId: string;
+  schedule: Schedule;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [date, setDate] = useState(() => assignmentDateKey(schedule.date) || assignmentDateKey(new Date()));
+  const [reason, setReason] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const unchanged = date === assignmentDateKey(schedule.date);
+
+  async function save() {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/customer-relation-workspace/applications/${applicationId}/schedules/${schedule.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date, reason: reason.trim() || undefined }),
+      });
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        toast.error(body?.error ?? "Gagal mengubah tanggal penugasan");
+        return;
+      }
+      toast.success("Tanggal penugasan diperbarui.");
+      onSaved();
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 flex flex-col gap-2 rounded-lg border border-[#efe2d4] bg-[#fbf7f3] p-3">
+      <div className="text-[12px] font-bold text-[#20180f]">Ubah Tanggal Penugasan</div>
+      <input
+        type="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        aria-label="Tanggal penugasan baru"
+        className="w-full rounded-lg border-none bg-white px-3 py-2 text-[12.5px] text-[#20180f] outline-none"
+      />
+      <ScheduleDateHint dateKey={date} />
+      <input
+        type="text"
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        placeholder="Alasan perubahan (opsional)"
+        className="w-full rounded-lg border-none bg-white px-3 py-2 text-[12.5px] text-[#20180f] outline-none"
+      />
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-[#594138]">
+          Batal
+        </button>
+        <button
+          type="button"
+          disabled={!date || unchanged || isSaving}
+          onClick={save}
+          className="rounded-lg bg-[#c14a1f] px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-50"
+        >
+          {isSaving ? "Menyimpan..." : "Simpan Tanggal"}
+        </button>
+      </div>
     </div>
   );
 }

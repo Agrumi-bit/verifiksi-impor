@@ -53,6 +53,8 @@ export async function GET(request: Request) {
       status: assignment.status,
       priority: assignment.priority,
       createdAt: assignment.createdAt,
+      // Tanggal Penugasan (entered by Customer Relationship) — see src/lib/assignment-date.ts.
+      scheduledDate: assignment.scheduledDate,
       dueDate: assignment.dueDate,
       validatedAt: assignment.validatedAt,
       revisionCount: assignment.revisionCount,

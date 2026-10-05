@@ -3,12 +3,13 @@ import Link from "next/link";
 import { MaterialIcon } from "../material-icon";
 import { SCHEDULE_STATUS_META, mapToScheduleStatus } from "../../status";
 import type { ScheduleItem } from "./schedule-types";
+import { formatAssignmentDate } from "@/lib/assignment-date";
 
 const GRID_COLS = "grid-cols-[1.4fr_1.6fr_0.7fr_1.8fr_1.1fr_1.6fr]";
 
 function fmtDate(value: string | null): string {
   if (!value) return "Belum dijadwalkan";
-  return new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return formatAssignmentDate(value);
 }
 
 function actionMeta(status: ScheduleItem["status"]) {

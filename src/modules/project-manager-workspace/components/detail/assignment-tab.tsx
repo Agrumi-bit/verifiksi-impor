@@ -9,6 +9,7 @@ import { SCHEDULE_TYPE_DEFS, type ScheduleType } from "@/modules/customer-relati
 import { LETTER_STATUS_BADGE, LETTER_STATUS_LABELS } from "../../status";
 import { SuratTugasView } from "./surat-tugas-view";
 import type { PmApplicationDetail } from "./types";
+import { formatAssignmentDate } from "@/lib/assignment-date";
 
 type Person = { id: string; name: string; role: string };
 
@@ -22,11 +23,6 @@ type AssignmentInfo = {
   letterNumber: string | null;
   letterReviewNote: string | null;
 };
-
-function fmtDate(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-}
 
 function ReassignForm({
   scheduleType,
@@ -191,8 +187,8 @@ function AssignmentCard({
               <div className="mt-1 text-[13.5px] font-extrabold text-[#20180f]">{personName ?? "Belum ditugaskan"}</div>
             </div>
             <div>
-              <div className="text-[10.5px] font-bold text-[#a68f80]">TANGGAL</div>
-              <div className="mt-1 text-[13px] font-semibold text-[#20180f]">{fmtDate(assignment.scheduledDate)}</div>
+              <div className="text-[10.5px] font-bold text-[#a68f80]">TANGGAL PENUGASAN</div>
+              <div className="mt-1 text-[13px] font-semibold text-[#20180f]">{formatAssignmentDate(assignment.scheduledDate, "long")}</div>
             </div>
             {assignment.location && (
               <div>

@@ -24,6 +24,7 @@ import { DocumentsTab } from "./detail/documents-tab";
 import { ProductsTab } from "./detail/products-tab";
 import { OnSiteTab } from "./detail/onsite-tab";
 import { ReportTab } from "./detail/report-tab";
+import { formatAssignmentDate, formatRecordedAt } from "@/lib/assignment-date";
 
 export type TeamMemberSummary = {
   name: string;
@@ -166,9 +167,9 @@ export function AssignmentDetail({ id }: Props) {
           </div>
           <div className="border-l border-[#f0ded0] px-5">
             <div className="mb-1 text-[10.5px] uppercase tracking-wide text-[#a68f80]">Tanggal Penugasan</div>
-            <div className="text-sm font-bold">
-              {new Date(data.createdAt).toLocaleDateString("id-ID")}
-            </div>
+            {/* The date Customer Relationship entered (may be backdated) — not createdAt. */}
+            <div className="text-sm font-bold">{formatAssignmentDate(data.scheduledDate, "numeric")}</div>
+            <div className="mt-0.5 text-[10.5px] text-[#a68f80]">Dicatat di sistem: {formatRecordedAt(data.createdAt)}</div>
           </div>
           <div className="border-l border-[#f0ded0] px-5">
             <div className="mb-1 text-[10.5px] uppercase tracking-wide text-[#a68f80]">Jenis Penugasan</div>
