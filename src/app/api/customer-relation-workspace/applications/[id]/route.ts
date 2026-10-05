@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import type { LocationValues } from "@/modules/shared/schema";
+import { summarizeApplicationLocations } from "@/modules/shared/location-meta";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
@@ -145,6 +147,7 @@ export async function GET(
       schedules,
       workflowStages,
       auditLogs: application.auditLogs,
+      locationSummaries: summarizeApplicationLocations(payload.locations, company?.locations as LocationValues[] | null),
       // For Penugasan's Pilih Lokasi picker — real locations from the application's own
       // payload, not the old hardcoded Kantor/Gudang/Factory facility list.
       locations: (payload.locations ?? []).map((location) => ({

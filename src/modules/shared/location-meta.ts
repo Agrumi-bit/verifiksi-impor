@@ -62,3 +62,47 @@ export function isLocationSnapshotStale(snapshot: LocationLike, live: LocationLi
   if (!live) return false;
   return COMPARED_FIELDS.some((field) => norm(snapshot[field]) !== norm(live[field]));
 }
+
+/** One application location as shown in the CR / Verifikator / PM / Admin location lists. */
+export type ApplicationLocationSummary = {
+  id: string;
+  locationType: string;
+  address: string;
+  cityProvince: string;
+  buildingStatus: string | null;
+  googleMapsLink: string | null;
+  badge: LocationSourceBadge;
+  /** The company profile's entry changed after this application captured it. */
+  updatedAfterSubmission: boolean;
+  /** The location no longer exists in the company profile. */
+  missingFromProfile: boolean;
+  fieldNotes: string | null;
+};
+
+/**
+ * Display rows for an application's locations: the company profile's live entry when it still
+ * exists (current data, per the "profile is the source of truth" rule), flagged when it differs
+ * from what the application captured; the application's own snapshot otherwise.
+ */
+export function summarizeApplicationLocations(
+  payloadLocations: readonly LocationLike[] | null | undefined,
+  companyLocations: readonly LocationLike[] | null | undefined,
+): ApplicationLocationSummary[] {
+  const live = new Map((companyLocations ?? []).map((loc) => [loc.id, loc]));
+  return (payloadLocations ?? []).map((snapshot) => {
+    const current = live.get(companyLocationIdOf(snapshot));
+    const shown = current ?? snapshot;
+    return {
+      id: snapshot.id,
+      locationType: shown.locationType ?? "",
+      address: [shown.address, shown.addressDesa, shown.addressKecamatan].filter(Boolean).join(", "),
+      cityProvince: [shown.city, shown.province].filter(Boolean).join(", "),
+      buildingStatus: shown.buildingStatus ?? null,
+      googleMapsLink: shown.googleMapsLink || null,
+      badge: locationSourceBadge(shown),
+      updatedAfterSubmission: current ? isLocationSnapshotStale(snapshot, current) : false,
+      missingFromProfile: !current && (companyLocations?.length ?? 0) > 0,
+      fieldNotes: shown.fieldNotes ?? null,
+    };
+  });
+}

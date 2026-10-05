@@ -1,5 +1,6 @@
 "use client";
 
+import { ApplicationLocationsPanel } from "@/modules/applications/components/application-locations-panel";
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -118,7 +119,12 @@ export function ApplicationDetail({ applicationNumber, jenis }: { applicationNum
         ))}
       </div>
 
-      {tab === "Overview" && <OverviewTab data={data} />}
+      {tab === "Overview" && (
+        <div className="flex flex-col gap-4">
+          <OverviewTab data={data} />
+          <ApplicationLocationsPanel locations={data.locationSummaries ?? []} />
+        </div>
+      )}
       {tab === "Assignment" && <AssignmentTab data={data} applicationNumber={applicationNumber} jenis={jenis} />}
       {tab === "Application" && <ApplicationInfoTab data={data} />}
       {tab === "Company" && <CompanyTab data={data} />}

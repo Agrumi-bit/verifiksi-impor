@@ -1,5 +1,7 @@
 "use client";
 
+import { ApplicationLocationsPanel } from "@/modules/applications/components/application-locations-panel";
+import type { ApplicationLocationSummary } from "@/modules/shared/location-meta";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -22,6 +24,7 @@ type ApplicationDetailData = {
   payload: ApplicationWizardValues;
   assignments: { status: string }[];
   auditLogs: ApplicationAuditEntry[];
+  locationSummaries: ApplicationLocationSummary[];
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -159,6 +162,8 @@ export function ApplicationDetail({ id }: Props) {
           <KonsumsiApplicationReview payload={payload} brandLookupApiBase="/api/merk" />
         </SectionErrorBoundary>
       )}
+
+      <ApplicationLocationsPanel locations={data.locationSummaries} />
 
       <ApplicationAuditHistory entries={data.auditLogs} />
     </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { ApplicationLocationsPanel } from "@/modules/applications/components/application-locations-panel";
+import type { ApplicationLocationSummary } from "@/modules/shared/location-meta";
 import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
 import { ApplicationEditedNotice } from "@/modules/applications/components/application-edited-notice";
 import type { ApplicationEditedNotice as ApplicationEditedNoticeData } from "@/modules/applications/server/edited-after";
@@ -48,6 +50,7 @@ export type TeamMemberSummary = {
 
 export type AssignmentDetailData = {
   applicationEditedAfterAssignment?: ApplicationEditedNoticeData;
+  locationSummaries?: ApplicationLocationSummary[];
   revisionCount: number;
   revisionReceivedAt: string | null;
   lastReturnNotes: string | null;
@@ -262,7 +265,12 @@ export function AssignmentDetail({ id }: Props) {
       </div>
 
       <div className="pb-8">
-        {activeTab === "Overview" && <OverviewTab data={data} />}
+        {activeTab === "Overview" && (
+          <div className="flex flex-col gap-4">
+            <OverviewTab data={data} />
+            <ApplicationLocationsPanel locations={data.locationSummaries ?? []} />
+          </div>
+        )}
         {activeTab === "Documents Verification" && (
           <DocumentVerificationTab
             assignmentId={id}

@@ -1,6 +1,9 @@
+import type { ApplicationLocationSummary } from "@/modules/shared/location-meta";
+
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 
 export type PmApplicationDetail = {
+  locationSummaries?: ApplicationLocationSummary[];
   applicationNumber: string;
   verificationType: string;
   applicationCategory: string;

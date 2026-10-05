@@ -1,5 +1,6 @@
 "use client";
 
+import { LOCATION_SOURCE_BADGE_STYLE, locationSourceBadge } from "@/modules/shared/location-meta";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -935,7 +936,19 @@ function FacilitiesTab({ data, onView }: { data: CompanyProfileData; onView: (do
                 <FacilityIcon className="size-8" />
               </div>
               <div className="flex-1">
-                <div className="text-[20px] font-extrabold text-[#20180f]">{LOCATION_TYPE_LABEL[loc.locationType] ?? loc.locationType}</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="text-[20px] font-extrabold text-[#20180f]">{LOCATION_TYPE_LABEL[loc.locationType] ?? loc.locationType}</div>
+                  {(() => {
+                    const badge = locationSourceBadge(loc);
+                    const style = LOCATION_SOURCE_BADGE_STYLE[badge.tone];
+                    return (
+                      <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold" style={{ background: style.bg, color: style.color }}>
+                        {badge.label}
+                        {loc.source === "FIELD_DISCOVERY" && loc.fieldVerificationStatus !== "VERIFIED" ? " · Belum diverifikasi" : ""}
+                      </span>
+                    );
+                  })()}
+                </div>
                 <div className="mt-1.5 text-[13px] text-[#594138]">{address || "—"}</div>
                 {loc.googleMapsLink && (
                   <a

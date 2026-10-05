@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { summarizeApplicationLocations } from "@/modules/shared/location-meta";
+import type { LocationValues } from "@/modules/shared/schema";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
@@ -34,8 +36,12 @@ export async function GET(
   }
 
   const payload = await backfillKonsumsiHsCodes(normalizeKonsumsiPayload(application.payload as ApplicationWizardValues));
+  const company = application.companyId
+    ? await db.company.findUnique({ where: { id: application.companyId }, select: { locations: true } })
+    : null;
+  const locationSummaries = summarizeApplicationLocations(payload.locations, company?.locations as LocationValues[] | null);
 
-  return NextResponse.json({ data: { ...application, payload } });
+  return NextResponse.json({ data: { ...application, payload, locationSummaries } });
 }
 
 const editRequestSchema = z.object({

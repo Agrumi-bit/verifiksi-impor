@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import type { LocationValues } from "@/modules/shared/schema";
+import { summarizeApplicationLocations } from "@/modules/shared/location-meta";
 import { z } from "zod";
 import type { LocationVisit } from "@/generated/prisma/client";
 
@@ -228,6 +230,7 @@ export async function GET(
       assignmentNumber: assignment.assignmentNumber,
       status: assignment.status,
       applicationEditedAfterAssignment,
+      locationSummaries: summarizeApplicationLocations(payload.locations, company?.locations as LocationValues[] | null),
       revisionCount: assignment.revisionCount,
       revisionReceivedAt: assignment.revisionReceivedAt,
       lastReturnNotes: assignment.lastReturnNotes,

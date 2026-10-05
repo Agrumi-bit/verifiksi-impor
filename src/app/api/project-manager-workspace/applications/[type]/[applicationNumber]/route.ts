@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import type { LocationValues } from "@/modules/shared/schema";
+import { summarizeApplicationLocations } from "@/modules/shared/location-meta";
 import { db } from "@/lib/db";
 import { requireProjectManagerSession } from "@/lib/require-project-manager-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
@@ -155,6 +157,10 @@ export async function GET(
       createdAt: application.createdAt,
       payload,
       businessAddress,
+      locationSummaries: summarizeApplicationLocations(
+        payload.locations,
+        (application.company?.locations as LocationValues[] | null) ?? null,
+      ),
       company: application.company
         ? {
             companyName: application.company.companyName,

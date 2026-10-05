@@ -1,5 +1,7 @@
 "use client";
 
+import { ApplicationLocationsPanel } from "@/modules/applications/components/application-locations-panel";
+import type { ApplicationLocationSummary } from "@/modules/shared/location-meta";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -61,6 +63,7 @@ export type ApplicationDetail = {
   }[];
   workflowStages: { key: string; label: string; done: boolean; active: boolean }[];
   auditLogs: ApplicationAuditEntry[];
+  locationSummaries: ApplicationLocationSummary[];
   locations: { id: string; locationType: string; address: string; city: string | null }[];
 };
 
@@ -244,6 +247,10 @@ export function ApplicationReview({ id }: { id: string }) {
             <p className="text-[13px] text-[#4a4038]">{data.crNotes || "—"}</p>
           )}
         </div>
+      </div>
+
+      <div className="mb-4.5">
+        <ApplicationLocationsPanel locations={data.locationSummaries ?? []} />
       </div>
 
       <div className="mb-4.5 flex gap-1 border-b border-[#f0ded0]">
