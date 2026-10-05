@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
 import { MaterialIcon } from "../material-icon";
+import { ReportBrandMark } from "./report-brand-mark";
 import {
   computeFindings,
   computeSectionKinds,
@@ -109,10 +110,7 @@ function PageShell({
   return (
     <section className="rd-sheet" id={id}>
       <div className="rd-pagehead">
-        <div className="rd-brand">
-          <div className="rd-brand-mark">IV</div>
-          <div className="rd-brand-name">INDUSTRIALVERIFY</div>
-        </div>
+        <ReportBrandMark variant="head" />
         <div className="rd-classified">INTERNAL — TERBATAS</div>
       </div>
       <div className="rd-body">{children}</div>
@@ -325,10 +323,7 @@ export function OfficeReportPreview({
           <div className="rd-cover-topbar" />
           <div className="rd-cover-inner">
             <div className="rd-cover-head">
-              <div className="rd-cover-mark">
-                <div className="rd-cover-mark-badge">IV</div>
-                <div className="rd-cover-mark-text">INDUSTRIALVERIFY</div>
-              </div>
+              <ReportBrandMark variant="cover" />
               <div className="rd-cover-classified">INTERNAL — TERBATAS</div>
             </div>
             <div className="rd-cover-title-block">
