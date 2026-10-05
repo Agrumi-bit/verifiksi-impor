@@ -48,12 +48,20 @@ export type CrDocumentRequest = z.infer<typeof crDocumentRequestSchema>;
 export const crDocumentRequestsSchema = z.record(z.string(), crDocumentRequestSchema);
 export type CrDocumentRequests = z.infer<typeof crDocumentRequestsSchema>;
 
-export const createScheduleSchema = z.object({
-  scheduleType: z.enum(SCHEDULE_TYPES),
-  facility: z.string().trim().max(200, "Fasilitas maksimal 200 karakter").optional(),
-  date: z.string().trim().min(1, "Tanggal wajib diisi"),
-  personId: z.string().trim().min(1, "Orang wajib dipilih"),
-});
+export const createScheduleSchema = z
+  .object({
+    scheduleType: z.enum(SCHEDULE_TYPES),
+    // The chosen location's own `id` from Application.payload.locations — survey schedules
+    // only. Server resolves the human-readable facility label from this location's own type,
+    // so the client never sends free text for it anymore (see assign-tab.tsx's own picker).
+    locationId: z.string().trim().optional(),
+    date: z.string().trim().min(1, "Tanggal wajib diisi"),
+    personId: z.string().trim().min(1, "Orang wajib dipilih"),
+  })
+  .refine((data) => data.scheduleType !== "survey" || Boolean(data.locationId), {
+    message: "Pilih lokasi untuk penugasan survey",
+    path: ["locationId"],
+  });
 
 // `direction` is deliberately NOT accepted from the client — SYSTEM messages
 // (audit trail entries) are only ever created server-side from trusted call

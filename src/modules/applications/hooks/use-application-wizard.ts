@@ -120,6 +120,17 @@ export function useApplicationWizard() {
       }
     }
 
+    // Step 5 "Location Information" requires Kantor + Gudang (VIU) or Kantor + Pabrik (VKI) —
+    // see applyRequiredLocationsRule in schema.ts, the same rule Submit enforces server-side.
+    // Gated forward-only like the Konsumsi steps above, for both VIU and VKI.
+    if (target > currentStep) {
+      const currentKey = activeSteps.find((s) => s.step === currentStep)?.key;
+      if (currentKey === "location") {
+        const stepValid = await form.trigger(activeFieldNames.location ?? []);
+        if (!stepValid) return false;
+      }
+    }
+
     setCurrentStep(target);
     return true;
   }

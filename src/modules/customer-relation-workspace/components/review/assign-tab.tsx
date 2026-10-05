@@ -5,7 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 
-import { FACILITY_OPTIONS, SCHEDULE_TYPE_DEFS, SCHEDULE_TYPES, type ScheduleType } from "../../status";
+import { SCHEDULE_TYPE_DEFS, SCHEDULE_TYPES, type ScheduleType } from "../../status";
+import { REQUIRED_LOCATION_TYPE_LABELS } from "@/modules/shared/schema";
 import { SuratTugasModal } from "../surat-tugas-modal";
 
 type Schedule = {
@@ -19,6 +20,8 @@ type Schedule = {
   letterNumber: string | null;
   letterStatus: "DRAFT" | "PENDING" | "APPROVED";
 };
+
+type ApplicationLocation = { id: string; locationType: string; address: string; city: string | null };
 
 type Person = { id: string; name: string; role: string };
 
@@ -36,13 +39,14 @@ function fmtDate(value: string | null): string {
 type Props = {
   applicationId: string;
   schedules: Schedule[];
+  locations: ApplicationLocation[];
   onChanged: () => void;
 };
 
-export function AssignTab({ applicationId, schedules, onChanged }: Props) {
+export function AssignTab({ applicationId, schedules, locations, onChanged }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [scheduleType, setScheduleType] = useState<ScheduleType>("survey");
-  const [facility, setFacility] = useState<string | null>(null);
+  const [locationId, setLocationId] = useState<string | null>(null);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [personId, setPersonId] = useState("");
   const [showPersonMenu, setShowPersonMenu] = useState(false);
@@ -62,12 +66,12 @@ export function AssignTab({ applicationId, schedules, onChanged }: Props) {
   });
 
   const selectedPerson = people?.find((p) => p.id === personId);
-  const saveDisabled = (scheduleType !== "survey" || facility) && personId && date ? false : true;
+  const saveDisabled = (scheduleType !== "survey" || locationId) && personId && date ? false : true;
 
   function openForm() {
     setShowForm(true);
     setScheduleType("survey");
-    setFacility(null);
+    setLocationId(null);
     setPersonId("");
     setDate(new Date().toISOString().slice(0, 10));
   }
@@ -78,7 +82,7 @@ export function AssignTab({ applicationId, schedules, onChanged }: Props) {
       const response = await fetch(`/api/customer-relation-workspace/applications/${applicationId}/schedules`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scheduleType, facility: facility ?? undefined, date, personId }),
+        body: JSON.stringify({ scheduleType, locationId: locationId ?? undefined, date, personId }),
       });
       if (!response.ok) {
         toast.error("Gagal menyimpan jadwal");
@@ -172,7 +176,7 @@ export function AssignTab({ applicationId, schedules, onChanged }: Props) {
                   type="button"
                   onClick={() => {
                     setScheduleType(type);
-                    setFacility(null);
+                    setLocationId(null);
                     setPersonId("");
                   }}
                   className="rounded-[9px] border-[1.5px] p-2.5 text-center text-[12px] font-bold"
@@ -191,28 +195,37 @@ export function AssignTab({ applicationId, schedules, onChanged }: Props) {
           {scheduleType === "survey" && (
             <div className="mb-3.5">
               <div className="mb-2 text-[12px] font-bold text-[#20180f]">
-                Pilih Fasilitas <span className="text-[#e0662e]">*</span>
+                Pilih Lokasi <span className="text-[#e0662e]">*</span>
               </div>
-              <div className="grid grid-cols-3 gap-2.5">
-                {FACILITY_OPTIONS.map((f) => {
-                  const selected = facility === f;
-                  return (
-                    <button
-                      key={f}
-                      type="button"
-                      onClick={() => setFacility(f)}
-                      className="rounded-[9px] border-[1.5px] p-2.5 text-center text-[12px] font-bold"
-                      style={{
-                        borderColor: selected ? "#e0662e" : "#e8dccd",
-                        background: selected ? "#fdeadd" : "#fff",
-                        color: selected ? "#c14a1f" : "#261813",
-                      }}
-                    >
-                      {f}
-                    </button>
-                  );
-                })}
-              </div>
+              {locations.length === 0 ? (
+                <p className="rounded-lg bg-[#fdeadd] px-3 py-2.25 text-[12px] text-[#c14a1f]">
+                  Permohonan ini belum punya lokasi. Lengkapi Step 5 &quot;Location Information&quot; dulu sebelum
+                  menugaskan survey.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {locations.map((loc) => {
+                    const selected = locationId === loc.id;
+                    const typeLabel = REQUIRED_LOCATION_TYPE_LABELS[loc.locationType as keyof typeof REQUIRED_LOCATION_TYPE_LABELS] ?? loc.locationType;
+                    return (
+                      <button
+                        key={loc.id}
+                        type="button"
+                        onClick={() => setLocationId(loc.id)}
+                        className="rounded-[9px] border-[1.5px] p-2.5 text-left text-[12px] font-bold"
+                        style={{
+                          borderColor: selected ? "#e0662e" : "#e8dccd",
+                          background: selected ? "#fdeadd" : "#fff",
+                          color: selected ? "#c14a1f" : "#261813",
+                        }}
+                      >
+                        <div>{typeLabel}</div>
+                        <div className="mt-0.5 truncate text-[11px] font-normal text-[#8a7565]">{loc.address}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

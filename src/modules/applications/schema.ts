@@ -9,6 +9,8 @@ import {
   INVESTMENT_STATUSES,
   LOCATION_TYPES,
   WAREHOUSE_REGISTRATION_TYPES,
+  missingRequiredLocationTypes,
+  missingRequiredLocationMessage,
   type BuildingStatus,
   type InvestmentStatus,
   type LocationType,
@@ -454,6 +456,25 @@ const applicationWizardShape = applicationMetaSchema
   .extend(vkiSupportSchema.shape);
 
 /**
+ * Step 5 "Location Information" requires specific location types depending on
+ * verificationType — VIU needs Kantor + Gudang, VKI needs Kantor + Pabrik (see
+ * `getRequiredLocationTypes`'s own comment in shared/schema.ts, the single source of truth this
+ * calls into). Called from three places: the live `applicationWizardSchema` (both VIU/VKI
+ * branches), `applyViuOnlySubmitRules` (VIU submit — reused from the live schema's own VIU
+ * branch, so this call covers both), and `vkiSubmitSchema`'s own superRefine (VKI submit, which
+ * — unlike VIU — isn't refactored into a shared named function, so it gets its own call).
+ */
+function applyRequiredLocationsRule(
+  locations: LocationValues[],
+  verificationType: "VIU" | "VKI",
+  ctx: z.RefinementCtx,
+): void {
+  for (const missingType of missingRequiredLocationTypes(locations, verificationType)) {
+    ctx.addIssue({ code: "custom", path: ["locations"], message: missingRequiredLocationMessage(missingType) });
+  }
+}
+
+/**
  * Every cross-field rule that only makes sense for VIU Barang Konsumsi (declaration
  * checkbox, Partner Industri, Merek yang Digunakan, Hasil Uji Mutu, Support Document
  * Konsumsi) — VKI has no `importTypes` field in its own wizard UI at all (see
@@ -468,6 +489,7 @@ const applicationWizardShape = applicationMetaSchema
 // Exported for scripts/test-viu-konsumsi-scheme-separation.mjs's submit-rule
 // parity regression — not otherwise imported outside this file.
 export function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardShape>, ctx: z.RefinementCtx): void {
+  applyRequiredLocationsRule(data.locations, "VIU", ctx);
   if (data.declarationAccepted !== true) {
     ctx.addIssue({
       code: "custom",
@@ -552,7 +574,10 @@ export const applicationWizardSchema = applicationWizardShape.superRefine((data,
   // VKI always needs materialType/hsCode on every product row (see vkiSubmitSchema's own
   // comment) — validated live here too, not just at final submit, so this matches the inline
   // error display VkiStep8Product had before these fields moved off the item schema itself.
-  else if (data.verificationType === "VKI") validateProductItems(data.products, ctx);
+  else if (data.verificationType === "VKI") {
+    applyRequiredLocationsRule(data.locations, "VKI", ctx);
+    validateProductItems(data.products, ctx);
+  }
 });
 
 /**
@@ -570,6 +595,7 @@ const viuSubmitSchema = applicationWizardShape
 // `importTypes`/Konsumsi concept at all) — preserved explicitly now that `productsSchema` itself
 // no longer carries a static `.min(1)` (see that schema's own comment).
 const vkiSubmitSchema = applicationWizardShape.extend({ verificationType: z.literal("VKI") }).superRefine((data, ctx) => {
+  applyRequiredLocationsRule(data.locations, "VKI", ctx);
   if (data.products.length < 1) {
     ctx.addIssue({
       code: "custom",

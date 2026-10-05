@@ -68,4 +68,3 @@ export const SCHEDULE_TYPE_DEFS: Record<
   technical: { label: "Technical", color: "#7a3fc1", bg: "#f1e6fd", role: "TECHNICAL_ANALYST" },
 };
 
-export const FACILITY_OPTIONS = ["Kantor", "Gudang", "Factory"] as const;
