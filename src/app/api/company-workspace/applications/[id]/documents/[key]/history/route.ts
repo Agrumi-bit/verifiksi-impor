@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
@@ -10,7 +9,8 @@ import {
   recordApplicationDocumentVersion,
 } from "@/modules/applications/document-versions";
 import { getVersionHistory, recordDocumentVersion } from "@/modules/company/document-versions";
-import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS } from "@/modules/verifikator-workspace/schema";
+import { COMPANY_MAPPED_DOCUMENT_KEYS } from "@/modules/verifikator-workspace/schema";
+import { buildApplicationDocumentChecklist } from "@/modules/verifikator-workspace/application-checklist";
 
 /**
  * `id` accepts either the internal cuid or the human-readable applicationNumber
@@ -39,7 +39,7 @@ export async function GET(
   }
 
   const payload = application.payload as ApplicationWizardValues;
-  const item = buildDocumentChecklist(payload).find((c) => c.key === key);
+  const item = (await buildApplicationDocumentChecklist(payload)).find((c) => c.key === key);
   if (!item) {
     return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
   }
@@ -83,7 +83,7 @@ export async function PATCH(
   const { path } = parsed.data;
 
   const payload = application.payload as ApplicationWizardValues;
-  const item = buildDocumentChecklist(payload).find((c) => c.key === key);
+  const item = (await buildApplicationDocumentChecklist(payload)).find((c) => c.key === key);
   if (!item) {
     return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
   }

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
 import { db } from "@/lib/db";
 import { requireCustomerRelationSession } from "@/lib/require-customer-relation-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
@@ -20,6 +19,7 @@ import {
   parseQualityTestChecklistKey,
   resyncQualityTestCertificates,
 } from "@/modules/applications/viu-schemes/konsumsi/server/certificate-upload";
+import { buildApplicationDocumentChecklist } from "@/modules/verifikator-workspace/application-checklist";
 
 export async function GET(
   _request: Request,
@@ -116,7 +116,7 @@ export async function PATCH(
 
   const payload = application.payload as ApplicationWizardValues;
   const company = application.companyId ? await db.company.findUnique({ where: { id: application.companyId } }) : null;
-  const item = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload)).find((c) => c.key === key);
+  const item = (await buildApplicationDocumentChecklist(payload, toChecklistCompanyContext(company))).find((c) => c.key === key);
   if (!item) {
     return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
   }

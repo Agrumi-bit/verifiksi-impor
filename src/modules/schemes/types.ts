@@ -144,32 +144,58 @@ export type SchemeTerms = {
   forbiddenTerms: readonly string[];
 };
 
-/** Narrative for one document — what the verifikator report prints. */
+/** Values the report hands to a document narrative (all pre-formatted strings). */
+export type DocTextParams = {
+  company: string;
+  /** Document title as printed, e.g. "Sertifikat Uji Mutu — MEREK · Kemeja" */
+  title: string;
+  /** Verified VALID by the verifikator and data complete. */
+  memenuhi: boolean;
+  hasDocument: boolean;
+  fields: readonly { label: string; value: string }[];
+  /** Value of a field by its label, "—" when absent. */
+  field: (label: string) => string;
+};
+
+/** Narrative for one document — what the checklist/report prints for it in THIS scheme. */
 export type DocumentNarrative = {
-  /** Why the document is asked for, in this scheme's terms. */
-  purpose: string;
-  /** What the verifikator checks. */
-  checks: string[];
+  /** Short "Keterangan" for the compliance table. */
+  keterangan: string;
+  intro: (p: DocTextParams) => string[];
+  findings: (p: DocTextParams) => string[];
+  /** May contain <strong>…</strong>. */
+  conclusion: (p: DocTextParams) => string;
 };
 
 export type SectionNarrative = {
   title: string;
-  intro: string;
+  desc: string;
+  intro: string[];
 };
 
+export type ChapterTextParams = { company: string; chapter: string; allMet: boolean };
+
 export type SchemeNarrative = {
-  sections: Partial<Record<ReportSectionId, SectionNarrative>>;
-  documents: Record<string, DocumentNarrative>;
-  /** Kata pengantar / ruang lingkup paragraph. */
+  /** Approval page paragraph. */
   foreword: string;
-  /** Kesimpulan template; `{result}` is replaced by the verification result phrase. */
-  conclusion: string;
+  /** Executive summary opening sentence. */
+  summary: (p: { company: string }) => string;
+  /** Compliance-table legend for "Wajib". */
+  wajibLegend: string;
+  /** Opening paragraph of a chapter's "C. Kesimpulan". */
+  chapterOpening: (p: ChapterTextParams) => string;
+  /** Closing paragraph of a chapter's "C. Kesimpulan" (may contain <strong>). */
+  chapterClosing: (p: ChapterTextParams) => string;
+  sections: Partial<Record<ReportSectionId, SectionNarrative>>;
+  /** Keyed by SchemeDocumentDef.id. */
+  documents: Record<string, DocumentNarrative>;
 };
 
 export type SchemeDefinition = {
   terms: SchemeTerms;
   documents: readonly SchemeDocumentDef[];
-  narrative: SchemeNarrative;
+  /** null until the scheme's narrative is written — everything then resolves to BELUM DIATUR. */
+  narrative: SchemeNarrative | null;
   /** Report chapter order for this scheme. */
   reportSections: readonly ReportSectionId[];
 };

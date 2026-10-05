@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
-
 import { db } from "@/lib/db";
 import { findApplicationEditAfter } from "@/modules/applications/server/edited-after";
 import { getServerSession } from "@/lib/get-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
-import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS, toChecklistStatus } from "@/modules/verifikator-workspace/schema";
+import { COMPANY_MAPPED_DOCUMENT_KEYS, toChecklistStatus } from "@/modules/verifikator-workspace/schema";
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
-import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
 import { getDocumentMeta } from "@/modules/company/document-versions";
+import { buildApplicationDocumentChecklist } from "@/modules/verifikator-workspace/application-checklist";
 
 /** Builds a Team tab row (name + Surat Tugas info) from a person's name and the assignment row that carries their letter. */
 function teamMemberSummary(
@@ -64,11 +63,7 @@ export async function GET(
   const company = assignment.application.companyId
     ? await db.company.findUnique({ where: { id: assignment.application.companyId } })
     : null;
-  const checklist = buildDocumentChecklist(
-    payload,
-    toChecklistCompanyContext(company),
-    await resolvePartnerContexts(payload),
-  );
+  const checklist = await buildApplicationDocumentChecklist(payload, toChecklistCompanyContext(company));
 
   // Same verification-status lookup CR/verifikator/company-workspace already show — without
   // this the surveyor sees a document exists but not that verifikator already rejected it.

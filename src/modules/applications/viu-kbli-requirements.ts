@@ -1,17 +1,21 @@
 import { splitKbliEntries, type KbliCategory } from "@/modules/shared/schema";
+import { VIU_INDUSTRI_KBLI } from "@/modules/schemes/viu-bahan-baku-industri/terms";
+import { VIU_NON_INDUSTRI_KBLI } from "@/modules/schemes/viu-bahan-baku-non-industri/terms";
+import { VIU_KONSUMSI_KBLI } from "@/modules/schemes/viu-konsumsi/terms";
 
 /**
  * KBLI an API-U company must hold for each VIU application type — Pasal 26 and Pasal 37
  * Permenperin No. 27 Tahun 2025. A company qualifies for a type when one of its KBLI *Utama* is
  * in that type's list — KBLI Pendukung don't count; the KBLI version doesn't matter here.
  *
- * Keys mirror `IMPORT_TYPES` in ./schema.ts — kept as plain literals so this module has no
- * import from schema.ts, which itself imports this file for its submit rules.
+ * Single source of truth: each VIU scheme's `terms.allowedKbli` (src/modules/schemes). Keys mirror
+ * `IMPORT_TYPES` in ./schema.ts — kept as plain literals so this module has no import from
+ * schema.ts, which itself imports this file for its submit rules.
  */
 export const VIU_REQUIRED_KBLI = {
-  BAHAN_BAKU_INDUSTRI: ["46411", "46414", "46699", "46100", "45301"],
-  BAHAN_BAKU_NON_INDUSTRI: ["46411", "46414", "46100"],
-  BARANG_KONSUMSI: ["46411", "46412", "46414", "46499", "46691", "46699", "46795", "46100"],
+  BAHAN_BAKU_INDUSTRI: VIU_INDUSTRI_KBLI,
+  BAHAN_BAKU_NON_INDUSTRI: VIU_NON_INDUSTRI_KBLI,
+  BARANG_KONSUMSI: VIU_KONSUMSI_KBLI,
 } as const satisfies Record<string, readonly string[]>;
 
 type ViuImportType = keyof typeof VIU_REQUIRED_KBLI;

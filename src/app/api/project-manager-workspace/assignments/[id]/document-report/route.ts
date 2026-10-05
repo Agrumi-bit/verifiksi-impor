@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
-
 import { db } from "@/lib/db";
 import { requireProjectManagerSession } from "@/lib/require-project-manager-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
 import { getDocumentMeta } from "@/modules/company/document-versions";
 import {
-  buildDocumentChecklist,
   buildMachineChecklist,
   buildProductChecklist,
   buildRawMaterialChecklist,
@@ -32,6 +30,7 @@ import {
   PRODUCTION_QTY_RENCANA_KEBUTUHAN_SUMMARY_KEY,
   PRODUCTION_QTY_PENJUALAN_SUMMARY_KEY,
 } from "@/modules/verifikator-workspace/status";
+import { buildApplicationDocumentChecklist } from "@/modules/verifikator-workspace/application-checklist";
 
 /**
  * PM-facing mirror of `verifikator-workspace/assignments/[id]/document-report/route.ts` — same
@@ -61,7 +60,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     : null;
 
   const partners = await resolvePartnerContexts(payload);
-  const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company), partners);
+  const checklist = await buildApplicationDocumentChecklist(payload, toChecklistCompanyContext(company), partners);
   const companyKeys = checklist.filter((item) => item.key in COMPANY_MAPPED_DOCUMENT_KEYS).map((item) => item.key);
   const appOnlyKeys = checklist.filter((item) => !(item.key in COMPANY_MAPPED_DOCUMENT_KEYS)).map((item) => item.key);
 

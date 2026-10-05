@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AlertCircle, CheckCircle2, Eye, FileText, Filter, HelpCircle, LayoutGrid, List, Search, XCircle } from "lucide-react";
 
-import { COMPLIANCE_SECTION_DEFS } from "@/modules/verifikator-workspace/document-compliance-defs";
+import { createComplianceResolver } from "@/modules/verifikator-workspace/scheme-compliance";
 import { CollapsibleCard, ComplianceTable, docStatusLabel } from "@/modules/verifikator-workspace/components/detail/document-verification-tab";
 import {
   CR_DOCUMENT_CHECK_STATUSES,
@@ -23,6 +23,9 @@ type Props = {
   applicationId: string;
   company: string;
   verificationType: string;
+  /** With `locations`, lets the per-scheme module decide Persyaratan/Referensi per document. */
+  importTypes?: string[];
+  locations?: { id: string; locationType: string }[];
   documents: DocItem[];
   showMarkAcceptedButton: boolean;
   onMarkAccepted: () => void;
@@ -49,7 +52,21 @@ function reviewLabel(doc: DocItem): string {
  * `CR_DOCUMENT_STATUS_LABELS`) as an administrative completeness check, not a full verification —
  * see `DocumentReviewModal` for the narrower decision UI (no "Uraian yang Diperiksa" checklist).
  */
-export function DocumentsTab({ applicationId, company, verificationType, documents, showMarkAcceptedButton, onMarkAccepted, onChanged }: Props) {
+export function DocumentsTab({
+  applicationId,
+  company,
+  verificationType,
+  importTypes,
+  locations,
+  documents,
+  showMarkAcceptedButton,
+  onMarkAccepted,
+  onChanged,
+}: Props) {
+  const compliance = useMemo(
+    () => createComplianceResolver({ verificationType, importTypes, locations }),
+    [verificationType, importTypes, locations],
+  );
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [reviewingDoc, setReviewingDoc] = useState<DocItem | null>(null);
   const [requestModalDoc, setRequestModalDoc] = useState<DocItem | null>(null);
@@ -153,9 +170,7 @@ export function DocumentsTab({ applicationId, company, verificationType, documen
         </div>
       </div>
 
-      {COMPLIANCE_SECTION_DEFS.filter(
-        (def) => (!def.vkiOnly || verificationType === "VKI") && (!def.viuOnly || verificationType === "VIU"),
-      ).map((def) => {
+      {compliance.sections().map((def) => {
         const sectionDocs = documents.filter((doc) => doc.category === def.category);
         // A category with zero matching documents means this application's Jenis Impor doesn't
         // need it (e.g. "Dokumen Partner Industri" on a Barang-Konsumsi-only application) — skip
@@ -172,7 +187,7 @@ export function DocumentsTab({ applicationId, company, verificationType, documen
                 </p>
               ))}
             </div>
-            <ComplianceTable rows={sectionDocs} onReview={setReviewingDoc} statusLabels={CR_DOCUMENT_STATUS_LABELS} />
+            <ComplianceTable rows={sectionDocs} onReview={setReviewingDoc} statusLabels={CR_DOCUMENT_STATUS_LABELS} resolveDef={compliance.def} />
           </CollapsibleCard>
         );
       })}

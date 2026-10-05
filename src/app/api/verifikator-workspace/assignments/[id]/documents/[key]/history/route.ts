@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
@@ -20,6 +19,7 @@ import {
   parseQualityTestChecklistKey,
   resyncQualityTestCertificates,
 } from "@/modules/applications/viu-schemes/konsumsi/server/certificate-upload";
+import { buildApplicationDocumentChecklist } from "@/modules/verifikator-workspace/application-checklist";
 
 async function findOwnedAssignment(assignmentNumber: string, verifikatorId: string) {
   const assignment = await db.assignment.findUnique({
@@ -139,9 +139,7 @@ export async function PATCH(
   const company = assignment.application.companyId
     ? await db.company.findUnique({ where: { id: assignment.application.companyId } })
     : null;
-  const item = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload)).find(
-    (c) => c.key === key,
-  );
+  const item = (await buildApplicationDocumentChecklist(payload, toChecklistCompanyContext(company))).find((c) => c.key === key);
   if (!item) {
     return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
   }

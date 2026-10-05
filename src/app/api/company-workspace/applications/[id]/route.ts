@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import { TERMINAL_STATUSES } from "@/modules/company-workspace/status";
@@ -9,10 +8,10 @@ import { getApplicationDocumentMeta } from "@/modules/applications/document-vers
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { normalizeKonsumsiPayload } from "@/modules/applications/viu-schemes/konsumsi/normalize";
 import { backfillKonsumsiHsCodes, resyncKonsumsiProductCommodities } from "@/modules/applications/viu-schemes/konsumsi/server/backfill-hs-codes";
-import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS } from "@/modules/verifikator-workspace/schema";
+import { COMPANY_MAPPED_DOCUMENT_KEYS } from "@/modules/verifikator-workspace/schema";
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
-import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
 import { computeDisplayStatus } from "@/modules/company-workspace/workflow-stage";
+import { buildApplicationDocumentChecklist } from "@/modules/verifikator-workspace/application-checklist";
 
 /**
  * `id` may be either the internal cuid (used by this workspace's own links)
@@ -65,7 +64,7 @@ export async function GET(
   const editable = application.status === "DRAFT" || application.status === "RETURNED";
   const normalized = normalizeKonsumsiPayload(application.payload as ApplicationWizardValues);
   const payload = editable ? await resyncKonsumsiProductCommodities(normalized) : await backfillKonsumsiHsCodes(normalized);
-  const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload));
+  const checklist = await buildApplicationDocumentChecklist(payload, toChecklistCompanyContext(company));
   const companyKeys = checklist.filter((item) => item.key in COMPANY_MAPPED_DOCUMENT_KEYS).map((item) => item.key);
   const appOnlyKeys = checklist.filter((item) => !(item.key in COMPANY_MAPPED_DOCUMENT_KEYS)).map((item) => item.key);
   const companyMeta = company

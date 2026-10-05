@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-
 import type { LocationValues } from "@/modules/shared/schema";
 import { summarizeApplicationLocations } from "@/modules/shared/location-meta";
 import { db } from "@/lib/db";
@@ -8,7 +7,6 @@ import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
 import { getDocumentMeta } from "@/modules/company/document-versions";
 import {
-  buildDocumentChecklist,
   buildMachineChecklist,
   buildProductChecklist,
   buildCapacityRows,
@@ -21,6 +19,7 @@ import {
 } from "@/modules/verifikator-workspace/schema";
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
 import { computeApplicationStage, type SiblingForStage } from "@/modules/project-manager-workspace/stage";
+import { buildApplicationDocumentChecklist } from "@/modules/verifikator-workspace/application-checklist";
 
 type DecisionMap = Record<string, { status?: string; note?: string }>;
 
@@ -103,7 +102,7 @@ export async function GET(
   ];
   const stageResult = computeApplicationStage(siblingsForStage);
 
-  const documentChecklistBase = buildDocumentChecklist(payload, toChecklistCompanyContext(application.company));
+  const documentChecklistBase = await buildApplicationDocumentChecklist(payload, toChecklistCompanyContext(application.company));
   const companyKeys = documentChecklistBase.filter((item) => item.key in COMPANY_MAPPED_DOCUMENT_KEYS).map((item) => item.key);
   const appOnlyKeys = documentChecklistBase.filter((item) => !(item.key in COMPANY_MAPPED_DOCUMENT_KEYS)).map((item) => item.key);
   const companyMeta = application.company

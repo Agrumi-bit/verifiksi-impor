@@ -15,7 +15,6 @@ import {
   resolveScheme,
   resolveSchemeDocuments,
   resolveSchemes,
-  validateViuKbli,
   type SchemeId,
 } from "./index";
 
@@ -178,12 +177,11 @@ describe("terms & forbidden vocabulary", () => {
 });
 
 describe("KBLI (VIU only)", () => {
-  it("checks every VIU scheme, never VKI", () => {
-    assert.deepEqual(validateViuKbli(["VKI"], ["13111"]), []);
-    const r = validateViuKbli(["VIU_BAHAN_BAKU_NON_INDUSTRI", "VIU_KONSUMSI"], ["46412"]);
-    assert.equal(r[0].ok, false); // 46412 not allowed for Non Industri
-    assert.equal(r[1].ok, true);
-    assert.equal(validateViuKbli(["VIU_BAHAN_BAKU_INDUSTRI"], ["45301"])[0].ok, true);
+  it("VKI has no KBLI list; each VIU scheme has the Pasal 37 list", () => {
+    assert.equal(getScheme("VKI").terms.allowedKbli, undefined);
+    assert.deepEqual(getScheme("VIU_BAHAN_BAKU_NON_INDUSTRI").terms.allowedKbli, ["46411", "46414", "46100"]);
+    assert.ok(getScheme("VIU_BAHAN_BAKU_INDUSTRI").terms.allowedKbli?.includes("45301"));
+    assert.ok(getScheme("VIU_KONSUMSI").terms.allowedKbli?.includes("46795"));
   });
 });
 
@@ -226,3 +224,41 @@ describe("snapshot", () => {
     assert.equal(json, readFileSync(file, "utf8").replace(/\r\n/g, "\n"));
   });
 });
+
+describe("narrative (schemes with narrative written)", () => {
+  const sample = (title: string) => ({
+    company: "PT CONTOH",
+    title,
+    memenuhi: true,
+    hasDocument: true,
+    fields: [{ label: "Alamat", value: "Jl. Contoh" }],
+    field: (l: string) => (l === "Alamat" ? "Jl. Contoh" : "—"),
+  });
+  for (const id of SCHEME_IDS) {
+    const scheme = getScheme(id);
+    if (!scheme.narrative) continue;
+    const narrative = scheme.narrative;
+    it(`${id}: every document and section has narrative; report can be finalized`, () => {
+      for (const d of scheme.documents) assert.ok(narrative.documents[d.id], `${id}: no narrative for ${d.id}`);
+      for (const s of scheme.reportSections) assert.ok(narrative.sections[s], `${id}: no narrative for section ${s}`);
+      assert.equal(canFinalizeReport(resolveReportContent([id])).ok, true);
+    });
+    it(`${id}: rendered narrative contains no forbidden term`, () => {
+      const texts: string[] = [narrative.foreword, narrative.summary({ company: "PT CONTOH" }), narrative.wajibLegend];
+      for (const allMet of [true, false]) {
+        texts.push(narrative.chapterOpening({ company: "PT CONTOH", chapter: "Legalitas", allMet }));
+        texts.push(narrative.chapterClosing({ company: "PT CONTOH", chapter: "Legalitas", allMet }));
+      }
+      for (const s of Object.values(narrative.sections)) texts.push(s!.title, s!.desc, ...s!.intro);
+      for (const d of scheme.documents) {
+        const n = narrative.documents[d.id];
+        for (const hasDocument of [true, false]) {
+          const p = { ...sample(`${d.label} — Konteks`), hasDocument, memenuhi: hasDocument };
+          texts.push(n.keterangan, ...n.intro(p), ...n.findings(p), n.conclusion(p));
+        }
+      }
+      for (const t of texts) assert.deepEqual(findForbiddenTerms(id, t), [], `${id}: "${t}"`);
+    });
+  }
+});
+

@@ -12,6 +12,7 @@ import { slugify } from "@/lib/document-filename";
 import { OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS, type LocationValues } from "@/modules/shared/schema";
 import { normalizeKonsumsiPayload } from "@/modules/applications/viu-schemes/konsumsi/normalize";
 import { certificateShareKey, isSameCertificate } from "@/modules/applications/viu-schemes/konsumsi/shared-certificates";
+import { isDocumentApplicable, isSchemeRolloutActive, resolveSchemes } from "@/modules/schemes";
 import {
   PRODUCT_VERIFICATION_STATUSES,
   MACHINE_VERIFICATION_STATUSES,
@@ -290,12 +291,14 @@ export function buildDocumentChecklist(
     });
   }
 
+  const locationTypeById: Record<string, string> = {};
   for (const payloadLoc of payload.locations ?? []) {
     // Prefer the live Company.locations entry (same id, edited via Company Workspace's
     // Facilities tab after submission) over the frozen payload snapshot — see
     // `ChecklistCompanyContext.locations` above.
     const loc = company?.locations?.find((l) => l.id === payloadLoc.id) ?? payloadLoc;
     const label = LOCATION_TYPE_NAMES[loc.locationType] ?? loc.locationType;
+    locationTypeById[loc.id] = loc.locationType;
     if (loc.buildingStatus === "MILIK_SENDIRI") {
       for (const entry of loc.ownershipDocuments ?? []) {
         items.push({
@@ -453,6 +456,49 @@ export function buildDocumentChecklist(
   // `partners` above) rather than anything already on `payload`. Omitted entirely when the
   // caller doesn't pass that context (e.g. a workspace not yet wired up for it) rather than
   // rendering with blank brand names.
+  if (payload.importTypes?.includes("BARANG_KONSUMSI") && konsumsiBrands) {
+    const brandContextById = new Map(konsumsiBrands.map((brand) => [brand.brandId, brand]));
+    for (const entry of payload.applicationBrands ?? []) {
+      const brand = brandContextById.get(entry.brandId);
+      const brandLabel = brand?.brandName ?? entry.brandId;
+      // Pasal 37 ayat (2) huruf c angka 2 huruf f) — sertifikat merek / tanda pendaftaran merek.
+      items.push({
+        key: `konsumsi-brand:${entry.brandId}:evidence`,
+        label: `Sertifikat Merek — ${brandLabel}`,
+        category: "Dokumen Merek",
+        documentPath: brand?.registrationDocumentPath ?? null,
+      });
+      // Pasal 37 ayat (3)–(5) — only when the applicant is not the brand owner.
+      if (entry.applicantRole !== "OWNER") {
+        for (const requirement of brand?.requiredRelationshipDocuments ?? []) {
+          items.push({
+            key: `konsumsi-brand:${entry.brandId}:rel:${requirement.code}`,
+            label: `${requirement.label} — ${brandLabel}`,
+            category: "Dokumen Merek",
+            documentPath: entry.relationshipDocuments?.[requirement.code]?.filePath ?? null,
+          });
+        }
+      }
+    }
+  }
+
+  // Barang Konsumsi's "Dokumen Label" — Pasal 37 ayat (2) huruf c angka 2 huruf h): one statement +
+  // its label documentation, once per Application (Step "Dokumen Label Produk").
+  if (payload.importTypes?.includes("BARANG_KONSUMSI")) {
+    items.push({
+      key: "konsumsi-label:statement",
+      label: "Surat Pernyataan Pemenuhan Ketentuan Label Berbahasa Indonesia",
+      category: "Dokumen Label",
+      documentPath: payload.labelStatementDocument?.filePath ?? null,
+    });
+    items.push({
+      key: "konsumsi-label:documentation",
+      label: "Dokumentasi Label Produk",
+      category: "Dokumen Label",
+      documentPath: payload.labelDocumentationDocument?.filePath ?? null,
+    });
+  }
+
   //
   // One certificate shared by several Sub Kelompok of a Brand (shared-certificates.ts) is ONE row
   // — keyed by its first group, labelled with every group it covers — so one review covers all.
@@ -502,6 +548,13 @@ export function buildDocumentChecklist(
     }
   }
 
+  // Per-scheme refactor: once every scheme of this application is served by src/modules/schemes,
+  // only the documents those schemes define are listed — e.g. a legacy `support:{id}` row or a
+  // Pabrik location document never shows on a VIU Barang Konsumsi application. Hidden, never deleted.
+  const schemes = resolveSchemes(payload);
+  if (isSchemeRolloutActive(schemes)) {
+    return items.filter((item) => isDocumentApplicable(schemes, item.key, { locationTypeById }));
+  }
   return items;
 }
 

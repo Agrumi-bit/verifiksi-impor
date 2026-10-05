@@ -17,7 +17,8 @@ import {
   type DocVerificationStatusValue,
 } from "../../status";
 import type { AssignmentStatusValue } from "../../status";
-import { COMPLIANCE_SECTION_DEFS, getComplianceDef } from "../../document-compliance-defs";
+import { getComplianceDef, type DocumentComplianceDef } from "../../document-compliance-defs";
+import { createComplianceResolver } from "../../scheme-compliance";
 import { getChecklistItems, type ChecklistItemDef, type ChecklistCompanyLegal } from "../../document-checklist-items";
 import { CertificateReviewUploadModal } from "@/modules/applications/viu-schemes/konsumsi/components/certificate-review-upload-modal";
 import { parseQualityTestChecklistKey } from "@/modules/applications/viu-schemes/konsumsi/qt-checklist-key";
@@ -294,9 +295,12 @@ export function ComplianceTable<Row extends ComplianceRow>({
   onReview,
   statusLabels = DOC_VERIFICATION_STATUS_LABELS,
   reviewActionLabel = "Review",
+  resolveDef = getComplianceDef,
 }: {
   rows: Row[];
   onReview: (row: Row) => void;
+  /** Scheme-aware Persyaratan/Referensi/Keterangan (scheme-compliance.ts); legacy defs by default. */
+  resolveDef?: (key: string) => DocumentComplianceDef | undefined;
   /** Defaults to verifikator's own "Verified/Need Revision/..." wording — Customer Relation's
    * document-completeness check passes `CR_DOCUMENT_STATUS_LABELS` ("Valid/Tidak Valid/Tidak
    * Diperlukan") instead, since it's a narrower administrative check, not a full verification. */
@@ -319,7 +323,7 @@ export function ComplianceTable<Row extends ComplianceRow>({
         </thead>
         <tbody>
           {rows.map((row, index) => {
-            const def = getComplianceDef(row.key);
+            const def = resolveDef(row.key);
             const docStatus = docStatusLabel(row);
             const reviewLabel = row.status === "PENDING" && !row.documentPath ? "Belum Ada" : statusLabels[row.status];
             return (
@@ -891,6 +895,10 @@ export function DocumentVerificationTab({
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const canEdit = assignmentStatus === "SUBMITTED";
+  const compliance = useMemo(
+    () => createComplianceResolver({ verificationType, importTypes: payload.importTypes, locations: payload.locations }, companyLocations),
+    [verificationType, payload.importTypes, payload.locations, companyLocations],
+  );
 
   const queryKey = ["verifikator-workspace", "assignments", assignmentId, "documents"];
   const { data, isLoading } = useQuery({
@@ -994,10 +1002,10 @@ export function DocumentVerificationTab({
         </div>
       </div>
 
-      {COMPLIANCE_SECTION_DEFS.filter(
-        (def) => (!def.vkiOnly || verificationType === "VKI") && (!def.viuOnly || verificationType === "VIU"),
-      ).map((def) => {
+      {compliance.sections().map((def) => {
         const sectionRows = rows.filter((row) => row.category === def.category);
+        // Scheme-served applications only show sections that actually hold documents.
+        if (compliance.schemes && sectionRows.length === 0) return null;
         return (
           <CollapsibleCard key={def.category} title={def.title} desc={def.desc}>
             <div className="mb-4.5 flex flex-col gap-3 text-[12.5px] leading-relaxed text-[#4a4038]">
@@ -1007,7 +1015,7 @@ export function DocumentVerificationTab({
                 </p>
               ))}
             </div>
-            <ComplianceTable rows={sectionRows} onReview={setReviewingRow} />
+            <ComplianceTable rows={sectionRows} onReview={setReviewingRow} resolveDef={compliance.def} />
           </CollapsibleCard>
         );
       })}

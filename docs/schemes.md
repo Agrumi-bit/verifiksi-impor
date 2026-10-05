@@ -64,3 +64,29 @@ schemes/
 
 `npm test` (node:test + tsx). Snapshot matriks dokumen: `src/modules/schemes/__snapshots__/documents.json`;
 perbarui dengan `UPDATE_SNAPSHOTS=1 npm test` setelah perubahan yang disetujui.
+
+## Rollout per tahap (`schemes/rollout.ts`)
+
+Aplikasi dilayani modul skema hanya jika **semua** skemanya aktif (`ACTIVE_SCHEMES`); aplikasi
+campuran tetap memakai jalur lama sampai semua skemanya selesai dimigrasi.
+
+| Tahap | Skema | Status |
+|---|---|---|
+| 2 | VIU Barang Konsumsi | aktif |
+| 3 | VIU Bahan Baku Non Industri | belum |
+| 4 | VIU Bahan Baku Industri | belum |
+| 5 | VKI | belum |
+
+### Titik integrasi
+
+- `verifikator-workspace/schema.ts` → `buildDocumentChecklist` menyaring dokumen yang tidak
+  didefinisikan skema (mis. `support:{id}` lama, SP VKI, dokumen lokasi Pabrik pada VIU).
+- `verifikator-workspace/application-checklist.ts` → `buildApplicationDocumentChecklist()`:
+  satu pintu server yang selalu menyertakan konteks Mitra Industri + Merek/Uji Mutu Konsumsi
+  (dipakai laporan Verifikator/TA/PM/Company, Surveyor, PM detail, riwayat dokumen).
+- `verifikator-workspace/scheme-compliance.ts` → kolom Persyaratan / Referensi Regulasi /
+  Keterangan dan pembuka setiap bagian di tab Verifikasi Dokumen (Verifikator) dan Dokumen (CR).
+- `verifikator-workspace/scheme-report.ts` → seluruh narasi Laporan Verifikasi Dokumen
+  (kata pengantar, ringkasan, bab, per dokumen, kesimpulan), urutan bab, penomoran BAB romawi,
+  dan dokumen pendukung yang tidak diunggah tidak dicetak.
+- `applications/viu-kbli-requirements.ts` → daftar KBLI VIU dibaca dari `terms.allowedKbli`.

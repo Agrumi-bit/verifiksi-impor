@@ -1,4 +1,7 @@
 /**
+ * LEGACY — used only for applications whose schemes are not yet served by src/modules/schemes
+ * (see schemes/rollout.ts and ./scheme-compliance.ts). Do not add VIU Barang Konsumsi text here.
+ *
  * Legal reference copy for the four "Pemeriksaan Administratif" compliance
  * sections in Documents Verification — transcribed from the approved Claude
  * Design mock (Peraturan Menteri Perindustrian Nomor 27 Tahun 2025 references).
@@ -7,7 +10,8 @@
  * type from the design with no real field simply never renders.
  */
 export type DocumentComplianceDef = {
-  persyaratan: "Wajib" | "Wajib (Alternatif)" | "Pendukung" | "Pendukung (Jika Tersedia)";
+  /** Starts with "Wajib" for any mandatory variant (UI colours on that prefix). */
+  persyaratan: string;
   referensi: string;
   keterangan: string;
 };

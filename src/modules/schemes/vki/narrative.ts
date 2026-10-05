@@ -5,9 +5,4 @@ import type { SchemeNarrative } from "../types";
  * resolves to the "[BELUM DIATUR untuk …]" marker and report finalization stays blocked
  * (see resolvers.ts). Never copy another scheme's text here.
  */
-export const VKI_NARRATIVE: SchemeNarrative = {
-  foreword: "",
-  conclusion: "",
-  sections: {},
-  documents: {},
-};
+export const VKI_NARRATIVE: SchemeNarrative | null = null;

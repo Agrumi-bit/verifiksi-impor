@@ -276,6 +276,8 @@ export function ApplicationReview({ id }: { id: string }) {
           applicationId={id}
           company={data.company}
           verificationType={data.jenis}
+          importTypes={data.importTypes}
+          locations={data.locations}
           documents={data.documents}
           showMarkAcceptedButton={showMarkAcceptedButton}
           onMarkAccepted={markAccepted}

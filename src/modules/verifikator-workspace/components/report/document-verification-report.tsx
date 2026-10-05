@@ -7,7 +7,8 @@ import DOMPurify from "dompurify";
 
 import { MaterialIcon } from "../material-icon";
 import { DOC_VERIFICATION_STATUS_LABELS, type DocVerificationStatusValue } from "../../status";
-import { COMPLIANCE_SECTION_DEFS, getComplianceDef } from "../../document-compliance-defs";
+import { COMPLIANCE_SECTION_DEFS, getComplianceDef, type DocumentComplianceDef } from "../../document-compliance-defs";
+import { createSchemeReport, toRoman } from "../../scheme-report";
 import {
   LEGALITAS_DOCUMENTS,
   PERPAJAKAN_DOCUMENTS,
@@ -538,7 +539,13 @@ export function Eyebrow({ children, dark }: { children: ReactNode; dark?: boolea
   );
 }
 
-function ComplianceTable({ rows }: { rows: { key: string; label: string }[] }) {
+function ComplianceTable({
+  rows,
+  resolveDef = getComplianceDef,
+}: {
+  rows: { key: string; label: string }[];
+  resolveDef?: (key: string) => DocumentComplianceDef | undefined;
+}) {
   return (
     <div style={{ border: `1px solid ${CARD_BORDER}`, borderRadius: 12, overflow: "hidden" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9.5 }}>
@@ -553,7 +560,7 @@ function ComplianceTable({ rows }: { rows: { key: string; label: string }[] }) {
         </thead>
         <tbody>
           {rows.map((row, i) => {
-            const def = getComplianceDef(row.key);
+            const def = resolveDef(row.key);
             if (!def) return null;
             const wajib = def.persyaratan.startsWith("Wajib");
             return (
@@ -900,6 +907,7 @@ function ProductChapter({
   startPage,
   totalPages,
   verificationType,
+  schemeTitle,
 }: {
   products: ProductRow[];
   rawMaterialConversion: RawMaterialConversionRow[];
@@ -908,11 +916,15 @@ function ProductChapter({
   startPage: number;
   totalPages: number;
   verificationType: string;
+  /** Per-scheme chapter title/description (e.g. VIU Barang Konsumsi) — overrides the VKI/VIU default. */
+  schemeTitle?: { title: string; desc: (company: string) => string } | null;
 }) {
   const babLabel = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"][chapterIdx + 1] ?? String(chapterIdx + 1);
   const isViu = verificationType === "VIU";
-  const chapterTitle = isViu ? "Produk Bahan Baku/Penolong yang Akan Diimpor" : "Data Produk";
-  const chapterDesc = isViu
+  const chapterTitle = schemeTitle?.title ?? (isViu ? "Produk Bahan Baku/Penolong yang Akan Diimpor" : "Data Produk");
+  const chapterDesc = schemeTitle
+    ? schemeTitle.desc(company)
+    : isViu
     ? `Klasifikasi bahan baku dan/atau bahan penolong yang akan diimpor oleh ${company}, beserta deskripsi produk dan pos tarif/Harmonized System (HS Code) yang berlaku.`
     : `Klasifikasi produk yang diproduksi ${company} beserta deskripsi produk dan pos tarif/Harmonized System (HS Code) yang berlaku, serta bahan baku yang digunakan dalam proses produksi.`;
 
@@ -1043,8 +1055,12 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   // count. It is listed once, in the "Ringkasan Verifikasi Dokumen" table, as "Tidak Diperlukan"
   // with the reviewer's note. `documents` below is everything that WAS examined.
   const hiddenNarrativeKeys = hiddenReportKeys(data.documents.filter((d) => d.status === "NOT_APPLICABLE").map((d) => d.key));
-  const notRequiredDocuments = data.documents.filter((d) => hiddenNarrativeKeys.has(d.key));
-  const documents = data.documents.filter((d) => !hiddenNarrativeKeys.has(d.key));
+  // Per-scheme content (src/modules/schemes) once the application's schemes are rolled out —
+  // otherwise null and every text below falls back to the legacy wording.
+  const schemeReport = createSchemeReport({ verificationType: data.verificationType, payload: data.payload, companyLocations: data.companyLocations });
+  const reportRows = schemeReport ? schemeReport.relevantRows(data.documents) : data.documents;
+  const notRequiredDocuments = reportRows.filter((d) => hiddenNarrativeKeys.has(d.key));
+  const documents = reportRows.filter((d) => !hiddenNarrativeKeys.has(d.key));
   const documentStatuses = Object.fromEntries(documents.map((d) => [d.key, d.status]));
   const ctx: NarrativeContext = {
     payload: data.payload,
@@ -1063,7 +1079,8 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   const completionPct = documents.length > 0 ? Math.round((verified / documents.length) * 100) : 0;
   const isFinal = data.status === "COMPLETED" || data.status === "RETURNED";
 
-  const categories = [...new Set(documents.map((d) => d.category))];
+  const rawCategories = [...new Set(documents.map((d) => d.category))];
+  const categories = schemeReport ? schemeReport.orderCategories(rawCategories) : rawCategories;
 
   // Every category gets the full narrative-page treatment (divider + compliance/
   // list page + one page per document + kesimpulan/rekap + visual summary) when
@@ -1072,7 +1089,8 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   const categoryDocsMap: Record<string, DocDetail[]> = {};
   for (const category of categories) {
     const realKeys = new Set(documents.filter((d) => d.category === category).map((d) => d.key));
-    if (category === "Legalitas Perusahaan") categoryDocsMap[category] = LEGALITAS_DOCUMENTS;
+    if (schemeReport) categoryDocsMap[category] = schemeReport.buildCategoryDocs(category, documents, ctx);
+    else if (category === "Legalitas Perusahaan") categoryDocsMap[category] = LEGALITAS_DOCUMENTS;
     else if (category === "Perpajakan") categoryDocsMap[category] = PERPAJAKAN_DOCUMENTS.filter((d) => realKeys.has(d.key));
     else if (category === "Surat Pernyataan") categoryDocsMap[category] = SURAT_PERNYATAAN_DOCUMENTS.filter((d) => realKeys.has(d.key));
     else if (category === "Tenaga Kerja") categoryDocsMap[category] = TENAGA_KERJA_DOCUMENTS.filter((d) => realKeys.has(d.key));
@@ -1232,7 +1250,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                 ["NOMOR APLIKASI", data.applicationNumber],
                 ["TANGGAL TERBIT", fmtDate(data.validatedAt ?? new Date().toISOString())],
                 ["DISUSUN OLEH", data.verifikatorName ?? "—"],
-                ["JENIS VERIFIKASI", data.verificationType],
+                ["JENIS VERIFIKASI", schemeReport?.label ?? data.verificationType],
               ].map(([label, value]) => (
                 <div key={label}>
                   <div style={{ fontSize: 10, letterSpacing: "0.05em", color: ORANGE_LIGHT, marginBottom: 6 }}>{label}</div>
@@ -1242,7 +1260,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
             </div>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#8a97a8", borderTop: "1px solid #1e2a38", paddingTop: 14, marginTop: 24 }}>
-            <div>Lembaga Verifikasi &amp; Survey — VKI / VIU</div>
+            <div>Lembaga Verifikasi &amp; Survey — {schemeReport?.family ?? "VKI / VIU"}</div>
             <div>Dokumen Rahasia — Distribusi Terbatas</div>
           </div>
         </section>
@@ -1252,8 +1270,9 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
           <Eyebrow>HALAMAN PERSETUJUAN</Eyebrow>
           <h1 style={{ fontSize: 30, fontWeight: 800, margin: "0 0 14px" }}>Persetujuan Dokumen</h1>
           <p style={{ fontSize: 13, lineHeight: 1.6, color: MUTED, maxWidth: 640, margin: 0 }}>
-            Laporan dokumen ini disusun berdasarkan hasil pemeriksaan kelengkapan dan kesesuaian dokumen permohonan oleh verifikator, sebagai
-            bagian dari proses Verifikasi Kemampuan Industri (VKI) / Verifikasi Importir Umum (VIU) sebelum diteruskan kepada pihak terkait.
+            {schemeReport
+              ? schemeReport.narrative.foreword
+              : "Laporan dokumen ini disusun berdasarkan hasil pemeriksaan kelengkapan dan kesesuaian dokumen permohonan oleh verifikator, sebagai bagian dari proses Verifikasi Kemampuan Industri (VKI) / Verifikasi Importir Umum (VIU) sebelum diteruskan kepada pihak terkait."}
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, marginTop: 36 }}>
             <div style={{ background: "#fff", border: `1px solid ${CARD_BORDER}`, padding: 20, borderRadius: 12 }}>
@@ -1367,7 +1386,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                   {categories.length + (machines.length > 0 ? 2 : 1)}
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#1a3a6b", flex: 1 }}>
-                  {data.verificationType === "VIU" ? "Produk Bahan Baku/Penolong yang Akan Diimpor" : "Data Produk"}
+                  {schemeReport?.productChapter?.title ?? (data.verificationType === "VIU" ? "Produk Bahan Baku/Penolong yang Akan Diimpor" : "Data Produk")}
                 </div>
                 <div style={{ fontSize: 12, color: MUTED_2 }}>{String(productChapterStartPage).padStart(2, "0")}</div>
               </a>
@@ -1396,8 +1415,9 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
           <Eyebrow>RINGKASAN EKSEKUTIF</Eyebrow>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 12px" }}>Ringkasan Eksekutif</h1>
           <p style={{ fontSize: 13, lineHeight: 1.6, color: MUTED, maxWidth: 640, margin: 0 }}>
-            Verifikasi dokumen permohonan {data.verificationType} milik {company} meliputi pemeriksaan kelengkapan legalitas, perpajakan,
-            lokasi, dan dokumen pendukung terhadap data permohonan yang diajukan oleh verifikator dokumen.
+            {schemeReport
+              ? schemeReport.narrative.summary({ company })
+              : `Verifikasi dokumen permohonan ${data.verificationType} milik ${company} meliputi pemeriksaan kelengkapan legalitas, perpajakan, lokasi, dan dokumen pendukung terhadap data permohonan yang diajukan oleh verifikator dokumen.`}
           </p>
 
           <div style={{ background: ORANGE, color: "#fff", padding: "22px 26px", marginTop: 26, display: "grid", gridTemplateColumns: "1fr 1fr", borderRadius: 14 }}>
@@ -1416,7 +1436,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
             <div style={{ borderLeft: "1px solid rgba(255,255,255,0.35)", paddingLeft: 24 }}>
               <div style={{ fontSize: 11, color: "#ffe3cc", marginBottom: 6 }}>Objek Verifikasi</div>
               <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{company.toUpperCase()}</div>
-              <div style={{ fontSize: 12, color: "#ffe3cc" }}>Permohonan {data.verificationType}</div>
+              <div style={{ fontSize: 12, color: "#ffe3cc" }}>Permohonan {schemeReport?.label ?? data.verificationType}</div>
             </div>
           </div>
 
@@ -1526,7 +1546,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
               ["Nama Perusahaan", company, "#1a3a6b"],
               ["Nomor Penugasan", data.assignmentNumber, ORANGE_TEXT],
               ["Nomor Aplikasi", data.applicationNumber, ORANGE_TEXT],
-              ["Jenis Verifikasi", data.verificationType, "#1a3a6b"],
+              ["Jenis Verifikasi", schemeReport?.label ?? data.verificationType, "#1a3a6b"],
               ["Jumlah Kategori Dokumen", String(categories.length), INK],
               ["Verifikator Dokumen", data.verifikatorName ?? "—", "#1a3a6b"],
               ["Technical Reviewer", data.technicalReviewerName ?? "—", INK],
@@ -1547,8 +1567,10 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
         {/* ===== CHAPTERS ===== */}
         {categories.map((category, chapterIdx) => {
           const catDocs = documents.filter((d) => d.category === category);
-          const sectionDef = COMPLIANCE_SECTION_DEFS.find((s) => s.category === category);
-          const complianceRows = catDocs.filter((d) => getComplianceDef(d.key));
+          const sectionDef = schemeReport ? schemeReport.compliance.section(category) : COMPLIANCE_SECTION_DEFS.find((s) => s.category === category);
+          const resolveDef = schemeReport ? schemeReport.compliance.def : getComplianceDef;
+          const complianceRows = catDocs.filter((d) => resolveDef(d.key));
+          const babRoman = toRoman(chapterIdx + 2);
           const narrativeDocs = categoryDocsMap[category] ?? [];
           const startPage = categoryStartPages[category];
           const catCompliant = narrativeDocs.filter((d) => d.kesimpulan(ctx).memenuhi).length;
@@ -1570,7 +1592,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
                     <div style={{ width: 22, height: 2, background: ORANGE_LIGHT }} />
                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "#f28951" }}>
-                      BAB {["I", "II", "III", "IV", "V", "VI", "VII"][chapterIdx + 1]}
+                      BAB {babRoman}
                     </div>
                   </div>
                   <h1 style={{ fontSize: 34, fontWeight: 800, lineHeight: 1.25, margin: "0 0 18px" }}>{category}</h1>
@@ -1609,11 +1631,11 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                         <div style={{ fontSize: 11, fontWeight: 700, color: INK, textAlign: "center", margin: "14px 0 10px" }}>
                           Tabel Pemeriksaan Dokumen {sectionDef?.title ?? category}
                         </div>
-                        <ComplianceTable rows={complianceRows.map((d) => ({ key: d.key, label: d.label }))} />
+                        <ComplianceTable rows={complianceRows.map((d) => ({ key: d.key, label: d.label }))} resolveDef={resolveDef} />
                         <div style={{ background: "#fff", borderRadius: 10, padding: "14px 16px", marginTop: 14 }}>
                           <div style={{ fontSize: 9.5, fontWeight: 700, color: ORANGE_TEXT, marginBottom: 6, letterSpacing: "0.04em" }}>KETERANGAN</div>
                           <div style={{ fontSize: 10, lineHeight: 1.5, color: MUTED, marginBottom: 5 }}>
-                            Persyaratan Wajib → dokumen yang memang dipersyaratkan atau menjadi dasar pemenuhan VKI.
+                            {schemeReport?.narrative.wajibLegend ?? "Persyaratan Wajib → dokumen yang memang dipersyaratkan atau menjadi dasar pemenuhan VKI."}
                           </div>
                           <div style={{ fontSize: 10, lineHeight: 1.5, color: MUTED }}>
                             Dokumen Pendukung → dokumen yang tidak diwajibkan untuk diunggah, tetapi diperiksa oleh verifikator untuk memastikan
@@ -1708,8 +1730,14 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                   <PageShell pageNo={startPage + 2 + narrativeDocs.length} totalPages={totalPages} companyName={company}>
                     <h1 style={{ fontSize: 22, fontWeight: 800, margin: "24px 0 12px" }}>C. Kesimpulan Pemeriksaan Administratif {category}</h1>
                     <p style={{ fontSize: 10.5, lineHeight: 1.5, color: MUTED, margin: "0 0 8px" }}>
-                      Berdasarkan hasil pemeriksaan dokumen dan observasi lapangan terhadap aspek {category.toLowerCase()}, diperoleh hasil bahwa{" "}
-                      {company} {catCompliant === narrativeDocs.length ? "telah memenuhi kelengkapan dokumen yang dipersyaratkan" : "memiliki sebagian dokumen yang masih perlu dilengkapi"} dengan ketentuan dalam pelaksanaan Verifikasi Kemampuan Industri (VKI).
+                      {schemeReport ? (
+                        schemeReport.narrative.chapterOpening({ company, chapter: category, allMet: catCompliant === narrativeDocs.length })
+                      ) : (
+                        <>
+                          Berdasarkan hasil pemeriksaan dokumen dan observasi lapangan terhadap aspek {category.toLowerCase()}, diperoleh hasil bahwa{" "}
+                          {company} {catCompliant === narrativeDocs.length ? "telah memenuhi kelengkapan dokumen yang dipersyaratkan" : "memiliki sebagian dokumen yang masih perlu dilengkapi"} dengan ketentuan dalam pelaksanaan Verifikasi Kemampuan Industri (VKI).
+                        </>
+                      )}
                     </p>
                     <div style={{ fontSize: 11, fontWeight: 700, color: INK, textAlign: "center", margin: "14px 0 10px" }}>
                       Tabel Rekapitulasi Hasil Verifikasi Aspek {category}
@@ -1744,11 +1772,20 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                         </tbody>
                       </table>
                     </div>
-                    <p style={{ fontSize: 10, lineHeight: 1.5, color: MUTED, margin: "14px 0 0" }}>
-                      Berdasarkan keseluruhan hasil verifikasi, Aspek {category} {company} dinyatakan{" "}
-                      <strong>{catCompliant === narrativeDocs.length ? "Memenuhi" : "Belum Memenuhi Seluruhnya"}</strong> sebagai dasar pelaksanaan
-                      Verifikasi Kemampuan Industri sesuai dengan ketentuan Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.
-                    </p>
+                    {schemeReport ? (
+                      <p
+                        style={{ fontSize: 10, lineHeight: 1.5, color: MUTED, margin: "14px 0 0" }}
+                        dangerouslySetInnerHTML={{
+                          __html: schemeReport.narrative.chapterClosing({ company, chapter: category, allMet: catCompliant === narrativeDocs.length }),
+                        }}
+                      />
+                    ) : (
+                      <p style={{ fontSize: 10, lineHeight: 1.5, color: MUTED, margin: "14px 0 0" }}>
+                        Berdasarkan keseluruhan hasil verifikasi, Aspek {category} {company} dinyatakan{" "}
+                        <strong>{catCompliant === narrativeDocs.length ? "Memenuhi" : "Belum Memenuhi Seluruhnya"}</strong> sebagai dasar pelaksanaan
+                        Verifikasi Kemampuan Industri sesuai dengan ketentuan Peraturan Menteri Perindustrian Nomor 27 Tahun 2025.
+                      </p>
+                    )}
                   </PageShell>
 
                   {/* Visual summary */}
@@ -1757,7 +1794,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                     <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "22px 0 4px" }}>
                       <div style={{ width: 22, height: 2, background: ORANGE_LIGHT }} />
                       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "#f28951" }}>
-                        BAB {["I", "II", "III", "IV", "V", "VI", "VII"][chapterIdx + 1]} · RINGKASAN VISUAL
+                        BAB {babRoman} · RINGKASAN VISUAL
                       </div>
                     </div>
                     <h1 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 6px" }}>{category}</h1>
@@ -1838,7 +1875,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                         <div style={{ fontSize: 11, fontWeight: 700, color: INK, textAlign: "center", margin: "14px 0 10px" }}>
                           Tabel Pemeriksaan Dokumen {sectionDef?.title ?? category}
                         </div>
-                        <ComplianceTable rows={complianceRows.map((d) => ({ key: d.key, label: d.label }))} />
+                        <ComplianceTable rows={complianceRows.map((d) => ({ key: d.key, label: d.label }))} resolveDef={resolveDef} />
                       </>
                     ) : (
                       <p style={{ fontSize: 10.5, lineHeight: 1.5, color: MUTED_2 }}>
@@ -1907,6 +1944,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
             startPage={productChapterStartPage}
             totalPages={totalPages}
             verificationType={data.verificationType}
+            schemeTitle={schemeReport?.productChapter}
           />
         )}
 

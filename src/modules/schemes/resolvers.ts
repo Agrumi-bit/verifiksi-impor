@@ -213,8 +213,7 @@ export type ReportSectionContent = {
 export type ReportContent = {
   schemes: SchemeId[];
   terms: SchemeTerms[];
-  forewords: (string)[];
-  conclusions: (string)[];
+  forewords: string[];
   sections: ReportSectionContent[];
   documentNarrative: (scheme: SchemeId, documentId: string) => DocumentNarrative | string;
   /** Every "[BELUM DIATUR …]" marker in the content. Non-empty → finalization must be blocked. */
@@ -231,7 +230,7 @@ export type ReportContent = {
 export function resolveReportContent(schemes: readonly SchemeId[]): ReportContent {
   const unresolved: string[] = [];
   const track = (text: string) => {
-    if (isBelumDiatur(text)) unresolved.push(text);
+    unresolved.push(text);
     return text;
   };
 
@@ -239,6 +238,7 @@ export function resolveReportContent(schemes: readonly SchemeId[]): ReportConten
   const seen = new Set<ReportSectionId>();
 
   for (const scheme of schemes) {
+    const narrative = getScheme(scheme).narrative;
     for (const section of getScheme(scheme).reportSections) {
       const isCommon = COMMON_REPORT_SECTIONS.includes(section);
       if (isCommon && seen.has(section)) {
@@ -248,21 +248,20 @@ export function resolveReportContent(schemes: readonly SchemeId[]): ReportConten
       // A scheme-specific chapter id shared by two schemes (e.g. kemampuan-finansial in Industri
       // and Non Industri) stays one chapter PER scheme, each with its own narrative.
       seen.add(section);
-      const narrative = getScheme(scheme).narrative.sections[section];
       sections.push({
         section,
         schemes: [scheme],
-        narrative: narrative ?? track(belumDiatur(scheme, `narasi bab "${section}"`)),
+        narrative: narrative?.sections[section] ?? track(belumDiatur(scheme, `narasi bab "${section}"`)),
       });
     }
   }
 
-  const forewords = schemes.map((s) => getScheme(s).narrative.foreword || track(belumDiatur(s, "kata pengantar")));
-  const conclusions = schemes.map((s) => getScheme(s).narrative.conclusion || track(belumDiatur(s, "kesimpulan")));
+  const forewords = schemes.map((s) => getScheme(s).narrative?.foreword || track(belumDiatur(s, "kata pengantar")));
 
   for (const scheme of schemes) {
+    const narrative = getScheme(scheme).narrative;
     for (const def of getScheme(scheme).documents) {
-      if (!getScheme(scheme).narrative.documents[def.id]) track(belumDiatur(scheme, `narasi dokumen "${def.label}"`));
+      if (!narrative?.documents[def.id]) track(belumDiatur(scheme, `narasi dokumen "${def.label}"`));
     }
   }
 
@@ -270,10 +269,9 @@ export function resolveReportContent(schemes: readonly SchemeId[]): ReportConten
     schemes: [...schemes],
     terms: schemes.map((s) => getScheme(s).terms),
     forewords,
-    conclusions,
     sections,
     documentNarrative: (scheme, documentId) =>
-      getScheme(scheme).narrative.documents[documentId] ?? belumDiatur(scheme, `narasi dokumen "${documentId}"`),
+      getScheme(scheme).narrative?.documents[documentId] ?? belumDiatur(scheme, `narasi dokumen "${documentId}"`),
     unresolved,
   };
 }
@@ -295,27 +293,4 @@ export function findForbiddenTerms(scheme: SchemeId, text: string): string[] {
   return getScheme(scheme).terms.forbiddenTerms.filter((term) =>
     new RegExp(`(^|[^\\p{L}\\p{N}])${escapeRegExp(term)}($|[^\\p{L}\\p{N}])`, "iu").test(text),
   );
-}
-
-// ---------------------------------------------------------------------------------------------
-// KBLI (VIU only — Pasal 37 ayat (2) … angka 2 huruf b) jo. Pasal 38 ayat (2) huruf b)
-// ---------------------------------------------------------------------------------------------
-
-export type KbliCheck = {
-  scheme: SchemeId;
-  ok: boolean;
-  allowed: readonly string[];
-  matched: string[];
-};
-
-/** For every VIU scheme: does the company hold at least one allowed KBLI? VKI is never checked. */
-export function validateViuKbli(schemes: readonly SchemeId[], kbliCodes: readonly string[]): KbliCheck[] {
-  const codes = kbliCodes.map((c) => c.replace(/\D/g, "").slice(0, 5)).filter(Boolean);
-  return schemes
-    .filter((s) => s !== "VKI")
-    .map((scheme) => {
-      const allowed = getScheme(scheme).terms.allowedKbli ?? [];
-      const matched = codes.filter((c) => allowed.includes(c));
-      return { scheme, ok: matched.length > 0, allowed, matched };
-    });
 }
