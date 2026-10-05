@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
+import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
 import { requireTechnicalAnalystSession } from "@/lib/require-technical-analyst-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import {
@@ -39,6 +40,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   return NextResponse.json({
     data: {
       status: assignment.status,
+      reviewable: isAssignmentReviewable(assignment),
       verificationType: assignment.application.verificationType,
       technicalAnalysisData,
       machines: buildMachineChecklist(payload),
@@ -68,7 +70,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!assignment) {
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
   }
-  if (assignment.status !== "SUBMITTED") {
+  if (!isAssignmentReviewable(assignment)) {
     return NextResponse.json(
       { error: "Analisis hanya dapat diisi saat assignment berstatus Submitted." },
       { status: 400 },

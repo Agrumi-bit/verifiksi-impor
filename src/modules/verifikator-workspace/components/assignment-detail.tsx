@@ -1,5 +1,6 @@
 "use client";
 
+import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
 import { ApplicationEditedNotice } from "@/modules/applications/components/application-edited-notice";
 import type { ApplicationEditedNotice as ApplicationEditedNoticeData } from "@/modules/applications/server/edited-after";
 import { useState } from "react";
@@ -47,6 +48,9 @@ export type TeamMemberSummary = {
 
 export type AssignmentDetailData = {
   applicationEditedAfterAssignment?: ApplicationEditedNoticeData;
+  revisionCount: number;
+  revisionReceivedAt: string | null;
+  lastReturnNotes: string | null;
   id: string;
   assignmentNumber: string;
   status: AssignmentStatusValue;
@@ -165,6 +169,9 @@ export function AssignmentDetail({ id }: Props) {
   const isVki = data.application.verificationType === "VKI";
   const tabNames = ALL_TAB_NAMES.filter((name) => isVki || !VKI_ONLY_TABS.includes(name));
   const statusStyle = ASSIGNMENT_STATUS_PILL[data.status];
+  // Tabs/decision panel only act on a reviewable assignment — SUBMITTED, or reopened
+  // (IN_PROGRESS, "Revisi ke-N") after the company resubmitted a revision.
+  const reviewStatus = isAssignmentReviewable(data) ? "SUBMITTED" : data.status;
 
   return (
     <div className="p-6">
@@ -193,6 +200,17 @@ export function AssignmentDetail({ id }: Props) {
             <span className={`rounded-full px-3 py-1.25 text-[11px] font-bold ${ASSIGNMENT_PRIORITY_BADGE[data.priority]}`}>
               {data.priority}
             </span>
+            {data.revisionCount > 0 && (
+              <span
+                className="rounded-full bg-[#fdf0d5] px-2.5 py-0.5 text-[10.5px] font-bold text-[#7a4a10]"
+                title={data.lastReturnNotes ? `Catatan pengembalian sebelumnya: ${data.lastReturnNotes}` : undefined}
+              >
+                Revisi ke-{data.revisionCount}
+                {data.revisionReceivedAt
+                  ? ` · Revisi diterima ${new Date(data.revisionReceivedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`
+                  : ""}
+              </span>
+            )}
           </div>
           <div className="flex gap-2.5">
             <button
@@ -248,7 +266,7 @@ export function AssignmentDetail({ id }: Props) {
         {activeTab === "Documents Verification" && (
           <DocumentVerificationTab
             assignmentId={id}
-            assignmentStatus={data.status}
+            assignmentStatus={reviewStatus}
             verificationType={data.application.verificationType}
             companyName={data.company.companyName}
             payload={data.application.payload}
@@ -268,12 +286,12 @@ export function AssignmentDetail({ id }: Props) {
           />
         )}
         {activeTab === "Verifikasi Mesin" && (
-          <MachineVerificationTab assignmentId={id} assignmentStatus={data.status} />
+          <MachineVerificationTab assignmentId={id} assignmentStatus={reviewStatus} />
         )}
         {activeTab === "Product Verification" && (
           <ProductVerificationTab
             assignmentId={id}
-            assignmentStatus={data.status}
+            assignmentStatus={reviewStatus}
             payload={data.application.payload}
             focusProductId={rawMaterialFocus?.productId ?? null}
             focusConversionId={rawMaterialFocus?.conversionId ?? null}
@@ -283,7 +301,7 @@ export function AssignmentDetail({ id }: Props) {
         {activeTab === "Verifikasi Jumlah Produksi" && (
           <ProductionQuantityTab
             assignmentId={id}
-            assignmentStatus={data.status}
+            assignmentStatus={reviewStatus}
             onNavigateToRawMaterial={(productId, conversionId) => {
               setRawMaterialFocus({ productId, conversionId });
               setActiveTab("Product Verification");
@@ -297,7 +315,7 @@ export function AssignmentDetail({ id }: Props) {
         {activeTab === "Communication" && <CommunicationTab assignmentId={id} />}
       </div>
 
-      <DecisionPanel assignmentId={id} status={data.status} quickStats={data.quickStats} />
+      <DecisionPanel assignmentId={id} status={reviewStatus} quickStats={data.quickStats} />
     </div>
   );
 }

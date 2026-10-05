@@ -1,5 +1,6 @@
 "use client";
 
+import { RevisionBadge } from "@/modules/applications/components/revision-badge";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -17,6 +18,8 @@ import {
 } from "../status";
 
 type AssignmentListItem = {
+  revisionCount?: number;
+  revisionReceivedAt?: string | null;
   id: string;
   assignmentNumber: string;
   applicationNumber: string;
@@ -174,6 +177,7 @@ export function AssignmentList() {
                   <span className="text-[#a68f80]">Assignment ID</span>
                   <br />
                   <span className="font-semibold">{assignment.assignmentNumber}</span>
+                  <RevisionBadge revisionCount={assignment.revisionCount} revisionReceivedAt={assignment.revisionReceivedAt} />
                 </span>
               </div>
               <div className="flex items-center gap-1.5 text-[12.5px] text-[#594138]">

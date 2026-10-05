@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
+import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
 import { getServerSession } from "@/lib/get-session";
 import { RAW_MATERIAL_CONVERSION_KATEGORI, type ApplicationWizardValues } from "@/modules/applications/schema";
 
@@ -51,7 +52,7 @@ export async function POST(
   if (!assignment) {
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
   }
-  if (assignment.status !== "SUBMITTED") {
+  if (!isAssignmentReviewable(assignment)) {
     return NextResponse.json(
       { error: "Rasio konversi hanya dapat diisi saat assignment berstatus Submitted." },
       { status: 400 },
@@ -100,7 +101,7 @@ export async function PATCH(
   if (!assignment) {
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
   }
-  if (assignment.status !== "SUBMITTED") {
+  if (!isAssignmentReviewable(assignment)) {
     return NextResponse.json(
       { error: "Rasio konversi hanya dapat diubah saat assignment berstatus Submitted." },
       { status: 400 },
@@ -145,7 +146,7 @@ export async function DELETE(
   if (!assignment) {
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
   }
-  if (assignment.status !== "SUBMITTED") {
+  if (!isAssignmentReviewable(assignment)) {
     return NextResponse.json(
       { error: "Rasio konversi hanya dapat dihapus saat assignment berstatus Submitted." },
       { status: 400 },

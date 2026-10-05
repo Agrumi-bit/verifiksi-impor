@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
+import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
 import { getServerSession } from "@/lib/get-session";
 import { updateApplicationPayload } from "@/lib/application-payload";
 
@@ -67,7 +68,7 @@ export async function PATCH(
   if (!assignment) {
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
   }
-  if (assignment.status !== "SUBMITTED") {
+  if (!isAssignmentReviewable(assignment)) {
     return NextResponse.json(
       { error: "Data hanya dapat diubah saat assignment berstatus Submitted." },
       { status: 400 },

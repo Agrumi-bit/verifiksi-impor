@@ -17,6 +17,8 @@ export type ElectricityMonth = {
 
 export type AnalysisData = {
   status: string;
+  /** SUBMITTED, or reopened after a resubmitted revision — see isAssignmentReviewable. */
+  reviewable?: boolean;
   verificationType: string;
   technicalAnalysisData: TechnicalAnalysisData;
   machines: MachineChecklistItem[];

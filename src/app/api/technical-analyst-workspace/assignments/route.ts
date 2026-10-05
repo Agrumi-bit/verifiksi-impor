@@ -55,6 +55,8 @@ export async function GET(request: Request) {
       createdAt: assignment.createdAt,
       dueDate: assignment.dueDate,
       validatedAt: assignment.validatedAt,
+      revisionCount: assignment.revisionCount,
+      revisionReceivedAt: assignment.revisionReceivedAt,
       overallStatus: overallTechnicalStatus(assignment.application.verificationType, technicalAnalysisData),
     };
   });

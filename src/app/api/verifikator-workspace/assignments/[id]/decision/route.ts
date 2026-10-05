@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
+import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
 import { getServerSession } from "@/lib/get-session";
 import { returnApplicationForRevision } from "@/modules/applications/return-for-revision";
 
@@ -29,7 +30,7 @@ export async function POST(
   if (!assignment || assignment.verifikatorId !== verifikatorId) {
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
   }
-  if (assignment.status !== "SUBMITTED") {
+  if (!isAssignmentReviewable(assignment)) {
     return NextResponse.json(
       { error: "Keputusan hanya dapat diambil saat assignment berstatus Submitted." },
       { status: 400 },

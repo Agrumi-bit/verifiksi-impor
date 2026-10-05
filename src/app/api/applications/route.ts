@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import { ADMIN_ROLES, requireAdminSession } from "@/lib/require-admin-session";
 import { type ApplicationWizardValues } from "@/modules/applications/schema";
+import { reopenReturnedAssignments } from "@/modules/applications/server/reopen-assignments";
 import { prepareApplicationSubmission, runApplicationSubmissionSyncs } from "@/modules/applications/server/submission";
 
 function generateApplicationNumber(verificationType: string): string {
@@ -88,6 +89,24 @@ export async function POST(request: Request) {
       // "Every non-draft update of the application" — a RETURNED application resubmitted
       // through this same promote-draft path counts, since its status becomes SUBMITTED here.
       await runApplicationSubmissionSyncs(promoted.id, values);
+      if (wasRevision) {
+        // RETURNED → SUBMITTED: reopen the Verifikator/TA assignments that sent it back
+        // ("Revisi ke-N") and record the resubmission in the application's history.
+        const receivedAt = new Date();
+        const reopened = await reopenReturnedAssignments(promoted.id, receivedAt);
+        const receivedLabel = receivedAt.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" });
+        await db.applicationAuditLog.create({
+          data: {
+            applicationId: promoted.id,
+            action: "RESUBMIT",
+            actorId: session.user.id,
+            actorName: session.user.name,
+            actorRole: session.user.role ?? null,
+            reason: `Revisi diterima ${receivedLabel}${reopened > 0 ? ` — ${reopened} penugasan dibuka kembali` : ""}`,
+            createdAt: receivedAt,
+          },
+        });
+      }
       return NextResponse.json({
         applicationNumber: promoted.applicationNumber,
         id: promoted.id,

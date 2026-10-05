@@ -1,5 +1,6 @@
 "use client";
 
+import { RevisionBadge } from "@/modules/applications/components/revision-badge";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -8,6 +9,7 @@ import { MaterialIcon } from "./material-icon";
 import { ASSIGNMENT_PRIORITY_LABELS, ASSIGNMENT_PRIORITY_BADGE, type AssignmentPriorityValue } from "../status";
 
 type QueueItem = {
+  revisionCount?: number;
   id: string;
   assignmentNumber: string;
   applicationNumber: string;
@@ -121,6 +123,7 @@ export function ApprovalCenter() {
                 📄 <span className="text-[#8891ab]">Assignment ID</span>
                 <br />
                 <span className="font-semibold">{item.assignmentNumber}</span>
+                <RevisionBadge revisionCount={item.revisionCount} />
               </div>
               <div>
                 🏛 <span className="text-[#8891ab]">Program</span>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
+import { REVIEWABLE_ASSIGNMENT_WHERE } from "@/modules/applications/assignment-review-state";
 import { getServerSession } from "@/lib/get-session";
 
 export async function GET(request: Request) {
@@ -18,8 +19,8 @@ export async function GET(request: Request) {
   // verifikator has already started reviewing but not yet decided.
   const assignments = await db.assignment.findMany({
     where: {
-      status: "SUBMITTED",
-      OR: [{ verifikatorId: null }, { verifikatorId }],
+      // SUBMITTED, or reopened after a resubmitted revision ("Revisi ke-N").
+      AND: [REVIEWABLE_ASSIGNMENT_WHERE, { OR: [{ verifikatorId: null }, { verifikatorId }] }],
     },
     include: { application: true },
     orderBy: { updatedAt: "asc" },
@@ -46,6 +47,7 @@ export async function GET(request: Request) {
       verificationType: assignment.application.verificationType,
       priority: assignment.priority,
       claimedByMe: assignment.verifikatorId === verifikatorId,
+      revisionCount: assignment.revisionCount,
       submittedAt: assignment.updatedAt,
       dueDate: assignment.dueDate,
     };

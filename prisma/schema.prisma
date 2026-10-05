@@ -1112,6 +1112,14 @@ model Assignment {
   // (kicks back to Customer Relation) and records why here.
   letterReviewNote String?
 
+  // Revision round-trips: when the company resubmits an application this RETURNED assignment
+  // sent back, it reopens as IN_PROGRESS ("Revisi ke-N") — revisionCount counts those reopenings,
+  // revisionReceivedAt is the latest resubmission, and lastReturnNotes keeps the decision notes
+  // the assignment was returned with (validationNotes is cleared for the new decision).
+  revisionCount      Int       @default(0)
+  revisionReceivedAt DateTime?
+  lastReturnNotes    String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

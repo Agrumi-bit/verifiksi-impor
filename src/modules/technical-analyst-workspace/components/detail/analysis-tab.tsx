@@ -74,7 +74,8 @@ export function AnalysisTab({ assignmentNumber, verificationType }: AnalysisTabP
   if (isError || !data) return <div className="p-6 text-center text-[#c1361f]">Gagal memuat data analisis.</div>;
 
   const analysisData = data;
-  const canEdit = analysisData.status === "SUBMITTED";
+  // SUBMITTED, or reopened after a resubmitted revision (see isAssignmentReviewable).
+  const canEdit = analysisData.reviewable ?? analysisData.status === "SUBMITTED";
 
   function serverDraft(moduleKey: string): Draft {
     const saved = analysisData.technicalAnalysisData[moduleKey];

@@ -1,5 +1,6 @@
 "use client";
 
+import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
 import { ApplicationEditedNotice } from "@/modules/applications/components/application-edited-notice";
 import type { ApplicationEditedNotice as ApplicationEditedNoticeData } from "@/modules/applications/server/edited-after";
 import { useState } from "react";
@@ -25,6 +26,9 @@ import { DecisionPanel } from "./detail/decision-panel";
 
 export type AssignmentDetailData = {
   applicationEditedAfterAssignment?: ApplicationEditedNoticeData;
+  revisionCount: number;
+  revisionReceivedAt: string | null;
+  lastReturnNotes: string | null;
   id: string;
   assignmentNumber: string;
   status: AssignmentStatusValue;
@@ -114,6 +118,17 @@ export function AssignmentDetail({ id }: { id: string }) {
             <span className={`rounded px-2.5 py-0.5 text-[10.5px] font-bold ${ASSIGNMENT_PRIORITY_BADGE[data.priority]}`}>
               {data.priority}
             </span>
+            {data.revisionCount > 0 && (
+              <span
+                className="rounded-full bg-[#fdf0d5] px-2.5 py-0.5 text-[10.5px] font-bold text-[#7a4a10]"
+                title={data.lastReturnNotes ? `Catatan pengembalian sebelumnya: ${data.lastReturnNotes}` : undefined}
+              >
+                Revisi ke-{data.revisionCount}
+                {data.revisionReceivedAt
+                  ? ` · Revisi diterima ${new Date(data.revisionReceivedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`
+                  : ""}
+              </span>
+            )}
             <span className={`rounded px-2.5 py-0.5 text-[10.5px] font-bold ${TECHNICAL_MODULE_STATUS_BADGE[data.overallStatus]}`}>
               {TECHNICAL_MODULE_STATUS_LABELS[data.overallStatus]}
             </span>
@@ -151,7 +166,7 @@ export function AssignmentDetail({ id }: { id: string }) {
       {tab === "Analisis Teknis" && <AnalysisTab assignmentNumber={data.assignmentNumber} verificationType={data.application.verificationType} />}
 
       <div className="mt-5 -mx-7 -mb-7">
-        <DecisionPanel assignmentId={data.assignmentNumber} status={data.status} readyForDecision={data.readyForDecision} />
+        <DecisionPanel assignmentId={data.assignmentNumber} status={isAssignmentReviewable(data) ? "SUBMITTED" : data.status} readyForDecision={data.readyForDecision} />
       </div>
     </div>
   );

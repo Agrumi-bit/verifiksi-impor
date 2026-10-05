@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { LocationVisit } from "@/generated/prisma/client";
 
 import { db } from "@/lib/db";
+import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
 import { findApplicationEditAfter } from "@/modules/applications/server/edited-after";
 import { getServerSession } from "@/lib/get-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
@@ -179,12 +180,15 @@ export async function GET(
   } else if (assignment.status === "RETURNED") {
     overallProgress = 100;
     currentStage = "Dikembalikan untuk Revisi";
-  } else if (assignment.status === "SUBMITTED") {
+  } else if (isAssignmentReviewable(assignment)) {
     const reviewTotal = documentChecklist.length + productChecklist.length;
     const reviewDone = documentsVerified + productsVerified;
     const reviewFraction = reviewTotal > 0 ? reviewDone / reviewTotal : 0;
     overallProgress = Math.round(70 + reviewFraction * 30);
-    currentStage = "Menunggu Validasi Verifikator";
+    currentStage =
+      assignment.status === "SUBMITTED"
+        ? "Menunggu Validasi Verifikator"
+        : `Revisi ke-${assignment.revisionCount} Diterima — Menunggu Validasi Ulang`;
   } else {
     overallProgress = Math.round(surveyProgress * 70);
     currentStage = "Survey Lapangan Berlangsung";
@@ -224,6 +228,9 @@ export async function GET(
       assignmentNumber: assignment.assignmentNumber,
       status: assignment.status,
       applicationEditedAfterAssignment,
+      revisionCount: assignment.revisionCount,
+      revisionReceivedAt: assignment.revisionReceivedAt,
+      lastReturnNotes: assignment.lastReturnNotes,
       priority: assignment.priority,
       createdAt: assignment.createdAt,
       dueDate: assignment.dueDate,

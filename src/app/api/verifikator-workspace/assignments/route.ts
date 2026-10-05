@@ -77,6 +77,8 @@ export async function GET(request: Request) {
       scheduledDate: assignment.scheduledDate,
       dueDate: assignment.dueDate,
       validatedAt: assignment.validatedAt,
+      revisionCount: assignment.revisionCount,
+      revisionReceivedAt: assignment.revisionReceivedAt,
     };
   });
 
