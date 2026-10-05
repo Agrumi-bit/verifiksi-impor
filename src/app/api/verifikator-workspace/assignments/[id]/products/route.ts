@@ -102,13 +102,34 @@ export async function PATCH(
   }
 
   if (parsed.data.productData) {
-    const products = (payload.products ?? []).map((p) =>
-      p.id === parsed.data.id ? { ...p, ...parsed.data.productData } : p,
-    );
-    await db.application.update({
-      where: { id: assignment.applicationId },
-      data: { payload: { ...payload, products } },
-    });
+    const isGenericProduct = (payload.products ?? []).some((p) => p.id === parsed.data.id);
+    if (isGenericProduct) {
+      const products = (payload.products ?? []).map((p) =>
+        p.id === parsed.data.id ? { ...p, ...parsed.data.productData } : p,
+      );
+      await db.application.update({
+        where: { id: assignment.applicationId },
+        data: { payload: { ...payload, products } },
+      });
+    } else {
+      // Konsumsi product — its own shape has no kategori/materialType/photoPath, only the
+      // overlapping fields are corrected here (see buildProductChecklist's mapping).
+      const { hsCode, hsDesc, deskripsi } = parsed.data.productData;
+      const konsumsiProducts = (payload.konsumsiProducts ?? []).map((p) =>
+        p.id === parsed.data.id
+          ? {
+              ...p,
+              ...(hsCode !== undefined ? { hsCode } : {}),
+              ...(hsDesc !== undefined ? { hsDescription: hsDesc } : {}),
+              ...(deskripsi !== undefined ? { productName: deskripsi } : {}),
+            }
+          : p,
+      );
+      await db.application.update({
+        where: { id: assignment.applicationId },
+        data: { payload: { ...payload, konsumsiProducts } },
+      });
+    }
   }
 
   const decisions = productVerificationsSchema.parse(assignment.productVerifications ?? {});
@@ -228,20 +249,28 @@ export async function DELETE(
   }
 
   const payload = assignment.application.payload as ApplicationWizardValues;
-  const productExists = (payload.products ?? []).some((p) => p.id === productId);
-  if (!productExists) {
+  const isGenericProduct = (payload.products ?? []).some((p) => p.id === productId);
+  const isKonsumsiProduct = (payload.konsumsiProducts ?? []).some((p) => p.id === productId);
+  if (!isGenericProduct && !isKonsumsiProduct) {
     return NextResponse.json({ error: "Produk tidak ditemukan" }, { status: 404 });
   }
 
-  const products = (payload.products ?? []).filter((p) => p.id !== productId);
-  const productionQty = (payload.productionQty ?? []).filter((p) => p.productId !== productId);
-  const sales = (payload.sales ?? []).filter((s) => s.productId !== productId);
-  const rawMaterialConversions = (payload.rawMaterialConversions ?? []).filter((c) => c.productId !== productId);
-
-  await db.application.update({
-    where: { id: assignment.applicationId },
-    data: { payload: { ...payload, products, productionQty, sales, rawMaterialConversions } },
-  });
+  if (isGenericProduct) {
+    const products = (payload.products ?? []).filter((p) => p.id !== productId);
+    const productionQty = (payload.productionQty ?? []).filter((p) => p.productId !== productId);
+    const sales = (payload.sales ?? []).filter((s) => s.productId !== productId);
+    const rawMaterialConversions = (payload.rawMaterialConversions ?? []).filter((c) => c.productId !== productId);
+    await db.application.update({
+      where: { id: assignment.applicationId },
+      data: { payload: { ...payload, products, productionQty, sales, rawMaterialConversions } },
+    });
+  } else {
+    const konsumsiProducts = (payload.konsumsiProducts ?? []).filter((p) => p.id !== productId);
+    await db.application.update({
+      where: { id: assignment.applicationId },
+      data: { payload: { ...payload, konsumsiProducts } },
+    });
+  }
 
   const decisions = productVerificationsSchema.parse(assignment.productVerifications ?? {});
   delete decisions[productId];

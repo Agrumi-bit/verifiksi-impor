@@ -46,6 +46,7 @@ type ProductRow = {
   volumeUnit: string;
   intendedUse: string;
   photoPath: string | null;
+  source: "generic" | "konsumsi";
   status: ProductVerificationStatusValue;
   note: string;
   verifiedAt: string | null;
@@ -1264,7 +1265,7 @@ export function ProductVerificationTab({
               </div>
             )}
 
-            {(materials.length > 0 || canEdit) && (
+            {row.source !== "konsumsi" && (materials.length > 0 || canEdit) && (
               <div className="border-t border-[#f0ded0] pt-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <button

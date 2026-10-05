@@ -569,10 +569,14 @@ export type ProductChecklistItem = {
   volumeUnit: string;
   intendedUse: string;
   photoPath: string | null;
+  // "generic" = payload.products (VKI / Bahan Baku Industri / Non-Industri — has a Bahan Baku
+  // linking concept). "konsumsi" = payload.konsumsiProducts, which has no raw-material concept at
+  // all, so the UI must not offer "Bahan Baku yang Digunakan" linking on these rows.
+  source: "generic" | "konsumsi";
 };
 
 export function buildProductChecklist(payload: ApplicationWizardValues): ProductChecklistItem[] {
-  return (payload.products ?? []).map((product) => ({
+  const generic = (payload.products ?? []).map((product) => ({
     id: product.id,
     kategori: product.kategori ?? "",
     materialType: product.materialType ?? "",
@@ -583,7 +587,27 @@ export function buildProductChecklist(payload: ApplicationWizardValues): Product
     volumeUnit: product.volumeUnit ?? "",
     intendedUse: product.intendedUse ?? "",
     photoPath: product.photoPath || null,
+    source: "generic" as const,
   }));
+  // Barang Konsumsi stores its own products in `payload.konsumsiProducts` (brand/HS-Code-driven
+  // shape, see konsumsi/schema.ts), never `payload.products` — mapped onto the same generic
+  // checklist shape here so the Product Verification tab isn't permanently empty for Konsumsi
+  // applications. No kategori/materialType/intendedUse/photoPath equivalent exists on a Konsumsi
+  // product, so those stay blank.
+  const konsumsi = (payload.konsumsiProducts ?? []).map((product) => ({
+    id: product.id,
+    kategori: product.commodityName ?? "",
+    materialType: "",
+    hsCode: product.hsCode ?? "",
+    hsDesc: product.hsDescription ?? "",
+    deskripsi: product.productName ?? "",
+    estimatedVolume: product.quantity ?? "",
+    volumeUnit: product.unit ?? "",
+    intendedUse: "",
+    photoPath: null,
+    source: "konsumsi" as const,
+  }));
+  return [...generic, ...konsumsi];
 }
 
 export type RawMaterialChecklistItem = {
