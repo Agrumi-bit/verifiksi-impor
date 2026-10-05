@@ -13,7 +13,7 @@ import { existsSync } from "node:fs";
 
 const BRANCH = "main";
 
-function run(command, { allowFailure = false } = {}) {
+function run(command, { allowFailure = false, hint } = {}) {
   console.log(`\n> ${command}`);
   try {
     execSync(command, { stdio: "inherit" });
@@ -21,9 +21,13 @@ function run(command, { allowFailure = false } = {}) {
   } catch {
     if (allowFailure) return false;
     console.error(`\n✗ Gagal menjalankan: ${command}`);
+    if (hint) console.error(`  ${hint}`);
     process.exit(1);
   }
 }
+
+const DB_HINT =
+  "Pastikan database lokal berjalan dan DATABASE_URL di .env benar (Postgres lokal/Docker, atau `npx prisma dev start default`).";
 
 function output(command) {
   return execSync(command, { encoding: "utf8" }).trim();
@@ -55,13 +59,13 @@ console.log("\n== 4/5 Database: migrasi + Prisma client");
 // Same local database `npm run dev` starts via its predev hook. Harmless when it's already
 // running, and when DATABASE_URL points at another Postgres it simply isn't used.
 run("npx prisma dev start default", { allowFailure: true });
-run("npx prisma migrate deploy");
+run("npx prisma migrate deploy", { hint: DB_HINT });
 run("npx prisma generate");
 
 console.log("\n== 5/5 Data referensi (dilewati bila sudah ada)");
-run("npx tsx --env-file=.env scripts/seed-regions.mjs");
-run("npx tsx --env-file=.env scripts/seed-countries.mjs");
-run("npx tsx --env-file=.env scripts/seed-trademark-classes.mjs");
+run("npx tsx --env-file=.env scripts/seed-regions.mjs", { hint: DB_HINT });
+run("npx tsx --env-file=.env scripts/seed-countries.mjs", { hint: DB_HINT });
+run("npx tsx --env-file=.env scripts/seed-trademark-classes.mjs", { hint: DB_HINT });
 
 // execFileSync (no shell) so `%h %s` isn't mangled by Windows cmd's %VAR% expansion.
 const lastCommit = execFileSync("git", ["log", "-1", "--format=%h %s"], { encoding: "utf8" }).trim();
