@@ -7,6 +7,7 @@ import { ADMIN_ROLES, requireAdminSession } from "@/lib/require-admin-session";
 import { type ApplicationWizardValues } from "@/modules/applications/schema";
 import { reopenReturnedAssignments } from "@/modules/applications/server/reopen-assignments";
 import { prepareApplicationSubmission, runApplicationSubmissionSyncs } from "@/modules/applications/server/submission";
+import { computeDisplayStatus } from "@/modules/company-workspace/workflow-stage";
 
 function generateApplicationNumber(verificationType: string): string {
   const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -20,7 +21,9 @@ export async function GET() {
 
   const applications = await db.application.findMany({
     orderBy: { createdAt: "desc" },
-    include: { assignments: { select: { status: true } } },
+    include: {
+      assignments: { select: { status: true, scheduleType: true, verifikatorId: true, technicalReviewerId: true } },
+    },
   });
 
   const data = applications.map((application) => {
@@ -31,7 +34,12 @@ export async function GET() {
       verificationType: application.verificationType,
       applicationCategory: application.applicationCategory,
       companyName: payload?.companyName ?? "—",
-      status: application.status,
+      // Application.status itself only ever moves SUBMITTED -> RETURNED/REJECTED/WITHDRAWN (or
+      // stays SUBMITTED forever on the happy path) — derive the real pipeline stage from the
+      // sibling Assignment rows CR/surveyor/verifikator/technical analyst actually write to, the
+      // same way Company Workspace's own detail view already does, so this table matches what
+      // every other workspace shows instead of freezing at "Submitted".
+      status: computeDisplayStatus(application, application.assignments),
       createdAt: application.createdAt,
       importTypes: payload?.importTypes ?? [],
       assignmentStatuses: application.assignments.map((a) => a.status),
