@@ -10,7 +10,11 @@ const CONTENT_TYPES: Record<string, string> = {
   pdf: "application/pdf",
   jpg: "image/jpeg",
   jpeg: "image/jpeg",
+  // JFIF is a JPEG under another extension (Windows/WhatsApp saves) — serve it as JPEG.
+  jfif: "image/jpeg",
+  jpe: "image/jpeg",
   png: "image/png",
+  webp: "image/webp",
 };
 
 /** Stored files are immutable per version (a new upload gets a new path), so a long

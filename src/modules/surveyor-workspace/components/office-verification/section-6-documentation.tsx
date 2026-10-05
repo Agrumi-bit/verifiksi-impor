@@ -28,7 +28,11 @@ async function uploadFile(file: File): Promise<string> {
   formData.append("file", file);
   formData.append("namespace", "inspection");
   const response = await fetch("/api/uploads", { method: "POST", body: formData });
-  if (!response.ok) throw new Error("Gagal mengunggah file");
+  if (!response.ok) {
+    // e.g. HEIC/HEIF — the server explains how to convert the photo.
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error ?? "Gagal mengunggah file");
+  }
   const data = (await response.json()) as { path: string };
   return data.path;
 }
@@ -58,8 +62,9 @@ export function Section6Documentation({
       const path = await uploadFile(file);
       onOtherChange(id, { filePath: path });
       setUploads((prev) => ({ ...prev, [id]: { uploading: false, previewUrl } }));
-    } catch {
-      setUploads((prev) => ({ ...prev, [id]: { uploading: false, previewUrl, error: "Gagal mengunggah file" } }));
+    } catch (err) {
+      const error = err instanceof Error ? err.message : "Gagal mengunggah file";
+      setUploads((prev) => ({ ...prev, [id]: { uploading: false, previewUrl, error } }));
     }
   }
 
@@ -71,8 +76,9 @@ export function Section6Documentation({
       const path = await uploadFile(file);
       onChange(key, { filePath: path });
       setUploads((prev) => ({ ...prev, [key]: { uploading: false, previewUrl } }));
-    } catch {
-      setUploads((prev) => ({ ...prev, [key]: { uploading: false, previewUrl, error: "Gagal mengunggah file" } }));
+    } catch (err) {
+      const error = err instanceof Error ? err.message : "Gagal mengunggah file";
+      setUploads((prev) => ({ ...prev, [key]: { uploading: false, previewUrl, error } }));
     }
   }
 
@@ -139,7 +145,7 @@ export function Section6Documentation({
                   <input
                     id={galleryInputId}
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.jfif,.png,.webp"
                     className="hidden"
                     onChange={(e) => {
                       handleFile(dt.key, e.target.files?.[0]);
@@ -149,7 +155,7 @@ export function Section6Documentation({
                   <input
                     id={cameraInputId}
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.jfif,.png,.webp"
                     capture="environment"
                     className="hidden"
                     onChange={(e) => {
@@ -266,7 +272,7 @@ export function Section6Documentation({
             <input
               id="doc-other-gallery"
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.jfif,.png,.webp"
               className="hidden"
               onChange={(e) => {
                 handleOtherFile(e.target.files?.[0]);

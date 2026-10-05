@@ -5,6 +5,14 @@ import { storage, STORAGE_NAMESPACES, type StorageNamespace } from "@/lib/storag
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
+// HEIC/HEIF (iPhone default) can't be decoded by the browsers that view reports, and no HEIC
+// decoder ships with the server — refuse it with a clear way out instead of storing a file that
+// later shows as a broken image.
+const HEIC_EXTENSIONS = /\.(heic|heif)$/i;
+const HEIC_MIME_TYPES = new Set(["image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"]);
+const HEIC_MESSAGE =
+  "Format HEIC/HEIF belum didukung. Simpan foto sebagai JPG/PNG lalu unggah ulang (iPhone: Pengaturan › Kamera › Format › Paling Kompatibel).";
+
 function isStorageNamespace(value: string): value is StorageNamespace {
   return (STORAGE_NAMESPACES as readonly string[]).includes(value);
 }
@@ -23,6 +31,9 @@ export async function POST(request: Request) {
   }
   if (typeof namespace !== "string" || !isStorageNamespace(namespace)) {
     return NextResponse.json({ error: "Namespace tidak valid" }, { status: 400 });
+  }
+  if (HEIC_EXTENSIONS.test(file.name) || HEIC_MIME_TYPES.has(file.type.toLowerCase())) {
+    return NextResponse.json({ error: HEIC_MESSAGE }, { status: 415 });
   }
   if (file.size > MAX_FILE_SIZE_BYTES) {
     return NextResponse.json({ error: "Ukuran file maksimal 10MB" }, { status: 413 });
