@@ -8,8 +8,8 @@ import { BRANDING_REPORT_LOGO_URL, useBranding } from "@/modules/branding/use-br
  * source as the verifikator's `BrandMark`. Falls back to the original "IV" monogram + wordmark
  * when no report logo has been uploaded yet.
  *
- * `cover`: the cover sheet is dark navy, so the uploaded logo sits on a white plate there to stay
- * legible whatever colors the logo itself uses.
+ * `cover`: shown directly (no background plate) at a fixed 300x66 box, left-aligned, so the admin's
+ * uploaded logo file controls its own look against the cover sheet's dark navy background.
  */
 export function ReportBrandMark({ variant }: { variant: "head" | "cover" }) {
   const { data: branding } = useBranding();
@@ -18,10 +18,12 @@ export function ReportBrandMark({ variant }: { variant: "head" | "cover" }) {
     if (variant === "cover") {
       return (
         <div className="rd-cover-mark">
-          <div style={{ background: "#fff", borderRadius: 10, padding: "8px 12px", display: "inline-flex" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={BRANDING_REPORT_LOGO_URL} alt="Logo" style={{ height: 32, width: "auto", maxWidth: 180, objectFit: "contain" }} />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={BRANDING_REPORT_LOGO_URL}
+            alt="Logo"
+            style={{ width: 300, height: 66, objectFit: "contain", objectPosition: "left center" }}
+          />
         </div>
       );
     }
