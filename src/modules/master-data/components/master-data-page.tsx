@@ -7,7 +7,7 @@ import { ChevronDown, ChevronsUpDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 
 import { MasterDataFormDialog, type FormNotice } from "./master-data-form-dialog";
-import type { MasterDataColumn, MasterDataField, MasterDataRow } from "../types";
+import type { MasterDataColumn, MasterDataField, MasterDataFilter, MasterDataRow } from "../types";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 type SortDirection = "asc" | "desc";
@@ -25,6 +25,8 @@ type Props = {
   headerActions?: ReactNode;
   /** See MasterDataFormDialog's `formNotice`. */
   formNotice?: FormNotice;
+  /** Dropdown filters rendered next to the search box, applied together with the search. */
+  filters?: MasterDataFilter[];
 };
 
 function cellValue(row: MasterDataRow, column: MasterDataColumn): string {
@@ -50,6 +52,7 @@ export function MasterDataPage({
   requireReasonOnDeactivate,
   headerActions,
   formNotice,
+  filters,
 }: Props) {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -62,6 +65,8 @@ export function MasterDataPage({
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_OPTIONS[0]);
   const [page, setPage] = useState(1);
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({});
+  const hasActiveFilter = Object.values(filterValues).some(Boolean) || search.trim() !== "";
 
   const { data, isLoading, isError } = useQuery({
     queryKey: [queryKey],
@@ -75,8 +80,13 @@ export function MasterDataPage({
 
   const rows = useMemo(() => data ?? [], [data]);
   const filtered = useMemo(
-    () => rows.filter((row) => rowMatchesSearch(row, columns, search)),
-    [rows, columns, search],
+    () =>
+      rows.filter(
+        (row) =>
+          rowMatchesSearch(row, columns, search) &&
+          (filters ?? []).every((filter) => !filterValues[filter.key] || filter.getValue(row) === filterValues[filter.key]),
+      ),
+    [rows, columns, search, filters, filterValues],
   );
 
   const sortColumn = columns.find((c) => c.key === sortKey);
@@ -206,7 +216,7 @@ export function MasterDataPage({
         </div>
       </div>
 
-      <div className="mb-4 rounded-[10px] border border-[#f0ded0] bg-white p-3.5">
+      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-[10px] border border-[#f0ded0] bg-white p-3.5">
         <input
           type="text"
           value={search}
@@ -215,8 +225,50 @@ export function MasterDataPage({
             setPage(1);
           }}
           placeholder={`Cari ${title.toLowerCase()}...`}
-          className="w-full rounded-lg border-none bg-[#f2f0ee] px-3 py-2.5 text-[13px] text-[#261813] outline-none"
+          className="min-w-60 flex-1 rounded-lg border-none bg-[#f2f0ee] px-3 py-2.5 text-[13px] text-[#261813] outline-none"
         />
+        {filters?.map((filter) => {
+          const parentValue = filter.dependsOn ? filterValues[filter.dependsOn] : "";
+          const options = parentValue && filter.optionsFor ? filter.optionsFor(parentValue) : filter.options;
+          return (
+          <label key={filter.key} className="flex flex-col gap-1 text-[11px] font-semibold text-[#8a7565]">
+            {filter.label}
+            <select
+              value={filterValues[filter.key] ?? ""}
+              onChange={(event) => {
+                const value = event.target.value;
+                setFilterValues((prev) => {
+                  const next = { ...prev, [filter.key]: value };
+                  for (const child of filters.filter((f) => f.dependsOn === filter.key)) next[child.key] = "";
+                  return next;
+                });
+                setPage(1);
+              }}
+              className="min-w-44 max-w-72 rounded-lg border border-[#e1bfb3] bg-white px-2.5 py-2 text-[12.5px] font-normal text-[#261813] outline-none focus:border-[#e0662e]"
+            >
+              <option value="">Semua</option>
+              {options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          );
+        })}
+        {filters && filters.length > 0 && hasActiveFilter && (
+          <button
+            type="button"
+            onClick={() => {
+              setFilterValues({});
+              setSearch("");
+              setPage(1);
+            }}
+            className="rounded-lg border border-[#e1bfb3] bg-white px-3 py-2 text-[12px] font-semibold text-[#261813]"
+          >
+            Reset
+          </button>
+        )}
       </div>
 
       <div className="mb-3.5 flex items-center justify-between text-[13px] text-[#8a7565]">
@@ -279,7 +331,7 @@ export function MasterDataPage({
         )}
         {!isLoading && !isError && filtered.length === 0 && (
           <p className="p-6 text-center text-[13px] text-[#8a7565]">
-            {rows.length === 0 ? "Belum ada data." : "Tidak ada data yang cocok dengan pencarian."}
+            {rows.length === 0 ? "Belum ada data." : "Tidak ada data yang cocok dengan pencarian atau filter."}
           </p>
         )}
 

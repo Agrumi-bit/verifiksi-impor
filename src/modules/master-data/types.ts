@@ -31,6 +31,19 @@ export type MasterDataColumn = {
   render?: (row: Record<string, unknown>) => string;
 };
 
+/** A dropdown filter above the table — `getValue` returns the row's value compared against the
+ * selected option's `value` ("" = Semua, no filtering). */
+export type MasterDataFilter = {
+  key: string;
+  label: string;
+  options: MasterDataFieldOption[];
+  getValue: (row: MasterDataRow) => string;
+  /** Cascading filter — when the parent filter (by key) has a value, `optionsFor` narrows this
+   * one's options, and changing the parent clears this filter's selection. */
+  dependsOn?: string;
+  optionsFor?: (parentValue: string) => MasterDataFieldOption[];
+};
+
 export type MasterDataRow = Record<string, unknown> & {
   id: string;
   status: "ACTIVE" | "INACTIVE";
