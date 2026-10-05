@@ -496,6 +496,10 @@ function ReportVerificationModal({
   const queryClient = useQueryClient();
   const [decisionNote, setDecisionNote] = useState("");
   const [selectedDecision, setSelectedDecision] = useState<ReportDecisionValue | null>(null);
+  // "Tanggal Diperiksa" — prints on the report cover's "DIPERIKSA OLEH" line. Defaults to today,
+  // but the verifikator can pick an earlier date (e.g. backfilling a decision made offline).
+  const [verifiedAtDate, setVerifiedAtDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [isConfirmed, setIsConfirmed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const label = LOCATION_TYPE_LABELS[loc.locationType] ?? loc.locationType;
   const queryKey = ["verifikator-workspace", "assignments", assignmentId, "locations", loc.id, "report-verification"];
@@ -516,6 +520,7 @@ function ReportVerificationModal({
       hasInitializedDecision.current = true;
       setSelectedDecision(state.decision);
       setDecisionNote(state.decisionNote ?? "");
+      setVerifiedAtDate(state.verifiedAt ? state.verifiedAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
     }
   }, [state]);
 
@@ -544,11 +549,19 @@ function ReportVerificationModal({
       toast.error("Pilih keputusan (Verified/Reject/Revisi) terlebih dahulu.");
       return;
     }
+    if (!verifiedAtDate) {
+      toast.error("Pilih tanggal diperiksa terlebih dahulu.");
+      return;
+    }
+    if (!isConfirmed) {
+      toast.error("Centang konfirmasi terlebih dahulu.");
+      return;
+    }
     setIsSaving(true);
     const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/locations/${loc.id}/report-verification/decision`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ decision: selectedDecision, note: decisionNote }),
+      body: JSON.stringify({ decision: selectedDecision, note: decisionNote, verifiedAt: verifiedAtDate, confirmed: isConfirmed }),
     });
     setIsSaving(false);
     if (!response.ok) {
@@ -633,9 +646,36 @@ function ReportVerificationModal({
                   </button>
                 ))}
               </div>
+
+              <div className="mt-3">
+                <label className="mb-1.5 block text-[11.5px] font-bold text-[#20180f]" htmlFor="report-verification-date">
+                  Tanggal Diperiksa
+                </label>
+                <input
+                  id="report-verification-date"
+                  type="date"
+                  value={verifiedAtDate}
+                  onChange={(event) => setVerifiedAtDate(event.target.value)}
+                  disabled={isSaving}
+                  className="w-full rounded-lg border border-[#e8dccd] bg-[#faf7f4] px-2.5 py-2 text-[12.5px] text-[#20180f] outline-none disabled:bg-[#f2ece5]"
+                />
+                <p className="mt-1 text-[10.5px] text-[#8a7565]">Tanggal ini akan tercetak pada bagian &quot;Diperiksa Oleh&quot; di laporan.</p>
+              </div>
+
+              <label className="mt-3 flex items-start gap-2 text-[11.5px] text-[#20180f]">
+                <input
+                  type="checkbox"
+                  checked={isConfirmed}
+                  onChange={(event) => setIsConfirmed(event.target.checked)}
+                  disabled={isSaving}
+                  className="mt-0.5"
+                />
+                <span>Saya mengonfirmasi bahwa hasil review laporan verifikasi lapangan ini sudah benar dan siap disimpan.</span>
+              </label>
+
               <button
                 type="button"
-                disabled={isSaving || !selectedDecision}
+                disabled={isSaving || !selectedDecision || !verifiedAtDate || !isConfirmed}
                 onClick={handleSubmit}
                 className="mt-3 w-full rounded-lg bg-[#16a34a] py-2.5 text-[12.5px] font-bold text-white disabled:opacity-50"
               >

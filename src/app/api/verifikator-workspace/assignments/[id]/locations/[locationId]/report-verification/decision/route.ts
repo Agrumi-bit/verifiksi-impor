@@ -10,6 +10,12 @@ const LOCATION_TYPE_LABEL: Record<string, string> = { KANTOR: "Kantor", GUDANG: 
 const patchSchema = z.object({
   decision: z.enum(["VERIFIED", "REJECTED", "REVISION"]),
   note: z.string().trim().optional(),
+  // "Tanggal Diperiksa" — printed on the report's own "DIPERIKSA OLEH" line, chosen explicitly
+  // by the verifikator (date picker in ReportVerificationModal) rather than silently stamped to
+  // the server clock. `confirmed` mirrors the modal's own confirmation checkbox — re-checked here
+  // so a request built outside that UI can't skip the same acknowledgment.
+  verifiedAt: z.string().trim().min(1, "Tanggal diperiksa wajib dipilih"),
+  confirmed: z.literal(true, { message: "Konfirmasi wajib dicentang" }),
 });
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string; locationId: string }> }) {
@@ -31,7 +37,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const parsed = patchSchema.safeParse(await request.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: "Data tidak valid" }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Data tidak valid" }, { status: 400 });
   }
 
   const verifikator = await db.user.findUnique({ where: { id: verifikatorId }, select: { name: true } });
@@ -40,6 +46,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     parsed.data.decision,
     parsed.data.note?.trim() || null,
     verifikator?.name ?? "Verifikator",
+    parsed.data.verifiedAt,
   );
 
   if (parsed.data.decision === "REVISION") {

@@ -38,11 +38,19 @@ export async function patchReportVerificationItem(
   return updated;
 }
 
+/**
+ * `verifiedAt` is the verifikator's own chosen "tanggal diperiksa" — the report's cover
+ * ("DIPERIKSA OLEH") prints this date, so it's collected explicitly at decision time (a date
+ * picker in `ReportVerificationModal`, defaulting to today but editable) rather than silently
+ * stamped to the server clock, which could read oddly against a verifikator working after hours
+ * or backfilling a decision for an earlier date.
+ */
 export async function setReportVerificationDecision(
   locationId: string,
   decision: ReportDecisionValue,
   decisionNote: string | null,
   verifiedByName: string,
+  verifiedAt: string,
 ): Promise<ReportVerificationState> {
   const current = await getReportVerification(locationId);
   const updated: ReportVerificationState = {
@@ -50,7 +58,7 @@ export async function setReportVerificationDecision(
     decision,
     decisionNote,
     verifiedByName,
-    verifiedAt: new Date().toISOString(),
+    verifiedAt,
   };
   await db.locationVisit.update({ where: { id: locationId }, data: { reportVerification: updated } });
   return updated;
