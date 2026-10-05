@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
 import { MaterialIcon } from "../material-icon";
+import { ReportBrandMark } from "./report-brand-mark";
 import {
   computeFindings,
   computeSectionKinds,
@@ -48,6 +49,8 @@ type LocationReportDetail = {
   applicationNumber: string;
   verificationType: string;
   surveyorName: string | null;
+  pmReviewStatus: "APPROVED" | "REJECTED" | null;
+  pmReviewedAt: string | null;
   company: {
     companyName: string;
     nibNumber: string | null;
@@ -109,10 +112,7 @@ function PageShell({
   return (
     <section className="rd-sheet" id={id}>
       <div className="rd-pagehead">
-        <div className="rd-brand">
-          <div className="rd-brand-mark">IV</div>
-          <div className="rd-brand-name">INDUSTRIALVERIFY</div>
-        </div>
+        <ReportBrandMark variant="head" />
         <div className="rd-classified">INTERNAL — TERBATAS</div>
       </div>
       <div className="rd-body">{children}</div>
@@ -234,6 +234,12 @@ export function OfficeReportPreview({
   const company = data.company.companyName;
   const reportVerification = data.reportVerification;
   const reviewDecision = reportVerification?.decision ?? null;
+  // "TANGGAL TERBIT" only applies once Project Manager has approved this survey report — before
+  // that, the cover shows "TANGGAL PENYUSUNAN" dated to the surveyor's own actual visit (Step 0),
+  // not a submission timestamp that implies an official issue date it doesn't have yet.
+  const isPmApproved = data.pmReviewStatus === "APPROVED";
+  const coverDateLabel = isPmApproved ? "TANGGAL TERBIT" : "TANGGAL PENYUSUNAN";
+  const coverDateValue = isPmApproved ? data.pmReviewedAt : ov.actualVisitDate || null;
   const reviewContext: ReportChecklistContext = {
     applicationNumber: data.applicationNumber,
     companyName: company,
@@ -325,10 +331,7 @@ export function OfficeReportPreview({
           <div className="rd-cover-topbar" />
           <div className="rd-cover-inner">
             <div className="rd-cover-head">
-              <div className="rd-cover-mark">
-                <div className="rd-cover-mark-badge">IV</div>
-                <div className="rd-cover-mark-text">INDUSTRIALVERIFY</div>
-              </div>
+              <ReportBrandMark variant="cover" />
               <div className="rd-cover-classified">INTERNAL — TERBATAS</div>
             </div>
             <div className="rd-cover-title-block">
@@ -360,8 +363,8 @@ export function OfficeReportPreview({
                 <div className="rd-cover-meta-value rd-mono">{data.applicationNumber}</div>
               </div>
               <div>
-                <div className="rd-cover-meta-label">TANGGAL TERBIT</div>
-                <div className="rd-cover-meta-value">{fmtDate(data.submittedAt ?? new Date().toISOString())}</div>
+                <div className="rd-cover-meta-label">{coverDateLabel}</div>
+                <div className="rd-cover-meta-value">{fmtDate(coverDateValue)}</div>
               </div>
               <div>
                 <div className="rd-cover-meta-label">DISUSUN OLEH</div>

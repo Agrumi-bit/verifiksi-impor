@@ -93,6 +93,11 @@ export async function GET(
       applicationNumber: application.applicationNumber,
       verificationType: application.verificationType,
       surveyorName: visit.assignment.surveyor?.name ?? null,
+      // Report cover's "TANGGAL TERBIT" only applies once Project Manager has approved this
+      // survey assignment's report (PM Approval Center, category "laporanSurvey") — before that,
+      // the cover shows "TANGGAL PENYUSUNAN" instead, dated to the surveyor's own actual visit.
+      pmReviewStatus: visit.assignment.pmReviewStatus,
+      pmReviewedAt: visit.assignment.pmReviewedAt,
       // CR's actual assigned date, regardless of Surat Tugas letterStatus (DRAFT/PENDING/APPROVED)
       // — Section 0's "Tanggal Ditugaskan" pre-fills from this so it never drifts from what CR set.
       scheduledDate: visit.assignment.scheduledDate,
