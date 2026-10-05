@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
+import { getServerSession } from "@/lib/get-session";
+import { ADMIN_ROLES, requireAdminSession } from "@/lib/require-admin-session";
 import { applicationSubmitSchema, type ApplicationWizardValues, type LocationValues } from "@/modules/applications/schema";
 import { findDisallowedViuImportType, viuKbliRequirementMessage } from "@/modules/applications/viu-kbli-requirements";
 import { konsumsiScheme } from "@/modules/applications/viu-schemes/konsumsi/registry";
@@ -50,6 +52,9 @@ async function syncNewFacilitiesToCompany(companyId: string, submittedLocations:
 }
 
 export async function GET() {
+  const { error } = await requireAdminSession();
+  if (error) return error;
+
   const applications = await db.application.findMany({
     orderBy: { createdAt: "desc" },
   });
@@ -71,6 +76,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  // Submitted from the admin wizard (any company) and from Company Workspace (a PERUSAHAAN
+  // account, only ever for its own company) — nobody else, and never anonymously.
+  const session = await getServerSession();
+  const role = session?.user.role ?? "";
+  const isAdmin = ADMIN_ROLES.includes(role);
+  if (!session?.user || (!isAdmin && role !== "PERUSAHAAN")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const body = await request.json();
   const { draftApplicationId, ...wizardBody } = body ?? {};
   // Discriminated by verificationType — the authoritative gate, structurally unable to run
@@ -85,6 +99,10 @@ export async function POST(request: Request) {
   }
 
   let values: ApplicationWizardValues = parsed.data;
+
+  if (!isAdmin && (!session.user.companyId || values.companyId !== session.user.companyId)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   // The schema checked the VIU type ↔ KBLI rule against the payload's own company snapshot;
   // re-check it against the Company row so a stale or edited payload can't bypass it.
