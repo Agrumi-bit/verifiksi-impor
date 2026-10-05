@@ -108,6 +108,35 @@ function suratPernyataanItems(defKey: string, docTitle: string, docDesc: string,
   ];
 }
 
+/** Surat Pernyataan Kepemilikan Modal Kerja — `getAmount` resolves the nominal from whichever
+ * array actually stores it (Konsumsi vs Bahan Baku Industri/Non-Industri both call this with
+ * their own lookup, see DOCUMENT_CHECKLIST_ITEMS below), so the verifikator sees the Rupiah
+ * figure the company entered right next to the question, not just a title-only checklist row. */
+function modalKerjaItems(getAmount: (ctx: ChecklistContext) => string | null | undefined): ChecklistItemDef[] {
+  return [
+    {
+      id: "modal-kerja-amount",
+      title: "Jumlah Modal Kerja",
+      description: "Nominal modal kerja yang dinyatakan perusahaan memiliki kecukupan untuk membiayai kegiatan impor.",
+      question: "Apakah nominal modal kerja pada sistem sesuai dengan yang tercantum pada surat pernyataan?",
+      dataSource: "Data ditampilkan secara otomatis berdasarkan data permohonan, diisi oleh perusahaan.",
+      getValue: (ctx) => formatRupiah(getAmount(ctx)),
+      criteria: [
+        "Nominal modal kerja tercantum dengan jelas pada surat pernyataan.",
+        "Nominal pada sistem sama dengan nominal pada dokumen.",
+        "Nominal modal kerja wajar untuk membiayai kegiatan impor yang dimohonkan.",
+      ],
+    },
+    {
+      id: "modal-kerja-content",
+      title: "Isi Pernyataan",
+      description: "Pernyataan bermaterai bahwa perusahaan memiliki modal kerja yang cukup untuk membiayai kegiatan impor.",
+      question: "Apakah isi surat pernyataan kepemilikan modal kerja sesuai dengan format dan ketentuan yang berlaku?",
+      criteria: ["Surat pernyataan bermaterai dan ditandatangani oleh pihak berwenang.", "Isi pernyataan mencantumkan nominal modal kerja."],
+    },
+  ];
+}
+
 const INDONESIAN_MONTHS = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
   "Juli", "Agustus", "September", "Oktober", "November", "Desember",
@@ -655,6 +684,17 @@ const DOCUMENT_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
     "Surat Pernyataan Alur Proses",
     "Pernyataan mengenai alur proses produksi yang dijalankan.",
     ["Alur proses produksi dijelaskan dengan lengkap.", "Alur proses konsisten dengan produk dan kapasitas yang dimohonkan."],
+  ),
+  // Surat Pernyataan Kepemilikan Modal Kerja — same `amount` field on both storage arrays
+  // (`konsumsiFinancialDocuments` for Barang Konsumsi, `nonIndustriDocuments` for Bahan Baku
+  // Industri/Non-Industri; see financial-capability-defs.ts's own comment on why they're separate
+  // arrays), so the nominal the company entered shows up here for the verifikator to compare
+  // against the figure actually printed on the uploaded surat, not just the document's presence.
+  "konsumsi-financial:surat-pernyataan-modal-kerja": modalKerjaItems(
+    ({ payload }) => payload.konsumsiFinancialDocuments?.find((d) => d.key === "surat-pernyataan-modal-kerja")?.amount,
+  ),
+  "nonindustri-support:surat-pernyataan-modal-kerja": modalKerjaItems(
+    ({ payload }) => payload.nonIndustriDocuments?.find((d) => d.key === "surat-pernyataan-modal-kerja")?.amount,
   ),
 };
 
