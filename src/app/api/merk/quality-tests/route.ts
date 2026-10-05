@@ -27,6 +27,7 @@ export async function GET() {
       merk: { select: { id: true, brandName: true, company: { select: { companyName: true } } } },
       commodityGroup: { select: { name: true } },
       commoditySubGroup: { select: { name: true } },
+      coverages: { select: { commodityGroup: { select: { name: true } } }, orderBy: { createdAt: "asc" } },
     },
   });
 
@@ -36,7 +37,10 @@ export async function GET() {
       brandId: qt.merk.id,
       brandName: qt.merk.brandName,
       companyName: qt.merk.company?.companyName ?? null,
-      commodityName: qt.commodityGroup.name,
+      // Every Sub Kelompok the certificate covers (primary first) — one certificate shared by
+      // several groups of a VIU Konsumsi application is one row here, not N copies.
+      commodityName: [qt.commodityGroup.name, ...qt.coverages.map((c) => c.commodityGroup.name)].join(", "),
+      coverageCount: 1 + qt.coverages.length,
       commoditySubGroupName: qt.commoditySubGroup?.name ?? null,
       certificateNumber: qt.certificateNumber,
       laboratoryName: qt.laboratoryName,

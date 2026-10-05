@@ -1,7 +1,10 @@
 "use client";
 
+import { Link2 } from "lucide-react";
+
 import type { ApplicationBrandEntryValues, ApplicationKonsumsiProductValues, ProductGroupCertificateValues } from "../../schema";
 import { konsumsiProductTotal } from "../../schema";
+import { otherGroupsSharing } from "../../shared-certificates";
 import { CERTIFICATE_STATUS_CLASSES, CERTIFICATE_STATUS_LABELS, computeCertificateStatus } from "./certificate-status";
 
 type BrandOption = { id: string; brandName: string };
@@ -69,6 +72,7 @@ export function ProductGroupMatrix({ applicationBrands, brandOptions, products, 
                 const total = groupProducts.reduce((sum, p) => sum + konsumsiProductTotal(p), 0);
                 const certificate = certificates.find((c) => c.brandId === brand.brandId && c.commodityGroupId === commodityGroupId);
                 const status = computeCertificateStatus(certificate, { brandId: brand.brandId, commodityGroupId }, today);
+                const sharedWith = certificate?.filePath ? otherGroupsSharing(certificates, certificate) : [];
                 return (
                   <td key={commodityGroupId} className="px-3 py-2.5">
                     <button
@@ -79,6 +83,15 @@ export function ProductGroupMatrix({ applicationBrands, brandOptions, products, 
                       <span className="text-xs text-muted-foreground">{groupProducts.length} produk &middot; {formatMoney(total)}</span>
                       <span className={`inline-flex h-5 items-center rounded-full px-2 text-[10px] font-bold ${CERTIFICATE_STATUS_CLASSES[status]}`}>
                         {CERTIFICATE_STATUS_LABELS[status]}
+                        {sharedWith.length > 0 && (
+                          <span
+                            className="ml-1 inline-flex"
+                            aria-label="dipakai bersama"
+                            title={`Dipakai bersama dengan: ${sharedWith.map((c) => columns.get(c.commodityGroupId) ?? c.commodityGroupId).join(", ")}`}
+                          >
+                            <Link2 className="size-3" />
+                          </span>
+                        )}
                       </span>
                     </button>
                   </td>

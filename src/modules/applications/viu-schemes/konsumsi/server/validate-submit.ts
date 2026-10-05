@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import type { MerkEvidenceType } from "@/modules/merk/schema";
 import { getVIUConsumptionBrandRequirements } from "../business-rules";
+import { certificateForGroup } from "../shared-certificates";
 import type {
   ApplicationBrandEntryValues,
   ApplicationBrandSubmissionSnapshot,
@@ -140,7 +141,8 @@ async function validateKonsumsiProducts(
 /**
  * Every (brandId, commodityGroupId) group with at least one Product needs exactly the Merek x Sub
  * Kelompok certificate-coverage rule the matrix in Step "Product Information" shows: at least one
- * `productGroupCertificates` entry, scope (commodityGroupId) matching, not expired. Mirrors
+ * `productGroupCertificates` entry of the same Brand, not expired. One certificate may be shared by
+ * several groups of the same Brand (see shared-certificates.ts). Mirrors
  * `validateKonsumsiProducts`'s own "never trust the client" stance — a `qualityTestId` reference is
  * re-resolved from `BrandQualityTest` here, never passed through from the client's own cache.
  */
@@ -168,17 +170,35 @@ async function validateProductGroupCertificates(
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const resolved: ProductGroupCertificateValues[] = [];
+  // Entries sharing one freshly uploaded certificate (same `certificateKey`) must belong to one
+  // Brand and carry identical data — the first entry is authoritative for the rest.
+  const sharedByKey = new Map<string, ProductGroupCertificateValues>();
   for (const certificate of list) {
+    if (certificate.qualityTestId || !certificate.certificateKey) continue;
+    const first = sharedByKey.get(certificate.certificateKey);
+    if (!first) {
+      sharedByKey.set(certificate.certificateKey, certificate);
+    } else if (first.brandId !== certificate.brandId) {
+      return {
+        error: `Sertifikat "${first.certificateNumber}" milik merek "${brandNameById.get(first.brandId) ?? first.brandId}" tidak dapat dipakai untuk merek "${brandNameById.get(certificate.brandId) ?? certificate.brandId}".`,
+      };
+    }
+  }
+
+  const resolved: ProductGroupCertificateValues[] = [];
+  for (const entry of list) {
+    const shared = !entry.qualityTestId && entry.certificateKey ? sharedByKey.get(entry.certificateKey) : undefined;
+    const certificate = shared ? certificateForGroup(shared, entry) : entry;
     if (certificate.qualityTestId) {
       const existing = existingById.get(certificate.qualityTestId);
       if (!existing) {
         return { error: `Sertifikat Hasil Uji Mutu yang dipilih untuk merek "${brandNameById.get(certificate.brandId) ?? certificate.brandId}" tidak ditemukan.` };
       }
-      if (existing.merkId !== certificate.brandId || existing.commodityGroupId !== certificate.commodityGroupId) {
-        const group = requiredGroups.get(`${certificate.brandId}|${certificate.commodityGroupId}`);
+      // Same Brand only — any of its Sub Kelompok: one certificate may cover several groups
+      // (the sync adds this group to the row's coverage).
+      if (existing.merkId !== certificate.brandId) {
         return {
-          error: `Sertifikat yang dipilih tidak sesuai dengan merek atau Sub Kelompok Komoditas "${group?.commodityName || certificate.commodityGroupId}".`,
+          error: `Sertifikat "${existing.certificateNumber}" milik merek lain dan tidak dapat dipakai untuk merek "${brandNameById.get(certificate.brandId) ?? certificate.brandId}".`,
         };
       }
       if (existing.expiryDate && existing.expiryDate < today) {

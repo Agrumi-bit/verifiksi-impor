@@ -28,7 +28,9 @@ export type QualityTestRow = {
   brandId: string;
   brandName: string;
   companyName: string | null;
+  /** Every Sub Kelompok Komoditas the certificate covers, comma-separated. */
   commodityName: string;
+  coverageCount?: number;
   commoditySubGroupName: string | null;
   certificateNumber: string;
   laboratoryName: string;
@@ -186,7 +188,14 @@ export function QualityTestsTable({ fetchUrl, brandDetailHrefBase, showCompanyCo
                     </Link>
                   </TableCell>
                   {showCompanyColumn && <TableCell>{row.companyName ?? "—"}</TableCell>}
-                  <TableCell>{row.commodityName}</TableCell>
+                  <TableCell>
+                    {row.commodityName}
+                    {(row.coverageCount ?? 1) > 1 && (
+                      <span className="ml-1.5 inline-flex rounded-full bg-sky-500/10 px-1.5 text-[10.5px] font-semibold text-sky-700">
+                        {row.coverageCount} Sub Kelompok
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell>{row.commoditySubGroupName ?? "—"}</TableCell>
                   <TableCell className="font-mono text-xs">{row.certificateNumber}</TableCell>
                   <TableCell>{row.laboratoryName}</TableCell>

@@ -15,6 +15,7 @@ import {
 import { terbilangRupiah } from "@/lib/terbilang";
 import { MODAL_STATEMENT_LETTER_DOC_DEF, NON_INDUSTRI_SUPPORT_DOC_DEFS } from "../../../financial-capability-defs";
 import type { ApplicationWizardValues } from "../../../schema";
+import { groupSharedCertificates } from "../shared-certificates";
 
 function formatMoney(value: number): string {
   return value.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -210,11 +211,15 @@ export function KonsumsiApplicationReview({ payload, brandLookupApiBase }: Props
       {productGroupCertificates.length > 0 && (
         <Section title="VIU Konsumsi — Sertifikat Hasil Uji Mutu">
           <div className="flex flex-col gap-3">
-            {productGroupCertificates.map((certificate, index) => (
+            {/* One card per certificate — a certificate shared by several Sub Kelompok lists them all. */}
+            {groupSharedCertificates(productGroupCertificates).map(([certificate, ...others], index) => (
               <div key={index} className="rounded-lg border border-border p-3">
                 <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
                   <Item label="Merek" value={snapshotOrFallbackBrandName(payload, certificate.brandId, fallbackBrandName)} />
-                  <Item label="Sub Kelompok Komoditas" value={certificate.commodityName || certificate.commodityGroupId} />
+                  <Item
+                    label="Sub Kelompok Komoditas"
+                    value={[certificate, ...others].map((c) => c.commodityName || c.commodityGroupId).join(", ")}
+                  />
                   <Item label="Nomor Sertifikat" value={certificate.certificateNumber} />
                   <Item label="Laboratorium" value={certificate.laboratoryName} />
                   <Item label="Tanggal Terbit" value={formatDate(certificate.issueDate)} />

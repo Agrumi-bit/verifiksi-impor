@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { syncQualityTestCertificatesForApplication } from "@/modules/merk/application-relationship-sync";
 import type { ApplicationWizardValues } from "../../../schema";
 import type { ProductGroupCertificateValues } from "../schema";
+import { newCertificateKey, otherGroupsSharing, upsertGroupCertificate } from "../shared-certificates";
 
 export { parseQualityTestChecklistKey } from "../qt-checklist-key";
 
@@ -52,8 +53,9 @@ export async function applyCertificateUpload(
     if (!existing) {
       return { error: "Sertifikat Hasil Uji Mutu yang dipilih tidak ditemukan." };
     }
-    if (existing.merkId !== brandId || existing.commodityGroupId !== commodityGroupId) {
-      return { error: "Sertifikat yang dipilih tidak sesuai dengan merek atau Sub Kelompok Komoditas ini." };
+    // Same Brand, any of its Sub Kelompok — one certificate may cover several groups.
+    if (existing.merkId !== brandId) {
+      return { error: "Sertifikat yang dipilih milik merek lain dan tidak dapat dipakai untuk merek ini." };
     }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -94,11 +96,14 @@ export async function applyCertificateUpload(
     };
   }
 
+  // A certificate shared by several Sub Kelompok is one checklist row: replacing it replaces it for
+  // every group that used it (a fresh upload keeps the shared `certificateKey`).
   const current = payload.productGroupCertificates ?? [];
-  const exists = current.some((c) => c.brandId === brandId && c.commodityGroupId === commodityGroupId);
-  const updatedCertificates = exists
-    ? current.map((c) => (c.brandId === brandId && c.commodityGroupId === commodityGroupId ? certificate : c))
-    : [...current, certificate];
+  const previous = current.find((c) => c.brandId === brandId && c.commodityGroupId === commodityGroupId);
+  if (previous && !certificate.qualityTestId && otherGroupsSharing(current, previous).length > 0) {
+    certificate = { ...certificate, certificateKey: previous.certificateKey ?? newCertificateKey() };
+  }
+  const updatedCertificates = upsertGroupCertificate(current, certificate, { propagateFrom: previous });
 
   return { ok: true, payload: { ...payload, productGroupCertificates: updatedCertificates }, certificate };
 }

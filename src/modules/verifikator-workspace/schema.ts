@@ -11,6 +11,7 @@ import { documentFieldCode, type DocumentFieldKey } from "@/modules/company/docu
 import { slugify } from "@/lib/document-filename";
 import { OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS, type LocationValues } from "@/modules/shared/schema";
 import { normalizeKonsumsiPayload } from "@/modules/applications/viu-schemes/konsumsi/normalize";
+import { certificateShareKey, isSameCertificate } from "@/modules/applications/viu-schemes/konsumsi/shared-certificates";
 import {
   PRODUCT_VERIFICATION_STATUSES,
   MACHINE_VERIFICATION_STATUSES,
@@ -452,64 +453,14 @@ export function buildDocumentChecklist(
   // `partners` above) rather than anything already on `payload`. Omitted entirely when the
   // caller doesn't pass that context (e.g. a workspace not yet wired up for it) rather than
   // rendering with blank brand names.
-  if (payload.importTypes?.includes("BARANG_KONSUMSI") && konsumsiBrands) {
-    const brandContextById = new Map(konsumsiBrands.map((brand) => [brand.brandId, brand]));
-
-    for (const entry of payload.applicationBrands ?? []) {
-      const brand = brandContextById.get(entry.brandId);
-      const brandLabel = brand?.brandName ?? entry.brandId;
-
-      items.push({
-        key: `konsumsi-brand:${entry.brandId}:evidence`,
-        label: `Sertifikat Merek — ${brandLabel}`,
-        category: "Dokumen Merek",
-        documentPath: brand?.registrationDocumentPath ?? null,
-      });
-
-      if (entry.applicantRole !== "OWNER") {
-        for (const requirement of brand?.requiredRelationshipDocuments ?? []) {
-          items.push({
-            key: `konsumsi-brand:${entry.brandId}:rel:${requirement.code}`,
-            label: `${requirement.label} — ${brandLabel}`,
-            category: "Dokumen Merek",
-            documentPath: entry.relationshipDocuments?.[requirement.code]?.filePath ?? null,
-          });
-        }
-      }
-    }
-  }
-
-  // Barang Konsumsi's "Dokumen Label" — exactly two documents, once per Application (Step
-  // "Dokumen Label Produk"). Separate category from "Dokumen Merek" (these aren't per-brand).
-  if (payload.importTypes?.includes("BARANG_KONSUMSI")) {
-    items.push({
-      key: "konsumsi-label:statement",
-      label: "Surat Pernyataan Pemenuhan Ketentuan Label Berbahasa Indonesia",
-      category: "Dokumen Label",
-      documentPath: payload.labelStatementDocument?.filePath ?? null,
-    });
-    items.push({
-      key: "konsumsi-label:documentation",
-      label: "Dokumentasi Label Produk",
-      category: "Dokumen Label",
-      documentPath: payload.labelDocumentationDocument?.filePath ?? null,
-    });
-  }
-
-  // Barang Konsumsi's "Sertifikat Uji Mutu" — one row per Merek x Sub Kelompok Komoditas group
-  // that has Products (Step "Product Information"'s own matrix). Separate category from "Dokumen
-  // Merek" (these are per commodity group, not per brand alone).
   //
-  // Derived from `konsumsiProducts` (the REQUIRED groups), never from `productGroupCertificates`
-  // alone — a group with products but no certificate yet must still show a "Belum Diunggah" row,
-  // not be silently absent from the checklist. A product's own `commodityGroupId` may be empty on
-  // pre-refactor rows (submitted before Step 9's HS-Code-driven grouping existed) — `hsCode` text
-  // still resolves it via `konsumsiHsCodeLookup` when the caller supplies one.
+  // One certificate shared by several Sub Kelompok of a Brand (shared-certificates.ts) is ONE row
+  // — keyed by its first group, labelled with every group it covers — so one review covers all.
   if (payload.importTypes?.includes("BARANG_KONSUMSI") && konsumsiBrands) {
     const brandContextById = new Map(konsumsiBrands.map((brand) => [brand.brandId, brand]));
-    const certificateByGroupKey = new Map(
-      (payload.productGroupCertificates ?? []).map((certificate) => [`${certificate.brandId}|${certificate.commodityGroupId}`, certificate]),
-    );
+    const certificates = payload.productGroupCertificates ?? [];
+    const certificateByGroupKey = new Map(certificates.map((certificate) => [`${certificate.brandId}|${certificate.commodityGroupId}`, certificate]));
+    const groups: { brandId: string; commodityGroupId: string; commodityName: string }[] = [];
     const seenGroupKeys = new Set<string>();
     for (const product of payload.konsumsiProducts ?? []) {
       let commodityGroupId = product.commodityGroupId;
@@ -523,12 +474,28 @@ export function buildDocumentChecklist(
       const groupKey = `${product.brandId}|${commodityGroupId}`;
       if (seenGroupKeys.has(groupKey)) continue;
       seenGroupKeys.add(groupKey);
+      groups.push({ brandId: product.brandId, commodityGroupId, commodityName: commodityName ?? commodityGroupId });
+    }
 
-      const brandLabel = brandContextById.get(product.brandId)?.brandName ?? product.brandId;
-      const certificate = certificateByGroupKey.get(groupKey);
+    const emittedShareKeys = new Set<string>();
+    for (const group of groups) {
+      const certificate = certificateByGroupKey.get(`${group.brandId}|${group.commodityGroupId}`);
+      let commodityNames = [group.commodityName];
+      if (certificate?.filePath) {
+        const shareKey = `${group.brandId}::${certificateShareKey(certificate)}`;
+        if (emittedShareKeys.has(shareKey)) continue;
+        emittedShareKeys.add(shareKey);
+        commodityNames = groups
+          .filter((g) => {
+            const other = certificateByGroupKey.get(`${g.brandId}|${g.commodityGroupId}`);
+            return Boolean(other?.filePath) && isSameCertificate(other!, certificate);
+          })
+          .map((g) => g.commodityName);
+      }
+      const brandLabel = brandContextById.get(group.brandId)?.brandName ?? group.brandId;
       items.push({
-        key: `konsumsi-qt:${product.brandId}:${commodityGroupId}`,
-        label: `Sertifikat Uji Mutu — ${brandLabel} · ${commodityName ?? commodityGroupId}`,
+        key: `konsumsi-qt:${group.brandId}:${group.commodityGroupId}`,
+        label: `Sertifikat Uji Mutu — ${brandLabel} · ${commodityNames.join(", ")}`,
         category: "Sertifikat Uji Mutu",
         documentPath: certificate?.filePath || null,
       });

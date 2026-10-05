@@ -114,12 +114,12 @@ model Application {
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
-  assignments      Assignment[]
-  messages         ApplicationMessage[]
-  documentVersions ApplicationDocumentVersion[]
+  assignments               Assignment[]
+  messages                  ApplicationMessage[]
+  documentVersions          ApplicationDocumentVersion[]
   // Brand relationships (importir/perwakilan resmi/pemilik) this application established with
   // one or more Merk rows via its own applicationBrands — see MerkImporter's own comment.
-  merkRelationships MerkImporter[]
+  merkRelationships         MerkImporter[]
   // Hasil Uji Mutu certificates this application freshly uploaded (never ones it only
   // referenced from an existing row) — see BrandQualityTest's own comment.
   qualityTestCertifications BrandQualityTest[]
@@ -302,13 +302,13 @@ model Company {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users            User[]
-  applications     Application[]
-  merks            Merk[]
-  partners         Partner[]
-  ownedPartners    Partner[]                 @relation("PartnerOwner")
+  users             User[]
+  applications      Application[]
+  merks             Merk[]
+  partners          Partner[]
+  ownedPartners     Partner[]                @relation("PartnerOwner")
   relatedToPartners Partner[]                @relation("PartnerRelatedCompanies")
-  documentVersions CompanyDocumentVersion[]
+  documentVersions  CompanyDocumentVersion[]
   // Brand relationships (importir/perwakilan resmi/pemilik) this company holds on OTHER
   // companies' Merk rows, synced from its own VIU applications — see MerkImporter's own comment.
   merkRelationships MerkImporter[]
@@ -361,19 +361,19 @@ model CompanyDocumentVersion {
 // inside an Application's own payload (facility proofs, VKI surat
 // pernyataan, etc.) — see src/modules/applications/document-versions.ts.
 model ApplicationDocumentVersion {
-  id            String      @id @default(cuid())
-  applicationId String
-  application   Application @relation(fields: [applicationId], references: [id])
-  fieldKey      String
-  version       Int
-  path          String?
-  uploadedById  String?
-  uploadedBy    User?       @relation(fields: [uploadedById], references: [id])
+  id             String      @id @default(cuid())
+  applicationId  String
+  application    Application @relation(fields: [applicationId], references: [id])
+  fieldKey       String
+  version        Int
+  path           String?
+  uploadedById   String?
+  uploadedBy     User?       @relation(fields: [uploadedById], references: [id])
   // "CR" vs "VERIFIKATOR" — set when this version was uploaded on the company's behalf by staff
   // (see document-versions.ts's own `recordApplicationDocumentVersion`); null for a company's own
   // upload, and for rows written before this field existed (same convention as `verifiedByRole`).
   uploadedByRole String?
-  createdAt     DateTime    @default(now())
+  createdAt      DateTime    @default(now())
 
   verificationStatus DocumentVerificationStatus @default(NOT_YET_VERIFIED)
   verifiedById       String?
@@ -546,8 +546,8 @@ model Merk {
   // wizard no longer offers it). registrationIssuer ("Lembaga Penerbit") and
   // registrationExpiryDate ("Tanggal Kadaluarsa Sertifikat") are collected
   // again by this flow.
-  hasCertificate  Boolean              @default(true)
-  certificateType MerkCertificateType?
+  hasCertificate            Boolean                   @default(true)
+  certificateType           MerkCertificateType?
   // Legacy scalar bridge — a brand can be registered in more than one Nice
   // class (see MerkTrademarkClassEntry below, the actual multi-class list
   // Step 1 now collects). These two always mirror the FIRST entry in that
@@ -555,7 +555,7 @@ model Merk {
   // "trademarkClass"/"trademarkClassDescription" (list/filter/export/
   // monitoring views) keeps working unchanged rather than needing to join
   // and re-aggregate the full list for a compact column.
-  trademarkClass    String?
+  trademarkClass            String?
   // Free-text goods/services description specific to this brand's own
   // application ("Uraian Kelas Merek") — distinct from
   // TrademarkClassMasterData.description, which is only the generic Nice
@@ -566,9 +566,9 @@ model Merk {
   // registered in, each with its own applicant-written uraian. Wipe-and-
   // recreate on every save (see toUpdateRelations in build-create-data.ts),
   // same pattern as `documents`/`qualityTests` below.
-  trademarkClassEntries MerkTrademarkClassEntry[]
-  merekStatusLabel  String?
-  logoPath          String?
+  trademarkClassEntries     MerkTrademarkClassEntry[]
+  merekStatusLabel          String?
+  logoPath                  String?
 
   // ownershipType/brandOwnerName are legacy (pre-BrandOwner) fields, kept for
   // existing rows and still written by the API — derived from
@@ -587,9 +587,9 @@ model Merk {
 
   // Step 4/5 — legacy multi-importer model, superseded by MerkOwnership for
   // rows created by the current wizard; left non-destructively in place.
-  importerRelation      MerkImporterRelation?
-  importers             MerkImporter[]
-  supportingDocuments   Json?
+  importerRelation    MerkImporterRelation?
+  importers           MerkImporter[]
+  supportingDocuments Json?
 
   // Step 2 (current wizard) — 1:1, see MerkOwnership.
   ownership MerkOwnership?
@@ -692,9 +692,9 @@ model MerkOwnership {
   ownerCountryCode          String?
   foreignRegistrationNumber String?
 
-  representationType              MerkRepresentationType?
-  officialRepresentativeId         String?
-  officialRepresentative           BrandOwner?             @relation("MerkOwnershipOfficialRepresentative", fields: [officialRepresentativeId], references: [id])
+  representationType       MerkRepresentationType?
+  officialRepresentativeId String?
+  officialRepresentative   BrandOwner?             @relation("MerkOwnershipOfficialRepresentative", fields: [officialRepresentativeId], references: [id])
 
   // --- Lisensi/Sublisensi (representationType = APIU_OFFICIAL_REPRESENTATIVE) ---
   agreementType      MerkAgreementType?
@@ -792,6 +792,11 @@ model BrandQualityTest {
   sourceApplicationId String?
   sourceApplication   Application?           @relation(fields: [sourceApplicationId], references: [id])
 
+  // Sub Kelompok Komoditas this certificate covers BESIDES its primary `commodityGroupId` above
+  // (full scope = primary + these). One certificate shared by several groups of a VIU Konsumsi
+  // application is one row with extra coverages, never N copies.
+  coverages BrandQualityTestCoverage[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -801,6 +806,24 @@ model BrandQualityTest {
   @@index([commoditySubGroupId])
   @@index([sourceApplicationId])
   @@map("brand_quality_test")
+}
+
+model BrandQualityTestCoverage {
+  id                  String           @id @default(cuid())
+  qualityTestId       String
+  qualityTest         BrandQualityTest @relation(fields: [qualityTestId], references: [id], onDelete: Cascade)
+  commodityGroupId    String
+  commodityGroup      CommodityGroup   @relation(fields: [commodityGroupId], references: [id])
+  // The application whose submit added this coverage (null = added manually) — lets a re-sync
+  // drop only the coverages that application itself added.
+  sourceApplicationId String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([qualityTestId, commodityGroupId])
+  @@index([commodityGroupId])
+  @@index([sourceApplicationId])
+  @@map("brand_quality_test_coverage")
 }
 
 enum MasterDataStatus {
@@ -827,7 +850,7 @@ model BrandOwner {
   // Step 2 (current wizard) — a BrandOwner row can be picked as the domestic
   // owner company, the foreign owner's official representative, or both
   // across different Merk registrations.
-  ownershipAsOwnerCompany          MerkOwnership[] @relation("MerkOwnershipOwnerCompany")
+  ownershipAsOwnerCompany           MerkOwnership[] @relation("MerkOwnershipOwnerCompany")
   ownershipAsOfficialRepresentative MerkOwnership[] @relation("MerkOwnershipOfficialRepresentative")
 
   @@map("brand_owner")
@@ -882,34 +905,35 @@ model IndustryGroup {
 }
 
 model CommodityGroup {
-  id              String              @id @default(cuid())
-  status          MasterDataStatus    @default(ACTIVE)
-  name            String
-  code            String
-  description     String?
-  industryGroupId String?
-  industryGroup   IndustryGroup?      @relation(fields: [industryGroupId], references: [id])
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  subGroups       CommoditySubGroup[]
-  hsCodes         HsCodeMasterData[]
-  brandQualityTests BrandQualityTest[]
+  id                        String                     @id @default(cuid())
+  status                    MasterDataStatus           @default(ACTIVE)
+  name                      String
+  code                      String
+  description               String?
+  industryGroupId           String?
+  industryGroup             IndustryGroup?             @relation(fields: [industryGroupId], references: [id])
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  subGroups                 CommoditySubGroup[]
+  hsCodes                   HsCodeMasterData[]
+  brandQualityTests         BrandQualityTest[]
+  brandQualityTestCoverages BrandQualityTestCoverage[]
 
   @@index([industryGroupId])
   @@map("commodity_group")
 }
 
 model CommoditySubGroup {
-  id               String             @id @default(cuid())
-  status           MasterDataStatus   @default(ACTIVE)
-  name             String
-  code             String
-  description      String?
-  commodityGroupId String
-  commodityGroup   CommodityGroup     @relation(fields: [commodityGroupId], references: [id])
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  hsCodes          HsCodeMasterData[]
+  id                String             @id @default(cuid())
+  status            MasterDataStatus   @default(ACTIVE)
+  name              String
+  code              String
+  description       String?
+  commodityGroupId  String
+  commodityGroup    CommodityGroup     @relation(fields: [commodityGroupId], references: [id])
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  hsCodes           HsCodeMasterData[]
   brandQualityTests BrandQualityTest[]
 
   @@index([commodityGroupId])
@@ -1165,10 +1189,10 @@ model LocationVisit {
   assignmentId String
   assignment   Assignment @relation(fields: [assignmentId], references: [id])
 
-  locationType String
-  address      String
-  city         String?
-  description  String?
+  locationType      String
+  address           String
+  city              String?
+  description       String?
   // The Company.locations entry this visit is for (same id the application's payload location
   // carries as companyLocationId). Null for visits created before this existed, which are still
   // matched by locationType + address.
@@ -1248,39 +1272,39 @@ model SuratTugasTemplate {
   id String @id @default("surat-tugas")
 
   // When set, the uploaded image replaces the org name/subtitle text block in the letterhead.
-  headerImagePath String?
-  orgName         String @default("PT Tribhakti Inspektama")
-  orgSubtitle     String @default("Laboratory & Integrated Services")
-  letterTitle     String @default("SURAT TUGAS")
-  nomorLabel      String @default("Nomor")
+  headerImagePath       String?
+  orgName               String  @default("PT Tribhakti Inspektama")
+  orgSubtitle           String  @default("Laboratory & Integrated Services")
+  letterTitle           String  @default("SURAT TUGAS")
+  nomorLabel            String  @default("Nomor")
   // Document-control box shown top-right of the letterhead (ISO/QHSE-style controlled
   // document metadata) — all optional, box is hidden entirely when all four are empty.
-  docNumberLabel    String @default("No. Dokumen")
-  docNumber         String @default("")
-  docRevisionLabel  String @default("No. Terbitan")
-  docRevision       String @default("")
-  docAmendmentLabel String @default("No. Revisi")
-  docAmendment      String @default("")
-  docEffectiveLabel String @default("Berlaku Mulai")
-  docEffectiveDate  String @default("")
-  openingSentence String @default("Yang bertanda tangan di bawah ini, Customer Relation Workspace, dengan ini menugaskan:")
-  namaLabel       String @default("Nama")
-  peranLabel      String @default("Peran")
-  assignmentPrefix String @default("Untuk melaksanakan")
-  assignmentSuffix String @default("pada:")
-  perusahaanLabel String @default("Perusahaan")
-  idAplikasiLabel String @default("ID Aplikasi")
-  fasilitasLabel  String @default("Fasilitas")
-  tanggalLabel    String @default("Tanggal Pelaksanaan")
-  closingSentence String @default("Demikian surat tugas ini dibuat untuk dilaksanakan dengan penuh tanggung jawab.")
-  draftNoticeText String @default("Dokumen ini masih berupa draft dan menunggu persetujuan Project Manager sebelum berlaku resmi.")
-  signatureCity   String @default("Jakarta")
-  signerLabel     String @default("Customer Relation")
+  docNumberLabel        String  @default("No. Dokumen")
+  docNumber             String  @default("")
+  docRevisionLabel      String  @default("No. Terbitan")
+  docRevision           String  @default("")
+  docAmendmentLabel     String  @default("No. Revisi")
+  docAmendment          String  @default("")
+  docEffectiveLabel     String  @default("Berlaku Mulai")
+  docEffectiveDate      String  @default("")
+  openingSentence       String  @default("Yang bertanda tangan di bawah ini, Customer Relation Workspace, dengan ini menugaskan:")
+  namaLabel             String  @default("Nama")
+  peranLabel            String  @default("Peran")
+  assignmentPrefix      String  @default("Untuk melaksanakan")
+  assignmentSuffix      String  @default("pada:")
+  perusahaanLabel       String  @default("Perusahaan")
+  idAplikasiLabel       String  @default("ID Aplikasi")
+  fasilitasLabel        String  @default("Fasilitas")
+  tanggalLabel          String  @default("Tanggal Pelaksanaan")
+  closingSentence       String  @default("Demikian surat tugas ini dibuat untuk dilaksanakan dengan penuh tanggung jawab.")
+  draftNoticeText       String  @default("Dokumen ini masih berupa draft dan menunggu persetujuan Project Manager sebelum berlaku resmi.")
+  signatureCity         String  @default("Jakarta")
+  signerLabel           String  @default("Customer Relation")
   // When set, the uploaded image replaces the "city, date" + signer name text block.
-  footerImagePath String?
+  footerImagePath       String?
   // Optional confidentiality/distribution notice printed above the signature block —
   // supports multiple lines. Hidden entirely when empty.
-  confidentialityNotice String @default("")
+  confidentialityNotice String  @default("")
 
   updatedAt DateTime @updatedAt
 
@@ -1295,17 +1319,17 @@ model SuratTugasTemplate {
 model BrandingSettings {
   id String @id @default("branding")
 
-  appName              String  @default("VKI & VIU Platform")
-  appSubtitle          String  @default("Sistem Verifikasi Kemampuan Industri & Verifikasi Importir Umum")
-  sidebarBrandTitle    String  @default("VKI & VIU")
-  sidebarBrandSubtitle String  @default("Admin Portal")
-  logoPath             String?
+  appName                String  @default("VKI & VIU Platform")
+  appSubtitle            String  @default("Sistem Verifikasi Kemampuan Industri & Verifikasi Importir Umum")
+  sidebarBrandTitle      String  @default("VKI & VIU")
+  sidebarBrandSubtitle   String  @default("Admin Portal")
+  logoPath               String?
   // Separate from `logoPath` (login/sidebar) — the letterhead mark printed on generated
   // reports. Reports are a different surface (often shared outside the app, printed) so the
   // brand mark used there is deliberately its own admin-managed asset, not forced to match.
-  reportLogoPath       String?
-  primaryColor           String @default("#e0662e")
-  primaryColorForeground String @default("#ffffff")
+  reportLogoPath         String?
+  primaryColor           String  @default("#e0662e")
+  primaryColorForeground String  @default("#ffffff")
 
   updatedAt DateTime @updatedAt
 

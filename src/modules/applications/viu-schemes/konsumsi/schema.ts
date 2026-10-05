@@ -336,6 +336,11 @@ export const productGroupCertificateSchema = z.object({
   // are a read-only display cache of that row (re-resolved from the DB at submit — see
   // validateKonsumsiSubmit — never trusted from the client alone), not independently editable.
   qualityTestId: z.string().trim().optional(),
+  // One certificate may cover several Sub Kelompok of the same Brand: every group entry using the
+  // same freshly-uploaded certificate carries the same `certificateKey` (and identical data — see
+  // shared-certificates.ts), and syncs into ONE BrandQualityTest row with N coverage rows. Absent
+  // on entries saved before sharing existed — those are their own, unshared certificate.
+  certificateKey: z.string().trim().optional(),
   certificateNumber: requiredString("Nomor sertifikat wajib diisi"),
   laboratoryName: requiredString("Nama laboratorium wajib diisi"),
   issueDate: requiredString("Tanggal terbit wajib diisi"),

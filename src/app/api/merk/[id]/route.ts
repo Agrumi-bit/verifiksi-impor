@@ -24,7 +24,13 @@ export async function GET(
       },
       ownership: { include: { ownerCompany: true, officialRepresentative: true } },
       documents: true,
-      qualityTests: { include: { commodityGroup: true, commoditySubGroup: true } },
+      qualityTests: {
+        include: {
+          commodityGroup: true,
+          commoditySubGroup: true,
+          coverages: { select: { commodityGroup: { select: { name: true } } }, orderBy: { createdAt: "asc" } },
+        },
+      },
       trademarkClassEntries: true,
     },
   });

@@ -7,7 +7,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ApplicationWizardValues } from "../../../../schema";
-import { konsumsiProductTotal, type ApplicationKonsumsiProductValues, type ProductGroupCertificateValues } from "../../schema";
+import { deriveProductGroups, konsumsiProductTotal, type ApplicationKonsumsiProductValues, type ProductGroupCertificateValues } from "../../schema";
 import { ProductFormSheet } from "./product-form-sheet";
 import { ProductTable } from "./product-table";
 import { CurrencyTotals } from "./product-summary";
@@ -45,15 +45,13 @@ export function CommodityProductSection({
   const [sheetState, setSheetState] = useState<SheetState | null>(null);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
 
-  const certificate = allCertificates.find((c) => c.brandId === brandId && c.commodityGroupId === commodityGroupId);
+  // Every Sub Kelompok of this Brand with products — the groups a certificate can be shared with.
+  const brandGroups = deriveProductGroups(allProducts)
+    .filter((group) => group.brandId === brandId)
+    .map((group) => ({ commodityGroupId: group.commodityGroupId, commodityName: group.commodityName || group.commodityGroupId }));
 
-  function handleCertificateChange(next: ProductGroupCertificateValues) {
-    const current = form.getValues("productGroupCertificates") ?? [];
-    const exists = current.some((c) => c.brandId === brandId && c.commodityGroupId === commodityGroupId);
-    const updated = exists
-      ? current.map((c) => (c.brandId === brandId && c.commodityGroupId === commodityGroupId ? next : c))
-      : [...current, next];
-    form.setValue("productGroupCertificates", updated, { shouldDirty: true });
+  function handleCertificatesChange(next: ProductGroupCertificateValues[]) {
+    form.setValue("productGroupCertificates", next, { shouldDirty: true });
   }
 
   const rows = allProducts
@@ -113,8 +111,9 @@ export function CommodityProductSection({
           brandId={brandId}
           commodityGroupId={commodityGroupId}
           commodityName={commodityName}
-          certificate={certificate}
-          onChange={handleCertificateChange}
+          brandGroups={brandGroups}
+          certificates={allCertificates as ProductGroupCertificateValues[]}
+          onCertificatesChange={handleCertificatesChange}
         />
       </div>
 
