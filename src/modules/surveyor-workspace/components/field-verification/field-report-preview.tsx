@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
+import { DocumentationBento, type DocumentationPhoto } from "../report/documentation-bento";
 import { MaterialIcon } from "../material-icon";
 import { ReportBrandMark } from "../report/report-brand-mark";
 import {
@@ -248,6 +249,20 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
   // rendered separately below.
   const fixedDocTypes = docTypes.filter((dt) => dt.key !== "other");
   const otherLabel = docTypes.find((dt) => dt.key === "other")!.label;
+  // Only documentation that was actually uploaded appears in the report (grid, index, numbering).
+  const uploadedOthers = fv.documentationOther.filter((item) => item.filePath);
+  const documentationPhotos: DocumentationPhoto[] = [
+    ...fixedDocTypes.flatMap((dt) => {
+      const item = fv.documentation[dt.key];
+      return item?.filePath ? [{ key: dt.key, title: dt.label, caption: item.caption, filePath: item.filePath }] : [];
+    }),
+    ...uploadedOthers.map((item, i) => ({
+      key: item.id,
+      title: uploadedOthers.length > 1 ? `${otherLabel} #${i + 1}` : otherLabel,
+      caption: item.caption,
+      filePath: item.filePath!,
+    })),
+  ].map((photo) => ({ ...photo, date: data.submittedAt ? fmtDate(data.submittedAt) : undefined }));
   const company = data.company.companyName;
   const capacityEfektif = computeCapacityEfektif(fv.capacity);
 
@@ -1031,52 +1046,10 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
             Dokumentasi Lapangan
           </h2>
           <p className="rd-lede">
-            Dokumentasi visual yang menunjukkan kondisi {label.toLowerCase()} perusahaan pada saat verifikasi
-            lapangan dilakukan ({docsFilled} dari {fixedDocTypes.length + fv.documentationOther.length} diunggah, opsional).
+            Dokumentasi visual yang menunjukkan kondisi {label.toLowerCase()} perusahaan pada saat verifikasi lapangan
+            dilakukan{documentationPhotos.length > 0 ? ` (${documentationPhotos.length} foto).` : "."}
           </p>
-          <div className="rd-photo-grid">
-            {fixedDocTypes.map((dt) => {
-              const item = fv.documentation[dt.key];
-              return (
-                <div className="rd-photo-card" key={dt.key}>
-                  <div className={`rd-photo-thumb ${item?.filePath ? "rd-photo-filled" : ""}`}>
-                    {item?.filePath ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={`/api/files?path=${encodeURIComponent(item.filePath)}`}
-                        alt={dt.label}
-                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }}
-                      />
-                    ) : (
-                      <MaterialIcon name="hide_image" className="text-2xl" />
-                    )}
-                  </div>
-                  <div className="rd-photo-name">{dt.label}</div>
-                  <div className="rd-photo-caption">{item?.filePath ? item.caption || "Terunggah" : "Belum diunggah"}</div>
-                </div>
-              );
-            })}
-            {fv.documentationOther.map((item, i) => (
-              <div className="rd-photo-card" key={item.id}>
-                <div className={`rd-photo-thumb ${item.filePath ? "rd-photo-filled" : ""}`}>
-                  {item.filePath ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={`/api/files?path=${encodeURIComponent(item.filePath)}`}
-                      alt={otherLabel}
-                      style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }}
-                    />
-                  ) : (
-                    <MaterialIcon name="hide_image" className="text-2xl" />
-                  )}
-                </div>
-                <div className="rd-photo-name">
-                  {otherLabel} #{i + 1}
-                </div>
-                <div className="rd-photo-caption">{item.filePath ? item.caption || "Terunggah" : "Belum diunggah"}</div>
-              </div>
-            ))}
-          </div>
+          <DocumentationBento photos={documentationPhotos} />
         </PageShell>
 
         {/* FINDINGS */}
@@ -1344,24 +1317,16 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
           <div className="rd-card-lg" style={{ background: "#fff", overflow: "hidden", marginBottom: 20 }}>
             <table className="rd-table">
               <tbody>
-                {fixedDocTypes.map((dt, i) => (
-                  <tr key={dt.key}>
-                    <td style={{ width: "8%", color: "var(--ink-faint)" }}>{String(i + 1).padStart(2, "0")}</td>
-                    <td>{dt.label}</td>
-                    <td style={{ textAlign: "right", color: "var(--ink-faint)" }}>
-                      {fv.documentation[dt.key]?.filePath ? fmtDate(data.submittedAt) : "belum diunggah"}
-                    </td>
+                {documentationPhotos.length === 0 && (
+                  <tr>
+                    <td style={{ color: "var(--ink-faint)" }}>Tidak ada dokumentasi lapangan yang dilampirkan.</td>
                   </tr>
-                ))}
-                {fv.documentationOther.map((item, i) => (
-                  <tr key={item.id}>
-                    <td style={{ width: "8%", color: "var(--ink-faint)" }}>{String(fixedDocTypes.length + i + 1).padStart(2, "0")}</td>
-                    <td>
-                      {otherLabel} #{i + 1}
-                    </td>
-                    <td style={{ textAlign: "right", color: "var(--ink-faint)" }}>
-                      {item.filePath ? fmtDate(data.submittedAt) : "belum diunggah"}
-                    </td>
+                )}
+                {documentationPhotos.map((photo, i) => (
+                  <tr key={photo.key}>
+                    <td style={{ width: "8%", color: "var(--ink-faint)" }}>{String(i + 1).padStart(2, "0")}</td>
+                    <td>{photo.title}</td>
+                    <td style={{ textAlign: "right", color: "var(--ink-faint)" }}>{photo.date ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
