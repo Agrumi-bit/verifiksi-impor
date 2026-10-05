@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { MasterDataFormDialog } from "./master-data-form-dialog";
+import { downloadLartasExcelTemplate, parseLartasExcelFile } from "../lartas-excel";
 import type { MasterDataRow } from "../types";
 
 type HsCodeOption = { id: string; hsCode: string; description: string };
@@ -34,6 +36,8 @@ export function LartasMasterDataPage() {
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<MasterDataRow | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const { data: hsCodes } = useQuery({
     queryKey: ["master-data-hs-code", "options"],
@@ -91,6 +95,56 @@ export function LartasMasterDataPage() {
     queryClient.invalidateQueries({ queryKey: ["master-data-lartas"] });
   }
 
+  async function handleImportFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setIsImporting(true);
+    try {
+      const { rows: importRows, unmarkedRows } = await parseLartasExcelFile(file);
+      if (importRows.length === 0) {
+        toast.error("Tidak ada baris valid. Pastikan kolom \"Pos Tarif/HS\" terisi dan minimal satu kolom pemohon bertanda √.");
+        return;
+      }
+
+      const response = await fetch("/api/master-data/lartas/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows: importRows }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        toast.error(body?.error ?? "Gagal mengimpor data");
+        return;
+      }
+      const { data: result } = (await response.json()) as {
+        data: { created: number; updated: number; unmatched: string[]; duplicatesInFile: string[] };
+      };
+      queryClient.invalidateQueries({ queryKey: ["master-data-lartas"] });
+
+      const preview = (codes: string[]) => `${codes.slice(0, 5).join(", ")}${codes.length > 5 ? ", ..." : ""}`;
+      const notes: string[] = [];
+      if (result.unmatched.length > 0) notes.push(`${result.unmatched.length} HS Code belum terdaftar di master HS Code (${preview(result.unmatched)})`);
+      if (result.duplicatesInFile.length > 0) notes.push(`${result.duplicatesInFile.length} baris duplikat dilewati`);
+      if (unmarkedRows > 0) notes.push(`${unmarkedRows} baris tanpa tanda √ dilewati`);
+      const suffix = notes.length > 0 ? ` ${notes.join("; ")}.` : "";
+
+      if (result.created + result.updated > 0) {
+        toast.success(`${result.created} relasi ditambahkan, ${result.updated} diperbarui.${suffix}`);
+      } else {
+        toast.error(`Tidak ada relasi yang diimpor.${suffix}`);
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error && error.message === "missing-columns"
+          ? "Kolom \"Pos Tarif/HS\" atau kolom pemohon (API-P/API-U/PPBB) tidak ditemukan. Gunakan template atau format Lampiran."
+          : "Gagal membaca file Excel. Pastikan format file sesuai template.",
+      );
+    } finally {
+      setIsImporting(false);
+    }
+  }
+
   async function toggleStatus(row: LartasRow) {
     const nextStatus = row.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
     const response = await fetch(`/api/master-data/lartas/${row.id}`, {
@@ -116,16 +170,36 @@ export function LartasMasterDataPage() {
             larangan/pembatasan impor yang berlaku.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setEditingRow(null);
-            setIsDialogOpen(true);
-          }}
-          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[#e0662e] px-4 py-2.5 text-[13px] font-semibold text-white"
-        >
-          + Tambah Relasi
-        </button>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={downloadLartasExcelTemplate}
+            className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-4 py-2.5 text-[13px] font-semibold text-[#261813]"
+          >
+            <Download className="size-3.5" />
+            Unduh Template Excel
+          </button>
+          <button
+            type="button"
+            disabled={isImporting}
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-4 py-2.5 text-[13px] font-semibold text-[#261813] disabled:opacity-60"
+          >
+            <Upload className="size-3.5" />
+            {isImporting ? "Mengimpor..." : "Impor dari Excel"}
+          </button>
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportFile} />
+          <button
+            type="button"
+            onClick={() => {
+              setEditingRow(null);
+              setIsDialogOpen(true);
+            }}
+            className="flex items-center gap-1.5 rounded-lg bg-[#e0662e] px-4 py-2.5 text-[13px] font-semibold text-white"
+          >
+            + Tambah Relasi
+          </button>
+        </div>
       </div>
 
       <div className="mb-5 grid grid-cols-4 gap-3.5">
