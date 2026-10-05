@@ -995,6 +995,19 @@ function ProductChapter({
   );
 }
 
+/**
+ * Report sub-chapters that disappear with a "Tidak Diperlukan" checklist item. Each checklist key
+ * hides its own narrative page; some also hide pages derived from them — the "Akta Notaris" item
+ * (`notarial`) covers both the Akta Pendirian and Akta Perubahan pages.
+ */
+const NOT_REQUIRED_HIDES: Record<string, string[]> = {
+  notarial: ["notarial", "notarial-amendment"],
+};
+
+function hiddenReportKeys(notRequiredKeys: string[]): Set<string> {
+  return new Set(notRequiredKeys.flatMap((key) => NOT_REQUIRED_HIDES[key] ?? [key]));
+}
+
 type Props = {
   assignmentId: string;
   backHref?: string;
@@ -1025,18 +1038,13 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   }
 
   const company = data.companyName;
-  // Customer Relation (or the verifikator) can mark an individual "Dokumen Pendukung" (VIU's
-  // modal-finansial checklist) item as NOT_APPLICABLE ("Tidak Diperlukan") when it isn't needed
-  // for this application. Unlike every other category, where NOT_APPLICABLE still prints with a
-  // "Tidak Berlaku" conclusion, a Dokumen Pendukung item marked this way is dropped from the
-  // report entirely — narrative page, compliance table, and every count below.
-  const documents = data.documents.filter(
-    (d) =>
-      !(
-        (d.category === "Dokumen Pendukung" || d.category === "Bukti Kemampuan Finansial — Konsumsi") &&
-        d.status === "NOT_APPLICABLE"
-      ),
-  );
+  // A document the verifikator / Customer Relation marked NOT_APPLICABLE ("Tidak Diperlukan") has
+  // no place in the report body: no chapter page, sub-chapter, narrative, table row, attachment or
+  // count. It is listed once, in the "Ringkasan Verifikasi Dokumen" table, as "Tidak Diperlukan"
+  // with the reviewer's note. `documents` below is everything that WAS examined.
+  const hiddenNarrativeKeys = hiddenReportKeys(data.documents.filter((d) => d.status === "NOT_APPLICABLE").map((d) => d.key));
+  const notRequiredDocuments = data.documents.filter((d) => hiddenNarrativeKeys.has(d.key));
+  const documents = data.documents.filter((d) => !hiddenNarrativeKeys.has(d.key));
   const documentStatuses = Object.fromEntries(documents.map((d) => [d.key, d.status]));
   const ctx: NarrativeContext = {
     payload: data.payload,
@@ -1051,10 +1059,8 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   const verified = documents.filter((d) => d.status === "VALID").length;
   const needsRevision = documents.filter((d) => d.status === "NEED_REVISION").length;
   const rejected = documents.filter((d) => d.status === "REJECTED").length;
-  const notApplicable = documents.filter((d) => d.status === "NOT_APPLICABLE").length;
   const pending = documents.filter((d) => d.status === "PENDING").length;
-  const applicable = documents.length - notApplicable;
-  const completionPct = applicable > 0 ? Math.round((verified / applicable) * 100) : 0;
+  const completionPct = documents.length > 0 ? Math.round((verified / documents.length) * 100) : 0;
   const isFinal = data.status === "COMPLETED" || data.status === "RETURNED";
 
   const categories = [...new Set(documents.map((d) => d.category))];
@@ -1079,6 +1085,11 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
     else if (category === "Bukti Kemampuan Finansial — Konsumsi") categoryDocsMap[category] = KONSUMSI_MODAL_FINANSIAL_DOCUMENTS.filter((d) => realKeys.has(d.key));
     else if (category === "Dokumen Partner Industri") categoryDocsMap[category] = buildPartnerIndustriDocuments(ctx);
     else categoryDocsMap[category] = [];
+    // Drop narrative pages of "Tidak Diperlukan" documents (and what derives from them, e.g. Akta
+    // Notaris → Akta Pendirian + Akta Perubahan), then renumber so sub-chapters run 1..n.
+    categoryDocsMap[category] = categoryDocsMap[category]
+      .filter((d) => !hiddenNarrativeKeys.has(d.key))
+      .map((d, i) => ({ ...d, no: i + 1 }));
   }
 
   // Page numbering: 1 approval, 2 toc, 3 ringkasan, 4 ringkasan-dokumen, 5 info,
@@ -1409,10 +1420,10 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 14, marginTop: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${notRequiredDocuments.length > 0 ? 5 : 4}, 1fr)`, gap: 14, marginTop: 20 }}>
             <div style={{ background: NAVY, color: "#fff", padding: 18, borderRadius: 12 }}>
               <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 6 }}>{documents.length}</div>
-              <div style={{ fontSize: 10, letterSpacing: "0.04em", color: "#a8b3c2" }}>TOTAL DOKUMEN</div>
+              <div style={{ fontSize: 10, letterSpacing: "0.04em", color: "#a8b3c2" }}>DOKUMEN DIPERIKSA</div>
             </div>
             <div style={{ background: "#d2f6dd", color: "#0e3d24", padding: 18, borderRadius: 12 }}>
               <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 6 }}>{verified}</div>
@@ -1423,9 +1434,15 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
               <div style={{ fontSize: 10, letterSpacing: "0.04em", color: "#a8443a" }}>PERLU TINDAK LANJUT</div>
             </div>
             <div style={{ background: "#ffebce", color: "#7a4a10", padding: 18, borderRadius: 12 }}>
-              <div style={{ fontSize: 10, letterSpacing: "0.03em", marginBottom: 8 }}>N/A &amp; BELUM DIPERIKSA</div>
-              <div style={{ fontSize: 26, fontWeight: 800 }}>{notApplicable + pending}</div>
+              <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 6 }}>{pending}</div>
+              <div style={{ fontSize: 10, letterSpacing: "0.04em" }}>BELUM DIPERIKSA</div>
             </div>
+            {notRequiredDocuments.length > 0 && (
+              <div style={{ background: STATUS_BADGE.NOT_APPLICABLE.bg, color: STATUS_BADGE.NOT_APPLICABLE.color, padding: 18, borderRadius: 12 }}>
+                <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 6 }}>{notRequiredDocuments.length}</div>
+                <div style={{ fontSize: 10, letterSpacing: "0.04em" }}>TIDAK DIPERLUKAN (N/A)</div>
+              </div>
+            )}
           </div>
 
           <div style={{ background: NAVY, color: "#fff", padding: "24px 26px", marginTop: 20, borderRadius: 14 }}>
@@ -1475,15 +1492,24 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
               </tr>
             </thead>
             <tbody>
-              {documents.map((doc, i) => (
+              {[...documents, ...notRequiredDocuments].map((doc, i) => (
                 <tr key={doc.key} style={{ borderBottom: `1px solid ${CARD_BORDER}`, background: "#fff" }}>
                   <td style={{ padding: 10, verticalAlign: "top" }}>{i + 1}</td>
                   <td style={{ padding: 10, verticalAlign: "top", fontWeight: 600 }}>{doc.label}</td>
-                  <td style={{ padding: 10, verticalAlign: "top", lineHeight: 1.5, color: MUTED }}>{doc.category}</td>
+                  <td style={{ padding: 10, verticalAlign: "top", lineHeight: 1.5, color: MUTED }}>
+                    {doc.category}
+                    {hiddenNarrativeKeys.has(doc.key) && doc.note && <div style={{ marginTop: 3, fontSize: 10, color: MUTED_2 }}>Catatan: {doc.note}</div>}
+                  </td>
                   <td style={{ padding: 10, verticalAlign: "top" }}>
-                    <Badge color={STATUS_BADGE[doc.status].color} bg={STATUS_BADGE[doc.status].bg}>
-                      {DOC_VERIFICATION_STATUS_LABELS[doc.status]}
-                    </Badge>
+                    {hiddenNarrativeKeys.has(doc.key) ? (
+                      <Badge color={STATUS_BADGE.NOT_APPLICABLE.color} bg={STATUS_BADGE.NOT_APPLICABLE.bg}>
+                        Tidak Diperlukan
+                      </Badge>
+                    ) : (
+                      <Badge color={STATUS_BADGE[doc.status].color} bg={STATUS_BADGE[doc.status].bg}>
+                        {DOC_VERIFICATION_STATUS_LABELS[doc.status]}
+                      </Badge>
+                    )}
                   </td>
                 </tr>
               ))}
