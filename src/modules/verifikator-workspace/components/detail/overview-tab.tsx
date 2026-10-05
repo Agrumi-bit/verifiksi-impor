@@ -1,6 +1,7 @@
 import { MaterialIcon } from "../material-icon";
 import type { AssignmentDetailData } from "../assignment-detail";
 import { LOCATION_TYPE_LABELS } from "../../status";
+import { missingRequiredLocationTypes, REQUIRED_LOCATION_TYPE_LABELS } from "@/modules/shared/schema";
 
 function fmtDate(value: string | null): string {
   if (!value) return "—";
@@ -31,9 +32,24 @@ function Field({ label, value }: { label: string; value?: string | null }) {
 export function OverviewTab({ data }: { data: AssignmentDetailData }) {
   const { company, verificationProgram, surveyInformation, progress, quickStats } = data;
   const payload = data.application.payload;
+  // Non-retroactive per design: this never blocks review of an already-submitted application —
+  // it's a heads-up for applications whose payload predates the Step 5 required-location rule
+  // (see getRequiredLocationTypes in shared/schema.ts).
+  const missingLocationTypes =
+    payload.verificationType === "VIU" || payload.verificationType === "VKI"
+      ? missingRequiredLocationTypes(payload.locations ?? [], payload.verificationType)
+      : [];
 
   return (
     <div className="flex flex-col gap-5">
+      {missingLocationTypes.length > 0 && (
+        <div className="rounded-[10px] border border-[#f6d58a] bg-[#fdf0d5] p-4 text-[13px] text-[#8a5a0a]">
+          <span className="font-bold">Perhatian:</span> Permohonan ini tidak memiliki lokasi{" "}
+          {missingLocationTypes.map((t) => REQUIRED_LOCATION_TYPE_LABELS[t]).join(" dan ")} pada data yang
+          disubmit — kemungkinan disubmit sebelum aturan lokasi wajib berlaku.
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Section title="Company Information" icon="domain" iconColor="#2f6fe0">
           <div className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">

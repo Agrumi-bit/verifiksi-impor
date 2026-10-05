@@ -7,6 +7,8 @@ import { db } from "@/lib/db";
 import { requireCustomerRelationSession } from "@/lib/require-customer-relation-session";
 import { createScheduleSchema } from "@/modules/customer-relation-workspace/schema";
 import { SCHEDULE_TYPE_DEFS } from "@/modules/customer-relation-workspace/status";
+import { REQUIRED_LOCATION_TYPE_LABELS, type LocationValues } from "@/modules/shared/schema";
+import type { ApplicationWizardValues } from "@/modules/applications/schema";
 
 function generateAssignmentNumber(scheduleType: string): string {
   const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -35,7 +37,7 @@ export async function POST(
     return NextResponse.json({ error: "Permohonan tidak ditemukan" }, { status: 404 });
   }
 
-  const { scheduleType, facility, date, personId } = parsed.data;
+  const { scheduleType, locationId, date, personId } = parsed.data;
   const person = await db.user.findUnique({ where: { id: personId } });
   if (!person) {
     return NextResponse.json({ error: "Orang yang dipilih tidak ditemukan" }, { status: 404 });
@@ -46,6 +48,19 @@ export async function POST(
       { error: `Orang yang dipilih harus memiliki role ${requiredRole}` },
       { status: 400 },
     );
+  }
+
+  // Resolved from the application's own payload, never free text from the client — a survey
+  // schedule's location must be one of this application's real locations (see
+  // createScheduleSchema's own refine requiring `locationId` for scheduleType "survey").
+  let facility: string | null = null;
+  if (scheduleType === "survey") {
+    const payloadLocations = ((application.payload as ApplicationWizardValues).locations ?? []) as LocationValues[];
+    const location = payloadLocations.find((loc) => loc.id === locationId);
+    if (!location) {
+      return NextResponse.json({ error: "Lokasi yang dipilih tidak ditemukan pada permohonan ini" }, { status: 400 });
+    }
+    facility = REQUIRED_LOCATION_TYPE_LABELS[location.locationType] ?? location.locationType;
   }
 
   const roleField =
@@ -65,7 +80,8 @@ export async function POST(
       assignmentNumber: generateAssignmentNumber(scheduleType),
       applicationId: id,
       scheduleType,
-      location: facility || null,
+      location: facility,
+      locationId: scheduleType === "survey" ? locationId : null,
       scheduledDate: new Date(date),
       ...(scheduleType !== "survey" ? { status: "SUBMITTED" as const } : {}),
       ...roleField,

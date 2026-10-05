@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
-import { composeLocationAddress } from "@/modules/shared/schema";
+import { composeLocationAddress, matchLocationTypeLabel } from "@/modules/shared/schema";
 
 type PayloadLocation = {
   locationType: string;
@@ -65,6 +65,39 @@ export async function GET(
     visits.push(visit);
   }
 
+  // Legacy safety net: a survey assignment created before `locationId` existed only has its old
+  // free-text `location` label ("Kantor"/"Gudang") — if that type has no matching entry in the
+  // application's own payload (the production bug this was built for: a company's profile
+  // gained a Kantor location after the application was already submitted), fall back to the
+  // live Company record so the surveyor still has something to work from, instead of a silently
+  // missing location. New assignments (scheduled via the locationId-based picker) never hit this
+  // branch — their chosen location always exists in the payload by construction.
+  const intendedType = matchLocationTypeLabel(assignment.location);
+  const hasIntendedType = visits.some((visit) => visit.locationType === intendedType);
+  if (intendedType && !hasIntendedType && assignment.application.companyId) {
+    const company = await db.company.findUnique({ where: { id: assignment.application.companyId } });
+    const companyLocations = (company?.locations as PayloadLocation[] | null) ?? [];
+    const fallbackLocation = companyLocations.find((loc) => loc.locationType === intendedType);
+    if (fallbackLocation) {
+      const fullAddress = composeLocationAddress(fallbackLocation);
+      const key = `${fallbackLocation.locationType}::${fullAddress}`;
+      let visit = existingByKey.get(key);
+      if (!visit) {
+        visit = await db.locationVisit.create({
+          data: {
+            assignmentId: assignment.id,
+            locationType: fallbackLocation.locationType,
+            address: fullAddress,
+            city: fallbackLocation.city ?? null,
+          },
+        });
+      }
+      visits.push(visit);
+    }
+  }
+
+  const payloadLocationTypes = new Set(payloadLocations.map((loc) => loc.locationType));
+
   const data = visits.map((visit) => ({
     id: visit.id,
     locationType: visit.locationType,
@@ -83,6 +116,10 @@ export async function GET(
     warehouseVerification: visit.warehouseVerification,
     factoryVerification: visit.factoryVerification,
     reportVerification: visit.reportVerification,
+    // True when this location type has no entry in the application's current payload — either
+    // the fallback-from-company case above, or a payload location that was removed after this
+    // visit was first created. Surfaced as a warning badge, never used to hide the location.
+    notInApplicationPayload: !payloadLocationTypes.has(visit.locationType),
   }));
 
   return NextResponse.json({ data });

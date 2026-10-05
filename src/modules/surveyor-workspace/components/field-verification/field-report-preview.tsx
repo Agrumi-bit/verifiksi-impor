@@ -686,7 +686,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
                 <tr><td style={{ color: "var(--ink-faint)" }}>Nomor Penugasan</td><td style={{ fontWeight: 600 }} className="rd-mono">{data.assignmentNumber}</td></tr>
                 <tr><td style={{ color: "var(--ink-faint)" }}>Nomor Aplikasi</td><td style={{ fontWeight: 600 }} className="rd-mono">{data.applicationNumber}</td></tr>
                 <tr><td style={{ color: "var(--ink-faint)" }}>Jenis Verifikasi</td><td style={{ fontWeight: 600 }}>{data.verificationType}</td></tr>
-                <tr><td style={{ color: "var(--ink-faint)" }}>Lokasi yang Diverifikasi</td><td style={{ fontWeight: 600 }}>{label} ({isWarehouse ? "Warehouse" : "Production Floor"})</td></tr>
+                <tr><td style={{ color: "var(--ink-faint)" }}>Lokasi yang Diverifikasi</td><td style={{ fontWeight: 600 }}>{label}</td></tr>
                 <tr>
                   <td style={{ color: "var(--ink-faint)" }}>Alamat</td>
                   <td style={{ fontWeight: 600 }}>

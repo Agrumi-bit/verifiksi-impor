@@ -1,12 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { useFieldArray, type UseFormReturn } from "react-hook-form";
-import { MapPin, Plus } from "lucide-react";
+import { useFieldArray, useWatch, type UseFormReturn } from "react-hook-form";
+import { Check, MapPin, Plus, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { LocationItemFields, type CompanyAddressValues } from "@/components/wizard/locations-field";
-import { LOCATION_TYPES, createEmptyLocation, type LocationType } from "@/modules/shared/schema";
+import {
+  LOCATION_TYPES,
+  REQUIRED_LOCATION_TYPE_LABELS,
+  createEmptyLocation,
+  getRequiredLocationTypes,
+  missingRequiredLocationTypes,
+  type LocationType,
+} from "@/modules/shared/schema";
 import type { ApplicationWizardValues } from "../../schema";
 
 const OWNERSHIP_LABEL: Record<string, string> = {
@@ -27,11 +34,16 @@ export function VkiStep5Locations({ form, companyAddress, availableTypes = LOCAT
   // location id (locationSchema also has its own `id` field) — use a distinct
   // keyName so `field.id` still reflects the actual business id below.
   const { fields, append, remove } = useFieldArray({ control, name: "locations", keyName: "fieldKey" });
+  const verificationType = useWatch({ control, name: "verificationType" }) === "VKI" ? "VKI" : "VIU";
 
   // Locations already on the company record (pulled in at Step 1) are locked/read-only.
   // Anything appended afterwards via "+ Tambah Lokasi" is a new site for this
   // application and gets the full editable location form.
   const [lockedIds] = useState(() => new Set(form.getValues("locations").map((l) => l.id)));
+
+  const requiredTypes = getRequiredLocationTypes(verificationType);
+  const presentTypes = new Set(fields.map((f) => f.locationType));
+  const missingTypes = missingRequiredLocationTypes(fields, verificationType);
 
   return (
     <div className="flex flex-col gap-4">
@@ -44,6 +56,32 @@ export function VkiStep5Locations({ form, companyAddress, availableTypes = LOCAT
           </p>
         </div>
       </div>
+
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 p-3">
+        <span className="text-xs font-semibold text-muted-foreground">Lokasi wajib:</span>
+        {requiredTypes.map((type) => {
+          const present = presentTypes.has(type);
+          return (
+            <span
+              key={type}
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${
+                present ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-destructive/10 text-destructive"
+              }`}
+            >
+              {present ? <Check className="size-3" /> : <X className="size-3" />}
+              {REQUIRED_LOCATION_TYPE_LABELS[type]}
+            </span>
+          );
+        })}
+      </div>
+
+      {missingTypes.length > 0 && (
+        <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+          {missingTypes.map((type) => `Lokasi ${REQUIRED_LOCATION_TYPE_LABELS[type]} wajib ditambahkan`).join(". ")}.
+          Tambahkan lewat tombol &quot;Tambah Lokasi&quot; di bawah, atau lengkapi dulu di profil perusahaan supaya
+          lokasi ini otomatis terisi di sini.
+        </p>
+      )}
 
       {fields.map((field, index) =>
         lockedIds.has(field.id) ? (

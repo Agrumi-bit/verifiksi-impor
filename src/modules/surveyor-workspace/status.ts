@@ -46,9 +46,9 @@ export const LOCATION_VISIT_STATUS_LABELS: Record<LocationVisitStatusValue, stri
 };
 
 export const LOCATION_TYPE_LABELS: Record<string, string> = {
-  KANTOR: "Main Office (Kantor)",
-  GUDANG: "Warehouse (Gudang)",
-  PABRIK: "Production Floor (Pabrik)",
+  KANTOR: "Kantor",
+  GUDANG: "Gudang",
+  PABRIK: "Pabrik",
 };
 
 export const LOCATION_TYPE_ICON: Record<string, string> = {

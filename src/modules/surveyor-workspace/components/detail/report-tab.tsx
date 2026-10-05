@@ -27,6 +27,7 @@ type LocationReportItem = {
   officeVerification: OfficeVerificationValues | null;
   warehouseVerification: FieldVerificationValues | null;
   factoryVerification: FieldVerificationValues | null;
+  notInApplicationPayload: boolean;
 };
 
 type Props = { assignmentId: string };
@@ -108,6 +109,12 @@ export function ReportTab({ assignmentId }: Props) {
                 {LOCATION_VISIT_STATUS_LABELS[loc.status]}
               </span>
             </div>
+
+            {loc.notInApplicationPayload && (
+              <div className="mb-3 rounded-[8px] bg-[#fdf0d5] px-3 py-2 text-[11.5px] leading-relaxed text-[#8a5a0a]">
+                <span className="font-bold">Perhatian:</span> Lokasi ini tidak tercantum di permohonan.
+              </div>
+            )}
 
             {loc.status !== "COMPLETED" ? (
               <p className="text-sm text-[#8a7565]">Laporan belum tersedia — verifikasi lokasi ini belum selesai.</p>

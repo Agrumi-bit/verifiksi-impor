@@ -1033,6 +1033,13 @@ model Assignment {
   scheduledTime   String?
   dueDate         DateTime?
   location        String?
+  // The `id` of a `locations[]` entry inside Application.payload — chosen by Customer Relation
+  // at scheduling time (survey assignments only). Not a Prisma relation since locations live as
+  // JSON inside the application payload, not a real table. `null` for legacy assignments created
+  // before this field existed (and for non-survey schedule types, which have no single location).
+  // `location` above stays a human-readable label (still derived from this location's own type)
+  // for display call sites that never needed anything more.
+  locationId      String?
   teamMembers     Json?
   businessType    String?
   productCategory String?

@@ -10,6 +10,7 @@ import { DocumentsTab } from "./review/documents-tab";
 import { AssignTab } from "./review/assign-tab";
 import { TimelineTab } from "./review/timeline-tab";
 import type { DocVerificationStatusValue } from "../status";
+import { missingRequiredLocationTypes, REQUIRED_LOCATION_TYPE_LABELS } from "@/modules/shared/schema";
 
 export type ApplicationDetail = {
   id: string;
@@ -46,6 +47,7 @@ export type ApplicationDetail = {
     scheduleType: "survey" | "dokumen" | "technical";
     typeLabel: string;
     facility: string | null;
+    locationId: string | null;
     date: string | null;
     person: string;
     status: string;
@@ -53,6 +55,7 @@ export type ApplicationDetail = {
     letterStatus: "DRAFT" | "PENDING" | "APPROVED";
   }[];
   workflowStages: { key: string; label: string; done: boolean; active: boolean }[];
+  locations: { id: string; locationType: string; address: string; city: string | null }[];
 };
 
 const TABS = [
@@ -119,6 +122,10 @@ export function ApplicationReview({ id }: { id: string }) {
   if (isError || !data) return <p className="p-7 text-[13px] text-[#ba1a1a]">Permohonan tidak ditemukan.</p>;
 
   const showMarkAcceptedButton = data.complete && data.crOutcome === "Diproses";
+  // Non-retroactive per design: never blocks review/scheduling of an already-submitted
+  // application — a heads-up for ones whose payload predates the Step 5 required-location rule.
+  const missingLocationTypes =
+    data.jenis === "VIU" || data.jenis === "VKI" ? missingRequiredLocationTypes(data.locations, data.jenis) : [];
 
   async function markAccepted() {
     const response = await fetch(`/api/customer-relation-workspace/applications/${id}`, {
@@ -147,6 +154,15 @@ export function ApplicationReview({ id }: { id: string }) {
           </div>
         </div>
       </div>
+
+      {missingLocationTypes.length > 0 && (
+        <div className="mb-4.5 rounded-xl border border-[#f6d58a] bg-[#fdf0d5] p-4 text-[13px] text-[#8a5a0a]">
+          <span className="font-bold">Perhatian:</span> Permohonan ini tidak memiliki lokasi{" "}
+          {missingLocationTypes.map((t) => REQUIRED_LOCATION_TYPE_LABELS[t]).join(" dan ")} pada data yang
+          disubmit — kemungkinan disubmit sebelum aturan lokasi wajib berlaku. Penugasan survey tetap bisa
+          dilakukan untuk lokasi yang tersedia.
+        </div>
+      )}
 
       <div className="mb-4.5 rounded-xl border border-[#f0ded0] bg-white p-5.5">
         <div className="mb-3.5 flex items-center justify-between">
@@ -242,7 +258,9 @@ export function ApplicationReview({ id }: { id: string }) {
           onChanged={invalidate}
         />
       )}
-      {tab === "assign" && <AssignTab applicationId={id} schedules={data.schedules} onChanged={invalidate} />}
+      {tab === "assign" && (
+        <AssignTab applicationId={id} schedules={data.schedules} locations={data.locations} onChanged={invalidate} />
+      )}
       {tab === "timeline" && <TimelineTab stages={data.workflowStages} />}
     </div>
   );

@@ -242,6 +242,47 @@ export const locationsSchema = z.object({
   locations: z.array(locationSchema).min(1, "Tambahkan minimal satu lokasi"),
 });
 
+/** Which location types Step 5 ("Location Information") requires, by verification type — VIU
+ * needs an office + a warehouse (survey visits both); VKI needs an office + a factory floor.
+ * The single source of truth for this rule — the client step's checklist UI and every
+ * server/zod validation path (live wizard schema, VIU/VKI submit schemas) call this instead of
+ * each declaring its own copy. */
+export function getRequiredLocationTypes(verificationType: "VIU" | "VKI"): readonly LocationType[] {
+  return verificationType === "VKI" ? (["KANTOR", "PABRIK"] as const) : (["KANTOR", "GUDANG"] as const);
+}
+
+/** Which of `getRequiredLocationTypes`'s types have no matching entry in `locations` yet. */
+export function missingRequiredLocationTypes(
+  locations: { locationType: string }[],
+  verificationType: "VIU" | "VKI",
+): LocationType[] {
+  const present = new Set(locations.map((location) => location.locationType));
+  return getRequiredLocationTypes(verificationType).filter((type) => !present.has(type));
+}
+
+export const REQUIRED_LOCATION_TYPE_LABELS: Record<LocationType, string> = {
+  KANTOR: "Kantor",
+  GUDANG: "Gudang",
+  PABRIK: "Pabrik",
+};
+
+export function missingRequiredLocationMessage(type: LocationType): string {
+  return `Lokasi ${REQUIRED_LOCATION_TYPE_LABELS[type]} wajib ditambahkan`;
+}
+
+/** Legacy `Assignment.location` rows stored a free-text facility label ("Kantor"/"Gudang"/the
+ * old mistaken "Factory") before `Assignment.locationId` existed — this matches that old text
+ * back to a real `LocationType` so the surveyor workspace can still resolve a facility-only
+ * assignment's intended location. `null` for anything unrecognized. */
+export function matchLocationTypeLabel(label: string | null | undefined): LocationType | null {
+  const normalized = label?.trim().toUpperCase();
+  if (!normalized) return null;
+  if (normalized === "KANTOR") return "KANTOR";
+  if (normalized === "GUDANG") return "GUDANG";
+  if (normalized === "PABRIK" || normalized === "FACTORY") return "PABRIK";
+  return null;
+}
+
 /**
  * LocationVisit.address (and every downstream report/detail view that reads
  * it) expects the historical "complete address" string. The wizard now

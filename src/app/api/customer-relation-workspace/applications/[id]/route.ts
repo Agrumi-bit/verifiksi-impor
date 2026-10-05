@@ -101,6 +101,7 @@ export async function GET(
       scheduleType,
       typeLabel: SCHEDULE_TYPE_DEFS[scheduleType].label,
       facility: assignment.location,
+      locationId: assignment.locationId,
       date: assignment.scheduledDate?.toISOString() ?? null,
       person: person?.name ?? "—",
       status: assignment.status,
@@ -140,6 +141,14 @@ export async function GET(
       documents,
       schedules,
       workflowStages,
+      // For Penugasan's Pilih Lokasi picker — real locations from the application's own
+      // payload, not the old hardcoded Kantor/Gudang/Factory facility list.
+      locations: (payload.locations ?? []).map((location) => ({
+        id: location.id,
+        locationType: location.locationType,
+        address: location.address,
+        city: location.city ?? null,
+      })),
     },
   });
 }
