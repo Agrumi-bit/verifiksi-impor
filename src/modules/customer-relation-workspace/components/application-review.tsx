@@ -6,6 +6,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowLeft, Pencil } from "lucide-react";
 
+import { ReturnForRevisionDialog } from "@/modules/applications/components/return-for-revision-dialog";
+
 import { DocumentsTab } from "./review/documents-tab";
 import { AssignTab } from "./review/assign-tab";
 import { TimelineTab } from "./review/timeline-tab";
@@ -17,6 +19,8 @@ export type ApplicationDetail = {
   company: string;
   jenis: string;
   category: string;
+  status: string;
+  importTypes: string[];
   submitted: string;
   picName: string;
   picPhone: string;
@@ -152,14 +156,25 @@ export function ApplicationReview({ id }: { id: string }) {
         <div className="mb-3.5 flex items-center justify-between">
           <div className="text-[15px] font-extrabold text-[#20180f]">Data Aplikasi</div>
           {!editMode ? (
-            <button
-              type="button"
-              onClick={startEdit}
-              className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-3.5 py-1.75 text-[12.5px] font-semibold text-[#261813]"
-            >
-              <Pencil className="size-4" />
-              Edit Catatan
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <ReturnForRevisionDialog
+                endpoint={`/api/customer-relation-workspace/applications/${id}/return`}
+                applicationNumber={data.applicationNumber}
+                status={data.status}
+                assignmentStatuses={data.schedules.map((s) => s.status)}
+                verificationType={data.jenis}
+                importTypes={data.importTypes}
+                onReturned={invalidate}
+              />
+              <button
+                type="button"
+                onClick={startEdit}
+                className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-3.5 py-1.75 text-[12.5px] font-semibold text-[#261813]"
+              >
+                <Pencil className="size-4" />
+                Edit Catatan
+              </button>
+            </div>
           ) : (
             <div className="flex gap-2">
               <button

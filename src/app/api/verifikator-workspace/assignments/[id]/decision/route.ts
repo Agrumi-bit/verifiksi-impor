@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
+import { returnApplicationForRevision } from "@/modules/applications/return-for-revision";
 
 const decisionSchema = z.object({
   decision: z.enum(["COMPLETED", "RETURNED"]),
@@ -55,16 +56,11 @@ export async function POST(
   // returning it here is the one real signal the company should see as "this application needs
   // revision". Application.status has no other writer for RETURNED today, so this is additive.
   if (parsed.data.decision === "RETURNED") {
-    await db.application.update({
-      where: { id: assignment.applicationId },
-      data: { status: "RETURNED" },
-    });
-    await db.applicationMessage.create({
-      data: {
-        applicationId: assignment.applicationId,
-        direction: "SYSTEM",
-        text: `Permohonan dikembalikan oleh verifikator untuk direvisi — alasan: ${parsed.data.notes}`,
-      },
+    await returnApplicationForRevision({
+      applicationId: assignment.applicationId,
+      source: "VERIFIKATOR",
+      actor: { id: verifikatorId, name: session.user.name, role: session.user.role },
+      reason: parsed.data.notes,
     });
   }
 

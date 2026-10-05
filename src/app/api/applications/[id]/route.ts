@@ -14,7 +14,10 @@ export async function GET(
   if (error) return error;
 
   const { id } = await params;
-  const application = await db.application.findUnique({ where: { id } });
+  const application = await db.application.findUnique({
+    where: { id },
+    include: { assignments: { select: { status: true } } },
+  });
 
   if (!application) {
     return NextResponse.json(

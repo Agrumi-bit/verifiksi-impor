@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ApplicationWizardValues } from "../schema";
 import { KonsumsiApplicationReview } from "../viu-schemes/konsumsi/components/konsumsi-application-review";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import { ReturnForRevisionDialog } from "./return-for-revision-dialog";
 
 type ApplicationDetailData = {
   id: string;
@@ -17,6 +18,7 @@ type ApplicationDetailData = {
   status: string;
   createdAt: string;
   payload: ApplicationWizardValues;
+  assignments: { status: string }[];
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -40,6 +42,7 @@ function Item({ label, value }: { label: string; value?: string }) {
 type Props = { id: string };
 
 export function ApplicationDetail({ id }: Props) {
+  const queryClient = useQueryClient();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["applications", "detail", id],
     queryFn: async () => {
@@ -72,8 +75,17 @@ export function ApplicationDetail({ id }: Props) {
           </p>
           <h1 className="text-lg font-semibold">{payload.companyName}</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <Badge>{data.status}</Badge>
+          <ReturnForRevisionDialog
+            endpoint={`/api/applications/${data.id}/return`}
+            applicationNumber={data.applicationNumber}
+            status={data.status}
+            assignmentStatuses={data.assignments.map((a) => a.status)}
+            verificationType={data.verificationType}
+            importTypes={payload.importTypes ?? []}
+            onReturned={() => queryClient.invalidateQueries({ queryKey: ["applications"] })}
+          />
           <Button variant="outline" nativeButton={false} render={<Link href="/applications" />}>
             Kembali ke Daftar
           </Button>

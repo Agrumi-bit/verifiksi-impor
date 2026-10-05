@@ -127,6 +127,8 @@ export async function GET(
       company: payload.companyName || "—",
       jenis: application.verificationType,
       category: application.applicationCategory,
+      status: application.status,
+      importTypes: payload.importTypes ?? [],
       submitted: application.createdAt.toISOString(),
       picName: payload.contactFullName || "",
       picPhone: payload.contactPhone || "",

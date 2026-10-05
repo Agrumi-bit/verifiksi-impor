@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import { returnSectionTitle, returnSourceLabel } from "@/modules/applications/return-rules";
 import { buildDocumentChecklist, checklistItemCode } from "@/modules/verifikator-workspace/schema";
 import { buildDisplayFileName } from "@/lib/document-filename";
 import { composeLocationAddress, OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS } from "@/modules/shared/schema";
@@ -137,6 +138,10 @@ type ApplicationDetailData = {
   assignments: AssignmentData[];
   messages: ApplicationMessageData[];
   company: CompanyAddressData | null;
+  returnReason: string | null;
+  returnedAt: string | null;
+  returnedByRole: string | null;
+  returnSections: string[] | null;
 };
 
 const DETAIL_TABS = [
@@ -854,10 +859,33 @@ export function CompanyApplicationDetail({ id }: Props) {
           <AlertTriangle className="mt-0.5 size-5 shrink-0 text-[#a3690a]" />
           <div className="flex-1">
             <div className="text-[13.5px] font-bold text-[#7a4a10]">Permohonan Dikembalikan untuk Revisi</div>
-            <p className="mt-0.5 text-[12.5px] text-[#8a6224]">
-              Verifikator mengembalikan permohonan ini untuk diperbaiki. Lihat tab History untuk alasan lengkap, lalu klik
-              &quot;Revisi Permohonan&quot; untuk membuka kembali formulir dan mengirim ulang.
-            </p>
+            {data.returnReason ? (
+              <div className="mt-1 flex flex-col gap-1 text-[12.5px] text-[#8a6224]">
+                <div>
+                  Dikembalikan oleh <strong>{returnSourceLabel(data.returnedByRole)}</strong>
+                  {data.returnedAt ? ` pada ${fmtDateTime(data.returnedAt)}` : ""}.
+                </div>
+                <div>
+                  <span className="font-semibold">Alasan:</span> {data.returnReason}
+                </div>
+                {(data.returnSections ?? []).length > 0 && (
+                  <div>
+                    <span className="font-semibold">Bagian yang perlu diperbaiki:</span>
+                    <ul className="ml-4 mt-0.5 list-disc">
+                      {(data.returnSections ?? []).map((key) => (
+                        <li key={key}>{returnSectionTitle(key)}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div>Klik &quot;Revisi Permohonan&quot; untuk membuka kembali formulir, perbaiki, lalu kirim ulang.</div>
+              </div>
+            ) : (
+              <p className="mt-0.5 text-[12.5px] text-[#8a6224]">
+                Verifikator mengembalikan permohonan ini untuk diperbaiki. Lihat tab History untuk alasan lengkap, lalu klik
+                &quot;Revisi Permohonan&quot; untuk membuka kembali formulir dan mengirim ulang.
+              </p>
+            )}
           </div>
           <Link
             href={`/company-workspace/applications/new?draftId=${id}`}

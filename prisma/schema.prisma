@@ -132,8 +132,43 @@ model Application {
   crFollowUpDate          DateTime?
   crNotes                 String?
 
+  // Latest "Kembalikan untuk Revisi" — set whenever status becomes RETURNED (by Verifikator,
+  // Technical Analyst, Customer Relationship or Admin), shown on the company's return banner.
+  // Left in place after resubmission; the full history lives in ApplicationAuditLog.
+  returnReason   String?
+  returnedAt     DateTime?
+  returnedById   String?
+  // VERIFIKATOR | TECHNICAL_ANALYST | CUSTOMER_RELATIONSHIP | ADMIN — who returned it, as a party.
+  returnedByRole String?
+  // Wizard step keys the returner flagged for correction (e.g. ["legal", "support-document"]).
+  returnSections Json?
+
+  auditLogs ApplicationAuditLog[]
+
   @@index([companyId])
   @@map("application")
+}
+
+/// Per-application event history: RETURN (dikembalikan untuk revisi), EDIT (Admin edit of a
+/// non-draft application) and RESUBMIT (revisi dikirim ulang). Append-only.
+model ApplicationAuditLog {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+  action        String
+  actorId       String?
+  actorName     String?
+  // The actor's session role (e.g. SUPER_ADMIN, CUSTOMER_RELATIONSHIP, PERUSAHAAN).
+  actorRole     String?
+  reason        String?
+  // RETURN: flagged wizard step keys.
+  sections      Json?
+  // EDIT: [{ path, before, after }] summary of what changed in the payload.
+  changedFields Json?
+  createdAt     DateTime    @default(now())
+
+  @@index([applicationId])
+  @@map("application_audit_log")
 }
 
 enum MessageDirection {

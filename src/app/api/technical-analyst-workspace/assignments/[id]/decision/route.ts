@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { requireTechnicalAnalystSession } from "@/lib/require-technical-analyst-session";
+import { returnApplicationForRevision } from "@/modules/applications/return-for-revision";
 import { allModulesDecided, decisionSchema, technicalAnalysisDataSchema } from "@/modules/technical-analyst-workspace/schema";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -44,16 +45,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   });
 
   if (parsed.data.decision === "RETURNED") {
-    await db.application.update({
-      where: { id: assignment.applicationId },
-      data: { status: "RETURNED" },
-    });
-    await db.applicationMessage.create({
-      data: {
-        applicationId: assignment.applicationId,
-        direction: "SYSTEM",
-        text: `Permohonan dikembalikan oleh technical analyst untuk direvisi — alasan: ${parsed.data.notes}`,
-      },
+    await returnApplicationForRevision({
+      applicationId: assignment.applicationId,
+      source: "TECHNICAL_ANALYST",
+      actor: { id: technicalAnalystId, name: session.user.name, role: session.user.role },
+      reason: parsed.data.notes,
     });
   }
 

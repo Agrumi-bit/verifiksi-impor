@@ -3,11 +3,12 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, ClipboardList, Hourglass, XCircle, type LucideIcon } from "lucide-react";
 
 import { STATUS_LABELS, ACTIVE_STATUSES, type ApplicationStatusValue } from "@/modules/company-workspace/status";
 import { APPLICATION_STATUS_STYLE } from "../status-style";
+import { ReturnForRevisionDialog } from "./return-for-revision-dialog";
 import type { VerificationType } from "../schema";
 
 type ApplicationListItem = {
@@ -18,6 +19,8 @@ type ApplicationListItem = {
   companyName: string;
   status: ApplicationStatusValue;
   createdAt: string;
+  importTypes: string[];
+  assignmentStatuses: string[];
 };
 
 function fmtDate(value: string): string {
@@ -26,6 +29,7 @@ function fmtDate(value: string): string {
 
 export function ApplicationTable() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [showFilters, setShowFilters] = useState(true);
   const [search, setSearch] = useState("");
   const [jenis, setJenis] = useState<"" | VerificationType>("");
@@ -224,9 +228,21 @@ export function ApplicationTable() {
                   Lanjutkan
                 </button>
               ) : (
-                <Link href={`/applications/${application.id}`} className="text-[12.5px] font-semibold text-[#c14a1f]">
-                  Detail
-                </Link>
+                <div className="flex flex-col items-start gap-0.5">
+                  <Link href={`/applications/${application.id}`} className="text-[12.5px] font-semibold text-[#c14a1f]">
+                    Detail
+                  </Link>
+                  <ReturnForRevisionDialog
+                    variant="menu-item"
+                    endpoint={`/api/applications/${application.id}/return`}
+                    applicationNumber={application.applicationNumber}
+                    status={application.status}
+                    assignmentStatuses={application.assignmentStatuses}
+                    verificationType={application.verificationType}
+                    importTypes={application.importTypes}
+                    onReturned={() => queryClient.invalidateQueries({ queryKey: ["applications"] })}
+                  />
+                </div>
               )}
             </div>
           </div>

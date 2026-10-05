@@ -57,10 +57,11 @@ export async function GET() {
 
   const applications = await db.application.findMany({
     orderBy: { createdAt: "desc" },
+    include: { assignments: { select: { status: true } } },
   });
 
   const data = applications.map((application) => {
-    const payload = application.payload as { companyName?: string } | null;
+    const payload = application.payload as { companyName?: string; importTypes?: string[] } | null;
     return {
       id: application.id,
       applicationNumber: application.applicationNumber,
@@ -69,6 +70,8 @@ export async function GET() {
       companyName: payload?.companyName ?? "—",
       status: application.status,
       createdAt: application.createdAt,
+      importTypes: payload?.importTypes ?? [],
+      assignmentStatuses: application.assignments.map((a) => a.status),
     };
   });
 
