@@ -2,6 +2,7 @@ import type { z } from "zod";
 
 import type { ApplicationWizardValues } from "../../schema";
 import { MODAL_STATEMENT_LETTER_DOC_DEF } from "../../financial-capability-defs";
+import { deriveProductGroups, productGroupKey } from "./schema";
 
 /**
  * Every cross-field submit-time rule exclusive to VIU Barang Konsumsi
@@ -145,15 +146,16 @@ export function applyKonsumsiSubmitRules(data: ApplicationWizardValues, ctx: z.R
   const brandNameById = new Map(
     data.applicationBrands.map((entry) => [entry.brandId, entry.submissionSnapshot?.brandName ?? entry.brandId]),
   );
-  const requiredGroups = new Map<string, { brandId: string; commodityName: string }>();
-  data.konsumsiProducts.forEach((product) => {
-    const key = `${product.brandId}|${product.commodityGroupId}`;
-    if (!requiredGroups.has(key)) {
-      requiredGroups.set(key, { brandId: product.brandId, commodityName: product.commodityName || product.commodityGroupId });
-    }
-  });
+  // Same grouping as the matrix and the server (deriveProductGroups/productGroupKey); a group is
+  // covered only by an entry that actually has a file, as the matrix and server require.
+  const requiredGroups = new Map(
+    deriveProductGroups(data.konsumsiProducts).map((group) => [
+      productGroupKey(group),
+      { brandId: group.brandId, commodityName: group.commodityName || group.commodityGroupId },
+    ]),
+  );
   const coveredGroupKeys = new Set(
-    (data.productGroupCertificates ?? []).map((certificate) => `${certificate.brandId}|${certificate.commodityGroupId}`),
+    (data.productGroupCertificates ?? []).filter((certificate) => certificate.filePath).map((certificate) => productGroupKey(certificate)),
   );
   for (const [key, group] of requiredGroups) {
     if (!coveredGroupKeys.has(key)) {

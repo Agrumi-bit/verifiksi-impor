@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import type { MerkEvidenceType } from "@/modules/merk/schema";
 import { getVIUConsumptionBrandRequirements } from "../business-rules";
-import { certificateForGroup } from "../shared-certificates";
+import { deriveProductGroups, productGroupKey } from "../schema";
 import type {
   ApplicationBrandEntryValues,
   ApplicationBrandSubmissionSnapshot,
@@ -9,6 +9,7 @@ import type {
   ProductGroupCertificateValues,
 } from "../schema";
 import type { ApplicationWizardValues } from "../../../schema";
+import { certificateForGroup } from "../shared-certificates";
 
 // Prisma's MerkCertificateType enum still carries the legacy "LAINNYA" value
 // (rows from the pre-drawer wizard) that the current evidence-type set
@@ -34,8 +35,12 @@ type ValidateKonsumsiSubmitInput = Pick<
   | "labelDocumentationDocument"
 >;
 
+/** A refusal; `stepKey` + `messages` (when set) let the wizard show it in its validation panel
+ * under the right step, one line per problem, instead of a bare toast. */
+export type KonsumsiSubmitError = { error: string; stepKey?: string; messages?: string[] };
+
 type ValidateKonsumsiSubmitResult =
-  | { error: string }
+  | KonsumsiSubmitError
   | {
       ok: true;
       applicationBrands: ApplicationBrandEntryValues[];
@@ -123,6 +128,7 @@ async function validateKonsumsiProducts(
       industryGroupId: hsRow.commodityGroup.industryGroupId ?? "",
       industryName,
       originCountryNames: countryNames,
+      commodityGroupChangedFrom: undefined,
       productSnapshot: {
         capturedAt,
         brandName: brandNameById.get(product.brandId) ?? "",
@@ -150,16 +156,20 @@ async function validateProductGroupCertificates(
   products: ApplicationKonsumsiProductValues[],
   certificates: ProductGroupCertificateValues[] | undefined,
   brandNameById: Map<string, string>,
-): Promise<{ error: string } | { ok: true; certificates: ProductGroupCertificateValues[] }> {
-  const list = certificates ?? [];
-  const requiredGroups = new Map<string, { brandId: string; commodityGroupId: string; commodityName: string }>();
-  for (const product of products) {
-    const key = `${product.brandId}|${product.commodityGroupId}`;
-    if (!requiredGroups.has(key)) {
-      requiredGroups.set(key, { brandId: product.brandId, commodityGroupId: product.commodityGroupId, commodityName: product.commodityName ?? "" });
-    }
-  }
-  if (requiredGroups.size === 0) return { ok: true, certificates: list };
+): Promise<KonsumsiSubmitError | { ok: true; certificates: ProductGroupCertificateValues[] }> {
+  // The SAME grouping the Step 9 matrix uses (deriveProductGroups/productGroupKey), applied to the
+  // server-resolved products — a client whose products were regrouped by
+  // resyncKonsumsiProductCommodities sees exactly these groups.
+  const requiredGroups = new Map(
+    deriveProductGroups(products).map((group) => [
+      productGroupKey(group),
+      { brandId: group.brandId, commodityGroupId: group.commodityGroupId, commodityName: group.commodityName ?? "" },
+    ]),
+  );
+  if (requiredGroups.size === 0) return { ok: true, certificates: [] };
+  // Certificates of groups that no longer have products (e.g. their products moved to another Sub
+  // Kelompok) are dropped — never synced into Hasil Uji Mutu for a group nothing is imported in.
+  const list = (certificates ?? []).filter((certificate) => requiredGroups.has(productGroupKey(certificate)));
 
   const referencedIds = [...new Set(list.map((c) => c.qualityTestId).filter((id): id is string => Boolean(id)))];
   const existingCertificates = referencedIds.length > 0
@@ -206,7 +216,7 @@ async function validateProductGroupCertificates(
       }
       resolved.push({
         ...certificate,
-        commodityName: requiredGroups.get(`${certificate.brandId}|${certificate.commodityGroupId}`)?.commodityName || certificate.commodityName,
+        commodityName: requiredGroups.get(productGroupKey(certificate))?.commodityName || certificate.commodityName,
         certificateNumber: existing.certificateNumber,
         laboratoryName: existing.laboratoryName,
         issueDate: existing.issueDate.toISOString(),
@@ -228,17 +238,22 @@ async function validateProductGroupCertificates(
     }
     resolved.push({
       ...certificate,
-      commodityName: requiredGroups.get(`${certificate.brandId}|${certificate.commodityGroupId}`)?.commodityName || certificate.commodityName,
+      commodityName: requiredGroups.get(productGroupKey(certificate))?.commodityName || certificate.commodityName,
     });
   }
 
-  const coveredGroupKeys = new Set(resolved.map((c) => `${c.brandId}|${c.commodityGroupId}`));
-  for (const [key, group] of requiredGroups) {
-    if (!coveredGroupKeys.has(key)) {
-      return {
-        error: `Sertifikat Hasil Uji Mutu belum diunggah untuk "${group.commodityName || group.commodityGroupId}" (${brandNameById.get(group.brandId) ?? group.brandId}).`,
-      };
-    }
+  const coveredGroupKeys = new Set(resolved.map((c) => productGroupKey(c)));
+  const missing = [...requiredGroups].filter(([key]) => !coveredGroupKeys.has(key)).map(([, group]) => group);
+  if (missing.length > 0) {
+    const messages = missing.map(
+      (group) =>
+        `${brandNameById.get(group.brandId) ?? group.brandId} × ${group.commodityName || group.commodityGroupId} belum ada sertifikat Hasil Uji Mutu`,
+    );
+    return {
+      error: `Sertifikat Hasil Uji Mutu belum diunggah untuk ${missing.length} grup Merek × Sub Kelompok: ${messages.join("; ")}.`,
+      stepKey: "product-info",
+      messages,
+    };
   }
 
   return { ok: true, certificates: resolved };
@@ -409,7 +424,7 @@ export async function validateKonsumsiSubmit(
   const brandNameById = new Map(brands.map((brand) => [brand.id, brand.brandName]));
   const productsResult = await validateKonsumsiProducts(values.konsumsiProducts, new Set(brandIds), brandNameById);
   if ("error" in productsResult) {
-    return { error: productsResult.error };
+    return { error: productsResult.error, stepKey: "product-info", messages: [productsResult.error] };
   }
 
   // Merek x Sub Kelompok certificate-coverage — see validateProductGroupCertificates above. Must
@@ -417,7 +432,7 @@ export async function validateKonsumsiSubmit(
   // client-submitted ones.
   const certificatesResult = await validateProductGroupCertificates(productsResult.products, values.productGroupCertificates, brandNameById);
   if ("error" in certificatesResult) {
-    return { error: certificatesResult.error };
+    return certificatesResult;
   }
 
   return {

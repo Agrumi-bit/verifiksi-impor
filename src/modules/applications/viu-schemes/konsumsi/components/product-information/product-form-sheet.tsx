@@ -79,6 +79,8 @@ export function ProductFormSheet({
       commodityName: option.commodityGroupName,
       industryGroupId: option.industryGroupId ?? "",
       industryName: option.industryGroupName ?? "",
+      // A freshly picked HS Code is current by definition — drop the "diperbarui" notice.
+      commodityGroupChangedFrom: undefined,
     });
     setErrors((e) => ({ ...e, hsCode: undefined }));
   }

@@ -179,6 +179,20 @@ export function ApplicationWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adminEditApplicationId]);
 
+  type ServerRejection = { error?: string; stepKey?: string; messages?: string[] } | null;
+
+  /** A server-side refusal that names its step (e.g. Konsumsi's certificate coverage) goes into
+   * the validation panel under that step, one line per problem — not only a toast. */
+  function showServerRejection(body: ServerRejection): boolean {
+    const meta = body?.stepKey ? activeSteps.find((step) => step.key === body.stepKey) : undefined;
+    if (!meta) return false;
+    const messages = body?.messages?.length ? body.messages : body?.error ? [body.error] : [];
+    setValidationIssues([{ step: meta.step, title: meta.title, messages }]);
+    toast.error(`Ditolak server: Step ${meta.step} (${meta.title}) — lihat rincian di atas.`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return true;
+  }
+
   async function saveAdminEdit() {
     if (!adminEditApplicationId || !pendingEditValues) return;
     setIsSubmitting(true);
@@ -188,8 +202,14 @@ export function ApplicationWizard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ values: pendingEditValues, reason: editReason.trim() }),
       });
-      const body = (await response.json().catch(() => null)) as { error?: string; data?: { changedCount: number } } | null;
-      if (!response.ok) throw new Error(body?.error ?? "Gagal menyimpan perubahan");
+      const body = (await response.json().catch(() => null)) as (ServerRejection & { data?: { changedCount: number } }) | null;
+      if (!response.ok) {
+        if (showServerRejection(body)) {
+          setPendingEditValues(null);
+          return;
+        }
+        throw new Error(body?.error ?? "Gagal menyimpan perubahan");
+      }
       toast.success(`Perubahan disimpan (${body?.data?.changedCount ?? 0} data diubah).`);
       setPendingEditValues(null);
       router.push(`/applications/${adminEditApplicationId}`);
@@ -305,7 +325,8 @@ export function ApplicationWizard({
         body: JSON.stringify({ ...values, draftApplicationId: draftApplicationId ?? undefined }),
       });
       if (!response.ok) {
-        const body = await response.json().catch(() => null);
+        const body = (await response.json().catch(() => null)) as ServerRejection;
+        if (showServerRejection(body)) return;
         throw new Error(body?.error ?? "Gagal mengirim permohonan");
       }
       const data = (await response.json()) as { applicationNumber: string };

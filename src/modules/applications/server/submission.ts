@@ -110,7 +110,10 @@ export async function prepareApplicationSubmission(
     if (!values.importTypes.includes(scheme.key)) continue;
     const result = await scheme.validateServerSide(values);
     if ("error" in result) {
-      return { ok: false, response: NextResponse.json({ error: result.error }, { status: 400 }) };
+      // `stepKey`/`messages` (when present) let the wizard list the problems in its validation
+      // panel under the right step.
+      const { error, stepKey, messages } = result;
+      return { ok: false, response: NextResponse.json({ error, stepKey, messages }, { status: 400 }) };
     }
     values = {
       ...values,

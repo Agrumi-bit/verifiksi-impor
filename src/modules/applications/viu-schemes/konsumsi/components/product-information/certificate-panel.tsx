@@ -72,7 +72,10 @@ export function CertificatePanel({ brandId, commodityGroupId, commodityName, bra
   const group = { brandId, commodityGroupId, commodityName };
   const current = certificate ?? createEmptyProductGroupCertificate(brandId, commodityGroupId, commodityName);
   const status = computeCertificateStatus(certificate, group, today());
-  const groupName = (id: string) => brandGroups.find((g) => g.commodityGroupId === id)?.commodityName ?? id;
+  const groupName = (id: string) =>
+    brandGroups.find((g) => g.commodityGroupId === id)?.commodityName ??
+    certificates.find((c) => c.commodityGroupId === id)?.commodityName ??
+    id;
 
   const sharedWith = certificate?.filePath ? otherGroupsSharing(certificates, certificate) : [];
   const isShared = sharedWith.length > 0;

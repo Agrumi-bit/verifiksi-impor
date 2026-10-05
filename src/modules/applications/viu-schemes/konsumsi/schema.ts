@@ -182,6 +182,12 @@ export type KonsumsiProductGroup = {
   industryName?: string;
 };
 
+/** The one (brand, Sub Kelompok) grouping key — used by the matrix, client submit rules and the
+ * server's certificate-coverage check alike, so client and server can never group differently. */
+export function productGroupKey(group: { brandId?: string; commodityGroupId?: string }): string {
+  return `${group.brandId ?? ""}|${group.commodityGroupId ?? ""}`;
+}
+
 /** Distinct (brandId, commodityGroupId) pairs, taken from `konsumsiProducts` — the single source
  * of truth for which commodity groupings a Brand has (replaces the old Step "Dokumen Pendukung
  * Merek"-sourced `deriveKonsumsiProductGroups`). Dedupes by `commodityGroupId` (it already
@@ -196,7 +202,7 @@ export function deriveProductGroups(
   const groups: KonsumsiProductGroup[] = [];
   for (const product of products) {
     if (!product.brandId || !product.commodityGroupId) continue;
-    const key = `${product.brandId}|${product.commodityGroupId}`;
+    const key = productGroupKey(product);
     if (seen.has(key)) continue;
     seen.add(key);
     groups.push({
@@ -276,6 +282,10 @@ export const konsumsiProductSchema = z.object({
   averageUnitPrice: nonNegativeNumberString("Harga satuan rata-rata tidak valid"),
   currency: z.enum(KONSUMSI_PRODUCT_CURRENCIES).default("USD"),
   productSnapshot: konsumsiProductSnapshotSchema.optional(),
+  // Set by `resyncKonsumsiProductCommodities` when the HS Code master data moved this product to a
+  // different Sub Kelompok after it was entered — the OLD Sub Kelompok name, shown as "Sub Kelompok
+  // diperbarui mengikuti master HS Code". Display-only; cleared by the server at submit.
+  commodityGroupChangedFrom: z.string().optional(),
 });
 export type ApplicationKonsumsiProductValues = z.infer<typeof konsumsiProductSchema>;
 
