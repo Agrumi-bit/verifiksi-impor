@@ -149,8 +149,35 @@ export const locationLeaseDocEntrySchema = z.object({
 });
 export type LocationLeaseDocEntry = z.infer<typeof locationLeaseDocEntrySchema>;
 
+/**
+ * Where a Company.locations entry came from — shown as a badge wherever a location is listed.
+ * Absent on entries created before this existed, which count as COMPANY_PROFILE.
+ */
+export const LOCATION_SOURCES = ["COMPANY_PROFILE", "APPLICATION", "FIELD_DISCOVERY"] as const;
+export type LocationSource = (typeof LOCATION_SOURCES)[number];
+
+export const FIELD_VERIFICATION_STATUSES = ["UNVERIFIED", "VERIFIED"] as const;
+
 const locationBaseSchema = z.object({
   id: z.string(),
+  // ---- Provenance (Company.locations; copied along into application payloads) — all optional
+  // so every entry saved before this existed stays valid, and declared here (not left as extra
+  // keys) so a Company Profile save, which rewrites the whole array, doesn't strip them.
+  source: z.enum(LOCATION_SOURCES).optional(),
+  /** APPLICATION: the application whose Step 5 "Tambah Lokasi Baru" created it. */
+  sourceApplicationId: z.string().optional(),
+  /** FIELD_DISCOVERY: the surveyor/admin who added it on site, when, and on which assignment. */
+  discoveredByUserId: z.string().optional(),
+  discoveredByName: z.string().optional(),
+  discoveredAt: z.string().optional(),
+  discoveredAssignmentId: z.string().optional(),
+  fieldVerificationStatus: z.enum(FIELD_VERIFICATION_STATUSES).optional(),
+  fieldNotes: z.string().trim().optional(),
+  // ---- Application payload only: which Company.locations entry this application entry is a
+  // snapshot of (same value as `id` for locations picked from the company), and when the
+  // snapshot was taken (refreshed on every submit/resubmit/Admin edit).
+  companyLocationId: z.string().optional(),
+  capturedAt: z.string().optional(),
   locationType: z.enum(LOCATION_TYPES, { message: "Pilih jenis lokasi" }),
   address: requiredString("Jalan wajib diisi"),
   addressDesa: requiredString("Desa/Kelurahan wajib diisi"),

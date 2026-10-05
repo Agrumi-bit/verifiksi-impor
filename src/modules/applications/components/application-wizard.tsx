@@ -256,6 +256,9 @@ export function ApplicationWizard({
 
   const verificationType = form.watch("verificationType");
   const companyId = form.watch("companyId");
+  // "Ubah di profil perusahaan" on Step 5's location cards — the company's own profile page in
+  // Company Workspace, the admin Company detail otherwise.
+  const companyProfileHref = hideCompanyPicker ? "/company-workspace/profile" : companyId ? `/company/${companyId}` : undefined;
   const locationAvailableTypes =
     verificationType === "VIU"
       ? LOCATION_TYPES.filter((type) => type !== "PABRIK")
@@ -624,6 +627,8 @@ export function ApplicationWizard({
                   availableTypes={locationAvailableTypes}
                   typeHint="VIU hanya memerlukan informasi Kantor dan Gudang"
                   companyAddress={companyAddress}
+                  companyProfileHref={companyProfileHref}
+                  applicationId={draftApplicationId ?? adminEditApplicationId ?? null}
                 />
               )}
               {!isVki && currentStep === stepNumberByKey["brands-used"] && (
@@ -665,7 +670,14 @@ export function ApplicationWizard({
 
               {isVki && currentStep === 3 && <VkiStep3Legal form={form} />}
               {isVki && currentStep === 4 && <VkiStep4Tax form={form} />}
-              {isVki && currentStep === 5 && <VkiStep5Locations form={form} companyAddress={companyAddress} />}
+              {isVki && currentStep === 5 && (
+                <VkiStep5Locations
+                  form={form}
+                  companyAddress={companyAddress}
+                  companyProfileHref={companyProfileHref}
+                  applicationId={draftApplicationId ?? adminEditApplicationId ?? null}
+                />
+              )}
               {isVki && currentStep === 6 && <VkiStep6SupportDocument form={form} />}
               {isVki && currentStep === 7 && <VkiStep7DataMesin form={form} />}
               {isVki && currentStep === 8 && <VkiStep8Product form={form} />}

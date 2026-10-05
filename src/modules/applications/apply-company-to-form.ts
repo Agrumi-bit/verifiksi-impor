@@ -99,5 +99,11 @@ export function applyCompanyToForm(setValue: UseFormSetValue<ApplicationWizardVa
   setValue("sktIssuer", company.sktIssuer ?? "");
   setValue("sktDate", toDateInputValue(company.sktDate));
   setValue("sktDocumentPath", company.sktDocumentPath ?? "");
-  setValue("locations", company.locations, { shouldValidate: true });
+  // Every company location starts selected, each linked back to its Company.locations entry —
+  // Step 5 lets the applicant untick any they aren't applying for.
+  setValue(
+    "locations",
+    company.locations.map((location) => ({ ...location, companyLocationId: location.id })),
+    { shouldValidate: true },
+  );
 }

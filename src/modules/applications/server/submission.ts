@@ -27,6 +27,29 @@ const REGISTERED_VIU_SCHEMES = [konsumsiScheme];
 type PrepareResult = { ok: true; values: ApplicationWizardValues } | { ok: false; response: NextResponse };
 
 /**
+ * Re-captures every application location from the live company profile before validation:
+ * an entry linked to a Company.locations entry (by companyLocationId, else by its own id) is
+ * replaced by that entry's current data, so what gets submitted is exactly what the profile says
+ * today; `capturedAt` stamps the snapshot. Entries with no matching company location (legacy
+ * application-only locations) are kept as they are, just stamped.
+ */
+async function refreshLocationSnapshots(body: unknown): Promise<unknown> {
+  if (!body || typeof body !== "object") return body;
+  const raw = body as { companyId?: unknown; locations?: unknown };
+  if (typeof raw.companyId !== "string" || !Array.isArray(raw.locations)) return body;
+
+  const company = await db.company.findUnique({ where: { id: raw.companyId }, select: { locations: true } });
+  const live = new Map(((company?.locations as LocationValues[] | null) ?? []).map((loc) => [loc.id, loc]));
+  const capturedAt = new Date().toISOString();
+  const locations = (raw.locations as Partial<LocationValues>[]).map((loc) => {
+    const linkedId = loc.companyLocationId || loc.id;
+    const current = linkedId ? live.get(linkedId) : undefined;
+    return current ? { ...current, companyLocationId: current.id, capturedAt } : { ...loc, capturedAt };
+  });
+  return { ...raw, locations };
+}
+
+/**
  * Validates a wizard payload and returns the values to persist. `authorize` runs right after the
  * schema parse, before any DB-backed rule, so a caller can refuse (e.g. wrong company) without
  * revealing anything else about the payload.
@@ -37,7 +60,7 @@ export async function prepareApplicationSubmission(
 ): Promise<PrepareResult> {
   // Discriminated by verificationType — the authoritative gate, structurally unable to run
   // a VIU-only rule against a VKI payload (see applicationSubmitSchema's own comment).
-  const parsed = applicationSubmitSchema.safeParse(wizardBody);
+  const parsed = applicationSubmitSchema.safeParse(await refreshLocationSnapshots(wizardBody));
   if (!parsed.success) {
     return {
       ok: false,

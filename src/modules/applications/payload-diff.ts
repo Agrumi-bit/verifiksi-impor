@@ -2,6 +2,8 @@
 export type PayloadFieldChange = { path: string; before: string; after: string };
 
 const IGNORED_TOP_LEVEL_KEYS = new Set(["_meta"]);
+/** Bookkeeping that changes on every save without being a data change (location snapshot time). */
+const IGNORED_KEYS_ANY_DEPTH = new Set(["capturedAt"]);
 const MAX_VALUE_LENGTH = 200;
 
 function display(value: unknown): string {
@@ -25,7 +27,7 @@ function walk(before: unknown, after: unknown, path: string, out: PayloadFieldCh
     const a = isPlainObject(before) ? before : {};
     const b = isPlainObject(after) ? after : {};
     for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
-      if (!path && IGNORED_TOP_LEVEL_KEYS.has(key)) continue;
+      if ((!path && IGNORED_TOP_LEVEL_KEYS.has(key)) || IGNORED_KEYS_ANY_DEPTH.has(key)) continue;
       walk(a[key], b[key], path ? `${path}.${key}` : key, out);
     }
     return;
