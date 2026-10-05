@@ -1,0 +1,593 @@
+{
+  "VKI": [
+    {
+      "id": "nib",
+      "sifat": "WAJIB",
+      "basis": "Pasal 30 ayat (2) huruf b angka 2"
+    },
+    {
+      "id": "kbli-utama",
+      "sifat": "WAJIB",
+      "basis": "Pasal 30 ayat (2) huruf b angka 2"
+    },
+    {
+      "id": "kbli-pendukung",
+      "sifat": "PENDUKUNG",
+      "basis": "Pasal 30 ayat (2) huruf b angka 2"
+    },
+    {
+      "id": "notarial",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "notarial-amendment",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "sk",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "npwp",
+      "sifat": "WAJIB",
+      "basis": "Pasal 30 ayat (2) huruf b angka 1"
+    },
+    {
+      "id": "tax-proof-summary",
+      "sifat": "WAJIB_ALTERNATIF",
+      "basis": "Pasal 30 ayat (2) huruf b angka 7"
+    },
+    {
+      "id": "skt",
+      "sifat": "WAJIB_ALTERNATIF",
+      "basis": "Pasal 30 ayat (2) huruf b angka 7"
+    },
+    {
+      "id": "tax-support",
+      "sifat": "PENDUKUNG",
+      "basis": "Pasal 30 ayat (2) huruf b angka 7"
+    },
+    {
+      "id": "tax-support-skf",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "Pasal 30 ayat (2) huruf b angka 7"
+    },
+    {
+      "id": "location-tenure-kantor",
+      "sifat": "PENDUKUNG",
+      "basis": "Pasal 31 ayat (2) huruf a"
+    },
+    {
+      "id": "location-tenure-pabrik",
+      "sifat": "PENDUKUNG",
+      "basis": "Pasal 31 ayat (2) huruf a"
+    },
+    {
+      "id": "location-tenure-gudang",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "Pasal 31 ayat (2) huruf a"
+    },
+    {
+      "id": "warehouse-registration",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "Pasal 31 ayat (2) huruf a"
+    },
+    {
+      "id": "warehouse-layout",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "Pasal 31 ayat (2) huruf a"
+    },
+    {
+      "id": "sp-memiliki-menguasai",
+      "sifat": "WAJIB",
+      "basis": "Pasal 30 ayat (2) huruf b angka 6 jo. ayat (3)"
+    },
+    {
+      "id": "alur-proses",
+      "sifat": "WAJIB",
+      "basis": "Pasal 30 ayat (2) huruf b angka 5"
+    },
+    {
+      "id": "listrik",
+      "sifat": "WAJIB",
+      "basis": "Pasal 30 ayat (2) huruf b angka 8"
+    },
+    {
+      "id": "tenaga-kerja",
+      "sifat": "WAJIB",
+      "basis": "Pasal 30 ayat (2) huruf b angka 3"
+    },
+    {
+      "id": "sp-tidak-diperjualbelikan",
+      "sifat": "PENDUKUNG",
+      "basis": "Pasal 8 ayat (2) huruf a angka 2 huruf c)"
+    },
+    {
+      "id": "sp-kebenaran-data",
+      "sifat": "PENDUKUNG",
+      "basis": "Pasal 8 ayat (2) huruf a angka 2 huruf d)"
+    }
+  ],
+  "VIU_KONSUMSI": [
+    {
+      "id": "nib",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf c angka 2 huruf b)"
+    },
+    {
+      "id": "kbli-utama",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf c angka 2 huruf b) jo. Pasal 38 ayat (2) huruf b"
+    },
+    {
+      "id": "kbli-pendukung",
+      "sifat": "PENDUKUNG",
+      "basis": "Pasal 37 ayat (2) huruf c angka 2 huruf b) jo. Pasal 38 ayat (2) huruf b"
+    },
+    {
+      "id": "notarial",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "notarial-amendment",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "sk",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "npwp",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf c angka 2 huruf a)"
+    },
+    {
+      "id": "tax-proof-summary",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "skt",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "tax-support",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "tax-support-skf",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "location-tenure-kantor",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf c angka 2 huruf c)"
+    },
+    {
+      "id": "location-tenure-gudang",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf c angka 2 huruf d)"
+    },
+    {
+      "id": "warehouse-registration",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf c angka 2 huruf e)"
+    },
+    {
+      "id": "warehouse-layout",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "surat-pernyataan-modal-kerja",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf c angka 2 huruf i) jo. Pasal 37 ayat (9)"
+    },
+    {
+      "id": "financial-rekening-koran",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-surat-referensi-bank",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-laporan-keuangan",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-fasilitas-kredit",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-keterangan-saldo",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-deposito",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-pinjaman-afiliasi",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-kontrak-po",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-proforma-invoice",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "brand-evidence",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf c angka 2 huruf f)"
+    },
+    {
+      "id": "brand-rel-official_representative_appointment",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (3) huruf a atau ayat (5) huruf c"
+    },
+    {
+      "id": "brand-rel-license_or_sublicense",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (3) huruf b atau ayat (5) huruf d"
+    },
+    {
+      "id": "brand-rel-license_registration",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (3) huruf c atau ayat (5) huruf e"
+    },
+    {
+      "id": "brand-rel-official_rep_deed",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (5) huruf a"
+    },
+    {
+      "id": "brand-rel-official_rep_deed_amendment",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "Pasal 37 ayat (5) huruf a"
+    },
+    {
+      "id": "brand-rel-official_rep_business_license",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (5) huruf b"
+    },
+    {
+      "id": "brand-rel-importer_appointment",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (4)"
+    },
+    {
+      "id": "brand-rel-importer_appointment_from_brand_owner",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (4) huruf a"
+    },
+    {
+      "id": "uji-mutu",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf c angka 2 huruf g)"
+    },
+    {
+      "id": "label-statement",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf c angka 2 huruf h) jo. Pasal 37 ayat (9)"
+    },
+    {
+      "id": "label-documentation",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf c angka 2 huruf h)"
+    }
+  ],
+  "VIU_BAHAN_BAKU_NON_INDUSTRI": [
+    {
+      "id": "nib",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf b angka 2 huruf b)"
+    },
+    {
+      "id": "kbli-utama",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf b angka 2 huruf b) jo. Pasal 38 ayat (2) huruf b"
+    },
+    {
+      "id": "kbli-pendukung",
+      "sifat": "PENDUKUNG",
+      "basis": "Pasal 37 ayat (2) huruf b angka 2 huruf b) jo. Pasal 38 ayat (2) huruf b"
+    },
+    {
+      "id": "notarial",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "notarial-amendment",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "sk",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "npwp",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf b angka 2 huruf a)"
+    },
+    {
+      "id": "tax-proof-summary",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "skt",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "tax-support",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "tax-support-skf",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "location-tenure-kantor",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf b angka 2 huruf c)"
+    },
+    {
+      "id": "location-tenure-gudang",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf b angka 2 huruf d)"
+    },
+    {
+      "id": "warehouse-registration",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf b angka 2 huruf e)"
+    },
+    {
+      "id": "warehouse-layout",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "mitra-non-industri-kontrak",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf b angka 2 huruf f)",
+      "planned": true
+    },
+    {
+      "id": "mitra-non-industri-nib",
+      "sifat": "WAJIB",
+      "basis": "Pasal 39 ayat (4) huruf c",
+      "planned": true
+    },
+    {
+      "id": "surat-pernyataan-modal-kerja",
+      "sifat": "WAJIB",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-rekening-koran",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-surat-referensi-bank",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-laporan-keuangan",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-fasilitas-kredit",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-keterangan-saldo",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-deposito",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-pinjaman-afiliasi",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-kontrak-po",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-proforma-invoice",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    }
+  ],
+  "VIU_BAHAN_BAKU_INDUSTRI": [
+    {
+      "id": "nib",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf a angka 2 huruf b)"
+    },
+    {
+      "id": "kbli-utama",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf a angka 2 huruf b) jo. Pasal 38 ayat (2) huruf b"
+    },
+    {
+      "id": "kbli-pendukung",
+      "sifat": "PENDUKUNG",
+      "basis": "Pasal 37 ayat (2) huruf a angka 2 huruf b) jo. Pasal 38 ayat (2) huruf b"
+    },
+    {
+      "id": "notarial",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "notarial-amendment",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "sk",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "npwp",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf a angka 2 huruf a)"
+    },
+    {
+      "id": "tax-proof-summary",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "skt",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "tax-support",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "tax-support-skf",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "location-tenure-kantor",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf a angka 2 huruf c)"
+    },
+    {
+      "id": "location-tenure-gudang",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf a angka 2 huruf d)"
+    },
+    {
+      "id": "warehouse-registration",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf a angka 2 huruf e)"
+    },
+    {
+      "id": "warehouse-layout",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "mitra-industri-kontrak",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf a angka 2 huruf f)",
+      "planned": true
+    },
+    {
+      "id": "mitra-industri-lhvki",
+      "sifat": "WAJIB",
+      "basis": "Pasal 37 ayat (2) huruf a angka 2 huruf g)"
+    },
+    {
+      "id": "mitra-industri-nib",
+      "sifat": "WAJIB",
+      "basis": "Pasal 39 ayat (3) huruf c"
+    },
+    {
+      "id": "mitra-industri-npwp",
+      "sifat": "WAJIB",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "mitra-industri-sk",
+      "sifat": "PENDUKUNG",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "surat-pernyataan-modal-kerja",
+      "sifat": "WAJIB",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-rekening-koran",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-surat-referensi-bank",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-laporan-keuangan",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-fasilitas-kredit",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-keterangan-saldo",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-deposito",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-pinjaman-afiliasi",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-kontrak-po",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "financial-proforma-invoice",
+      "sifat": "PILIH_SALAH_SATU",
+      "basis": "INTERNAL_LVI"
+    }
+  ]
+}
