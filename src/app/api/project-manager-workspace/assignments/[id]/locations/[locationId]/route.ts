@@ -50,6 +50,8 @@ export async function GET(
       applicationNumber: visit.assignment.application.applicationNumber,
       verificationType: visit.assignment.application.verificationType,
       surveyorName: visit.assignment.surveyor?.name ?? null,
+      pmReviewStatus: visit.assignment.pmReviewStatus,
+      pmReviewedAt: visit.assignment.pmReviewedAt,
       company: {
         companyName: payload.companyName ?? "—",
         nibNumber: payload.nibNumber ?? null,

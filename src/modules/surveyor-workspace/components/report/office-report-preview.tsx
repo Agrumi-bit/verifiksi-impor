@@ -49,6 +49,8 @@ type LocationReportDetail = {
   applicationNumber: string;
   verificationType: string;
   surveyorName: string | null;
+  pmReviewStatus: "APPROVED" | "REJECTED" | null;
+  pmReviewedAt: string | null;
   company: {
     companyName: string;
     nibNumber: string | null;
@@ -232,6 +234,12 @@ export function OfficeReportPreview({
   const company = data.company.companyName;
   const reportVerification = data.reportVerification;
   const reviewDecision = reportVerification?.decision ?? null;
+  // "TANGGAL TERBIT" only applies once Project Manager has approved this survey report — before
+  // that, the cover shows "TANGGAL PENYUSUNAN" dated to the surveyor's own actual visit (Step 0),
+  // not a submission timestamp that implies an official issue date it doesn't have yet.
+  const isPmApproved = data.pmReviewStatus === "APPROVED";
+  const coverDateLabel = isPmApproved ? "TANGGAL TERBIT" : "TANGGAL PENYUSUNAN";
+  const coverDateValue = isPmApproved ? data.pmReviewedAt : ov.actualVisitDate || null;
   const reviewContext: ReportChecklistContext = {
     applicationNumber: data.applicationNumber,
     companyName: company,
@@ -355,8 +363,8 @@ export function OfficeReportPreview({
                 <div className="rd-cover-meta-value rd-mono">{data.applicationNumber}</div>
               </div>
               <div>
-                <div className="rd-cover-meta-label">TANGGAL TERBIT</div>
-                <div className="rd-cover-meta-value">{fmtDate(data.submittedAt ?? new Date().toISOString())}</div>
+                <div className="rd-cover-meta-label">{coverDateLabel}</div>
+                <div className="rd-cover-meta-value">{fmtDate(coverDateValue)}</div>
               </div>
               <div>
                 <div className="rd-cover-meta-label">DISUSUN OLEH</div>
