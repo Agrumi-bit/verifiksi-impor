@@ -161,7 +161,8 @@ export function CertificateReviewUploadModal({ apiBase, docKey, docTitle, onClos
                 <option value="">Pilih sertifikat...</option>
                 {(existingOptions ?? []).map((option) => (
                   <option key={option.id} value={option.id}>
-                    {option.certificateNumber} — {option.laboratoryName}
+                    {option.certificateNumber} — {option.laboratoryName} · cakupan: {option.coverageNames.join(", ")}
+                    {option.coversGroup ? "" : " (Sub Kelompok berbeda)"}
                   </option>
                 ))}
               </select>

@@ -49,6 +49,8 @@ type DetailData = {
     expiryDate: string | null;
     commodityGroup: { name: string };
     commoditySubGroup: { name: string } | null;
+    /** Sub Kelompok covered besides the primary one (absent on older API responses). */
+    coverages?: { commodityGroup: { name: string } }[];
   }[];
 };
 
@@ -279,7 +281,7 @@ export function BrandDetailDrawer({ id, apiBase, detailHref, onClose, onEdit, de
                       {data.qualityTests.map((qt) => (
                         <div key={qt.id} className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs">
                           <p className="font-semibold">
-                            {qt.commodityGroup.name}
+                            {[qt.commodityGroup.name, ...(qt.coverages ?? []).map((c) => c.commodityGroup.name)].join(", ")}
                             {qt.commoditySubGroup && ` / ${qt.commoditySubGroup.name}`}
                           </p>
                           <p className="text-muted-foreground">{qt.certificateNumber} · {qt.laboratoryName}</p>

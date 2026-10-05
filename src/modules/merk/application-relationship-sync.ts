@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { resolveKonsumsiBrandContexts, type ChecklistKonsumsiBrandContext } from "@/modules/verifikator-workspace/konsumsi-brand-context";
 import type { ApplicationBrandEntryValues, ProductGroupCertificateValues } from "@/modules/applications/viu-schemes/konsumsi/schema";
+import { groupSharedCertificates } from "@/modules/applications/viu-schemes/konsumsi/shared-certificates";
 
 type SyncInput = {
   applicationId: string;
@@ -96,10 +97,15 @@ export async function syncMerkRelationshipsForApplication({
  * the sync contract. Called at submit and at every subsequent non-draft save of the same
  * application, same lifecycle as `syncMerkRelationshipsForApplication` above — never for a DRAFT.
  *
- * Only entries WITHOUT a `qualityTestId` (freshly uploaded, not referenced from an existing row)
- * get written — one upserted row per (merkId, commodityGroupId, sourceApplicationId). An entry
- * that referenced an existing certificate is intentionally skipped: that row already exists and is
- * already visible in Hasil Uji Mutu, so syncing it again would duplicate it.
+ * Entries are grouped by certificate identity (shared-certificates.ts): one certificate used by N
+ * Sub Kelompok becomes ONE row — primary `commodityGroupId` = its first group — plus coverage rows
+ * for the other N-1 groups, never N copies.
+ *   - A freshly uploaded certificate (no `qualityTestId`) is upserted per
+ *     (merkId, primary commodityGroupId, sourceApplicationId).
+ *   - A certificate picked from an existing row is never duplicated; only the groups it now also
+ *     covers in this application are added as coverage rows (tagged with this application).
+ * Rows and coverages this application added that are no longer used are removed; MANUAL rows and
+ * other applications' rows/coverages are never touched.
  *
  * No-op when `productGroupCertificates` is empty (not a Konsumsi application, or no certificates
  * attached yet).
@@ -113,25 +119,39 @@ export async function syncQualityTestCertificatesForApplication({
 }): Promise<void> {
   if (productGroupCertificates.length === 0) return;
 
-  const freshCertificates = productGroupCertificates.filter((certificate) => !certificate.qualityTestId);
-  const desiredGroupKeys = freshCertificates.map((certificate) => `${certificate.brandId}|${certificate.commodityGroupId}`);
+  const buckets = groupSharedCertificates(productGroupCertificates);
+  const freshBuckets = buckets.filter((bucket) => !bucket[0].qualityTestId);
+  const pickedBuckets = buckets.filter((bucket) => Boolean(bucket[0].qualityTestId));
+  const desiredPrimaryKeys = new Set(freshBuckets.map((bucket) => `${bucket[0].brandId}|${bucket[0].commodityGroupId}`));
 
   await db.$transaction(async (tx) => {
     // A certificate removed (or switched to "pilih existing") since the last sync — drop its
-    // stale APPLICATION row. Never touches MANUAL rows or other applications' own rows.
+    // stale APPLICATION row (its coverages cascade). Never touches MANUAL rows or other
+    // applications' own rows.
     const existingAppRows = await tx.brandQualityTest.findMany({
       where: { sourceApplicationId: applicationId, sourceType: "APPLICATION" },
       select: { id: true, merkId: true, commodityGroupId: true },
     });
     const staleIds = existingAppRows
-      .filter((row) => !desiredGroupKeys.includes(`${row.merkId}|${row.commodityGroupId}`))
+      .filter((row) => !desiredPrimaryKeys.has(`${row.merkId}|${row.commodityGroupId}`))
       .map((row) => row.id);
     if (staleIds.length > 0) {
       await tx.brandQualityTest.deleteMany({ where: { id: { in: staleIds } } });
     }
 
-    for (const certificate of freshCertificates) {
-      await tx.brandQualityTest.upsert({
+    const desiredCoverages: { qualityTestId: string; commodityGroupId: string }[] = [];
+
+    for (const bucket of freshBuckets) {
+      const [certificate, ...others] = bucket;
+      const data = {
+        certificateNumber: certificate.certificateNumber,
+        laboratoryName: certificate.laboratoryName,
+        issueDate: new Date(certificate.issueDate),
+        expiryDate: certificate.validUntil ? new Date(certificate.validUntil) : null,
+        filePath: certificate.filePath,
+        fileName: certificate.fileName,
+      };
+      const row = await tx.brandQualityTest.upsert({
         where: {
           merkId_commodityGroupId_sourceApplicationId: {
             merkId: certificate.brandId,
@@ -140,25 +160,52 @@ export async function syncQualityTestCertificatesForApplication({
           },
         },
         create: {
+          ...data,
           merkId: certificate.brandId,
           commodityGroupId: certificate.commodityGroupId,
-          certificateNumber: certificate.certificateNumber,
-          laboratoryName: certificate.laboratoryName,
-          issueDate: new Date(certificate.issueDate),
-          expiryDate: certificate.validUntil ? new Date(certificate.validUntil) : null,
-          filePath: certificate.filePath,
-          fileName: certificate.fileName,
           sourceType: "APPLICATION",
           sourceApplicationId: applicationId,
         },
-        update: {
-          certificateNumber: certificate.certificateNumber,
-          laboratoryName: certificate.laboratoryName,
-          issueDate: new Date(certificate.issueDate),
-          expiryDate: certificate.validUntil ? new Date(certificate.validUntil) : null,
-          filePath: certificate.filePath,
-          fileName: certificate.fileName,
-        },
+        update: data,
+        select: { id: true },
+      });
+      for (const other of others) {
+        if (other.commodityGroupId !== certificate.commodityGroupId) {
+          desiredCoverages.push({ qualityTestId: row.id, commodityGroupId: other.commodityGroupId });
+        }
+      }
+    }
+
+    const pickedIds = pickedBuckets.map((bucket) => bucket[0].qualityTestId!);
+    const pickedRows = pickedIds.length > 0
+      ? await tx.brandQualityTest.findMany({ where: { id: { in: pickedIds } }, select: { id: true, merkId: true, commodityGroupId: true } })
+      : [];
+    const pickedById = new Map(pickedRows.map((row) => [row.id, row]));
+    for (const bucket of pickedBuckets) {
+      const row = pickedById.get(bucket[0].qualityTestId!);
+      if (!row) continue;
+      for (const entry of bucket) {
+        if (entry.brandId === row.merkId && entry.commodityGroupId !== row.commodityGroupId) {
+          desiredCoverages.push({ qualityTestId: row.id, commodityGroupId: entry.commodityGroupId });
+        }
+      }
+    }
+
+    const desiredCoverageKeys = new Set(desiredCoverages.map((c) => `${c.qualityTestId}|${c.commodityGroupId}`));
+    const existingCoverages = await tx.brandQualityTestCoverage.findMany({
+      where: { sourceApplicationId: applicationId },
+      select: { id: true, qualityTestId: true, commodityGroupId: true },
+    });
+    const staleCoverageIds = existingCoverages
+      .filter((c) => !desiredCoverageKeys.has(`${c.qualityTestId}|${c.commodityGroupId}`))
+      .map((c) => c.id);
+    if (staleCoverageIds.length > 0) {
+      await tx.brandQualityTestCoverage.deleteMany({ where: { id: { in: staleCoverageIds } } });
+    }
+    if (desiredCoverages.length > 0) {
+      await tx.brandQualityTestCoverage.createMany({
+        data: desiredCoverages.map((c) => ({ ...c, sourceApplicationId: applicationId })),
+        skipDuplicates: true,
       });
     }
   });
