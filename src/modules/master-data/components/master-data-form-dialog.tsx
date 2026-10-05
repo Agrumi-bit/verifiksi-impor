@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { SearchSelectInput } from "@/components/form/search-select-input";
 import type { MasterDataField, MasterDataRow } from "../types";
@@ -12,7 +12,12 @@ type Props = {
   fields: MasterDataField[];
   initialValues?: MasterDataRow | null;
   onSubmit: (values: Record<string, string>) => Promise<void>;
+  /** Optional notice above the form buttons, computed from the row being edited and the current
+   * form values (e.g. HS Code: how many applications a Sub Kelompok change affects). */
+  formNotice?: FormNotice;
 };
+
+export type FormNotice = (context: { initialValues?: MasterDataRow | null; values: Record<string, string> }) => ReactNode;
 
 export function MasterDataFormDialog({
   open,
@@ -21,6 +26,7 @@ export function MasterDataFormDialog({
   fields,
   initialValues,
   onSubmit,
+  formNotice,
 }: Props) {
   if (!open) return null;
 
@@ -49,6 +55,7 @@ export function MasterDataFormDialog({
           fields={fields}
           initialValues={initialValues}
           onSubmit={onSubmit}
+          formNotice={formNotice}
           onCancel={() => onOpenChange(false)}
           onDone={() => onOpenChange(false)}
         />
@@ -61,6 +68,7 @@ type FormProps = {
   fields: MasterDataField[];
   initialValues?: MasterDataRow | null;
   onSubmit: (values: Record<string, string>) => Promise<void>;
+  formNotice?: FormNotice;
   onCancel: () => void;
   onDone: () => void;
 };
@@ -85,7 +93,7 @@ const inputClass =
   "w-full rounded-lg border-none bg-[#f2f0ee] px-3 py-2.5 text-[13px] text-[#261813] outline-none";
 const labelClass = "mb-1.5 block text-[12px] font-semibold text-[#594138]";
 
-function MasterDataForm({ fields, initialValues, onSubmit, onCancel, onDone }: FormProps) {
+function MasterDataForm({ fields, initialValues, onSubmit, formNotice, onCancel, onDone }: FormProps) {
   const [values, setValues] = useState<Record<string, string>>(() =>
     buildInitialValues(fields, initialValues),
   );
@@ -211,6 +219,7 @@ function MasterDataForm({ fields, initialValues, onSubmit, onCancel, onDone }: F
           )}
         </div>
       ))}
+      {formNotice?.({ initialValues, values })}
       <div className="mt-2 flex justify-end gap-2.5">
         <button
           type="button"

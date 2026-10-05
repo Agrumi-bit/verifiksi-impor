@@ -69,7 +69,17 @@ export function ProductTable({
         <tbody>
           {rows.map(({ product, index }) => (
             <tr key={product.id} className="border-t border-border">
-              <td className="px-3 py-2">{product.productName}</td>
+              <td className="px-3 py-2">
+                {product.productName}
+                {product.commodityGroupChangedFrom && (
+                  <span
+                    className="mt-1 block w-fit rounded-full bg-amber-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-amber-800 dark:text-amber-300"
+                    title={`Sebelumnya: ${product.commodityGroupChangedFrom}`}
+                  >
+                    Sub Kelompok diperbarui mengikuti master HS Code (sebelumnya {product.commodityGroupChangedFrom})
+                  </span>
+                )}
+              </td>
               <td className="px-3 py-2 font-mono">{product.hsCode}</td>
               <td className="px-3 py-2 text-xs text-muted-foreground">{product.hsDescription}</td>
               <td className="px-3 py-2">

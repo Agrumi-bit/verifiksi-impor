@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronsUpDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 
-import { MasterDataFormDialog } from "./master-data-form-dialog";
+import { MasterDataFormDialog, type FormNotice } from "./master-data-form-dialog";
 import type { MasterDataColumn, MasterDataField, MasterDataRow } from "../types";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
@@ -23,6 +23,8 @@ type Props = {
   requireReasonOnDeactivate?: boolean;
   /** Extra buttons rendered next to "+ Tambah" — e.g. Excel import/export, when a page needs it. */
   headerActions?: ReactNode;
+  /** See MasterDataFormDialog's `formNotice`. */
+  formNotice?: FormNotice;
 };
 
 function cellValue(row: MasterDataRow, column: MasterDataColumn): string {
@@ -47,6 +49,7 @@ export function MasterDataPage({
   addButtonLabel,
   requireReasonOnDeactivate,
   headerActions,
+  formNotice,
 }: Props) {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -374,6 +377,7 @@ export function MasterDataPage({
         fields={fields}
         initialValues={editingRow}
         onSubmit={handleSubmit}
+        formNotice={formNotice}
       />
 
       {deactivateTarget && (

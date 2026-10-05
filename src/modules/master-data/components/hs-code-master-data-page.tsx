@@ -217,6 +217,45 @@ export function HsCodeMasterDataPage() {
         },
       ]}
       addButtonLabel="Tambah HS Code"
+      formNotice={({ initialValues, values }) => {
+        const originalGroupId = initialValues?.commodityGroupId;
+        if (!initialValues?.id || typeof originalGroupId !== "string" || !values.commodityGroupId || values.commodityGroupId === originalGroupId) {
+          return null;
+        }
+        return <HsCodeRegroupNotice hsCodeId={String(initialValues.id)} />;
+      }}
     />
+  );
+}
+
+/** Warns before an HS Code moves to another Sub Kelompok Komoditas: VIU Konsumsi products using it
+ * in drafts / active applications are regrouped the next time they're opened, and their new group
+ * may need its own Hasil Uji Mutu certificate. */
+function HsCodeRegroupNotice({ hsCodeId }: { hsCodeId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["master-data-hs-code", hsCodeId, "usage"],
+    queryFn: async () => {
+      const response = await fetch(`/api/master-data/hs-code/${hsCodeId}/usage`);
+      if (!response.ok) throw new Error("Gagal memuat pemakaian HS Code");
+      const json = (await response.json()) as { data: { drafts: number; active: number; total: number } };
+      return json.data;
+    },
+  });
+  return (
+    <div className="rounded-lg border border-amber-500/40 bg-amber-50 px-3 py-2.5 text-[12px] text-amber-900">
+      <p className="font-semibold">Sub Kelompok Komoditas HS Code ini akan diubah.</p>
+      {isLoading ? (
+        <p>Memeriksa pemakaian di permohonan…</p>
+      ) : data && data.total > 0 ? (
+        <p>
+          HS Code ini dipakai di <strong>{data.drafts} draft/revisi</strong> dan <strong>{data.active} permohonan aktif</strong> VIU
+          Barang Konsumsi. Produk pada draft/revisi (dan permohonan yang diedit Admin) akan dipindah ke Sub Kelompok baru saat
+          dibuka, dan grup barunya mungkin memerlukan sertifikat Hasil Uji Mutu tersendiri. Permohonan aktif lainnya tetap
+          seperti saat diajukan.
+        </p>
+      ) : (
+        <p>Tidak ada draft atau permohonan aktif yang memakai HS Code ini.</p>
+      )}
+    </div>
   );
 }

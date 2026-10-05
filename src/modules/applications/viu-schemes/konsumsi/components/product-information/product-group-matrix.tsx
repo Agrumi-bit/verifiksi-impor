@@ -3,7 +3,7 @@
 import { Link2 } from "lucide-react";
 
 import type { ApplicationBrandEntryValues, ApplicationKonsumsiProductValues, ProductGroupCertificateValues } from "../../schema";
-import { konsumsiProductTotal } from "../../schema";
+import { deriveProductGroups, konsumsiProductTotal, productGroupKey } from "../../schema";
 import { otherGroupsSharing } from "../../shared-certificates";
 import { CERTIFICATE_STATUS_CLASSES, CERTIFICATE_STATUS_LABELS, computeCertificateStatus } from "./certificate-status";
 
@@ -30,9 +30,12 @@ function formatMoney(value: number): string {
  * `id={konsumsi-group-${brandId}-${commodityGroupId}}`).
  */
 export function ProductGroupMatrix({ applicationBrands, brandOptions, products, certificates }: Props) {
+  // Same grouping as the submit rules and the server (deriveProductGroups/productGroupKey).
+  const groups = deriveProductGroups(products);
+  const groupKeys = new Set(groups.map((group) => productGroupKey(group)));
   const columns = new Map<string, string>();
-  for (const product of products) {
-    if (!columns.has(product.commodityGroupId)) columns.set(product.commodityGroupId, product.commodityName || product.commodityGroupId);
+  for (const group of groups) {
+    if (!columns.has(group.commodityGroupId)) columns.set(group.commodityGroupId, group.commodityName || group.commodityGroupId);
   }
   if (columns.size === 0 || applicationBrands.length === 0) return null;
 
@@ -65,12 +68,13 @@ export function ProductGroupMatrix({ applicationBrands, brandOptions, products, 
             <tr key={brand.brandId} className="border-b border-border last:border-0">
               <td className="px-3 py-2.5 font-semibold">{brandLabel(brand.brandId)}</td>
               {[...columns.keys()].map((commodityGroupId) => {
-                const groupProducts = products.filter((p) => p.brandId === brand.brandId && p.commodityGroupId === commodityGroupId);
-                if (groupProducts.length === 0) {
+                const groupKey = productGroupKey({ brandId: brand.brandId, commodityGroupId });
+                const groupProducts = products.filter((p) => productGroupKey(p) === groupKey);
+                if (!groupKeys.has(groupKey)) {
                   return <td key={commodityGroupId} className="px-3 py-2.5 text-center text-muted-foreground">—</td>;
                 }
                 const total = groupProducts.reduce((sum, p) => sum + konsumsiProductTotal(p), 0);
-                const certificate = certificates.find((c) => c.brandId === brand.brandId && c.commodityGroupId === commodityGroupId);
+                const certificate = certificates.find((c) => productGroupKey(c) === groupKey);
                 const status = computeCertificateStatus(certificate, { brandId: brand.brandId, commodityGroupId }, today);
                 const sharedWith = certificate?.filePath ? otherGroupsSharing(certificates, certificate) : [];
                 return (

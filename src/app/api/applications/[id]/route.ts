@@ -6,7 +6,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireAdminSession } from "@/lib/require-admin-session";
 import { normalizeKonsumsiPayload } from "@/modules/applications/viu-schemes/konsumsi/normalize";
-import { backfillKonsumsiHsCodes } from "@/modules/applications/viu-schemes/konsumsi/server/backfill-hs-codes";
+import { resyncKonsumsiProductCommodities } from "@/modules/applications/viu-schemes/konsumsi/server/backfill-hs-codes";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { EDIT_REASON_MIN_LENGTH, getAdminEditBlockReason } from "@/modules/applications/edit-rules";
 import { diffApplicationPayload } from "@/modules/applications/payload-diff";
@@ -35,7 +35,9 @@ export async function GET(
     );
   }
 
-  const payload = await backfillKonsumsiHsCodes(normalizeKonsumsiPayload(application.payload as ApplicationWizardValues));
+  // Loaded into the wizard (draft resume, Admin edit): regroup products by the CURRENT HS Code
+  // master data, exactly as the server will at submit/save — see resyncKonsumsiProductCommodities.
+  const payload = await resyncKonsumsiProductCommodities(normalizeKonsumsiPayload(application.payload as ApplicationWizardValues));
   const company = application.companyId
     ? await db.company.findUnique({ where: { id: application.companyId }, select: { locations: true } })
     : null;

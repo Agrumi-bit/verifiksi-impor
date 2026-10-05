@@ -8,7 +8,7 @@ import { getDocumentMeta } from "@/modules/company/document-versions";
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { normalizeKonsumsiPayload } from "@/modules/applications/viu-schemes/konsumsi/normalize";
-import { backfillKonsumsiHsCodes } from "@/modules/applications/viu-schemes/konsumsi/server/backfill-hs-codes";
+import { backfillKonsumsiHsCodes, resyncKonsumsiProductCommodities } from "@/modules/applications/viu-schemes/konsumsi/server/backfill-hs-codes";
 import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS } from "@/modules/verifikator-workspace/schema";
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
 import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
@@ -60,7 +60,11 @@ export async function GET(
   }
 
   const company = await db.company.findUnique({ where: { id: companyId } });
-  const payload = await backfillKonsumsiHsCodes(normalizeKonsumsiPayload(application.payload as ApplicationWizardValues));
+  // A draft / returned application is loaded into the wizard: regroup its products by the CURRENT
+  // HS Code master data, exactly as the server will at submit. Otherwise only backfill legacy rows.
+  const editable = application.status === "DRAFT" || application.status === "RETURNED";
+  const normalized = normalizeKonsumsiPayload(application.payload as ApplicationWizardValues);
+  const payload = editable ? await resyncKonsumsiProductCommodities(normalized) : await backfillKonsumsiHsCodes(normalized);
   const checklist = buildDocumentChecklist(payload, toChecklistCompanyContext(company), await resolvePartnerContexts(payload));
   const companyKeys = checklist.filter((item) => item.key in COMPANY_MAPPED_DOCUMENT_KEYS).map((item) => item.key);
   const appOnlyKeys = checklist.filter((item) => !(item.key in COMPANY_MAPPED_DOCUMENT_KEYS)).map((item) => item.key);

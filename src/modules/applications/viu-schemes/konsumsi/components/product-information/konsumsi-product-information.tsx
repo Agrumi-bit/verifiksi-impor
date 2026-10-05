@@ -5,7 +5,7 @@ import { useWatch, type UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { useApplicationBrandOptions } from "../../../../hooks/use-application-brand-options";
 import type { ApplicationWizardValues } from "../../../../schema";
-import { deriveProductGroups, konsumsiProductTotal } from "../../schema";
+import { deriveProductGroups, konsumsiProductTotal, productGroupKey } from "../../schema";
 import { BrandProductSection } from "./brand-product-section";
 import { CurrencyTotals } from "./product-summary";
 import { ProductGroupMatrix } from "./product-group-matrix";
@@ -72,12 +72,11 @@ export function KonsumsiProductInformation({ form, onNavigateToBrandsStep }: Pro
   // no brand name, since applyKonsumsiSubmitRules is a synchronous refinement with no DB/network
   // access to resolve one). Shown proactively, not just after a failed "Lanjut" attempt.
   const missingCertificateGroups = deriveProductGroups(products).filter(
-    (group) =>
-      !certificates.some(
-        (certificate) =>
-          certificate.brandId === group.brandId && certificate.commodityGroupId === group.commodityGroupId && certificate.filePath,
-      ),
+    (group) => !certificates.some((certificate) => productGroupKey(certificate) === productGroupKey(group) && certificate.filePath),
   );
+  // Products the HS Code master data moved to another Sub Kelompok since they were entered (see
+  // resyncKonsumsiProductCommodities) — their group may now need its own certificate.
+  const regroupedProducts = products.filter((product) => product.commodityGroupChangedFrom);
 
   return (
     <div className="mt-8 flex flex-col gap-6 border-t border-border pt-8">
@@ -98,6 +97,23 @@ export function KonsumsiProductInformation({ form, onNavigateToBrandsStep }: Pro
           <CurrencyTotals totals={totalsByCurrency} />
         </div>
       </div>
+
+      {regroupedProducts.length > 0 && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-300">
+          <p className="font-semibold">Sub Kelompok Komoditas diperbarui mengikuti master HS Code</p>
+          <p className="mt-0.5">
+            HS Code berikut dipindahkan admin ke Sub Kelompok lain setelah produk diinput. Pastikan grup barunya memiliki
+            sertifikat Hasil Uji Mutu (bisa memakai sertifikat yang sudah ada).
+          </p>
+          <ul className="mt-1 list-disc pl-4">
+            {regroupedProducts.map((product) => (
+              <li key={product.id}>
+                {product.productName} ({product.hsCode}): {product.commodityGroupChangedFrom} → <strong>{product.commodityName}</strong>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {(typeof productsError === "string" || missingCertificateGroups.length > 0) && (
         <div className="flex flex-col gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
