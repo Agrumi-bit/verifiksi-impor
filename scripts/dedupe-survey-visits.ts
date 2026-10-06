@@ -71,6 +71,7 @@ type SurveyVisit = {
   companyLocationId: string | null;
   submittedAt?: Date | string | null;
   updatedAt?: Date | string | null;
+  createdAt?: Date | string | null;
   checklist?: unknown;
   photos?: unknown;
   interviews?: unknown;
@@ -192,7 +193,12 @@ const SELECTION_RULES: { reason: string; score: (visit: VisitCandidate) => numbe
   { reason: "sudah disubmit (submittedAt terisi)", score: (v) => (v.submittedAt ? 1 : 0) },
   { reason: "berstatus COMPLETED", score: (v) => (v.status === "COMPLETED" ? 1 : 0) },
   { reason: "IN_PROGRESS dengan isian terbanyak", score: (v) => (v.status === "IN_PROGRESS" ? 1 + visitFilledCount(v) : 0) },
-  { reason: "paling baru", score: (v) => Math.max(timestamp(v.submittedAt), timestamp(v.updatedAt)) },
+  {
+    reason: "paling baru (visit berisi) / paling lama (visit kosong)",
+    // Between two untouched visits the ORIGINAL one is kept — the later one is just the copy an older
+    // version made for the same location. Between visits with data, the most recent wins.
+    score: (v) => (visitHasData(v) ? Math.max(timestamp(v.submittedAt), timestamp(v.updatedAt)) : -timestamp(v.createdAt)),
+  },
 ];
 
 /** Ranks two candidates; > 0 means `a` should be kept over `b`. */

@@ -104,6 +104,15 @@ describe("pickActiveVisit priority", () => {
     assert.match(picked!.reason, /^dipilih karena/);
   });
 
+  it("between two untouched visits the original (oldest) is kept; between visits with data, the newest", () => {
+    const original = kantorVisit({ createdAt: new Date("2026-09-01"), updatedAt: new Date("2026-09-01") });
+    const copy = kantorVisit({ createdAt: new Date("2026-10-03"), updatedAt: new Date("2026-10-03") });
+    assert.equal(pickActiveVisit([copy, original])?.visit, original);
+    const olderWithData = kantorVisit({ status: "COMPLETED", submittedAt: new Date("2026-01-01"), createdAt: new Date("2026-01-01") });
+    const newerWithData = kantorVisit({ status: "COMPLETED", submittedAt: new Date("2026-02-01"), createdAt: new Date("2026-02-01") });
+    assert.equal(pickActiveVisit([olderWithData, newerWithData])?.visit, newerWithData);
+  });
+
   it("a NOT_STARTED duplicate never wins", () => {
     const empty = kantorVisit();
     const filled = kantorVisit({ status: "IN_PROGRESS" });
