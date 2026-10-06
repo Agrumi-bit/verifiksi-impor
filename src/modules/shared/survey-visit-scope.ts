@@ -116,19 +116,33 @@ function isFilled(value: unknown): boolean {
   return Array.isArray(value) ? value.length > 0 : value != null;
 }
 
-/** How much the surveyor actually entered — answered checklist rows, photos, interviews, findings,
- * and each filled verification form / note. */
+/** Number of values the surveyor actually filled in somewhere in a form/JSON blob: non-empty text,
+ * numbers, ticked checkboxes and list items, recursively. Defaults (empty text, unticked boxes)
+ * don't count, so an untouched form scores 0. */
+function countFilledValues(value: unknown): number {
+  if (value == null) return 0;
+  if (typeof value === "string") return value.trim() ? 1 : 0;
+  if (typeof value === "number") return 1;
+  if (typeof value === "boolean") return value ? 1 : 0;
+  if (Array.isArray(value)) return value.reduce((sum: number, item) => sum + countFilledValues(item), 0);
+  if (typeof value === "object") return Object.values(value).reduce((sum: number, item) => sum + countFilledValues(item), 0);
+  return 0;
+}
+
+/** How much the surveyor actually entered — answered checklist rows plus every filled value in the
+ * photos, interviews, findings and the office/warehouse/factory verification forms, and the notes. */
 export function visitFilledCount(visit: SurveyVisit): number {
   const answered = Array.isArray(visit.checklist)
     ? visit.checklist.filter((item) => item && typeof item === "object" && "result" in item && (item as { result: unknown }).result != null).length
     : 0;
-  const lengthOf = (value: unknown) => (Array.isArray(value) ? value.length : 0);
   return (
     answered +
-    lengthOf(visit.photos) +
-    lengthOf(visit.interviews) +
-    lengthOf(visit.findings) +
-    [visit.officeVerification, visit.warehouseVerification, visit.factoryVerification].filter((v) => v != null).length +
+    countFilledValues(visit.photos) +
+    countFilledValues(visit.interviews) +
+    countFilledValues(visit.findings) +
+    countFilledValues(visit.officeVerification) +
+    countFilledValues(visit.warehouseVerification) +
+    countFilledValues(visit.factoryVerification) +
     (visit.reportSummary ? 1 : 0) +
     (visit.fieldObservationNotes ? 1 : 0)
   );

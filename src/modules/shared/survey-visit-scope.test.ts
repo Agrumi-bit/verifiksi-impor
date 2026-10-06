@@ -84,6 +84,18 @@ describe("pickActiveVisit priority", () => {
     assert.match(picked!.reason, /baru/);
   });
 
+  it("counts every filled value inside a verification form, not one per form", () => {
+    const few = kantorVisit({ status: "IN_PROGRESS", officeVerification: { a: "x", b: "" } });
+    const many = kantorVisit({ status: "IN_PROGRESS", officeVerification: { a: "x", b: "y", c: ["p", "q"], d: { e: 3, f: false, g: true } } });
+    assert.equal(pickActiveVisit([few, many])?.visit, many);
+  });
+
+  it("an untouched form (empty text, unticked boxes) counts as nothing", () => {
+    const untouched = kantorVisit({ status: "IN_PROGRESS", officeVerification: { a: "", b: false, c: [] } });
+    const typed = kantorVisit({ status: "IN_PROGRESS", fieldObservationNotes: "catatan" });
+    assert.equal(pickActiveVisit([untouched, typed])?.visit, typed);
+  });
+
   it("explains why one of two COMPLETED visits was chosen", () => {
     const earlier = kantorVisit({ status: "COMPLETED", submittedAt: new Date("2026-01-01") });
     const later = kantorVisit({ status: "COMPLETED", submittedAt: new Date("2026-02-01") });
