@@ -11,6 +11,13 @@
 // Never touches Assignment rows or statuses — the surveyor submits the Kantor assignment
 // themselves afterwards.
 //
+// Second wave: the same mix-up on two more applications — a surveyor filled in the KANTOR visit
+// under a sibling survey assignment. Each is moved to the assignment scheduled for that location
+// (SIBLING_MOVES below), with extra guards: ABORT if either assignment already has a PM review
+// decision beyond PENDING, if the visit isn't for the target's location or holds no data, or if
+// the target already has data for that location; an empty visit for the same location on the
+// target is deleted. Any single ABORT stops the whole run before anything is written.
+//
 // DRY-RUN by default (read-only). Applying needs BOTH --apply and --backup-file=<path> pointing
 // at a non-empty pg_dump of location_visit + assignment taken beforehand, e.g.:
 //   pg_dump "$DATABASE_URL" -t location_visit -t assignment -f /tmp/survey-fix-backup.sql
@@ -141,6 +148,22 @@ const PLAN = {
   deleteIfEmptyVisitIds: ["cmuvqeeu700970apc8n6q0mof", "cmuvqeeu800980apcnik2jrxr"],
 };
 
+/** Visits a surveyor filled in under a sibling assignment, resolved by assignment number. */
+const SIBLING_MOVES = [
+  {
+    applicationNumber: "APP-VIU-20261005-0C5111CC",
+    visitId: "cmuvs403x009u0apcfv2rbnjm",
+    fromAssignmentNumber: "ASG-SURVEY-20261005-869224AC",
+    toAssignmentNumber: "ASG-SURVEY-20261005-22501892",
+  },
+  {
+    applicationNumber: "APP-VIU-20261005-8C3445C6",
+    visitId: "cmuvcwaz0000h0an5ynt0l1sm",
+    fromAssignmentNumber: "ASG-SURVEY-20261005-A9C4C012",
+    toAssignmentNumber: "ASG-SURVEY-20261005-A059C1D4",
+  },
+];
+
 const args = process.argv.slice(2);
 const apply = args.includes("--apply");
 const backupFile = args.find((arg) => arg.startsWith("--backup-file="))?.slice("--backup-file=".length);
@@ -221,8 +244,73 @@ async function planKnownFix() {
   return { toDelete, moveVisit, toAssignment };
 }
 
+type Plan = {
+  toDelete: Visit[];
+  moveVisit: Visit;
+  toAssignment: { id: string };
+};
+
+function isDecidedByPm(pmReviewStatus: string | null): boolean {
+  return pmReviewStatus != null && pmReviewStatus !== "PENDING";
+}
+
+async function planSiblingMove(move: (typeof SIBLING_MOVES)[number]): Promise<Plan | null> {
+  console.log(`\n--- ${move.applicationNumber}: visit ${move.visitId} ---`);
+  const [moveVisit, fromAssignment, toAssignment] = await Promise.all([
+    db.locationVisit.findUnique({ where: { id: move.visitId } }),
+    db.assignment.findUnique({ where: { assignmentNumber: move.fromAssignmentNumber } }),
+    db.assignment.findUnique({
+      where: { assignmentNumber: move.toAssignmentNumber },
+      include: { application: true, locationVisits: true },
+    }),
+  ]);
+  if (!moveVisit || !fromAssignment || !toAssignment) {
+    console.log("  Known rows not found in this database (expected on a non-production DB) — nothing to plan.");
+    return null;
+  }
+  if (moveVisit.assignmentId === toAssignment.id) {
+    console.log(`  Visit is already on ${toAssignment.assignmentNumber} — move not needed.`);
+    return null;
+  }
+  if (moveVisit.assignmentId !== fromAssignment.id) {
+    fail(`${move.visitId} is on assignment ${moveVisit.assignmentId}, expected ${fromAssignment.assignmentNumber}.`);
+  }
+  if (toAssignment.application.applicationNumber !== move.applicationNumber || fromAssignment.applicationId !== toAssignment.applicationId) {
+    fail(`${move.fromAssignmentNumber} / ${move.toAssignmentNumber} do not both belong to ${move.applicationNumber}.`);
+  }
+  for (const assignment of [fromAssignment, toAssignment]) {
+    if (isDecidedByPm(assignment.pmReviewStatus)) {
+      fail(`${assignment.assignmentNumber} already has pmReviewStatus ${assignment.pmReviewStatus} — refusing to touch a reviewed assignment.`);
+    }
+  }
+
+  const payloadLocations = (toAssignment.application.payload as { locations?: ScopablePayloadLocation[] } | null)?.locations ?? [];
+  const targetLocation = payloadLocations.find(
+    (loc) => loc.id === toAssignment.locationId || loc.companyLocationId === toAssignment.locationId,
+  );
+  if (!targetLocation) fail(`${toAssignment.assignmentNumber} has no matching location in the application payload.`);
+  if (!isVisitForPayloadLocation(moveVisit, targetLocation)) {
+    fail(`Visit ${moveVisit.id} is not for ${toAssignment.assignmentNumber}'s location (${targetLocation.locationType}).`);
+  }
+  if (!visitHasData(moveVisit)) fail(`Visit ${moveVisit.id} to be moved holds no data — refusing to move an empty visit.`);
+
+  const toDelete: Visit[] = [];
+  for (const visit of toAssignment.locationVisits.filter((v) => isVisitForPayloadLocation(v, targetLocation))) {
+    if (visitHasData(visit) || visit.reportVerification != null || visit.submittedAt != null) {
+      fail(`${toAssignment.assignmentNumber} already holds data for that location: ${describeVisit(visit)}. Resolve by hand.`);
+    }
+    toDelete.push(visit);
+  }
+
+  for (const visit of toDelete) console.log(`  DELETE ${describeVisit(visit)} (empty) from ${toAssignment.assignmentNumber}`);
+  console.log(`  MOVE   ${describeVisit(moveVisit)}`);
+  console.log(`         ${fromAssignment.assignmentNumber} -> ${toAssignment.assignmentNumber}`);
+  console.log(`  pmReviewStatus: from=${fromAssignment.pmReviewStatus ?? "(none)"} to=${toAssignment.pmReviewStatus ?? "(none)"}`);
+  return { toDelete, moveVisit, toAssignment };
+}
+
 async function reportSimilarCases() {
-  console.log("\n=== Part 2: similar cases (REPORT ONLY, nothing is changed) ===");
+  console.log("\n=== Remaining similar cases (REPORT ONLY, nothing is changed) ===");
   const surveys = await db.assignment.findMany({
     where: { OR: [{ scheduleType: "survey" }, { surveyorId: { not: null } }] },
     include: { application: { select: { applicationNumber: true, payload: true } }, locationVisits: true },
@@ -232,6 +320,7 @@ async function reportSimilarCases() {
     byApplication.set(assignment.applicationId, [...(byApplication.get(assignment.applicationId) ?? []), assignment]);
   }
 
+  const coveredVisitIds = new Set([PLAN.moveVisitId, ...SIBLING_MOVES.map((move) => move.visitId)]);
   let found = 0;
   for (const siblings of byApplication.values()) {
     const payloadLocations = (siblings[0].application.payload as { locations?: ScopablePayloadLocation[] } | null)?.locations ?? [];
@@ -248,7 +337,7 @@ async function reportSimilarCases() {
         });
         if (!owner) continue;
         found += 1;
-        const known = visit.id === PLAN.moveVisitId ? "  (covered by Part 1)" : "";
+        const known = coveredVisitIds.has(visit.id) ? "  (covered by the plan above)" : "";
         console.log(
           `  ${siblings[0].application.applicationNumber}: ${assignment.assignmentNumber} holds ${visit.status} visit ${visit.id} ` +
             `(${visit.locationType} "${visit.address}") for ${owner.assignmentNumber}'s location${known}`,
@@ -263,20 +352,31 @@ async function main() {
   console.log(apply ? "MODE: APPLY" : "MODE: DRY-RUN (no changes will be written)");
   if (apply) assertBackup();
 
-  const plan = await planKnownFix();
+  // Every plan is built (and every guard checked) before anything is written: one ABORT stops all.
+  const plans: Plan[] = [];
+  const first = await planKnownFix();
+  if (first) plans.push(first);
+  console.log("\n=== Second wave: sibling-assignment moves ===");
+  for (const move of SIBLING_MOVES) {
+    const plan = await planSiblingMove(move);
+    if (plan) plans.push(plan);
+  }
   await reportSimilarCases();
 
-  if (!plan) return;
+  if (plans.length === 0) {
+    console.log("\nNothing to change.");
+    return;
+  }
   if (!apply) {
     console.log("\nDry-run only. Re-run with --apply --backup-file=<pg_dump> after approval.");
     return;
   }
 
   await db.$transaction([
-    ...plan.toDelete.map((visit) => db.locationVisit.delete({ where: { id: visit.id } })),
-    db.locationVisit.update({ where: { id: plan.moveVisit.id }, data: { assignmentId: plan.toAssignment.id } }),
+    ...plans.flatMap((plan) => plan.toDelete.map((visit) => db.locationVisit.delete({ where: { id: visit.id } }))),
+    ...plans.map((plan) => db.locationVisit.update({ where: { id: plan.moveVisit.id }, data: { assignmentId: plan.toAssignment.id } })),
   ]);
-  console.log("\nApplied. Assignment rows and statuses were not touched.");
+  console.log(`\nApplied ${plans.length} move(s). Assignment rows and statuses were not touched.`);
 }
 
 main()
