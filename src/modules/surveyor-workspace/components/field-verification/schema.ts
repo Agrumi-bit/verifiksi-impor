@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { REPORT_PREPARED_DATE_MODES } from "../../report-prepared-date";
 
 import {
   FINDINGS_IMPACTS,
@@ -96,6 +97,11 @@ export const fieldVerificationSchema = z.object({
   conclusionStatus: z.enum(CONCLUSION_STATUSES).nullable().default(null),
   conclusionRecommendation: z.enum(CONCLUSION_RECOMMENDATIONS).nullable().default(null),
   conclusionSummary: z.string().trim().optional(),
+
+  // "Tanggal Penyusunan Laporan" (DISUSUN OLEH on the report), chosen before Submit Verifikasi;
+  // `submittedAt` on the visit stays the audit trail. See report-prepared-date.ts.
+  reportPreparedDate: z.string().trim().optional(),
+  reportPreparedDateMode: z.enum(REPORT_PREPARED_DATE_MODES).optional(),
 });
 export type FieldVerificationValues = z.infer<typeof fieldVerificationSchema>;
 

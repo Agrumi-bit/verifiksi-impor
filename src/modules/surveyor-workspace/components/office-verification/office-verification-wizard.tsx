@@ -30,6 +30,8 @@ import { Section8Conclusion } from "./section-8-conclusion";
 import { Section9Review } from "./section-9-review";
 import { OfficeVerificationSidebar } from "./sidebar";
 import { assignmentDateKey } from "@/lib/assignment-date";
+import { validateReportPreparedDate } from "../../report-prepared-date";
+import { ReportPreparedDateField } from "../report-prepared-date-field";
 
 type PayloadLocation = {
   address?: string | null;
@@ -110,6 +112,8 @@ export function OfficeVerificationWizard({ assignmentId, locationId }: Props) {
   const [values, setValues] = useState<OfficeVerificationValues>(emptyOfficeVerification());
   const [openStep, setOpenStep] = useState<number | null>(0);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [preparedDateConfirmed, setPreparedDateConfirmed] = useState(false);
+  const [preparedDateError, setPreparedDateError] = useState<string | null>(null);
   const [loadedForId, setLoadedForId] = useState<string | null>(null);
 
   if (data && data.id !== loadedForId) {
@@ -139,6 +143,28 @@ export function OfficeVerificationWizard({ assignmentId, locationId }: Props) {
   function patch(partial: Partial<OfficeVerificationValues>) {
     setValues((prev) => ({ ...prev, ...partial }));
   }
+
+  // "Submit Verifikasi" first needs a valid "Tanggal Penyusunan Laporan" and its confirmation; the submit
+  // API validates it again.
+  function requestSubmit() {
+    const prepared = validateReportPreparedDate({
+      mode: values.reportPreparedDateMode,
+      date: values.reportPreparedDate,
+      actualVisitDate: values.actualVisitDate,
+    });
+    if (!prepared.ok) {
+      setPreparedDateError(prepared.error);
+      return;
+    }
+    if (!preparedDateConfirmed) {
+      setPreparedDateError("Centang konfirmasi tanggal penyusunan laporan sebelum submit.");
+      return;
+    }
+    setPreparedDateError(null);
+    patch({ reportPreparedDate: prepared.date, reportPreparedDateMode: prepared.mode });
+    setShowSubmitConfirm(true);
+  }
+
 
   const saveMutation = useMutation({
     mutationFn: async (next: OfficeVerificationValues) => {
@@ -442,7 +468,23 @@ export function OfficeVerificationWizard({ assignmentId, locationId }: Props) {
             reportHref={`/surveyor-workspace/assignments/${assignmentId}/verify/${locationId}/report`}
             onGoTo={(i) => setOpenStep(i)}
             onSave={() => saveMutation.mutate(values)}
-            onOpenSubmitConfirm={() => setShowSubmitConfirm(true)}
+            onOpenSubmitConfirm={requestSubmit}
+            beforeSubmit={
+              <ReportPreparedDateField
+                actualVisitDate={values.actualVisitDate ?? ""}
+                mode={values.reportPreparedDateMode}
+                date={values.reportPreparedDate}
+                confirmed={preparedDateConfirmed}
+                error={preparedDateError}
+                onChange={(next) => {
+                  setPreparedDateError(null);
+                  patch(next);
+                }}
+                onConfirmedChange={(checked) => {
+                  setPreparedDateError(null);
+                  setPreparedDateConfirmed(checked);
+                }}
+              />}
             isSaving={saveMutation.isPending}
           />
         )}

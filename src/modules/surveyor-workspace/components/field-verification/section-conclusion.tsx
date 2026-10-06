@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { MaterialIcon } from "../material-icon";
@@ -29,6 +30,8 @@ type Props = {
   onSummaryChange: (v: string) => void;
   onSave: () => void;
   onSubmit: () => void;
+  /** Rendered right above the buttons — the "Tanggal Penyusunan Laporan" block. */
+  beforeSubmit?: ReactNode;
   isSaving?: boolean;
 };
 
@@ -44,6 +47,7 @@ export function SectionConclusion({
   onSummaryChange,
   onSave,
   onSubmit,
+  beforeSubmit,
   isSaving,
 }: Props) {
   const label = LOCATION_LABEL[kind];
@@ -142,6 +146,8 @@ export function SectionConclusion({
           <div className="text-[13.5px] text-[#c1440e]">{recommendation}</div>
         </div>
       )}
+
+      {beforeSubmit}
 
       <div className="flex justify-end gap-2.5 border-t border-[#ecdffb] pt-3.5">
         <button

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { MaterialIcon } from "../material-icon";
@@ -15,10 +16,12 @@ type Props = {
   onGoTo: (index: number) => void;
   onSave: () => void;
   onOpenSubmitConfirm: () => void;
+  /** Rendered right above the buttons — the "Tanggal Penyusunan Laporan" block. */
+  beforeSubmit?: ReactNode;
   isSaving?: boolean;
 };
 
-export function Section9Review({ kinds, reportHref, onGoTo, onSave, onOpenSubmitConfirm, isSaving }: Props) {
+export function Section9Review({ kinds, reportHref, onGoTo, onSave, onOpenSubmitConfirm, beforeSubmit, isSaving }: Props) {
   const unfilled = kinds.filter((k) => k === "unfilled").length;
   const issues = kinds.filter((k) => k === "issue").length;
   const outstandingLabel =
@@ -70,6 +73,8 @@ export function Section9Review({ kinds, reportHref, onGoTo, onSave, onOpenSubmit
         <MaterialIcon name="info" className="text-[19px] text-[#8a6d00]" />
         <div className="text-[13px] text-[#8a6d00]">{outstandingLabel}</div>
       </div>
+
+      {beforeSubmit}
 
       <div className="flex justify-end gap-2.5 border-t border-[#e0e5eb] pt-3.5">
         <button

@@ -32,6 +32,8 @@ import { REPORT_CHECKLIST_SECTIONS, reportResultLabels, type ReportChecklistCont
 import type { ReportVerificationState } from "@/modules/verifikator-workspace/report-verification";
 import "../report/office-report-preview.css";
 import { formatAssignmentDate } from "@/lib/assignment-date";
+import { resolveReportPreparedDate } from "../../report-prepared-date";
+import { reportFamilyLabel, reportVerificationName } from "../../report-scheme-text";
 
 type PayloadLocation = {
   buildingStatus?: "MILIK_SENDIRI" | "SEWA" | null;
@@ -61,6 +63,7 @@ type LocationReportDetail = {
   assignmentNumber: string;
   applicationNumber: string;
   verificationType: string;
+  importTypes?: string[];
   surveyorName: string | null;
   pmReviewStatus: "APPROVED" | "REJECTED" | null;
   pmReviewedAt: string | null;
@@ -235,6 +238,9 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
   // documentationOther) come back from the DB without it — `fieldVerificationSchema.parse`
   // fills in every `.default(...)` so the rest of this report never has to guard against it.
   const fv = data[dataField] ? fieldVerificationSchema.parse(data[dataField]) : emptyFieldVerification();
+  // The date the surveyor chose for "Disusun oleh" (older reports: visit date, then the submit time).
+  const preparedDate = resolveReportPreparedDate(fv, data.submittedAt);
+  const verificationName = reportVerificationName(data);
   const buildingStatus = data.payloadLocation?.buildingStatus ?? null;
   const isSewa = buildingStatus === "SEWA";
   const isWarehouse = kind === "GUDANG";
@@ -323,11 +329,11 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
   const reportVerification = data.reportVerification;
   const reviewDecision = reportVerification?.decision ?? null;
   // "TANGGAL TERBIT" only applies once Project Manager has approved this survey report — before
-  // that, the cover shows "TANGGAL PENYUSUNAN" dated to the surveyor's own actual visit (Step 0),
+  // that, the cover shows "TANGGAL PENYUSUNAN" dated to the "Tanggal Penyusunan Laporan" the surveyor chose before Submit,
   // not a submission timestamp that implies an official issue date it doesn't have yet.
   const isPmApproved = data.pmReviewStatus === "APPROVED";
   const coverDateLabel = isPmApproved ? "TANGGAL TERBIT" : "TANGGAL PENYUSUNAN";
-  const coverDateValue = isPmApproved ? data.pmReviewedAt : fv.actualVisitDate || null;
+  const coverDateValue = isPmApproved ? data.pmReviewedAt : preparedDate;
   const reviewContext: ReportChecklistContext = {
     applicationNumber: data.applicationNumber,
     companyName: company,
@@ -427,7 +433,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
             </div>
           </div>
           <div className="rd-cover-foot">
-            <div>Lembaga Verifikasi &amp; Survey — VKI / VIU</div>
+            <div>Lembaga Verifikasi &amp; Survey — {reportFamilyLabel(data)}</div>
             <div>Dokumen Rahasia — Distribusi Terbatas</div>
           </div>
         </section>
@@ -438,7 +444,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
           <h2 className="rd-page-title rd-serif">Persetujuan Dokumen</h2>
           <p className="rd-lede">
             Dokumen laporan ini telah disusun berdasarkan hasil observasi lapangan dan diperiksa serta disetujui
-            secara berjenjang sebagai bagian dari proses Verifikasi Kemampuan Industri (VKI) sebelum diteruskan
+            secara berjenjang sebagai bagian dari proses {verificationName} sebelum diteruskan
             kepada pemohon dan pihak terkait.
           </p>
           <div className="rd-approval-grid">
@@ -451,7 +457,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
               <div className="rd-approval-sign">Tanda tangan</div>
               {data.submittedAt ? (
                 <div className="rd-approval-status" style={{ color: "var(--ok-fg)" }}>
-                  ✓ {fmtDate(data.submittedAt)}
+                  ✓ {fmtDate(preparedDate)}
                 </div>
               ) : (
                 <div className="rd-approval-status" style={{ color: "var(--gold-soft-ink)" }}>
@@ -607,7 +613,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
                 <div className="rd-exec-banner-desc">
                   Laporan hasil survey verifikasi {label.toLowerCase()}{" "}
                   {data.status === "COMPLETED"
-                    ? `telah disusun oleh surveyor pada tanggal ${fmtDate(data.submittedAt)}.`
+                    ? `telah disusun oleh surveyor pada tanggal ${fmtDate(preparedDate)}.`
                     : "masih dalam proses penyusunan oleh surveyor."}
                 </div>
               </div>
@@ -1339,7 +1345,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
           <div className="rd-card" style={{ marginBottom: reviewDecision ? 10 : 0 }}>
             <div style={{ fontWeight: 600, fontSize: 12, color: "var(--ink)", marginBottom: 2 }}>Versi 1.0</div>
             <div style={{ fontSize: 11.5, color: "var(--ink-faint)" }}>
-              Draf disusun oleh surveyor — {fmtDate(data.submittedAt ?? fv.actualVisitDate)}
+              Draf disusun oleh surveyor — {fmtDate(preparedDate)}
             </div>
           </div>
           {reviewDecision && (

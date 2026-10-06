@@ -31,6 +31,8 @@ import { SectionConclusion } from "./section-conclusion";
 import { FieldVerificationSidebar } from "./sidebar";
 import { SECTION4_QUESTIONS, SECTION6_QUESTIONS } from "./schema";
 import { assignmentDateKey } from "@/lib/assignment-date";
+import { validateReportPreparedDate } from "../../report-prepared-date";
+import { ReportPreparedDateField } from "../report-prepared-date-field";
 
 type PayloadLocation = {
   address?: string | null;
@@ -124,6 +126,8 @@ export function FieldVerificationWizard({ kind, assignmentId, locationId }: Prop
   const [values, setValues] = useState<FieldVerificationValues>(emptyFieldVerification());
   const [openStep, setOpenStep] = useState<number | null>(0);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [preparedDateConfirmed, setPreparedDateConfirmed] = useState(false);
+  const [preparedDateError, setPreparedDateError] = useState<string | null>(null);
   const [loadedForId, setLoadedForId] = useState<string | null>(null);
 
   if (data && data.id !== loadedForId) {
@@ -204,6 +208,27 @@ export function FieldVerificationWizard({ kind, assignmentId, locationId }: Prop
       toast.error(error instanceof Error ? error.message : `Gagal submit verifikasi ${label.toLowerCase()}`);
     },
   });
+
+  // "Submit Verifikasi" first needs a valid "Tanggal Penyusunan Laporan" and its confirmation; the submit
+  // API validates it again.
+  function requestSubmit() {
+    const prepared = validateReportPreparedDate({
+      mode: values.reportPreparedDateMode,
+      date: values.reportPreparedDate,
+      actualVisitDate: values.actualVisitDate,
+    });
+    if (!prepared.ok) {
+      setPreparedDateError(prepared.error);
+      return;
+    }
+    if (!preparedDateConfirmed) {
+      setPreparedDateError("Centang konfirmasi tanggal penyusunan laporan sebelum submit.");
+      return;
+    }
+    setPreparedDateError(null);
+    patch({ reportPreparedDate: prepared.date, reportPreparedDateMode: prepared.mode });
+    setShowSubmitConfirm(true);
+  }
 
   const buildingStatus = data?.payloadLocation?.buildingStatus ?? null;
   const kinds = useMemo(() => computeSectionKinds(kind, values, buildingStatus), [kind, values, buildingStatus]);
@@ -454,7 +479,23 @@ export function FieldVerificationWizard({ kind, assignmentId, locationId }: Prop
             onRecommendationChange={(v) => patch({ conclusionRecommendation: v })}
             onSummaryChange={(v) => patch({ conclusionSummary: v })}
             onSave={() => saveMutation.mutate(values)}
-            onSubmit={() => setShowSubmitConfirm(true)}
+            onSubmit={requestSubmit}
+            beforeSubmit={
+              <ReportPreparedDateField
+                actualVisitDate={values.actualVisitDate ?? ""}
+                mode={values.reportPreparedDateMode}
+                date={values.reportPreparedDate}
+                confirmed={preparedDateConfirmed}
+                error={preparedDateError}
+                onChange={(next) => {
+                  setPreparedDateError(null);
+                  patch(next);
+                }}
+                onConfirmedChange={(checked) => {
+                  setPreparedDateError(null);
+                  setPreparedDateConfirmed(checked);
+                }}
+              />}
             isSaving={saveMutation.isPending}
           />
         )}

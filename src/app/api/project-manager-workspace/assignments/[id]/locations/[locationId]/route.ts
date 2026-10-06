@@ -49,6 +49,7 @@ export async function GET(
       assignmentNumber: visit.assignment.assignmentNumber,
       applicationNumber: visit.assignment.application.applicationNumber,
       verificationType: visit.assignment.application.verificationType,
+      importTypes: (visit.assignment.application.payload as { importTypes?: string[] } | null)?.importTypes ?? [],
       surveyorName: visit.assignment.surveyor?.name ?? null,
       pmReviewStatus: visit.assignment.pmReviewStatus,
       pmReviewedAt: visit.assignment.pmReviewedAt,
