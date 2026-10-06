@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import type { LocationValues } from "@/modules/shared/schema";
 import { summarizeApplicationLocations } from "@/modules/shared/location-meta";
 import { z } from "zod";
-import type { LocationVisit } from "@/generated/prisma/client";
 
 import { db } from "@/lib/db";
 import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
 import { findApplicationEditAfter } from "@/modules/applications/server/edited-after";
 import { getServerSession } from "@/lib/get-session";
+import { effectiveAssignmentVisits, mergeVisitsByLocation, type ScopablePayloadLocation } from "@/modules/shared/survey-visit-scope";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { computeFindings, type OfficeVerificationValues } from "@/modules/surveyor-workspace/components/office-verification/schema";
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
@@ -79,24 +79,20 @@ function teamMemberSummary(
   };
 }
 
-async function loadApplicationSurveyData(applicationId: string, ownVisits: LocationVisit[]) {
+async function loadApplicationSurveyData(applicationId: string, payloadLocations: ScopablePayloadLocation[]) {
   const siblingAssignments = await db.assignment.findMany({
     where: { applicationId },
     include: { locationVisits: true, surveyor: true, technicalReviewer: true },
   });
-  const allVisits = siblingAssignments.flatMap((a) => a.locationVisits);
-  const STATUS_RANK: Record<string, number> = { NOT_STARTED: 0, IN_PROGRESS: 1, COMPLETED: 2 };
-  const byLocationType = new Map<string, LocationVisit>();
-  for (const visit of [...ownVisits, ...allVisits]) {
-    const existing = byLocationType.get(visit.locationType);
-    if (!existing || STATUS_RANK[visit.status] > STATUS_RANK[existing.status]) {
-      byLocationType.set(visit.locationType, visit);
-    }
-  }
+  // One row per physical location: each survey assignment only owns its own scheduled location
+  // (a visit for another location counts only when the surveyor filled it in), then the most
+  // advanced copy wins.
+  const allVisits = siblingAssignments.flatMap((a) => effectiveAssignmentVisits(a, a.locationVisits, payloadLocations));
+  const byLocation = mergeVisitsByLocation(allVisits, payloadLocations);
   const surveyAssignment = siblingAssignments.find((a) => a.surveyorId) ?? null;
   const technicalAssignment = siblingAssignments.find((a) => a.technicalReviewerId) ?? null;
   return {
-    locationVisits: [...byLocationType.values()],
+    locationVisits: byLocation,
     surveyorName: surveyAssignment?.surveyor?.name ?? null,
     surveyAssignment,
     technicalAssignment,
@@ -142,7 +138,7 @@ export async function GET(
   const appDocMeta = await getApplicationDocumentMeta(assignment.application.id, appOnlyKeys, assignment.application.createdAt);
   const { locationVisits, surveyorName, surveyAssignment, technicalAssignment } = await loadApplicationSurveyData(
     assignment.applicationId,
-    assignment.locationVisits,
+    (assignment.application.payload as { locations?: ScopablePayloadLocation[] } | null)?.locations ?? [],
   );
 
   const documentsVerified = documentChecklist.filter((item) => {

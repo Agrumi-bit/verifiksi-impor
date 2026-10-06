@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireProjectManagerSession } from "@/lib/require-project-manager-session";
 import { APPROVAL_CATEGORIES } from "@/modules/project-manager-workspace/status";
+import { effectiveAssignmentVisits, type ScopablePayloadLocation } from "@/modules/shared/survey-visit-scope";
 
 const patchSchema = z.object({
   category: z.enum(APPROVAL_CATEGORIES),
@@ -44,7 +45,10 @@ export async function PATCH(
 
   const assignment = await db.assignment.findUnique({
     where: { id: assignmentId },
-    include: { locationVisits: { select: { status: true } } },
+    include: {
+      application: { select: { payload: true } },
+      locationVisits: { select: { status: true, locationType: true, address: true, companyLocationId: true } },
+    },
   });
   if (!assignment) {
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
@@ -77,9 +81,15 @@ export async function PATCH(
   if (assignment.pmReviewStatus) {
     return NextResponse.json({ error: "Laporan ini sudah direview." }, { status: 400 });
   }
+  // Only this assignment's own location(s) count — see survey-visit-scope.
+  const ownVisits = effectiveAssignmentVisits(
+    assignment,
+    assignment.locationVisits,
+    (assignment.application.payload as { locations?: ScopablePayloadLocation[] } | null)?.locations ?? [],
+  );
   const isReady =
     category === "laporanSurvey"
-      ? assignment.locationVisits.length > 0 && assignment.locationVisits.every((v) => v.status === "COMPLETED")
+      ? ownVisits.length > 0 && ownVisits.every((v) => v.status === "COMPLETED")
       : assignment.status === "COMPLETED";
   if (!isReady) {
     return NextResponse.json({ error: "Laporan ini belum siap untuk direview." }, { status: 400 });

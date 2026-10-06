@@ -749,12 +749,19 @@ function buildDocumentEntries(payload: ApplicationWizardValues, documentStatuses
     });
 }
 
+const VISIT_STATUS_RANK: Record<string, number> = { NOT_STARTED: 0, IN_PROGRESS: 1, COMPLETED: 2 };
+
+// The same location can have a visit on more than one survey assignment (re-schedule) — show
+// the most advanced one, not just whichever assignment happens to be listed first.
 function findLocationVisit(assignments: AssignmentData[], locationType: string, composedAddress: string): LocationVisitData | null {
+  let best: LocationVisitData | null = null;
   for (const assignment of assignments) {
-    const match = assignment.locationVisits.find((visit) => visit.locationType === locationType && visit.address === composedAddress);
-    if (match) return match;
+    for (const visit of assignment.locationVisits) {
+      if (visit.locationType !== locationType || visit.address !== composedAddress) continue;
+      if (!best || (VISIT_STATUS_RANK[visit.status] ?? 0) > (VISIT_STATUS_RANK[best.status] ?? 0)) best = visit;
+    }
   }
-  return null;
+  return best;
 }
 
 function MessageIcon({ direction }: { direction: ApplicationMessageData["direction"] }) {

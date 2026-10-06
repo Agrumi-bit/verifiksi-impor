@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
+import { effectiveAssignmentVisits, mergeVisitsByLocation, type ScopablePayloadLocation } from "@/modules/shared/survey-visit-scope";
 
 export async function GET(
   _request: Request,
@@ -14,7 +15,7 @@ export async function GET(
   }
 
   const { id } = await params;
-  const assignment = await db.assignment.findUnique({ where: { assignmentNumber: id } });
+  const assignment = await db.assignment.findUnique({ where: { assignmentNumber: id }, include: { application: true } });
   if (!assignment || assignment.verifikatorId !== verifikatorId) {
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
   }
@@ -29,20 +30,13 @@ export async function GET(
     where: { applicationId: assignment.applicationId },
     include: { locationVisits: true },
   });
-  const allVisits = siblingAssignments.flatMap((a) => a.locationVisits);
-
-  // If the same location ended up with more than one visit row (e.g. a
-  // survey re-assignment), keep the most advanced one per locationType so
-  // the tab shows one row per physical location, not one per assignment.
-  const STATUS_RANK: Record<string, number> = { NOT_STARTED: 0, IN_PROGRESS: 1, COMPLETED: 2 };
-  const byLocationType = new Map<string, (typeof allVisits)[number]>();
-  for (const visit of allVisits) {
-    const existing = byLocationType.get(visit.locationType);
-    if (!existing || STATUS_RANK[visit.status] > STATUS_RANK[existing.status]) {
-      byLocationType.set(visit.locationType, visit);
-    }
-  }
-  const locationVisits = [...byLocationType.values()];
+  const payloadLocations =
+    (assignment.application.payload as { locations?: ScopablePayloadLocation[] } | null)?.locations ?? [];
+  // Each survey assignment only owns its own scheduled location — count a sibling's visit for any
+  // other location only if the surveyor actually filled it in there — then keep the most advanced
+  // copy per physical location (a re-schedule can leave the same location on two assignments).
+  const allVisits = siblingAssignments.flatMap((a) => effectiveAssignmentVisits(a, a.locationVisits, payloadLocations));
+  const locationVisits = mergeVisitsByLocation(allVisits, payloadLocations);
 
   const data = locationVisits.map((visit) => ({
     id: visit.id,

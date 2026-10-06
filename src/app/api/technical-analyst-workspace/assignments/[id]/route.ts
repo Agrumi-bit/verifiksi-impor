@@ -4,9 +4,9 @@ import { db } from "@/lib/db";
 import { findApplicationEditAfter } from "@/modules/applications/server/edited-after";
 import { requireTechnicalAnalystSession } from "@/lib/require-technical-analyst-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import { effectiveAssignmentVisits, mergeVisitsByLocation, type ScopablePayloadLocation } from "@/modules/shared/survey-visit-scope";
 import { allModulesDecided, overallTechnicalStatus, technicalAnalysisDataSchema } from "@/modules/technical-analyst-workspace/schema";
 
-const LOCATION_STATUS_RANK: Record<string, number> = { NOT_STARTED: 0, IN_PROGRESS: 1, COMPLETED: 2 };
 const ASSIGNMENT_STATUS_RANK: Record<string, number> = { ASSIGNED: 0, SCHEDULED: 1, IN_PROGRESS: 2, SUBMITTED: 3, RETURNED: 3, COMPLETED: 4 };
 
 /**
@@ -19,32 +19,33 @@ const ASSIGNMENT_STATUS_RANK: Record<string, number> = { ASSIGNED: 0, SCHEDULED:
  * (old + new), each with its own subset of location visits — picking only the
  * first one via `.find()` silently hid completed reports left on a later row.
  * Same fix as verifikator's `loadApplicationSurveyData`: merge visits from every
- * survey sibling, keeping the most-progressed visit per locationType. "dokumen"
+ * survey sibling, keeping the most-progressed visit per physical location (a survey assignment
+ * only owns its own scheduled location — see survey-visit-scope). "dokumen"
  * duplicates are rarer but handled the same way — pick the most-progressed row.
  */
-async function loadSiblingSummaries(applicationId: string) {
+async function loadSiblingSummaries(applicationId: string, payloadLocations: ScopablePayloadLocation[]) {
   const siblings = await db.assignment.findMany({
     where: { applicationId },
     include: { locationVisits: true },
   });
 
   const surveyAssignments = siblings.filter((a) => a.surveyorId);
-  const byLocationType = new Map<string, { id: string; locationType: string; address: string; city: string | null; status: string; assignmentNumber: string }>();
-  for (const assignment of surveyAssignments) {
-    for (const visit of assignment.locationVisits) {
-      const existing = byLocationType.get(visit.locationType);
-      if (!existing || LOCATION_STATUS_RANK[visit.status] > LOCATION_STATUS_RANK[existing.status]) {
-        byLocationType.set(visit.locationType, {
-          id: visit.id,
-          locationType: visit.locationType,
-          address: visit.address,
-          city: visit.city,
-          status: visit.status,
-          assignmentNumber: assignment.assignmentNumber,
-        });
-      }
-    }
-  }
+  const mergedVisits = mergeVisitsByLocation(
+    surveyAssignments.flatMap((assignment) =>
+      effectiveAssignmentVisits(assignment, assignment.locationVisits, payloadLocations).map((visit) => ({
+        ...visit,
+        assignmentNumber: assignment.assignmentNumber,
+      })),
+    ),
+    payloadLocations,
+  ).map((visit) => ({
+    id: visit.id,
+    locationType: visit.locationType,
+    address: visit.address,
+    city: visit.city,
+    status: visit.status,
+    assignmentNumber: visit.assignmentNumber,
+  }));
 
   const dokumenAssignment =
     siblings
@@ -52,7 +53,7 @@ async function loadSiblingSummaries(applicationId: string) {
       .sort((a, b) => (ASSIGNMENT_STATUS_RANK[b.status] ?? 0) - (ASSIGNMENT_STATUS_RANK[a.status] ?? 0))[0] ?? null;
 
   return {
-    survey: surveyAssignments.length > 0 ? { locationVisits: [...byLocationType.values()] } : null,
+    survey: surveyAssignments.length > 0 ? { locationVisits: mergedVisits } : null,
     dokumen: dokumenAssignment
       ? { assignmentNumber: dokumenAssignment.assignmentNumber, status: dokumenAssignment.status }
       : null,
@@ -77,7 +78,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const company = assignment.application.companyId
     ? await db.company.findUnique({ where: { id: assignment.application.companyId } })
     : null;
-  const siblings = await loadSiblingSummaries(assignment.applicationId);
+  const siblings = await loadSiblingSummaries(assignment.applicationId, payload.locations ?? []);
   const technicalAnalysisData = technicalAnalysisDataSchema.parse(assignment.technicalAnalysisData ?? {});
 
   const kantorLocation = payload.locations?.find((loc) => loc.locationType === "KANTOR") ?? payload.locations?.[0];

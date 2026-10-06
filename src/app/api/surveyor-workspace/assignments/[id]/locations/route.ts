@@ -3,16 +3,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import { composeLocationAddress, matchLocationTypeLabel } from "@/modules/shared/schema";
+import {
+  isAssignmentScoped,
+  locationsInAssignmentScope,
+  visitHasData,
+  type ScopablePayloadLocation,
+} from "@/modules/shared/survey-visit-scope";
 
-type PayloadLocation = {
-  id?: string;
-  companyLocationId?: string;
-  locationType: string;
-  address: string;
-  addressDesa?: string;
-  addressKecamatan?: string;
-  city?: string;
-};
+type PayloadLocation = ScopablePayloadLocation & { address: string; city?: string };
 
 function computeProgress(checklist: unknown): number {
   if (!Array.isArray(checklist) || checklist.length === 0) return 0;
@@ -45,6 +43,12 @@ export async function GET(
     ((assignment.application.payload as { locations?: PayloadLocation[] } | null)?.locations) ??
     [];
 
+  // A survey assignment is scheduled for ONE location (`locationId`) — only that location (plus
+  // any found in the field on this assignment) gets a visit here. Assignments without a
+  // resolvable locationId keep the legacy "every payload location" behaviour.
+  const inScopeLocations = locationsInAssignmentScope(assignment, payloadLocations) as PayloadLocation[];
+  const isScoped = isAssignmentScoped(assignment, payloadLocations);
+
   const existingByKey = new Map(
     assignment.locationVisits.map((visit) => [`${visit.locationType}::${visit.address}`, visit]),
   );
@@ -55,7 +59,7 @@ export async function GET(
   );
 
   const visits = [];
-  for (const loc of payloadLocations) {
+  for (const loc of inScopeLocations) {
     const fullAddress = composeLocationAddress(loc);
     const key = `${loc.locationType}::${fullAddress}`;
     const companyLocationId = loc.companyLocationId || loc.id || null;
@@ -85,7 +89,7 @@ export async function GET(
   // branch — their chosen location always exists in the payload by construction.
   const intendedType = matchLocationTypeLabel(assignment.location);
   const hasIntendedType = visits.some((visit) => visit.locationType === intendedType);
-  if (intendedType && !hasIntendedType && assignment.application.companyId) {
+  if (!isScoped && intendedType && !hasIntendedType && assignment.application.companyId) {
     const company = await db.company.findUnique({ where: { id: assignment.application.companyId } });
     const companyLocations = (company?.locations as PayloadLocation[] | null) ?? [];
     const fallbackLocation = companyLocations.find((loc) => loc.locationType === intendedType);
@@ -104,6 +108,19 @@ export async function GET(
         });
       }
       visits.push(visit);
+    }
+  }
+
+  // Visits this assignment already holds for ANOTHER location (surveyor work saved before visits
+  // were scoped) are never dropped — shown, flagged, so the data stays reachable. Empty ones are
+  // just leftovers of the old create-a-visit-for-every-location behaviour and stay hidden.
+  const shownIds = new Set(visits.map((visit) => visit.id));
+  const otherLocationVisitIds = new Set<string>();
+  if (isScoped) {
+    for (const visit of assignment.locationVisits) {
+      if (shownIds.has(visit.id) || !visitHasData(visit)) continue;
+      visits.push(visit);
+      otherLocationVisitIds.add(visit.id);
     }
   }
 
@@ -131,6 +148,8 @@ export async function GET(
     // the fallback-from-company case above, or a payload location that was removed after this
     // visit was first created. Surfaced as a warning badge, never used to hide the location.
     notInApplicationPayload: !payloadLocationTypes.has(visit.locationType),
+    // Filled in on this assignment although the location belongs to a sibling assignment.
+    belongsToOtherAssignmentLocation: otherLocationVisitIds.has(visit.id),
   }));
 
   return NextResponse.json({ data });

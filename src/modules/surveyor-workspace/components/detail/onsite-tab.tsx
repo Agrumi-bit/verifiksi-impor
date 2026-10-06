@@ -28,6 +28,7 @@ type LocationVisitItem = {
   factoryVerification: FieldVerificationValues | null;
   reportVerification: { decision: "VERIFIED" | "REJECTED" | "REVISION" | null; decisionNote: string | null } | null;
   notInApplicationPayload: boolean;
+  belongsToOtherAssignmentLocation?: boolean;
 };
 
 type Props = { assignmentId: string };
@@ -189,6 +190,12 @@ export function OnSiteTab({ assignmentId }: Props) {
                   {loc.address}
                   {loc.city ? `, ${loc.city}` : ""}
                 </div>
+
+                {loc.belongsToOtherAssignmentLocation && (
+                  <div className="mb-3 rounded-[8px] bg-[#e8eefc] px-3 py-2 text-[11.5px] leading-relaxed text-[#2c4a8a]">
+                    <span className="font-bold">Lokasi penugasan lain</span> — diverifikasi di sini.
+                  </div>
+                )}
 
                 {loc.notInApplicationPayload && (
                   <div className="mb-3 rounded-[8px] bg-[#fdf0d5] px-3 py-2 text-[11.5px] leading-relaxed text-[#8a5a0a]">

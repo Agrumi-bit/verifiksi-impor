@@ -3,6 +3,7 @@ import type { LocationValues } from "@/modules/shared/schema";
 import { summarizeApplicationLocations } from "@/modules/shared/location-meta";
 import { db } from "@/lib/db";
 import { requireProjectManagerSession } from "@/lib/require-project-manager-session";
+import { effectiveAssignmentVisits, mergeVisitsByLocation } from "@/modules/shared/survey-visit-scope";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
 import { getDocumentMeta } from "@/modules/company/document-versions";
@@ -30,7 +31,6 @@ function statusFrom(map: unknown, key: string): string {
 
 type MachineDecisionMap = Record<string, { status?: string; note?: string; photoPath?: string; verifiedAt?: string }>;
 
-const LOCATION_STATUS_RANK: Record<string, number> = { NOT_STARTED: 0, IN_PROGRESS: 1, COMPLETED: 2 };
 const ASSIGNMENT_STATUS_RANK: Record<string, number> = { ASSIGNED: 0, SCHEDULED: 1, IN_PROGRESS: 2, SUBMITTED: 3, RETURNED: 3, COMPLETED: 4 };
 
 /**
@@ -81,17 +81,17 @@ export async function GET(
 
   // Merge locationVisits from every survey sibling (not just the most-progressed row's own
   // visits) — a reschedule's older sibling may hold a visit the newer one never got, and vice
-  // versa. Dedup by locationType, keep whichever copy is furthest along.
-  const mergedLocationVisitsByType = new Map<string, (typeof surveySiblings)[number]["locationVisits"][number] & { assignmentNumber: string }>();
-  for (const sibling of surveySiblings) {
-    for (const visit of sibling.locationVisits) {
-      const existing = mergedLocationVisitsByType.get(visit.locationType);
-      if (!existing || (LOCATION_STATUS_RANK[visit.status] ?? 0) > (LOCATION_STATUS_RANK[existing.status] ?? 0)) {
-        mergedLocationVisitsByType.set(visit.locationType, { ...visit, assignmentNumber: sibling.assignmentNumber });
-      }
-    }
-  }
-  const mergedLocationVisits = [...mergedLocationVisitsByType.values()];
+  // versa. Dedup per physical location (not per type), keep whichever copy is furthest along.
+  const payloadLocations = payload.locations ?? [];
+  const mergedLocationVisits = mergeVisitsByLocation(
+    surveySiblings.flatMap((sibling) =>
+      effectiveAssignmentVisits(sibling, sibling.locationVisits, payloadLocations).map((visit) => ({
+        ...visit,
+        assignmentNumber: sibling.assignmentNumber,
+      })),
+    ),
+    payloadLocations,
+  );
 
   const siblingsForStage: SiblingForStage[] = [
     ...(dokumen ? [{ scheduleType: "dokumen", status: dokumen.status, dueDate: dokumen.dueDate?.toISOString() ?? null, locationVisits: [] }] : []),
