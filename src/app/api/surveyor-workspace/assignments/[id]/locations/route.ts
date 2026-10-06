@@ -2,15 +2,17 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
-import { composeLocationAddress, matchLocationTypeLabel } from "@/modules/shared/schema";
+import { composeLocationAddress } from "@/modules/shared/schema";
 import {
-  isAssignmentScoped,
-  locationsInAssignmentScope,
-  visitHasData,
-  type ScopablePayloadLocation,
+  assignmentLocations,
+  collectApplicationVisits,
+  findLocationAssignment,
+  groupVisitsByLocation,
+  locationKey,
+  type SurveyPayloadLocation,
 } from "@/modules/shared/survey-visit-scope";
 
-type PayloadLocation = ScopablePayloadLocation & { address: string; city?: string };
+type PayloadLocation = SurveyPayloadLocation & { address: string; city?: string };
 
 function computeProgress(checklist: unknown): number {
   if (!Array.isArray(checklist) || checklist.length === 0) return 0;
@@ -33,124 +35,94 @@ export async function GET(
   const { id } = await params;
   const assignment = await db.assignment.findUnique({
     where: { assignmentNumber: id },
-    include: { application: true, locationVisits: true },
+    include: { application: true },
   });
   if (!assignment || assignment.surveyorId !== surveyorId) {
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
   }
 
   const payloadLocations =
-    ((assignment.application.payload as { locations?: PayloadLocation[] } | null)?.locations) ??
-    [];
+    ((assignment.application.payload as { locations?: PayloadLocation[] } | null)?.locations) ?? [];
 
-  // A survey assignment is scheduled for ONE location (`locationId`) — only that location (plus
-  // any found in the field on this assignment) gets a visit here. Assignments without a
-  // resolvable locationId keep the legacy "every payload location" behaviour.
-  const inScopeLocations = locationsInAssignmentScope(assignment, payloadLocations) as PayloadLocation[];
-  const isScoped = isAssignmentScoped(assignment, payloadLocations);
+  // A survey result belongs to the application's location, not to this assignment: take the
+  // location's active visit from EVERY assignment of the application. The tab lists ALL of the
+  // application's locations; only this assignment's own location(s) are editable (and only those
+  // get a visit created when they have none yet) — the others are read-only.
+  const siblings = await db.assignment.findMany({
+    where: { applicationId: assignment.applicationId },
+    select: {
+      id: true,
+      assignmentNumber: true,
+      pmReviewStatus: true,
+      status: true,
+      scheduleType: true,
+      surveyorId: true,
+      scheduledDate: true,
+      locationId: true,
+      location: true,
+      surveyor: { select: { name: true } },
+      locationVisits: true,
+    },
+  });
+  const surveySiblings = siblings.filter((sibling) => sibling.scheduleType === "survey" || (!sibling.scheduleType && sibling.surveyorId));
+  const applicationVisits = collectApplicationVisits(siblings);
+  const { groups } = groupVisitsByLocation(applicationVisits, payloadLocations);
+  const ownKeys = new Set(assignmentLocations(assignment, payloadLocations).map(locationKey));
 
-  const existingByKey = new Map(
-    assignment.locationVisits.map((visit) => [`${visit.locationType}::${visit.address}`, visit]),
-  );
-  // Visits are tied to the company location id when known (so an edited address doesn't spawn a
-  // second visit); type + address is the fallback for visits created before that link existed.
-  const existingByCompanyLocationId = new Map(
-    assignment.locationVisits.filter((visit) => visit.companyLocationId).map((visit) => [visit.companyLocationId as string, visit]),
-  );
-
-  const visits = [];
-  for (const loc of inScopeLocations) {
-    const fullAddress = composeLocationAddress(loc);
-    const key = `${loc.locationType}::${fullAddress}`;
-    const companyLocationId = loc.companyLocationId || loc.id || null;
-    let visit = (companyLocationId ? existingByCompanyLocationId.get(companyLocationId) : undefined) ?? existingByKey.get(key);
-    if (!visit) {
-      visit = await db.locationVisit.create({
+  const data = [];
+  for (const loc of payloadLocations as PayloadLocation[]) {
+    const key = locationKey(loc);
+    if (!key) continue;
+    const canEdit = ownKeys.has(key);
+    let visit = groups.find((group) => group.key === key)?.active ?? null;
+    if (!visit && canEdit) {
+      const created = await db.locationVisit.create({
         data: {
           assignmentId: assignment.id,
+          applicationId: assignment.applicationId,
           locationType: loc.locationType,
-          address: fullAddress,
+          address: composeLocationAddress(loc),
           city: loc.city ?? null,
-          companyLocationId,
+          companyLocationId: key,
         },
       });
-    } else if (!visit.companyLocationId && companyLocationId) {
-      visit = await db.locationVisit.update({ where: { id: visit.id }, data: { companyLocationId } });
+      visit = { ...created, pmApproved: false, assignmentNumber: assignment.assignmentNumber };
+    } else if (visit && canEdit && !visit.companyLocationId) {
+      await db.locationVisit.update({ where: { id: visit.id }, data: { companyLocationId: key } });
     }
-    visits.push(visit);
+
+    const owner = findLocationAssignment(surveySiblings, loc, payloadLocations);
+    const recordedBy = visit ? (visit as { assignmentNumber?: string }).assignmentNumber ?? assignment.assignmentNumber : null;
+    // Surveyed under a different assignment of this application: shown as the location's result.
+    const surveyedElsewhere = canEdit && visit?.status === "COMPLETED" && recordedBy !== assignment.assignmentNumber;
+    data.push({
+      locationKey: key,
+      id: visit?.id ?? null,
+      locationType: loc.locationType,
+      address: visit?.address ?? composeLocationAddress(loc),
+      city: visit?.city ?? loc.city ?? null,
+      status: visit?.status ?? "NOT_STARTED",
+      progress: computeProgress(visit?.checklist),
+      scheduledDate: visit?.scheduledDate ?? null,
+      scheduledTime: visit?.scheduledTime ?? null,
+      submittedAt: visit?.submittedAt ?? null,
+      checklist: visit?.checklist ?? [],
+      findings: visit?.findings ?? [],
+      reportSummary: visit?.reportSummary ?? null,
+      fieldObservationNotes: visit?.fieldObservationNotes ?? null,
+      officeVerification: visit?.officeVerification ?? null,
+      warehouseVerification: visit?.warehouseVerification ?? null,
+      factoryVerification: visit?.factoryVerification ?? null,
+      reportVerification: visit?.reportVerification ?? null,
+      notInApplicationPayload: false,
+      canEdit,
+      owner: owner
+        ? { assignmentNumber: owner.assignmentNumber, scheduledDate: owner.scheduledDate, surveyorName: owner.surveyor?.name ?? null }
+        : null,
+      surveyedElsewhere: surveyedElsewhere && recordedBy ? { assignmentNumber: recordedBy, surveyedAt: visit?.submittedAt ?? null } : null,
+      assignmentStatus: assignment.status,
+    });
   }
-
-  // Legacy safety net: a survey assignment created before `locationId` existed only has its old
-  // free-text `location` label ("Kantor"/"Gudang") — if that type has no matching entry in the
-  // application's own payload (the production bug this was built for: a company's profile
-  // gained a Kantor location after the application was already submitted), fall back to the
-  // live Company record so the surveyor still has something to work from, instead of a silently
-  // missing location. New assignments (scheduled via the locationId-based picker) never hit this
-  // branch — their chosen location always exists in the payload by construction.
-  const intendedType = matchLocationTypeLabel(assignment.location);
-  const hasIntendedType = visits.some((visit) => visit.locationType === intendedType);
-  if (!isScoped && intendedType && !hasIntendedType && assignment.application.companyId) {
-    const company = await db.company.findUnique({ where: { id: assignment.application.companyId } });
-    const companyLocations = (company?.locations as PayloadLocation[] | null) ?? [];
-    const fallbackLocation = companyLocations.find((loc) => loc.locationType === intendedType);
-    if (fallbackLocation) {
-      const fullAddress = composeLocationAddress(fallbackLocation);
-      const key = `${fallbackLocation.locationType}::${fullAddress}`;
-      let visit = existingByKey.get(key);
-      if (!visit) {
-        visit = await db.locationVisit.create({
-          data: {
-            assignmentId: assignment.id,
-            locationType: fallbackLocation.locationType,
-            address: fullAddress,
-            city: fallbackLocation.city ?? null,
-          },
-        });
-      }
-      visits.push(visit);
-    }
-  }
-
-  // Visits this assignment already holds for ANOTHER location (surveyor work saved before visits
-  // were scoped) are never dropped — shown, flagged, so the data stays reachable. Empty ones are
-  // just leftovers of the old create-a-visit-for-every-location behaviour and stay hidden.
-  const shownIds = new Set(visits.map((visit) => visit.id));
-  const otherLocationVisitIds = new Set<string>();
-  if (isScoped) {
-    for (const visit of assignment.locationVisits) {
-      if (shownIds.has(visit.id) || !visitHasData(visit)) continue;
-      visits.push(visit);
-      otherLocationVisitIds.add(visit.id);
-    }
-  }
-
-  const payloadLocationTypes = new Set(payloadLocations.map((loc) => loc.locationType));
-
-  const data = visits.map((visit) => ({
-    id: visit.id,
-    locationType: visit.locationType,
-    address: visit.address,
-    city: visit.city,
-    status: visit.status,
-    progress: computeProgress(visit.checklist),
-    scheduledDate: visit.scheduledDate,
-    scheduledTime: visit.scheduledTime,
-    submittedAt: visit.submittedAt,
-    checklist: visit.checklist ?? [],
-    findings: visit.findings ?? [],
-    reportSummary: visit.reportSummary,
-    fieldObservationNotes: visit.fieldObservationNotes,
-    officeVerification: visit.officeVerification,
-    warehouseVerification: visit.warehouseVerification,
-    factoryVerification: visit.factoryVerification,
-    reportVerification: visit.reportVerification,
-    // True when this location type has no entry in the application's current payload — either
-    // the fallback-from-company case above, or a payload location that was removed after this
-    // visit was first created. Surfaced as a warning badge, never used to hide the location.
-    notInApplicationPayload: !payloadLocationTypes.has(visit.locationType),
-    // Filled in on this assignment although the location belongs to a sibling assignment.
-    belongsToOtherAssignmentLocation: otherLocationVisitIds.has(visit.id),
-  }));
 
   return NextResponse.json({ data });
 }

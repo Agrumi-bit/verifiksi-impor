@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireProjectManagerSession } from "@/lib/require-project-manager-session";
 import { computeApplicationStage, type SiblingForStage } from "@/modules/project-manager-workspace/stage";
-import { effectiveAssignmentVisits, type ScopablePayloadLocation } from "@/modules/shared/survey-visit-scope";
+import { collectApplicationVisits, groupVisitsByLocation, assignmentLocations, locationKey, type SurveyPayloadLocation } from "@/modules/shared/survey-visit-scope";
 
 export type PmApplicationRow = {
   applicationNumber: string;
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
           surveyor: { select: { name: true } },
           verifikator: { select: { name: true } },
           technicalReviewer: { select: { name: true } },
-          locationVisits: { select: { status: true, locationType: true, address: true, companyLocationId: true } },
+          locationVisits: { select: { id: true, status: true, locationType: true, address: true, companyLocationId: true, submittedAt: true, updatedAt: true, reportVerification: true } },
         },
       },
     },
@@ -52,16 +52,21 @@ export async function GET(request: Request) {
   });
 
   const rows: PmApplicationRow[] = applications.map((app) => {
-    const payload = app.payload as { companyName?: string; locations?: (ScopablePayloadLocation & { city: string })[] };
+    const payload = app.payload as { companyName?: string; locations?: (SurveyPayloadLocation & { city: string })[] };
     const dokumen = app.assignments.find((a) => a.scheduleType === "dokumen") ?? null;
     const survey = app.assignments.find((a) => a.scheduleType === "survey") ?? null;
     const technical = app.assignments.find((a) => a.scheduleType === "technical") ?? null;
 
+    const { groups } = groupVisitsByLocation(collectApplicationVisits(app.assignments), payload.locations ?? []);
     const siblings: SiblingForStage[] = app.assignments.map((a) => ({
       scheduleType: a.scheduleType,
       status: a.status,
       dueDate: a.dueDate?.toISOString() ?? null,
-      locationVisits: effectiveAssignmentVisits(a, a.locationVisits, payload.locations ?? []).map((v) => ({ status: v.status })),
+      // One status per location this assignment is responsible for (NOT_STARTED when it has no
+      // visit yet), taken from the application location's single active visit.
+      locationVisits: assignmentLocations(a, payload.locations ?? []).map((loc) => ({
+        status: groups.find((group) => group.key === locationKey(loc))?.active?.status ?? "NOT_STARTED",
+      })),
     }));
     const { stage, status, slaLabel, slaDetail, slaColor } = computeApplicationStage(siblings);
 

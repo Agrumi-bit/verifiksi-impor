@@ -9,6 +9,7 @@ import { MaterialIcon } from "../material-icon";
 import { LOCATION_TYPE_ICON, LOCATION_TYPE_LABELS } from "../../status";
 import { computeFindings as computeOfficeFindings, type OfficeVerificationValues } from "../office-verification/schema";
 import { computeFindings as computeFieldFindings, type FieldVerificationValues } from "../field-verification/schema";
+import { formatAssignmentDate } from "@/lib/assignment-date";
 
 const LOCATION_TYPE_IMAGE: Record<string, string> = {
   KANTOR: "/images/locations/kantor.svg",
@@ -17,7 +18,11 @@ const LOCATION_TYPE_IMAGE: Record<string, string> = {
 };
 
 type LocationVisitItem = {
-  id: string;
+  locationKey: string;
+  // null = this application location has no survey result yet (and isn't this assignment's to start).
+  id: string | null;
+  canEdit: boolean;
+  owner: { assignmentNumber: string; scheduledDate: string | null; surveyorName: string | null } | null;
   locationType: string;
   address: string;
   city: string | null;
@@ -28,8 +33,14 @@ type LocationVisitItem = {
   factoryVerification: FieldVerificationValues | null;
   reportVerification: { decision: "VERIFIED" | "REJECTED" | "REVISION" | null; decisionNote: string | null } | null;
   notInApplicationPayload: boolean;
-  belongsToOtherAssignmentLocation?: boolean;
+  surveyedElsewhere?: { assignmentNumber: string; surveyedAt: string | null } | null;
+  assignmentStatus?: string;
 };
+
+function formatSurveyDate(value: string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+}
 
 type Props = { assignmentId: string };
 
@@ -107,6 +118,28 @@ export function OnSiteTab({ assignmentId }: Props) {
     },
   });
 
+  const submitMutation = useMutation({
+    mutationFn: async (locationId: string) => {
+      const response = await fetch(
+        `/api/surveyor-workspace/assignments/${assignmentId}/locations/${locationId}/report/submit`,
+        { method: "POST" },
+      );
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error ?? "Gagal submit penugasan");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast.success("Penugasan berhasil disubmit.");
+      queryClient.invalidateQueries({ queryKey: ["surveyor-workspace"] });
+      router.refresh();
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Gagal submit penugasan");
+    },
+  });
+
   const locations = data ?? [];
   const completedCount = locations.filter((l) => l.status === "COMPLETED").length;
   const overallPct = locations.length > 0 ? Math.round((completedCount / locations.length) * 100) : 0;
@@ -158,7 +191,7 @@ export function OnSiteTab({ assignmentId }: Props) {
           const meta = needsRevision ? CARD_META.COMPLETED_REVISION : CARD_META[loc.status];
 
           return (
-            <div key={loc.id} className="flex flex-col overflow-hidden rounded-[14px] border border-[#e8d5c5] bg-white">
+            <div key={loc.locationKey} className="flex flex-col overflow-hidden rounded-[14px] border border-[#e8d5c5] bg-white">
               <div className="relative h-[130px] overflow-hidden bg-gradient-to-br from-[#e9e6e3] to-[#d8d4d0]">
                 {LOCATION_TYPE_IMAGE[loc.locationType] ? (
                   <Image
@@ -191,9 +224,19 @@ export function OnSiteTab({ assignmentId }: Props) {
                   {loc.city ? `, ${loc.city}` : ""}
                 </div>
 
-                {loc.belongsToOtherAssignmentLocation && (
+                <dl className="mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-[8px] bg-[#fbf8f4] px-3 py-2 text-[11.5px] text-[#594138]">
+                  <dt className="text-[#a68f80]">Assignment ID</dt>
+                  <dd className="font-semibold">{loc.owner?.assignmentNumber ?? "Belum ditugaskan"}</dd>
+                  <dt className="text-[#a68f80]">Tanggal Penugasan</dt>
+                  <dd className="font-semibold">{loc.owner ? formatAssignmentDate(loc.owner.scheduledDate) : "—"}</dd>
+                  <dt className="text-[#a68f80]">Surveyor</dt>
+                  <dd className="font-semibold">{loc.owner ? (loc.owner.surveyorName ?? "—") : "Belum ditugaskan"}</dd>
+                </dl>
+
+                {loc.surveyedElsewhere && (
                   <div className="mb-3 rounded-[8px] bg-[#e8eefc] px-3 py-2 text-[11.5px] leading-relaxed text-[#2c4a8a]">
-                    <span className="font-bold">Lokasi penugasan lain</span> — diverifikasi di sini.
+                    <span className="font-bold">Sudah disurvey</span> tgl {formatSurveyDate(loc.surveyedElsewhere.surveyedAt)} di{" "}
+                    {loc.surveyedElsewhere.assignmentNumber}.
                   </div>
                 )}
 
@@ -222,7 +265,28 @@ export function OnSiteTab({ assignmentId }: Props) {
                 )}
 
                 <div className="mt-auto flex gap-2">
-                  {isCompleted ? (
+                  {!loc.canEdit ? (
+                    isCompleted && loc.id ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          router.push(
+                            ["KANTOR", "GUDANG", "PABRIK"].includes(loc.locationType)
+                              ? `/surveyor-workspace/assignments/${assignmentId}/verify/${loc.id}/report`
+                              : `/surveyor-workspace/assignments/${assignmentId}/verify/${loc.id}`,
+                          )
+                        }
+                        className="flex flex-1 items-center justify-center gap-2 rounded-[9px] border border-[#e1bfb3] bg-white py-2.5 text-[13px] font-bold"
+                      >
+                        <MaterialIcon name="description" className="text-base" />
+                        View Report
+                      </button>
+                    ) : (
+                      <div className="flex-1 rounded-[9px] bg-[#f2f0ee] py-2.5 text-center text-[12.5px] font-semibold text-[#8a7565]">
+                        Read-only — lokasi penugasan lain
+                      </div>
+                    )
+                  ) : isCompleted ? (
                     <>
                       <button
                         type="button"
@@ -238,11 +302,22 @@ export function OnSiteTab({ assignmentId }: Props) {
                         <MaterialIcon name="description" className="text-base" />
                         View Report
                       </button>
+                      {loc.surveyedElsewhere && !["SUBMITTED", "COMPLETED"].includes(loc.assignmentStatus ?? "") && (
+                        <button
+                          type="button"
+                          disabled={submitMutation.isPending}
+                          onClick={() => submitMutation.mutate(loc.id as string)}
+                          className="flex flex-1 items-center justify-center gap-2 rounded-[9px] bg-[#e0662e] py-2.5 text-[13px] font-bold text-white disabled:opacity-60"
+                        >
+                          <MaterialIcon name="send" className="text-base" />
+                          Submit Penugasan
+                        </button>
+                      )}
                       {needsRevision && (
                         <button
                           type="button"
                           disabled={reviseMutation.isPending}
-                          onClick={() => reviseMutation.mutate(loc.id)}
+                          onClick={() => reviseMutation.mutate(loc.id as string)}
                           className="flex flex-1 items-center justify-center gap-2 rounded-[9px] bg-[#ba1a1a] py-2.5 text-[13px] font-bold text-white disabled:opacity-60"
                         >
                           <MaterialIcon name="rate_review" className="text-base" />
@@ -277,7 +352,7 @@ export function OnSiteTab({ assignmentId }: Props) {
                     <button
                       type="button"
                       disabled={startMutation.isPending}
-                      onClick={() => startMutation.mutate(loc.id)}
+                      onClick={() => startMutation.mutate(loc.id as string)}
                       className="flex flex-1 items-center justify-center gap-2 rounded-[9px] border-[1.5px] border-sv-primary-container bg-[#fff8f6] py-2.5 text-[13px] font-bold text-sv-primary-container disabled:opacity-60"
                     >
                       <MaterialIcon name="edit_note" className="text-base" />

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
-import { effectiveAssignmentVisits, mergeVisitsByLocation, type ScopablePayloadLocation } from "@/modules/shared/survey-visit-scope";
+import { activeVisitsForApplication, collectApplicationVisits, type SurveyPayloadLocation } from "@/modules/shared/survey-visit-scope";
 
 export async function GET(
   _request: Request,
@@ -31,12 +31,10 @@ export async function GET(
     include: { locationVisits: true },
   });
   const payloadLocations =
-    (assignment.application.payload as { locations?: ScopablePayloadLocation[] } | null)?.locations ?? [];
-  // Each survey assignment only owns its own scheduled location — count a sibling's visit for any
-  // other location only if the surveyor actually filled it in there — then keep the most advanced
-  // copy per physical location (a re-schedule can leave the same location on two assignments).
-  const allVisits = siblingAssignments.flatMap((a) => effectiveAssignmentVisits(a, a.locationVisits, payloadLocations));
-  const locationVisits = mergeVisitsByLocation(allVisits, payloadLocations);
+    (assignment.application.payload as { locations?: SurveyPayloadLocation[] } | null)?.locations ?? [];
+  // One survey result per application location: the active visit of each payload location, no
+  // matter which assignment created it. The tab lists exactly as many locations as the application.
+  const locationVisits = activeVisitsForApplication(collectApplicationVisits(siblingAssignments), payloadLocations);
 
   const data = locationVisits.map((visit) => ({
     id: visit.id,

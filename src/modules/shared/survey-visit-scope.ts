@@ -1,14 +1,16 @@
-import { composeLocationAddress } from "./schema";
+import { composeLocationAddress, matchLocationTypeLabel } from "./schema";
 
 /**
- * A survey Assignment is scheduled for ONE application location (`Assignment.locationId`, the
- * `id` — or `companyLocationId` — of an Application.payload `locations[]` entry). An application
- * with several locations therefore has several survey assignments, each owning only its own
- * location's LocationVisit. Assignments without `locationId` (created before it existed) keep
- * the old behaviour: every payload location belongs to them.
+ * Survey results belong to the APPLICATION's locations: one LocationVisit per
+ * (applicationId, application location). A survey assignment (one per location, scheduled by
+ * Customer Relation via `Assignment.locationId`) only shows and works on its own location, but the
+ * visit it works on is the application location's single "active" visit — even if another
+ * assignment created it. Everything that reads survey results (surveyor, verifikator, technical
+ * analyst, PM, company, reports, "ready for review" counts) goes through the helpers below, so
+ * they all agree on one visit per location.
  */
 
-export type ScopablePayloadLocation = {
+export type SurveyPayloadLocation = {
   id?: string;
   companyLocationId?: string;
   locationType: string;
@@ -18,13 +20,16 @@ export type ScopablePayloadLocation = {
   discoveredAssignmentId?: string;
 };
 
-export type ScopableAssignment = { id: string; locationId: string | null };
+export type SurveyAssignment = { id: string; locationId: string | null; location?: string | null };
 
-export type ScopableVisit = {
+export type SurveyVisit = {
+  id: string;
   status: string;
   locationType: string;
   address: string;
   companyLocationId: string | null;
+  submittedAt?: Date | string | null;
+  updatedAt?: Date | string | null;
   checklist?: unknown;
   photos?: unknown;
   interviews?: unknown;
@@ -34,119 +39,234 @@ export type ScopableVisit = {
   officeVerification?: unknown;
   warehouseVerification?: unknown;
   factoryVerification?: unknown;
+  reportVerification?: unknown;
 };
 
-const VISIT_STATUS_RANK: Record<string, number> = { NOT_STARTED: 0, IN_PROGRESS: 1, COMPLETED: 2 };
+/** A visit plus what the selection rules need to know about the assignment that owns it. */
+export type VisitCandidate = SurveyVisit & { pmApproved?: boolean };
 
-/** True when the assignment is tied to a location that actually exists in the payload — only
- * then can its visits be scoped; an unresolvable `locationId` falls back to the legacy
- * "everything" behaviour rather than hiding all of the assignment's work. */
-export function isAssignmentScoped(assignment: ScopableAssignment, payloadLocations: ScopablePayloadLocation[]): boolean {
-  const locationId = assignment.locationId;
-  if (!locationId) return false;
-  return payloadLocations.some((loc) => loc.id === locationId || loc.companyLocationId === locationId);
-}
-
-/** Payload locations this assignment is responsible for: its scheduled location, plus any
- * location the surveyor discovered in the field on this very assignment. */
-export function locationsInAssignmentScope(
-  assignment: ScopableAssignment,
-  payloadLocations: ScopablePayloadLocation[],
-): ScopablePayloadLocation[] {
-  if (!isAssignmentScoped(assignment, payloadLocations)) return payloadLocations;
-  return payloadLocations.filter(
-    (loc) =>
-      loc.id === assignment.locationId ||
-      loc.companyLocationId === assignment.locationId ||
-      loc.discoveredAssignmentId === assignment.id,
-  );
-}
-
-function payloadLocationKey(loc: ScopablePayloadLocation): string | null {
+/** The identity of an application location: the company-location id when known, else its own id. */
+export function locationKey(loc: SurveyPayloadLocation): string | null {
   return loc.companyLocationId || loc.id || null;
 }
 
-export function visitHasData(visit: ScopableVisit): boolean {
-  if (visit.status !== "NOT_STARTED") return true;
-  const filled = (value: unknown) => (Array.isArray(value) ? value.length > 0 : value != null);
+function locationMatchesId(loc: SurveyPayloadLocation, id: string): boolean {
+  return loc.id === id || loc.companyLocationId === id;
+}
+
+/** Which payload location a visit is for (by its company-location link, else type + address), or
+ * null for a visit whose location is no longer in the application. */
+export function matchVisitLocation(visit: SurveyVisit, payloadLocations: SurveyPayloadLocation[]): SurveyPayloadLocation | null {
+  if (visit.companyLocationId) {
+    const linked = payloadLocations.find((loc) => locationMatchesId(loc, visit.companyLocationId as string));
+    if (linked) return linked;
+  }
   return (
-    filled(visit.checklist) ||
-    filled(visit.photos) ||
-    filled(visit.interviews) ||
-    filled(visit.findings) ||
-    filled(visit.officeVerification) ||
-    filled(visit.warehouseVerification) ||
-    filled(visit.factoryVerification) ||
-    Boolean(visit.reportSummary) ||
-    Boolean(visit.fieldObservationNotes)
+    payloadLocations.find((loc) => visit.locationType === loc.locationType && visit.address === composeLocationAddress(loc)) ?? null
   );
 }
 
-export function isVisitForPayloadLocation(visit: ScopableVisit, loc: ScopablePayloadLocation): boolean {
-  const key = payloadLocationKey(loc);
-  if (visit.companyLocationId && key) return visit.companyLocationId === key;
-  return visit.locationType === loc.locationType && visit.address === composeLocationAddress(loc);
-}
-
-export type ScopedVisit<V> = V & { belongsToOtherAssignmentLocation: boolean };
-
-/**
- * The visits that count as this assignment's own: those for its in-scope locations, plus visits
- * for any OTHER location that already hold data (surveyor work done before scoping existed —
- * never hidden or dropped, flagged `belongsToOtherAssignmentLocation` so the UI can say so).
- * Empty visits for other locations are the artefact of the old "create a visit for every payload
- * location" behaviour and are left out.
- */
-export function effectiveAssignmentVisits<V extends ScopableVisit>(
-  assignment: ScopableAssignment,
-  visits: V[],
-  payloadLocations: ScopablePayloadLocation[],
-): ScopedVisit<V>[] {
-  if (!isAssignmentScoped(assignment, payloadLocations)) {
-    return visits.map((visit) => ({ ...visit, belongsToOtherAssignmentLocation: false }));
-  }
-  const inScope = locationsInAssignmentScope(assignment, payloadLocations);
-  const result: ScopedVisit<V>[] = [];
-  for (const visit of visits) {
-    if (inScope.some((loc) => isVisitForPayloadLocation(visit, loc))) {
-      result.push({ ...visit, belongsToOtherAssignmentLocation: false });
-    } else if (visitHasData(visit)) {
-      result.push({ ...visit, belongsToOtherAssignmentLocation: true });
+/** The payload locations a survey assignment is responsible for. */
+export function assignmentLocations(assignment: SurveyAssignment, payloadLocations: SurveyPayloadLocation[]): SurveyPayloadLocation[] {
+  if (assignment.locationId) {
+    const scheduledId = assignment.locationId;
+    const own = payloadLocations.filter((loc) => locationMatchesId(loc, scheduledId));
+    if (own.length > 0) {
+      // A facility the surveyor found in the field on this very assignment stays with it.
+      return [...own, ...payloadLocations.filter((loc) => !own.includes(loc) && loc.discoveredAssignmentId === assignment.id)];
     }
+    return payloadLocations;
   }
-  return result;
-}
-
-/** One key per physical location: the company-location id when the visit has one, otherwise
- * type + address (visits created before that link existed). When the application's payload
- * locations are given, a visit without the link is first matched to its payload location, so a
- * legacy copy and a linked copy of the same location still merge into one. */
-export function visitLocationKey(
-  visit: Pick<ScopableVisit, "companyLocationId" | "locationType" | "address">,
-  payloadLocations: ScopablePayloadLocation[] = [],
-): string {
-  if (visit.companyLocationId) return visit.companyLocationId;
-  const matched = payloadLocations.find((loc) => isVisitForPayloadLocation({ ...visit, status: "" }, loc));
-  return (matched && payloadLocationKey(matched)) || `${visit.locationType}::${visit.address}`;
+  // Older assignments only have the free-text label ("Kantor"/"Gudang"/"Factory"): trust it when it
+  // names exactly one location, otherwise it is ambiguous and the assignment keeps every location.
+  const type = matchLocationTypeLabel(assignment.location);
+  if (type) {
+    const ofType = payloadLocations.filter((loc) => loc.locationType === type);
+    if (ofType.length === 1) return ofType;
+  }
+  return payloadLocations;
 }
 
 /**
- * Merges visits gathered from several survey assignments of one application into one row per
- * physical location, keeping the most-progressed copy (a re-schedule can leave the same
- * location on more than one assignment). Merging by location — not by `locationType` — keeps two
- * Gudang locations apart instead of letting one overwrite the other.
+ * The survey assignment responsible for a location, or null when none is assigned yet. An
+ * assignment explicitly scheduled for the location (`locationId`) wins, then one that found it in
+ * the field; only then an older assignment without `locationId` whose label narrows to it.
  */
-export function mergeVisitsByLocation<V extends ScopableVisit>(
+export function findLocationAssignment<A extends SurveyAssignment>(
+  assignments: A[],
+  location: SurveyPayloadLocation,
+  payloadLocations: SurveyPayloadLocation[],
+): A | null {
+  const explicit = assignments.find((assignment) => assignment.locationId && locationMatchesId(location, assignment.locationId));
+  if (explicit) return explicit;
+  const discovered = assignments.find((assignment) => location.discoveredAssignmentId === assignment.id);
+  if (discovered) return discovered;
+  // Legacy: no (resolvable) locationId — take the assignment whose label narrows to exactly this
+  // location. An ambiguous legacy assignment (it would claim every location) is not an owner.
+  return (
+    assignments.find((assignment) => {
+      if (assignment.locationId && payloadLocations.some((loc) => locationMatchesId(loc, assignment.locationId as string))) return false;
+      const own = assignmentLocations(assignment, payloadLocations);
+      return own.length === 1 && own[0] === location;
+    }) ?? null
+  );
+}
+
+function isFilled(value: unknown): boolean {
+  return Array.isArray(value) ? value.length > 0 : value != null;
+}
+
+/** How much the surveyor actually entered — answered checklist rows, photos, interviews, findings,
+ * and each filled verification form / note. */
+export function visitFilledCount(visit: SurveyVisit): number {
+  const answered = Array.isArray(visit.checklist)
+    ? visit.checklist.filter((item) => item && typeof item === "object" && "result" in item && (item as { result: unknown }).result != null).length
+    : 0;
+  const lengthOf = (value: unknown) => (Array.isArray(value) ? value.length : 0);
+  return (
+    answered +
+    lengthOf(visit.photos) +
+    lengthOf(visit.interviews) +
+    lengthOf(visit.findings) +
+    [visit.officeVerification, visit.warehouseVerification, visit.factoryVerification].filter((v) => v != null).length +
+    (visit.reportSummary ? 1 : 0) +
+    (visit.fieldObservationNotes ? 1 : 0)
+  );
+}
+
+export function visitHasData(visit: SurveyVisit): boolean {
+  return (
+    visit.status !== "NOT_STARTED" ||
+    visitFilledCount(visit) > 0 ||
+    isFilled(visit.checklist) ||
+    isFilled(visit.photos) ||
+    isFilled(visit.interviews) ||
+    isFilled(visit.findings)
+  );
+}
+
+function timestamp(value: Date | string | null | undefined): number {
+  if (!value) return 0;
+  const time = value instanceof Date ? value.getTime() : Date.parse(value);
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function isVerified(visit: SurveyVisit): boolean {
+  return (visit.reportVerification as { decision?: string | null } | null)?.decision === "VERIFIED";
+}
+
+/** Selection rules, strongest first. Each entry is also the human-readable reason it was chosen. */
+const SELECTION_RULES: { reason: string; score: (visit: VisitCandidate) => number }[] = [
+  { reason: "penugasannya sudah disetujui PM", score: (v) => (v.pmApproved ? 1 : 0) },
+  { reason: "laporan sudah VERIFIED oleh verifikator", score: (v) => (isVerified(v) ? 1 : 0) },
+  { reason: "sudah disubmit (submittedAt terisi)", score: (v) => (v.submittedAt ? 1 : 0) },
+  { reason: "berstatus COMPLETED", score: (v) => (v.status === "COMPLETED" ? 1 : 0) },
+  { reason: "IN_PROGRESS dengan isian terbanyak", score: (v) => (v.status === "IN_PROGRESS" ? 1 + visitFilledCount(v) : 0) },
+  { reason: "paling baru", score: (v) => Math.max(timestamp(v.submittedAt), timestamp(v.updatedAt)) },
+];
+
+/** Ranks two candidates; > 0 means `a` should be kept over `b`. */
+function compareCandidates(a: VisitCandidate, b: VisitCandidate): number {
+  for (const rule of SELECTION_RULES) {
+    const diff = rule.score(a) - rule.score(b);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+/** The single visit to keep among visits for the same location, and why it won. */
+export function pickActiveVisit<V extends VisitCandidate>(candidates: V[]): { visit: V; reason: string } | null {
+  if (candidates.length === 0) return null;
+  const ranked = [...candidates].sort((a, b) => compareCandidates(b, a) || a.id.localeCompare(b.id));
+  const winner = ranked[0];
+  if (ranked.length === 1) return { visit: winner, reason: "satu-satunya visit" };
+  const runnerUp = ranked[1];
+  const decisive = SELECTION_RULES.find((rule) => rule.score(winner) !== rule.score(runnerUp));
+  return { visit: winner, reason: decisive ? `dipilih karena ${decisive.reason}` : "dipilih karena identik; diambil yang pertama" };
+}
+
+export type LocationGroup<V extends VisitCandidate> = {
+  location: SurveyPayloadLocation;
+  key: string;
+  active: V | null;
+  /** Every visit for this location, active one first. */
+  visits: V[];
+};
+
+/** Groups visits by application location. Visits for locations missing from the payload come back
+ * as `orphans` so callers can report them instead of silently losing them. */
+export function groupVisitsByLocation<V extends VisitCandidate>(
   visits: V[],
-  payloadLocations: ScopablePayloadLocation[] = [],
+  payloadLocations: SurveyPayloadLocation[],
+): { groups: LocationGroup<V>[]; orphans: V[] } {
+  const byKey = new Map<string, V[]>();
+  const orphans: V[] = [];
+  for (const visit of visits) {
+    const loc = matchVisitLocation(visit, payloadLocations);
+    const key = loc ? locationKey(loc) : null;
+    if (!loc || !key) {
+      orphans.push(visit);
+      continue;
+    }
+    byKey.set(key, [...(byKey.get(key) ?? []), visit]);
+  }
+  const groups: LocationGroup<V>[] = [];
+  for (const location of payloadLocations) {
+    const key = locationKey(location);
+    if (!key) continue;
+    const group = byKey.get(key) ?? [];
+    const picked = pickActiveVisit(group);
+    groups.push({
+      location,
+      key,
+      active: picked?.visit ?? null,
+      visits: picked ? [picked.visit, ...group.filter((v) => v !== picked.visit)] : [],
+    });
+  }
+  return { groups, orphans };
+}
+
+/** One active visit per application location — what every report/overview should show. */
+export function activeVisitsForApplication<V extends VisitCandidate>(visits: V[], payloadLocations: SurveyPayloadLocation[]): V[] {
+  return groupVisitsByLocation(visits, payloadLocations)
+    .groups.map((group) => group.active)
+    .filter((visit): visit is V => visit != null);
+}
+
+/** The active visits of ONE assignment's own locations (a location with no visit yet is absent). */
+export function assignmentActiveVisits<V extends VisitCandidate>(
+  assignment: SurveyAssignment,
+  applicationVisits: V[],
+  payloadLocations: SurveyPayloadLocation[],
 ): V[] {
-  const byKey = new Map<string, V>();
-  for (const visit of visits) {
-    const key = visitLocationKey(visit, payloadLocations);
-    const existing = byKey.get(key);
-    if (!existing || (VISIT_STATUS_RANK[visit.status] ?? 0) > (VISIT_STATUS_RANK[existing.status] ?? 0)) {
-      byKey.set(key, visit);
-    }
-  }
-  return [...byKey.values()];
+  const ownKeys = new Set(assignmentLocations(assignment, payloadLocations).map(locationKey));
+  return groupVisitsByLocation(applicationVisits, payloadLocations)
+    .groups.filter((group) => ownKeys.has(group.key) && group.active)
+    .map((group) => group.active as V);
+}
+
+/** True when every location of the assignment has a COMPLETED active visit. */
+export function isAssignmentSurveyComplete<V extends VisitCandidate>(
+  assignment: SurveyAssignment,
+  applicationVisits: V[],
+  payloadLocations: SurveyPayloadLocation[],
+): boolean {
+  const locations = assignmentLocations(assignment, payloadLocations);
+  if (locations.length === 0) return false;
+  const groups = groupVisitsByLocation(applicationVisits, payloadLocations).groups;
+  return locations.every((loc) => groups.find((group) => group.key === locationKey(loc))?.active?.status === "COMPLETED");
+}
+
+/** For readers that hold every survey assignment of an application: all their visits as
+ * candidates, tagged with the owning assignment's number and PM decision. */
+export function collectApplicationVisits<
+  A extends { assignmentNumber: string; pmReviewStatus: string | null; locationVisits: SurveyVisit[] },
+>(assignments: A[]): (A["locationVisits"][number] & { pmApproved: boolean; assignmentNumber: string })[] {
+  return assignments.flatMap((assignment) =>
+    assignment.locationVisits.map((visit) => ({
+      ...visit,
+      pmApproved: assignment.pmReviewStatus === "APPROVED",
+      assignmentNumber: assignment.assignmentNumber,
+    })),
+  );
 }

@@ -7,20 +7,15 @@ import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { composeLocationAddress, type LocationValues } from "@/modules/shared/schema";
 import { getDocumentMeta, type DocumentMetaEntry } from "@/modules/company/document-versions";
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
+import { loadAssignmentVisit } from "@/modules/surveyor-workspace/server/load-assignment-visit";
 
-async function loadScopedLocation(assignmentNumber: string, locationId: string, surveyorId: string) {
-  const visit = await db.locationVisit.findUnique({
-    where: { id: locationId },
-    include: { assignment: { include: { application: true, surveyor: true } } },
-  });
-  if (
-    !visit ||
-    visit.assignment.assignmentNumber !== assignmentNumber ||
-    visit.assignment.surveyorId !== surveyorId
-  ) {
-    return null;
-  }
-  return visit;
+async function loadScopedLocation(
+  assignmentNumber: string,
+  locationId: string,
+  surveyorId: string,
+  mode: "read" | "write" = "write",
+) {
+  return loadAssignmentVisit(assignmentNumber, locationId, surveyorId, mode);
 }
 
 export async function GET(
@@ -34,7 +29,7 @@ export async function GET(
   }
 
   const { id, locationId } = await params;
-  const visit = await loadScopedLocation(id, locationId, surveyorId);
+  const visit = await loadScopedLocation(id, locationId, surveyorId, "read");
   if (!visit) {
     return NextResponse.json({ error: "Lokasi tidak ditemukan" }, { status: 404 });
   }
@@ -172,7 +167,7 @@ export async function PATCH(
   });
 
   await db.assignment.update({
-    where: { id: visit.assignmentId },
+    where: { id: visit.requestingAssignment.id },
     data: { status: "IN_PROGRESS" },
   });
 

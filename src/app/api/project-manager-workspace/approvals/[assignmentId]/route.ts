@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireProjectManagerSession } from "@/lib/require-project-manager-session";
 import { APPROVAL_CATEGORIES } from "@/modules/project-manager-workspace/status";
-import { effectiveAssignmentVisits, type ScopablePayloadLocation } from "@/modules/shared/survey-visit-scope";
+import { collectApplicationVisits, isAssignmentSurveyComplete, type SurveyPayloadLocation } from "@/modules/shared/survey-visit-scope";
 
 const patchSchema = z.object({
   category: z.enum(APPROVAL_CATEGORIES),
@@ -45,10 +45,7 @@ export async function PATCH(
 
   const assignment = await db.assignment.findUnique({
     where: { id: assignmentId },
-    include: {
-      application: { select: { payload: true } },
-      locationVisits: { select: { status: true, locationType: true, address: true, companyLocationId: true } },
-    },
+    include: { application: { select: { payload: true } } },
   });
   if (!assignment) {
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
@@ -81,15 +78,21 @@ export async function PATCH(
   if (assignment.pmReviewStatus) {
     return NextResponse.json({ error: "Laporan ini sudah direview." }, { status: 400 });
   }
-  // Only this assignment's own location(s) count — see survey-visit-scope.
-  const ownVisits = effectiveAssignmentVisits(
-    assignment,
-    assignment.locationVisits,
-    (assignment.application.payload as { locations?: ScopablePayloadLocation[] } | null)?.locations ?? [],
-  );
+  // Ready when this assignment's own location(s) each have a COMPLETED survey result — the result
+  // belongs to the application location, whichever assignment recorded it.
+  const siblings = category === "laporanSurvey"
+    ? await db.assignment.findMany({
+        where: { applicationId: assignment.applicationId },
+        select: { assignmentNumber: true, pmReviewStatus: true, locationVisits: true },
+      })
+    : [];
   const isReady =
     category === "laporanSurvey"
-      ? ownVisits.length > 0 && ownVisits.every((v) => v.status === "COMPLETED")
+      ? isAssignmentSurveyComplete(
+          assignment,
+          collectApplicationVisits(siblings),
+          (assignment.application.payload as { locations?: SurveyPayloadLocation[] } | null)?.locations ?? [],
+        )
       : assignment.status === "COMPLETED";
   if (!isReady) {
     return NextResponse.json({ error: "Laporan ini belum siap untuk direview." }, { status: 400 });

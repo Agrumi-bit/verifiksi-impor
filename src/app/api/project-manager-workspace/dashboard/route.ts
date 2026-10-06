@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireProjectManagerSession } from "@/lib/require-project-manager-session";
 import { APPROVAL_CATEGORY_META, type ApprovalCategory, type PmDashboardStats } from "@/modules/project-manager-workspace/status";
-import { effectiveAssignmentVisits, type ScopablePayloadLocation } from "@/modules/shared/survey-visit-scope";
+import { collectApplicationVisits, isAssignmentSurveyComplete, type SurveyPayloadLocation } from "@/modules/shared/survey-visit-scope";
 
 export type PmApprovalItem = {
   id: string;
@@ -38,15 +38,19 @@ export async function GET() {
       surveyor: { select: { name: true } },
       verifikator: { select: { name: true } },
       technicalReviewer: { select: { name: true } },
-      locationVisits: { select: { status: true, locationType: true, address: true, companyLocationId: true } },
+      locationVisits: { select: { id: true, status: true, locationType: true, address: true, companyLocationId: true, submittedAt: true, updatedAt: true, reportVerification: true } },
     },
     orderBy: { updatedAt: "desc" },
   });
 
   const items: PmApprovalItem[] = [];
+  const assignmentsByApplication = new Map<string, typeof assignments>();
+  for (const a of assignments) {
+    assignmentsByApplication.set(a.applicationId, [...(assignmentsByApplication.get(a.applicationId) ?? []), a]);
+  }
 
   for (const a of assignments) {
-    const payload = a.application.payload as { companyName?: string; locations?: ScopablePayloadLocation[] } | null;
+    const payload = a.application.payload as { companyName?: string; locations?: SurveyPayloadLocation[] } | null;
     const company = payload?.companyName ?? "—";
     const jenis = a.application.verificationType;
 
@@ -67,9 +71,10 @@ export async function GET() {
     }
 
     if (a.scheduleType === "survey") {
-      // Only this assignment's own location(s) count — see survey-visit-scope.
-      const ownVisits = effectiveAssignmentVisits(a, a.locationVisits, payload?.locations ?? []);
-      const locationsReady = ownVisits.length > 0 && ownVisits.every((v) => v.status === "COMPLETED");
+      // Ready when this assignment's own location(s) each have a COMPLETED survey result — the
+      // result belongs to the application location, whichever assignment recorded it.
+      const applicationVisits = collectApplicationVisits(assignmentsByApplication.get(a.applicationId) ?? [a]);
+      const locationsReady = isAssignmentSurveyComplete(a, applicationVisits, payload?.locations ?? []);
       if (locationsReady || a.pmReviewStatus) {
         items.push({
           id: a.id,

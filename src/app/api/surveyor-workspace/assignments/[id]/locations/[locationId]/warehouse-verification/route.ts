@@ -4,16 +4,10 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import { fieldVerificationSchema } from "@/modules/surveyor-workspace/components/field-verification/schema";
+import { loadAssignmentVisit } from "@/modules/surveyor-workspace/server/load-assignment-visit";
 
 async function loadScopedLocation(assignmentNumber: string, locationId: string, surveyorId: string) {
-  const visit = await db.locationVisit.findUnique({
-    where: { id: locationId },
-    include: { assignment: true },
-  });
-  if (!visit || visit.assignment.assignmentNumber !== assignmentNumber || visit.assignment.surveyorId !== surveyorId) {
-    return null;
-  }
-  return visit;
+  return loadAssignmentVisit(assignmentNumber, locationId, surveyorId);
 }
 
 export async function PATCH(

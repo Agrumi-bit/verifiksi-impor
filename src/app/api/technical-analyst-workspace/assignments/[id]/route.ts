@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { findApplicationEditAfter } from "@/modules/applications/server/edited-after";
 import { requireTechnicalAnalystSession } from "@/lib/require-technical-analyst-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
-import { effectiveAssignmentVisits, mergeVisitsByLocation, type ScopablePayloadLocation } from "@/modules/shared/survey-visit-scope";
+import { activeVisitsForApplication, collectApplicationVisits, type SurveyPayloadLocation } from "@/modules/shared/survey-visit-scope";
 import { allModulesDecided, overallTechnicalStatus, technicalAnalysisDataSchema } from "@/modules/technical-analyst-workspace/schema";
 
 const ASSIGNMENT_STATUS_RANK: Record<string, number> = { ASSIGNED: 0, SCHEDULED: 1, IN_PROGRESS: 2, SUBMITTED: 3, RETURNED: 3, COMPLETED: 4 };
@@ -23,22 +23,14 @@ const ASSIGNMENT_STATUS_RANK: Record<string, number> = { ASSIGNED: 0, SCHEDULED:
  * only owns its own scheduled location — see survey-visit-scope). "dokumen"
  * duplicates are rarer but handled the same way — pick the most-progressed row.
  */
-async function loadSiblingSummaries(applicationId: string, payloadLocations: ScopablePayloadLocation[]) {
+async function loadSiblingSummaries(applicationId: string, payloadLocations: SurveyPayloadLocation[]) {
   const siblings = await db.assignment.findMany({
     where: { applicationId },
     include: { locationVisits: true },
   });
 
   const surveyAssignments = siblings.filter((a) => a.surveyorId);
-  const mergedVisits = mergeVisitsByLocation(
-    surveyAssignments.flatMap((assignment) =>
-      effectiveAssignmentVisits(assignment, assignment.locationVisits, payloadLocations).map((visit) => ({
-        ...visit,
-        assignmentNumber: assignment.assignmentNumber,
-      })),
-    ),
-    payloadLocations,
-  ).map((visit) => ({
+  const mergedVisits = activeVisitsForApplication(collectApplicationVisits(surveyAssignments), payloadLocations).map((visit) => ({
     id: visit.id,
     locationType: visit.locationType,
     address: visit.address,

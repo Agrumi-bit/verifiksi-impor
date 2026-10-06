@@ -4,6 +4,7 @@ import { ApplicationEditedNotice } from "@/modules/applications/components/appli
 import type { ApplicationEditedNotice as ApplicationEditedNoticeData } from "@/modules/applications/server/edited-after";
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "@/lib/auth-client";
 
@@ -87,7 +88,9 @@ type TabName = (typeof TAB_NAMES)[number];
 type Props = { id: string };
 
 export function AssignmentDetail({ id }: Props) {
-  const [activeTab, setActiveTab] = useState<TabName>("Overview");
+  const searchParams = useSearchParams();
+  // "View Assignment" from My Assignments deep-links straight to the on-site tab (?tab=onsite).
+  const [activeTab, setActiveTab] = useState<TabName>(searchParams.get("tab") === "onsite" ? "On Site Verification" : "Overview");
   const { data: session } = useSession();
   const initials = (session?.user.name ?? "?")
     .split(" ")

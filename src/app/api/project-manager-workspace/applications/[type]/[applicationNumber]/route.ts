@@ -3,7 +3,7 @@ import type { LocationValues } from "@/modules/shared/schema";
 import { summarizeApplicationLocations } from "@/modules/shared/location-meta";
 import { db } from "@/lib/db";
 import { requireProjectManagerSession } from "@/lib/require-project-manager-session";
-import { effectiveAssignmentVisits, mergeVisitsByLocation } from "@/modules/shared/survey-visit-scope";
+import { collectApplicationVisits, groupVisitsByLocation } from "@/modules/shared/survey-visit-scope";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
 import { getDocumentMeta } from "@/modules/company/document-versions";
@@ -83,21 +83,17 @@ export async function GET(
   // visits) — a reschedule's older sibling may hold a visit the newer one never got, and vice
   // versa. Dedup per physical location (not per type), keep whichever copy is furthest along.
   const payloadLocations = payload.locations ?? [];
-  const mergedLocationVisits = mergeVisitsByLocation(
-    surveySiblings.flatMap((sibling) =>
-      effectiveAssignmentVisits(sibling, sibling.locationVisits, payloadLocations).map((visit) => ({
-        ...visit,
-        assignmentNumber: sibling.assignmentNumber,
-      })),
-    ),
-    payloadLocations,
-  );
+  const locationGroups = groupVisitsByLocation(collectApplicationVisits(surveySiblings), payloadLocations).groups;
+  const mergedLocationVisits = locationGroups.flatMap((group) => (group.active ? [group.active] : []));
+  // Every application location counts toward progress — one without a visit yet is NOT_STARTED, so
+  // a single finished location can't make the whole survey look complete.
+  const locationStatuses = locationGroups.map((group) => ({ status: group.active?.status ?? "NOT_STARTED" }));
 
   const siblingsForStage: SiblingForStage[] = [
     ...(dokumen ? [{ scheduleType: "dokumen", status: dokumen.status, dueDate: dokumen.dueDate?.toISOString() ?? null, locationVisits: [] }] : []),
     ...(technical ? [{ scheduleType: "technical", status: technical.status, dueDate: technical.dueDate?.toISOString() ?? null, locationVisits: [] }] : []),
     ...(survey
-      ? [{ scheduleType: "survey", status: survey.status, dueDate: survey.dueDate?.toISOString() ?? null, locationVisits: mergedLocationVisits.map((v) => ({ status: v.status })) }]
+      ? [{ scheduleType: "survey", status: survey.status, dueDate: survey.dueDate?.toISOString() ?? null, locationVisits: locationStatuses }]
       : []),
   ];
   const stageResult = computeApplicationStage(siblingsForStage);
@@ -188,7 +184,7 @@ export async function GET(
               pmReviewStatus: survey.pmReviewStatus,
               pmReviewNote: survey.pmReviewNote,
               pmReviewedAt: survey.pmReviewedAt,
-              allLocationsCompleted: mergedLocationVisits.length > 0 && mergedLocationVisits.every((v) => v.status === "COMPLETED"),
+              allLocationsCompleted: locationStatuses.length > 0 && locationStatuses.every((v) => v.status === "COMPLETED"),
               locationVisits: mergedLocationVisits.map((v) => {
                 const findingsCount = Array.isArray(v.findings) ? v.findings.length : 0;
                 const reportVerification = v.reportVerification as

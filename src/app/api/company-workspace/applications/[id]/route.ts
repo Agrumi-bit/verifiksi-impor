@@ -12,7 +12,7 @@ import { COMPANY_MAPPED_DOCUMENT_KEYS } from "@/modules/verifikator-workspace/sc
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
 import { computeDisplayStatus } from "@/modules/company-workspace/workflow-stage";
 import { buildApplicationDocumentChecklist } from "@/modules/verifikator-workspace/application-checklist";
-import { effectiveAssignmentVisits } from "@/modules/shared/survey-visit-scope";
+import { assignmentActiveVisits, collectApplicationVisits } from "@/modules/shared/survey-visit-scope";
 
 /**
  * `id` may be either the internal cuid (used by this workspace's own links)
@@ -86,11 +86,11 @@ export async function GET(
     data: {
       ...application,
       payload,
-      // Each survey assignment only owns its own scheduled location — hide the empty visits an
-      // older version created for every other location (see survey-visit-scope).
+      // Each survey assignment lists only its own location(s), showing the application location's
+      // single active survey result (see survey-visit-scope).
       assignments: application.assignments.map((assignment) => ({
         ...assignment,
-        locationVisits: effectiveAssignmentVisits(assignment, assignment.locationVisits, payload.locations ?? []),
+        locationVisits: assignmentActiveVisits(assignment, collectApplicationVisits(application.assignments), payload.locations ?? []),
       })),
       displayStatus,
       assignedSurveyorName: latestAssignment?.surveyor?.name ?? null,

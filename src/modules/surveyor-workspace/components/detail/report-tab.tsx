@@ -15,7 +15,9 @@ import { computeFindings as computeOfficeFindings, type OfficeVerificationValues
 import { computeFindings as computeFieldFindings, type FieldVerificationValues } from "../field-verification/schema";
 
 type LocationReportItem = {
-  id: string;
+  locationKey: string;
+  // null = no survey result yet for this application location.
+  id: string | null;
   locationType: string;
   address: string;
   city: string | null;
@@ -28,8 +30,13 @@ type LocationReportItem = {
   warehouseVerification: FieldVerificationValues | null;
   factoryVerification: FieldVerificationValues | null;
   notInApplicationPayload: boolean;
-  belongsToOtherAssignmentLocation?: boolean;
+  surveyedElsewhere?: { assignmentNumber: string; surveyedAt: string | null } | null;
 };
+
+function formatSurveyDate(value: string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+}
 
 type Props = { assignmentId: string };
 
@@ -91,7 +98,7 @@ export function ReportTab({ assignmentId }: Props) {
         const naCount = loc.checklist.filter((c) => c.result === "NA").length;
 
         return (
-          <div key={loc.id} className="rounded-[14px] border border-[#e8d5c5] bg-white p-7 shadow-sm">
+          <div key={loc.locationKey} className="rounded-[14px] border border-[#e8d5c5] bg-white p-7 shadow-sm">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <MaterialIcon
@@ -111,9 +118,10 @@ export function ReportTab({ assignmentId }: Props) {
               </span>
             </div>
 
-            {loc.belongsToOtherAssignmentLocation && (
+            {loc.surveyedElsewhere && (
               <div className="mb-3 rounded-[8px] bg-[#e8eefc] px-3 py-2 text-[11.5px] leading-relaxed text-[#2c4a8a]">
-                <span className="font-bold">Lokasi penugasan lain</span> — diverifikasi di sini.
+                <span className="font-bold">Sudah disurvey</span> tgl {formatSurveyDate(loc.surveyedElsewhere.surveyedAt)} di{" "}
+                {loc.surveyedElsewhere.assignmentNumber}.
               </div>
             )}
 
@@ -169,18 +177,20 @@ export function ReportTab({ assignmentId }: Props) {
               </div>
             )}
 
-            <div className="mt-4 flex justify-end">
-              <Link
-                href={
-                  (isOffice || isField) && loc.status === "COMPLETED"
-                    ? `/surveyor-workspace/assignments/${assignmentId}/verify/${loc.id}/report`
-                    : `/surveyor-workspace/assignments/${assignmentId}/verify/${loc.id}`
-                }
-                className="rounded-lg border border-[#e8d5c5] bg-white px-4 py-2 text-xs font-semibold text-[#2b2420]"
-              >
-                Lihat Detail Laporan
-              </Link>
-            </div>
+            {loc.id && (
+              <div className="mt-4 flex justify-end">
+                <Link
+                  href={
+                    (isOffice || isField) && loc.status === "COMPLETED"
+                      ? `/surveyor-workspace/assignments/${assignmentId}/verify/${loc.id}/report`
+                      : `/surveyor-workspace/assignments/${assignmentId}/verify/${loc.id}`
+                  }
+                  className="rounded-lg border border-[#e8d5c5] bg-white px-4 py-2 text-xs font-semibold text-[#2b2420]"
+                >
+                  Lihat Detail Laporan
+                </Link>
+              </div>
+            )}
           </div>
         );
       })}

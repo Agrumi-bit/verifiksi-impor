@@ -2,123 +2,181 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
-  effectiveAssignmentVisits,
-  locationsInAssignmentScope,
-  mergeVisitsByLocation,
-  visitLocationKey,
-  type ScopablePayloadLocation,
-  type ScopableVisit,
+  activeVisitsForApplication,
+  assignmentActiveVisits,
+  assignmentLocations,
+  findLocationAssignment,
+  groupVisitsByLocation,
+  isAssignmentSurveyComplete,
+  pickActiveVisit,
+  type SurveyPayloadLocation,
+  type VisitCandidate,
 } from "./survey-visit-scope";
 
-const KANTOR: ScopablePayloadLocation = { id: "loc-kantor", companyLocationId: "co-kantor", locationType: "KANTOR", address: "Jl. Kantor" };
-const GUDANG: ScopablePayloadLocation = { id: "loc-gudang", companyLocationId: "co-gudang", locationType: "GUDANG", address: "Jl. Gudang" };
-const TEMUAN: ScopablePayloadLocation = {
-  id: "co-temuan",
-  companyLocationId: "co-temuan",
-  locationType: "GUDANG",
-  address: "Jl. Temuan",
-  discoveredAssignmentId: "asg-kantor",
-};
+const KANTOR: SurveyPayloadLocation = { id: "loc-kantor", companyLocationId: "co-kantor", locationType: "KANTOR", address: "Jl. Kantor" };
+const GUDANG: SurveyPayloadLocation = { id: "loc-gudang", companyLocationId: "co-gudang", locationType: "GUDANG", address: "Jl. Gudang" };
 const PAYLOAD = [KANTOR, GUDANG];
 
-function visit(overrides: Partial<ScopableVisit> & Pick<ScopableVisit, "locationType" | "address">): ScopableVisit {
-  return { status: "NOT_STARTED", companyLocationId: null, ...overrides };
+let seq = 0;
+function visit(overrides: Partial<VisitCandidate> & Pick<VisitCandidate, "locationType" | "address">): VisitCandidate {
+  seq += 1;
+  return { id: `v${seq}`, status: "NOT_STARTED", companyLocationId: null, ...overrides };
 }
+const kantorVisit = (o: Partial<VisitCandidate> = {}) => visit({ locationType: "KANTOR", address: "Jl. Kantor", companyLocationId: "co-kantor", ...o });
+const gudangVisit = (o: Partial<VisitCandidate> = {}) => visit({ locationType: "GUDANG", address: "Jl. Gudang", companyLocationId: "co-gudang", ...o });
 
-const kantorVisit = visit({ locationType: "KANTOR", address: "Jl. Kantor", companyLocationId: "co-kantor" });
-const gudangVisit = visit({ locationType: "GUDANG", address: "Jl. Gudang", companyLocationId: "co-gudang" });
-
-describe("locationsInAssignmentScope", () => {
-  it("returns every payload location for an assignment without locationId", () => {
-    assert.deepEqual(locationsInAssignmentScope({ id: "a", locationId: null }, PAYLOAD), PAYLOAD);
+describe("assignmentLocations", () => {
+  it("a survey assignment with locationId sees only its own location", () => {
+    assert.deepEqual(assignmentLocations({ id: "a", locationId: "loc-kantor" }, PAYLOAD), [KANTOR]);
+    assert.deepEqual(assignmentLocations({ id: "a", locationId: "co-gudang" }, PAYLOAD), [GUDANG]);
   });
 
-  it("returns only the scheduled location when locationId matches a payload id", () => {
-    assert.deepEqual(locationsInAssignmentScope({ id: "a", locationId: "loc-kantor" }, PAYLOAD), [KANTOR]);
+  it("keeps a location discovered in the field on this very assignment", () => {
+    const temuan: SurveyPayloadLocation = { id: "co-t", companyLocationId: "co-t", locationType: "GUDANG", address: "Jl. T", discoveredAssignmentId: "asg-1" };
+    assert.deepEqual(assignmentLocations({ id: "asg-1", locationId: "loc-kantor" }, [...PAYLOAD, temuan]), [KANTOR, temuan]);
+    assert.deepEqual(assignmentLocations({ id: "asg-2", locationId: "loc-gudang" }, [...PAYLOAD, temuan]), [GUDANG]);
   });
 
-  it("also matches on companyLocationId", () => {
-    assert.deepEqual(locationsInAssignmentScope({ id: "a", locationId: "co-gudang" }, PAYLOAD), [GUDANG]);
+  it("an old assignment without locationId uses its label when exactly one location has that type", () => {
+    assert.deepEqual(assignmentLocations({ id: "a", locationId: null, location: "Gudang" }, PAYLOAD), [GUDANG]);
+    assert.deepEqual(assignmentLocations({ id: "a", locationId: null, location: "Factory" }, [KANTOR, { ...GUDANG, locationType: "PABRIK" }]).length, 1);
   });
 
-  it("keeps a location discovered in the field on this very assignment, but not another assignment's", () => {
-    const withTemuan = [...PAYLOAD, TEMUAN];
-    assert.deepEqual(locationsInAssignmentScope({ id: "asg-kantor", locationId: "loc-kantor" }, withTemuan), [KANTOR, TEMUAN]);
-    assert.deepEqual(locationsInAssignmentScope({ id: "asg-gudang", locationId: "loc-gudang" }, withTemuan), [GUDANG]);
+  it("an old assignment with an ambiguous or unmatched label keeps every location", () => {
+    const twoGudang = [KANTOR, GUDANG, { ...GUDANG, id: "g2", companyLocationId: "co-g2" }];
+    assert.equal(assignmentLocations({ id: "a", locationId: null, location: "Gudang" }, twoGudang).length, 3);
+    assert.equal(assignmentLocations({ id: "a", locationId: null, location: "Factory" }, PAYLOAD).length, 2);
+    assert.equal(assignmentLocations({ id: "a", locationId: null, location: null }, PAYLOAD).length, 2);
   });
 
-  it("falls back to every location when locationId is not in the payload", () => {
-    assert.deepEqual(locationsInAssignmentScope({ id: "a", locationId: "removed" }, PAYLOAD), PAYLOAD);
-  });
-});
-
-describe("effectiveAssignmentVisits", () => {
-  const assignment = { id: "asg-kantor", locationId: "loc-kantor" };
-
-  it("keeps all visits of an assignment without locationId", () => {
-    const result = effectiveAssignmentVisits({ id: "a", locationId: null }, [kantorVisit, gudangVisit], PAYLOAD);
-    assert.equal(result.length, 2);
-    assert.ok(result.every((v) => !v.belongsToOtherAssignmentLocation));
-  });
-
-  it("drops empty visits of other locations", () => {
-    const result = effectiveAssignmentVisits(assignment, [kantorVisit, gudangVisit], PAYLOAD);
-    assert.deepEqual(result.map((v) => v.locationType), ["KANTOR"]);
-  });
-
-  it("keeps a filled visit of another location and flags it, never dropping surveyor data", () => {
-    const filledGudang = { ...gudangVisit, status: "COMPLETED" };
-    const result = effectiveAssignmentVisits(assignment, [kantorVisit, filledGudang], PAYLOAD);
-    assert.equal(result.length, 2);
-    assert.equal(result.find((v) => v.locationType === "GUDANG")?.belongsToOtherAssignmentLocation, true);
-    assert.equal(result.find((v) => v.locationType === "KANTOR")?.belongsToOtherAssignmentLocation, false);
-  });
-
-  it("treats a visit with saved data as filled even while NOT_STARTED", () => {
-    const noted = { ...gudangVisit, fieldObservationNotes: "catatan" };
-    assert.equal(effectiveAssignmentVisits(assignment, [noted], PAYLOAD).length, 1);
-  });
-
-  it("keeps the field-discovered location's visit without a badge", () => {
-    const temuanVisit = visit({ locationType: "GUDANG", address: "Jl. Temuan", companyLocationId: "co-temuan" });
-    const result = effectiveAssignmentVisits(assignment, [kantorVisit, temuanVisit], [...PAYLOAD, TEMUAN]);
-    assert.equal(result.length, 2);
-    assert.ok(result.every((v) => !v.belongsToOtherAssignmentLocation));
-  });
-
-  it("matches a legacy visit without companyLocationId by type + address", () => {
-    const legacy = visit({ locationType: "KANTOR", address: "Jl. Kantor" });
-    assert.equal(effectiveAssignmentVisits(assignment, [legacy], PAYLOAD)[0].belongsToOtherAssignmentLocation, false);
+  it("a locationId that is not in the payload falls back to every location", () => {
+    assert.equal(assignmentLocations({ id: "a", locationId: "removed" }, PAYLOAD).length, 2);
   });
 });
 
-describe("mergeVisitsByLocation", () => {
-  it("keeps the most-progressed copy of the same location across assignments", () => {
-    const done = { ...kantorVisit, status: "COMPLETED" };
-    const merged = mergeVisitsByLocation([kantorVisit, done, gudangVisit]);
-    assert.equal(merged.length, 2);
-    assert.equal(merged.find((v) => v.locationType === "KANTOR")?.status, "COMPLETED");
+describe("pickActiveVisit priority", () => {
+  it("PM approved beats everything", () => {
+    const approved = kantorVisit({ status: "IN_PROGRESS", pmApproved: true });
+    const verified = kantorVisit({ status: "COMPLETED", reportVerification: { decision: "VERIFIED" }, submittedAt: new Date() });
+    const picked = pickActiveVisit([verified, approved]);
+    assert.equal(picked?.visit, approved);
+    assert.match(picked!.reason, /PM/);
   });
 
-  it("keeps two different locations of the same type apart", () => {
-    const gudang2 = visit({ locationType: "GUDANG", address: "Jl. Gudang 2", companyLocationId: "co-gudang-2" });
-    assert.equal(mergeVisitsByLocation([gudangVisit, gudang2]).length, 2);
+  it("then report VERIFIED, then submittedAt, then COMPLETED", () => {
+    const verified = kantorVisit({ status: "COMPLETED", reportVerification: { decision: "VERIFIED" } });
+    const submitted = kantorVisit({ status: "COMPLETED", submittedAt: new Date("2026-01-01") });
+    const completed = kantorVisit({ status: "COMPLETED" });
+    const inProgress = kantorVisit({ status: "IN_PROGRESS", photos: [1, 2, 3] });
+    assert.equal(pickActiveVisit([completed, submitted, verified, inProgress])?.visit, verified);
+    assert.equal(pickActiveVisit([completed, submitted, inProgress])?.visit, submitted);
+    assert.equal(pickActiveVisit([inProgress, completed])?.visit, completed);
   });
 
-  it("merges a legacy unlinked copy with its linked copy when payload locations are given", () => {
-    const legacy = visit({ locationType: "KANTOR", address: "Jl. Kantor", status: "COMPLETED" });
-    const merged = mergeVisitsByLocation([kantorVisit, legacy], PAYLOAD);
-    assert.equal(merged.length, 1);
-    assert.equal(merged[0].status, "COMPLETED");
+  it("among IN_PROGRESS visits the one with the most entries wins, then the most recent", () => {
+    const few = kantorVisit({ status: "IN_PROGRESS", photos: [1] });
+    const many = kantorVisit({ status: "IN_PROGRESS", photos: [1, 2, 3], fieldObservationNotes: "x" });
+    assert.equal(pickActiveVisit([few, many])?.visit, many);
+    const older = kantorVisit({ status: "IN_PROGRESS", updatedAt: new Date("2026-01-01") });
+    const newer = kantorVisit({ status: "IN_PROGRESS", updatedAt: new Date("2026-02-01") });
+    const picked = pickActiveVisit([older, newer]);
+    assert.equal(picked?.visit, newer);
+    assert.match(picked!.reason, /baru/);
+  });
+
+  it("explains why one of two COMPLETED visits was chosen", () => {
+    const earlier = kantorVisit({ status: "COMPLETED", submittedAt: new Date("2026-01-01") });
+    const later = kantorVisit({ status: "COMPLETED", submittedAt: new Date("2026-02-01") });
+    const picked = pickActiveVisit([earlier, later]);
+    assert.equal(picked?.visit, later);
+    assert.match(picked!.reason, /^dipilih karena/);
+  });
+
+  it("a NOT_STARTED duplicate never wins", () => {
+    const empty = kantorVisit();
+    const filled = kantorVisit({ status: "IN_PROGRESS" });
+    assert.equal(pickActiveVisit([empty, filled])?.visit, filled);
   });
 });
 
-describe("visitLocationKey", () => {
-  it("uses the company location id when present", () => {
-    assert.equal(visitLocationKey(kantorVisit), "co-kantor");
+describe("one visit per application location", () => {
+  // 2 locations, 2 survey assignments: the old bug left 4 visits (each assignment made both).
+  const fromKantorAsg = [kantorVisit({ status: "COMPLETED", submittedAt: new Date("2026-01-01") }), gudangVisit({ status: "COMPLETED" })];
+  const fromGudangAsg = [gudangVisit({ status: "IN_PROGRESS" }), kantorVisit({ status: "IN_PROGRESS" })];
+  const all = [...fromKantorAsg, ...fromGudangAsg];
+
+  it("collapses 4 visits to exactly 2 active ones — the count of locations", () => {
+    const active = activeVisitsForApplication(all, PAYLOAD);
+    assert.equal(active.length, PAYLOAD.length);
+    assert.deepEqual(active.map((v) => v.locationType).sort(), ["GUDANG", "KANTOR"]);
+    assert.ok(active.every((v) => v.status === "COMPLETED"));
   });
 
-  it("falls back to type + address", () => {
-    assert.equal(visitLocationKey(visit({ locationType: "PABRIK", address: "X" })), "PABRIK::X");
+  it("the second assignment sees the first one's COMPLETED result for its own location", () => {
+    const gudangAssignment = { id: "asg-gudang", locationId: "loc-gudang" };
+    const own = assignmentActiveVisits(gudangAssignment, all, PAYLOAD);
+    assert.equal(own.length, 1);
+    assert.equal(own[0].locationType, "GUDANG");
+    assert.equal(own[0].status, "COMPLETED");
+    assert.equal(isAssignmentSurveyComplete(gudangAssignment, all, PAYLOAD), true);
+  });
+
+  it("an assignment is not complete while its location has no completed visit", () => {
+    const kantorAssignment = { id: "asg-kantor", locationId: "loc-kantor" };
+    assert.equal(isAssignmentSurveyComplete(kantorAssignment, [kantorVisit({ status: "IN_PROGRESS" })], PAYLOAD), false);
+    assert.equal(isAssignmentSurveyComplete(kantorAssignment, [], PAYLOAD), false);
+  });
+
+  it("an old assignment without locationId and an ambiguous label is complete only when every location is", () => {
+    const legacy = { id: "legacy", locationId: null, location: null };
+    assert.equal(isAssignmentSurveyComplete(legacy, [kantorVisit({ status: "COMPLETED" })], PAYLOAD), false);
+    assert.equal(isAssignmentSurveyComplete(legacy, [kantorVisit({ status: "COMPLETED" }), gudangVisit({ status: "COMPLETED" })], PAYLOAD), true);
+  });
+
+  it("two locations of the same type stay separate; a legacy unlinked visit joins its location", () => {
+    const gudang2 = { id: "g2", companyLocationId: "co-g2", locationType: "GUDANG", address: "Jl. Gudang 2" };
+    const legacy = visit({ locationType: "GUDANG", address: "Jl. Gudang 2", status: "COMPLETED" });
+    const linked = gudangVisit({ status: "COMPLETED" });
+    const { groups } = groupVisitsByLocation([legacy, linked], [KANTOR, GUDANG, gudang2]);
+    assert.equal(groups.find((g) => g.key === "co-g2")?.active, legacy);
+    assert.equal(groups.find((g) => g.key === "co-gudang")?.active, linked);
+  });
+
+  it("visits for a location missing from the application are returned as orphans, not dropped", () => {
+    const orphan = visit({ locationType: "PABRIK", address: "Jl. Pabrik", status: "COMPLETED" });
+    const { groups, orphans } = groupVisitsByLocation([kantorVisit(), orphan], PAYLOAD);
+    assert.deepEqual(orphans, [orphan]);
+    assert.equal(groups.length, PAYLOAD.length);
+  });
+
+  it("the report lists as many locations as the application has, even before surveys start", () => {
+    assert.equal(groupVisitsByLocation([], PAYLOAD).groups.length, 2);
+    assert.equal(activeVisitsForApplication([], PAYLOAD).length, 0);
+  });
+});
+
+describe("findLocationAssignment", () => {
+  const kantorAsg = { id: "a-k", locationId: "loc-kantor", location: "Kantor" };
+  const gudangAsg = { id: "a-g", locationId: "co-gudang", location: "Gudang" };
+
+  it("returns the assignment scheduled for the location, or null when none is assigned", () => {
+    assert.equal(findLocationAssignment([kantorAsg, gudangAsg], KANTOR, PAYLOAD), kantorAsg);
+    assert.equal(findLocationAssignment([kantorAsg, gudangAsg], GUDANG, PAYLOAD), gudangAsg);
+    assert.equal(findLocationAssignment([kantorAsg], GUDANG, PAYLOAD), null);
+  });
+
+  it("credits a field-discovered location to the assignment that found it", () => {
+    const temuan: SurveyPayloadLocation = { id: "co-t", companyLocationId: "co-t", locationType: "GUDANG", address: "Jl. T", discoveredAssignmentId: "a-k" };
+    assert.equal(findLocationAssignment([kantorAsg, gudangAsg], temuan, [...PAYLOAD, temuan]), kantorAsg);
+  });
+
+  it("an old assignment with a label that names exactly one location owns it", () => {
+    const legacy = { id: "old", locationId: null, location: "Gudang" };
+    assert.equal(findLocationAssignment([legacy], GUDANG, PAYLOAD), legacy);
+  });
+
+  it("an ambiguous old assignment owns nothing", () => {
+    const legacy = { id: "old", locationId: null, location: null };
+    assert.equal(findLocationAssignment([legacy], KANTOR, PAYLOAD), null);
   });
 });

@@ -115,6 +115,7 @@ model Application {
   updatedAt           DateTime          @updatedAt
 
   assignments               Assignment[]
+  locationVisits            LocationVisit[]
   messages                  ApplicationMessage[]
   documentVersions          ApplicationDocumentVersion[]
   // Brand relationships (importir/perwakilan resmi/pemilik) this application established with
@@ -1189,6 +1190,12 @@ model LocationVisit {
   assignmentId String
   assignment   Assignment @relation(fields: [assignmentId], references: [id])
 
+  // Survey results belong to the APPLICATION's location, not to whichever survey assignment
+  // happened to create the row: one visit per (applicationId, application location). Denormalized
+  // from Assignment.applicationId so the one-visit-per-location rule can be a database constraint.
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+
   locationType      String
   address           String
   city              String?
@@ -1223,6 +1230,7 @@ model LocationVisit {
   updatedAt   DateTime  @updatedAt
 
   @@index([assignmentId])
+  @@index([applicationId, companyLocationId])
   @@map("location_visit")
 }
 

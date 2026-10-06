@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
 import { findApplicationEditAfter } from "@/modules/applications/server/edited-after";
 import { getServerSession } from "@/lib/get-session";
-import { effectiveAssignmentVisits, mergeVisitsByLocation, type ScopablePayloadLocation } from "@/modules/shared/survey-visit-scope";
+import { activeVisitsForApplication, collectApplicationVisits, type SurveyPayloadLocation } from "@/modules/shared/survey-visit-scope";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { computeFindings, type OfficeVerificationValues } from "@/modules/surveyor-workspace/components/office-verification/schema";
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
@@ -79,16 +79,13 @@ function teamMemberSummary(
   };
 }
 
-async function loadApplicationSurveyData(applicationId: string, payloadLocations: ScopablePayloadLocation[]) {
+async function loadApplicationSurveyData(applicationId: string, payloadLocations: SurveyPayloadLocation[]) {
   const siblingAssignments = await db.assignment.findMany({
     where: { applicationId },
     include: { locationVisits: true, surveyor: true, technicalReviewer: true },
   });
-  // One row per physical location: each survey assignment only owns its own scheduled location
-  // (a visit for another location counts only when the surveyor filled it in), then the most
-  // advanced copy wins.
-  const allVisits = siblingAssignments.flatMap((a) => effectiveAssignmentVisits(a, a.locationVisits, payloadLocations));
-  const byLocation = mergeVisitsByLocation(allVisits, payloadLocations);
+  // One survey result per application location (see survey-visit-scope).
+  const byLocation = activeVisitsForApplication(collectApplicationVisits(siblingAssignments), payloadLocations);
   const surveyAssignment = siblingAssignments.find((a) => a.surveyorId) ?? null;
   const technicalAssignment = siblingAssignments.find((a) => a.technicalReviewerId) ?? null;
   return {
@@ -138,7 +135,7 @@ export async function GET(
   const appDocMeta = await getApplicationDocumentMeta(assignment.application.id, appOnlyKeys, assignment.application.createdAt);
   const { locationVisits, surveyorName, surveyAssignment, technicalAssignment } = await loadApplicationSurveyData(
     assignment.applicationId,
-    (assignment.application.payload as { locations?: ScopablePayloadLocation[] } | null)?.locations ?? [],
+    (assignment.application.payload as { locations?: SurveyPayloadLocation[] } | null)?.locations ?? [],
   );
 
   const documentsVerified = documentChecklist.filter((item) => {

@@ -74,6 +74,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     db.locationVisit.create({
       data: {
         assignmentId: assignment.id,
+        applicationId: application.id,
         locationType: location.locationType,
         address: fullAddress,
         city: location.city ?? null,
