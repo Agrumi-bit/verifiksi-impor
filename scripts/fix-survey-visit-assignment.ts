@@ -21,13 +21,116 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "../src/generated/prisma/client";
-import {
-  effectiveAssignmentVisits,
-  isAssignmentScoped,
-  isVisitForPayloadLocation,
-  visitHasData,
-  type ScopablePayloadLocation,
-} from "../src/modules/shared/survey-visit-scope";
+
+// Visit-scoping helpers: an exact copy of src/modules/shared/survey-visit-scope.ts. Copied (not
+// imported) because the production "migrate" image this script runs in ships scripts/ and the
+// generated Prisma client but not src/modules.
+type ScopablePayloadLocation = {
+  id?: string;
+  companyLocationId?: string;
+  locationType: string;
+  address?: string;
+  addressDesa?: string;
+  addressKecamatan?: string;
+  discoveredAssignmentId?: string;
+};
+
+type ScopableAssignment = { id: string; locationId: string | null };
+
+type ScopableVisit = {
+  status: string;
+  locationType: string;
+  address: string;
+  companyLocationId: string | null;
+  checklist?: unknown;
+  photos?: unknown;
+  interviews?: unknown;
+  findings?: unknown;
+  reportSummary?: string | null;
+  fieldObservationNotes?: string | null;
+  officeVerification?: unknown;
+  warehouseVerification?: unknown;
+  factoryVerification?: unknown;
+};
+
+/** True when the assignment is tied to a location that actually exists in the payload — only
+ * then can its visits be scoped; an unresolvable `locationId` falls back to the legacy
+ * "everything" behaviour rather than hiding all of the assignment's work. */
+function isAssignmentScoped(assignment: ScopableAssignment, payloadLocations: ScopablePayloadLocation[]): boolean {
+  const locationId = assignment.locationId;
+  if (!locationId) return false;
+  return payloadLocations.some((loc) => loc.id === locationId || loc.companyLocationId === locationId);
+}
+
+/** Payload locations this assignment is responsible for: its scheduled location, plus any
+ * location the surveyor discovered in the field on this very assignment. */
+function locationsInAssignmentScope(
+  assignment: ScopableAssignment,
+  payloadLocations: ScopablePayloadLocation[],
+): ScopablePayloadLocation[] {
+  if (!isAssignmentScoped(assignment, payloadLocations)) return payloadLocations;
+  return payloadLocations.filter(
+    (loc) =>
+      loc.id === assignment.locationId ||
+      loc.companyLocationId === assignment.locationId ||
+      loc.discoveredAssignmentId === assignment.id,
+  );
+}
+
+function payloadLocationKey(loc: ScopablePayloadLocation): string | null {
+  return loc.companyLocationId || loc.id || null;
+}
+
+function visitHasData(visit: ScopableVisit): boolean {
+  if (visit.status !== "NOT_STARTED") return true;
+  const filled = (value: unknown) => (Array.isArray(value) ? value.length > 0 : value != null);
+  return (
+    filled(visit.checklist) ||
+    filled(visit.photos) ||
+    filled(visit.interviews) ||
+    filled(visit.findings) ||
+    filled(visit.officeVerification) ||
+    filled(visit.warehouseVerification) ||
+    filled(visit.factoryVerification) ||
+    Boolean(visit.reportSummary) ||
+    Boolean(visit.fieldObservationNotes)
+  );
+}
+
+function isVisitForPayloadLocation(visit: ScopableVisit, loc: ScopablePayloadLocation): boolean {
+  const key = payloadLocationKey(loc);
+  if (visit.companyLocationId && key) return visit.companyLocationId === key;
+  return visit.locationType === loc.locationType && visit.address === [loc.address, loc.addressDesa, loc.addressKecamatan].filter(Boolean).join(", ");
+}
+
+type ScopedVisit<V> = V & { belongsToOtherAssignmentLocation: boolean };
+
+/**
+ * The visits that count as this assignment's own: those for its in-scope locations, plus visits
+ * for any OTHER location that already hold data (surveyor work done before scoping existed —
+ * never hidden or dropped, flagged `belongsToOtherAssignmentLocation` so the UI can say so).
+ * Empty visits for other locations are the artefact of the old "create a visit for every payload
+ * location" behaviour and are left out.
+ */
+function effectiveAssignmentVisits<V extends ScopableVisit>(
+  assignment: ScopableAssignment,
+  visits: V[],
+  payloadLocations: ScopablePayloadLocation[],
+): ScopedVisit<V>[] {
+  if (!isAssignmentScoped(assignment, payloadLocations)) {
+    return visits.map((visit) => ({ ...visit, belongsToOtherAssignmentLocation: false }));
+  }
+  const inScope = locationsInAssignmentScope(assignment, payloadLocations);
+  const result: ScopedVisit<V>[] = [];
+  for (const visit of visits) {
+    if (inScope.some((loc) => isVisitForPayloadLocation(visit, loc))) {
+      result.push({ ...visit, belongsToOtherAssignmentLocation: false });
+    } else if (visitHasData(visit)) {
+      result.push({ ...visit, belongsToOtherAssignmentLocation: true });
+    }
+  }
+  return result;
+}
 
 const PLAN = {
   /** The filled-in Kantor visit that must belong to the Kantor assignment. */
