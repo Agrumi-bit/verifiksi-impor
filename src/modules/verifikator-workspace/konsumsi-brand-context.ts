@@ -1,8 +1,12 @@
 import { db } from "@/lib/db";
-import { getVIUConsumptionBrandRequirements } from "@/modules/applications/viu-schemes/konsumsi/business-rules";
+import {
+  APPLICANT_BRAND_ROLE_LABELS,
+  IMPORT_APPOINTMENT_SOURCE_LABELS,
+  getVIUConsumptionBrandRequirements,
+} from "@/modules/applications/viu-schemes/konsumsi/business-rules";
 import type { ApplicationBrandEntryValues, ApplicationKonsumsiProductValues } from "@/modules/applications/viu-schemes/konsumsi/schema";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
-import type { MerkEvidenceType } from "@/modules/merk/schema";
+import { MERK_EVIDENCE_TYPE_LABELS, type MerkEvidenceType } from "@/modules/merk/schema";
 
 // Mirrors validate-submit.ts's own guard — Prisma's MerkCertificateType enum still carries the
 // legacy "LAINNYA" value the current evidence-type set doesn't cover.
@@ -19,12 +23,32 @@ function toEvidenceType(value: string | null): MerkEvidenceType | null {
  * `getVIUConsumptionBrandRequirements` rule engine Step "Merek yang Digunakan" and
  * `validateKonsumsiSubmit` already use — never a second, independently-maintained document list.
  */
+/** What the verifikator compares the uploaded Sertifikat Merek against ("Uraian yang Diperiksa"):
+ * the brand's own data from Merek Management plus this application entry's relationship to it. */
+export type KonsumsiBrandDetails = {
+  evidenceTypeLabel: string;
+  registrationNumber: string | null;
+  registrationDate: string | null;
+  registrationExpiryDate: string | null;
+  trademarkClasses: string[];
+  ownerName: string | null;
+  applicantRelationship: string | null;
+};
+
 export type ChecklistKonsumsiBrandContext = {
   brandId: string;
   brandName: string;
   registrationDocumentPath: string | null;
   requiredRelationshipDocuments: { code: string; label: string }[];
+  details: KonsumsiBrandDetails | null;
 };
+
+function applicantRelationshipLabel(entry: ApplicationBrandEntryValues): string | null {
+  if (!entry.applicantRole) return null;
+  const role = APPLICANT_BRAND_ROLE_LABELS[entry.applicantRole];
+  if (entry.applicantRole !== "IMPORTER_ONLY" || !entry.appointmentSource) return role;
+  return `${role} (ditunjuk oleh ${IMPORT_APPOINTMENT_SOURCE_LABELS[entry.appointmentSource]})`;
+}
 
 /** One context per `applicationBrands` entry (not deduped by brandId) — the required-document set
  * depends on that entry's own `applicantRole`/`appointmentSource`, not the brand alone. */
@@ -43,7 +67,15 @@ export async function resolveKonsumsiBrandContexts(
       certificateType: true,
       registrationDate: true,
       registrationDocumentPath: true,
-      ownership: { select: { ownerLocation: true } },
+      hasCertificate: true,
+      registrationNumber: true,
+      registrationExpiryDate: true,
+      trademarkClass: true,
+      trademarkClassDescription: true,
+      trademarkClassEntries: { select: { trademarkClass: true, trademarkClassDescription: true }, orderBy: { createdAt: "asc" } },
+      brandOwnerName: true,
+      brandOwner: { select: { name: true } },
+      ownership: { select: { ownerLocation: true, ownerName: true, ownerCompany: { select: { name: true } } } },
     },
   });
   const brandById = new Map(brands.map((brand) => [brand.id, brand]));
@@ -51,7 +83,13 @@ export async function resolveKonsumsiBrandContexts(
   return applicationBrands.map((entry) => {
     const brand = brandById.get(entry.brandId);
     if (!brand) {
-      return { brandId: entry.brandId, brandName: "Merek tidak ditemukan", registrationDocumentPath: null, requiredRelationshipDocuments: [] };
+      return {
+        brandId: entry.brandId,
+        brandName: "Merek tidak ditemukan",
+        registrationDocumentPath: null,
+        requiredRelationshipDocuments: [],
+        details: null,
+      };
     }
     const ownerLocation =
       brand.ownership?.ownerLocation === "DOMESTIC" ? "domestic" : brand.ownership?.ownerLocation === "FOREIGN" ? "foreign" : null;
@@ -72,8 +110,50 @@ export async function resolveKonsumsiBrandContexts(
       requiredRelationshipDocuments: requirements.requirements
         .filter((requirement) => requirement.requirementStatus === "REQUIRED")
         .map((requirement) => ({ code: requirement.code, label: requirement.label })),
+      details: buildBrandDetails(brand, entry),
     };
   });
+}
+
+type BrandRowForDetails = {
+  hasCertificate: boolean;
+  certificateType: string | null;
+  registrationNumber: string | null;
+  registrationDate: Date | null;
+  registrationExpiryDate: Date | null;
+  trademarkClass: string | null;
+  trademarkClassDescription: string | null;
+  trademarkClassEntries: { trademarkClass: string; trademarkClassDescription: string }[];
+  brandOwnerName: string;
+  brandOwner: { name: string } | null;
+  ownership: { ownerName: string | null; ownerCompany: { name: string } | null } | null;
+};
+
+function formatTrademarkClass(trademarkClass: string, description: string | null): string {
+  return description ? `Kelas ${trademarkClass} — ${description}` : `Kelas ${trademarkClass}`;
+}
+
+function buildBrandDetails(brand: BrandRowForDetails, entry: ApplicationBrandEntryValues): KonsumsiBrandDetails {
+  const evidenceType = toEvidenceType(brand.certificateType);
+  const trademarkClasses = brand.trademarkClassEntries.length
+    ? brand.trademarkClassEntries.map((c) => formatTrademarkClass(c.trademarkClass, c.trademarkClassDescription))
+    : brand.trademarkClass
+      ? [formatTrademarkClass(brand.trademarkClass, brand.trademarkClassDescription)]
+      : [];
+  return {
+    evidenceTypeLabel: !brand.hasCertificate
+      ? "Tidak mempunyai sertifikat"
+      : evidenceType
+        ? MERK_EVIDENCE_TYPE_LABELS[evidenceType]
+        : "",
+    registrationNumber: brand.registrationNumber,
+    registrationDate: brand.registrationDate?.toISOString() ?? null,
+    registrationExpiryDate: brand.registrationExpiryDate?.toISOString() ?? null,
+    trademarkClasses,
+    // MerkOwnership (current wizard) first; legacy rows only carry brandOwner / brandOwnerName.
+    ownerName: brand.ownership?.ownerCompany?.name || brand.ownership?.ownerName || brand.brandOwner?.name || brand.brandOwnerName || null,
+    applicantRelationship: applicantRelationshipLabel(entry),
+  };
 }
 
 /**

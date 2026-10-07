@@ -26,6 +26,7 @@ import type { ApplicationWizardValues, MachineKondisiValue } from "@/modules/app
 import type { LocationValues } from "@/modules/shared/schema";
 import type { CompanyLegalContext } from "../../company-context";
 import type { ChecklistPartnerContext } from "../../schema";
+import type { ChecklistKonsumsiBrandContext } from "../../konsumsi-brand-context";
 import { useHsCodeOptions } from "@/modules/applications/hooks/use-hs-code-options";
 import { useBranding, BRANDING_REPORT_LOGO_URL } from "@/modules/branding/use-branding";
 import { ProductionCapabilityChapter, PRODUCTION_CAPABILITY_CHAPTER_PAGE_COUNT } from "./production-capability-chapter";
@@ -62,6 +63,9 @@ export type ReportData = {
   status: string;
   validationNotes: string | null;
   validatedAt: string | null;
+  /** Project Manager review of this report — "TANGGAL TERBIT" only exists once it is APPROVED. */
+  pmReviewStatus?: "APPROVED" | "REJECTED" | null;
+  pmReviewedAt?: string | null;
   signaturePath: string | null;
   signatureDate: string | null;
   companyName: string;
@@ -88,6 +92,7 @@ export type ReportData = {
   companyLegal: CompanyLegalContext;
   companyLocations: LocationValues[] | null;
   partners: ChecklistPartnerContext[];
+  konsumsiBrands?: ChecklistKonsumsiBrandContext[];
 };
 
 export type ProductRow = {
@@ -1139,6 +1144,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
     companyLegal: data.companyLegal,
     companyLocations: data.companyLocations,
     partners: data.partners,
+    konsumsiBrands: data.konsumsiBrands,
     documentStatuses,
   };
 
@@ -1148,6 +1154,12 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   const pending = documents.filter((d) => d.status === "PENDING").length;
   const completionPct = documents.length > 0 ? Math.round((verified / documents.length) * 100) : 0;
   const isFinal = data.status === "COMPLETED" || data.status === "RETURNED";
+  // Cover date: "TANGGAL TERBIT" only once the Project Manager has approved this report (dated to that
+  // approval). Before that it is "TANGGAL PENYUSUNAN", dated to when the verifikator clicked Submit
+  // Report (validatedAt) — still "—" while the report is a draft.
+  const isPmApproved = data.pmReviewStatus === "APPROVED";
+  const coverDateLabel = isPmApproved ? "TANGGAL TERBIT" : "TANGGAL PENYUSUNAN";
+  const coverDateValue = isPmApproved ? (data.pmReviewedAt ?? null) : data.validatedAt;
 
   const rawCategories = [...new Set(documents.map((d) => d.category))];
   const categories = schemeReport ? schemeReport.orderCategories(rawCategories) : rawCategories;
@@ -1318,7 +1330,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                 ["NOMOR DOKUMEN", `LV-DOK/${data.assignmentNumber}`],
                 ["NOMOR PENUGASAN", data.assignmentNumber],
                 ["NOMOR APLIKASI", data.applicationNumber],
-                ["TANGGAL TERBIT", fmtDate(data.validatedAt ?? new Date().toISOString())],
+                [coverDateLabel, fmtDate(coverDateValue)],
                 ["DISUSUN OLEH", data.verifikatorName ?? "—"],
                 ["JENIS VERIFIKASI", schemeReport?.label ?? data.verificationType],
               ].map(([label, value]) => (
@@ -1620,7 +1632,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
               ["Jumlah Kategori Dokumen", String(categories.length), INK],
               ["Verifikator Dokumen", data.verifikatorName ?? "—", "#1a3a6b"],
               ["Technical Reviewer", data.technicalReviewerName ?? "—", INK],
-              ["Tanggal Laporan Diterbitkan", fmtDate(data.validatedAt), INK],
+              ["Tanggal Laporan Diterbitkan", isPmApproved ? fmtDate(data.pmReviewedAt) : "—", INK],
               ["Klasifikasi Dokumen", "Internal — Terbatas", "#1a3a6b"],
             ].map(([label, value, color], i, arr) => (
               <div

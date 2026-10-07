@@ -23,6 +23,7 @@ import {
 import { OverviewTab } from "./detail/overview-tab";
 import { FieldVerificationTab } from "./detail/field-verification-tab";
 import { DocumentVerificationTab } from "./detail/document-verification-tab";
+import type { ChecklistKonsumsiBrandContext } from "../konsumsi-brand-context";
 import { MachineVerificationTab } from "./detail/machine-verification-tab";
 import { ProductVerificationTab } from "./detail/product-verification-tab";
 import { KonsumsiProductVerificationTab } from "./detail/konsumsi-product-verification-tab";
@@ -82,6 +83,8 @@ export type AssignmentDetailData = {
     // submission) — see CompanyLegalContext for why the checklist/report prefer these over the
     // frozen application payload.
     companyLegal: CompanyLegalContext;
+    /** VIU Barang Konsumsi brands used by this application — Sertifikat Merek uraian values. */
+    konsumsiBrands?: ChecklistKonsumsiBrandContext[];
     // Live `Company.locations` — same precedence, for location-document checklist items.
     companyLocations: LocationValues[] | null;
   };
@@ -298,6 +301,7 @@ export function AssignmentDetail({ id }: Props) {
             businessAddress={data.company.businessAddress}
             companyLegal={data.company.companyLegal}
             companyLocations={data.company.companyLocations}
+            konsumsiBrands={data.company.konsumsiBrands}
           />
         )}
         {activeTab === "Survey Lapangan" && (

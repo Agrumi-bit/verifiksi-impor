@@ -252,7 +252,8 @@ const brandEvidence: DocumentNarrative = {
   findings: (p) =>
     p.hasDocument
       ? [
-          `Berdasarkan hasil pemeriksaan dokumen, ${p.company} menyampaikan bukti merek untuk merek ${titleContext(p)}. Pemeriksaan meliputi nama merek, kelas merek, pemilik merek, dan masa berlaku bukti merek.`,
+          `Berdasarkan hasil pemeriksaan dokumen, ${p.company} menyampaikan ${p.field("Jenis Bukti Merek")} untuk merek ${p.field("Nama Merek")} dengan Nomor ${p.field("Nomor Sertifikat / Pendaftaran")}, diterbitkan tanggal ${p.field("Tanggal Penerbitan")} dan berlaku sampai dengan ${p.field("Tanggal Kedaluwarsa")}.`,
+          `Merek tersebut terdaftar pada ${p.field("Kelas Merek")} atas nama pemilik merek ${p.field("Pemilik Merek")}, dengan hubungan ${p.company} terhadap merek sebagai ${p.field("Hubungan dengan Pemohon VIU Konsumsi")}.`,
           "Identitas pemilik merek dimuat dalam LHVIU sesuai Pasal 39 ayat (5) huruf c " + PERMENPERIN + ".",
         ]
       : [`Berdasarkan hasil pemeriksaan, bukti merek untuk merek ${titleContext(p)} belum disampaikan.`],

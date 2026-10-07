@@ -253,6 +253,7 @@ export async function GET(
         // "Uraian yang Diperiksa" comparison values don't stay stuck on stale data.
         companyLegal: toCompanyLegalContext(company),
         companyLocations: toCompanyLocationsContext(company),
+        konsumsiBrands: konsumsiBrands ?? [],
       },
       verificationProgram: {
         type: assignment.application.verificationType,

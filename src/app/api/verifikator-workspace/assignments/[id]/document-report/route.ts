@@ -30,7 +30,7 @@ import {
   PRODUCTION_QTY_RENCANA_KEBUTUHAN_SUMMARY_KEY,
   PRODUCTION_QTY_PENJUALAN_SUMMARY_KEY,
 } from "@/modules/verifikator-workspace/status";
-import { buildApplicationDocumentChecklist } from "@/modules/verifikator-workspace/application-checklist";
+import { buildApplicationDocumentChecklistWithBrands } from "@/modules/verifikator-workspace/application-checklist";
 
 /**
  * Read-only data for the verifikator's own "Laporan Verifikasi Dokumen" —
@@ -60,7 +60,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     : null;
 
   const partners = await resolvePartnerContexts(payload);
-  const checklist = await buildApplicationDocumentChecklist(payload, toChecklistCompanyContext(company), partners);
+  const { checklist, konsumsiBrands } = await buildApplicationDocumentChecklistWithBrands(
+    payload,
+    toChecklistCompanyContext(company),
+    partners,
+  );
   const companyKeys = checklist.filter((item) => item.key in COMPANY_MAPPED_DOCUMENT_KEYS).map((item) => item.key);
   const appOnlyKeys = checklist.filter((item) => !(item.key in COMPANY_MAPPED_DOCUMENT_KEYS)).map((item) => item.key);
 
@@ -145,6 +149,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       status: assignment.status,
       validationNotes: assignment.validationNotes,
       validatedAt: assignment.validatedAt,
+      pmReviewStatus: assignment.pmReviewStatus,
+      pmReviewedAt: assignment.pmReviewedAt,
       signaturePath: assignment.signaturePath,
       signatureDate: assignment.signatureDate,
       companyName: payload.companyName,
@@ -171,6 +177,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       companyLegal,
       companyLocations,
       partners,
+      konsumsiBrands,
     },
   });
 }

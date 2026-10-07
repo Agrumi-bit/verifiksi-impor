@@ -16,6 +16,7 @@ import {
   MODAL_FINANSIAL_DOCUMENTS,
   PERPAJAKAN_DOCUMENTS,
   type DocDetail,
+  type DocField,
   type NarrativeContext,
 } from "./report-narrative";
 
@@ -87,6 +88,38 @@ function genericDoc(row: ReportRow): DocDetail {
   };
 }
 
+/** Same points as the review modal's "Uraian yang Diperiksa" for Sertifikat Merek
+ * (document-checklist-items.ts brandEvidenceItems), printed as the page's data block. */
+function brandEvidenceDoc(row: ReportRow, brandId: string): DocDetail {
+  const hasDocument = Boolean(row.documentPath);
+  const field = (label: string, value: string | null | undefined): DocField => ({ label, value: value || "—", ok: Boolean(value) });
+  return {
+    ...genericDoc(row),
+    fields: (ctx) => {
+      const brand = ctx.konsumsiBrands?.find((b) => b.brandId === brandId);
+      const details = brand?.details ?? null;
+      return [
+        field("Nama Merek", brand?.brandName),
+        field("Jenis Bukti Merek", details?.evidenceTypeLabel),
+        field("Nomor Sertifikat / Pendaftaran", details?.registrationNumber),
+        field("Tanggal Penerbitan", details?.registrationDate ? fmtTanggal(details.registrationDate) : null),
+        field("Tanggal Kedaluwarsa", details?.registrationExpiryDate ? fmtTanggal(details.registrationExpiryDate) : null),
+        field("Kelas Merek", details?.trademarkClasses.join("; ")),
+        field("Pemilik Merek", details?.ownerName),
+        field("Hubungan dengan Pemohon VIU Konsumsi", details?.applicantRelationship),
+        { label: "Status Unggah", value: hasDocument ? "Diunggah" : "Belum Diunggah", ok: hasDocument },
+      ];
+    },
+  };
+}
+
+function fmtTanggal(value: string): string {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime())
+    ? value
+    : parsed.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+}
+
 export function createSchemeReport(source: {
   verificationType: string;
   payload: NarrativeContext["payload"];
@@ -143,7 +176,9 @@ export function createSchemeReport(source: {
     return rows
       .filter((row) => row.category === category)
       .map((row, i) => {
-        const base = legacy.find((d) => d.key === row.key) ?? genericDoc(row);
+        const brandEvidenceId = row.key.match(/^konsumsi-brand:([^:]+):evidence$/)?.[1];
+        const base =
+          legacy.find((d) => d.key === row.key) ?? (brandEvidenceId ? brandEvidenceDoc(row, brandEvidenceId) : genericDoc(row));
         const found = defFor(row.key, ctx);
         const text: DocumentNarrative | string = found
           ? (getScheme(found.scheme).narrative?.documents[found.def.id] ?? belumDiatur(found.scheme, `narasi dokumen "${found.def.label}"`))

@@ -25,6 +25,7 @@ import {
   type LeaseDocumentType,
 } from "@/modules/shared/schema";
 import type { CompanyLegalContext } from "./company-context";
+import type { ChecklistKonsumsiBrandContext } from "./konsumsi-brand-context";
 
 /** @deprecated import `CompanyLegalContext` from `./company-context` directly — kept as an alias so existing imports don't need to change. */
 export type ChecklistCompanyLegal = CompanyLegalContext;
@@ -35,6 +36,8 @@ export type ChecklistContext = {
   companyLegal: CompanyLegalContext;
   /** Live `Company.locations`, same live-over-payload-snapshot precedence as `companyLegal` — see `findLocation` below. */
   companyLocations: LocationValues[] | null;
+  /** VIU Barang Konsumsi only — the brands this application uses, for the Sertifikat Merek uraian. */
+  konsumsiBrands?: ChecklistKonsumsiBrandContext[];
 };
 
 export type ChecklistItemDef = {
@@ -887,7 +890,81 @@ function warehouseLayoutItems(locationId: string): ChecklistItemDef[] {
   ];
 }
 
+/**
+ * Sertifikat Merek / Tanda Pendaftaran Merek (VIU Barang Konsumsi) — one set per brand, keyed
+ * `konsumsi-brand:${brandId}:evidence`. Values come from the brand's own record in Merek
+ * Management plus this application's "Merek yang Digunakan" entry for it.
+ */
+function brandEvidenceItems(brandId: string): ChecklistItemDef[] {
+  const brandOf = (ctx: ChecklistContext) => ctx.konsumsiBrands?.find((brand) => brand.brandId === brandId);
+  const detailsOf = (ctx: ChecklistContext) => brandOf(ctx)?.details ?? null;
+  return [
+    {
+      id: "brand-name",
+      title: "Nama Merek",
+      question: "Apakah nama merek pada dokumen sama dengan merek yang diajukan dalam permohonan?",
+      criteria: ["Nama merek tercantum jelas pada dokumen.", "Ejaan nama merek sama dengan data permohonan."],
+      getValue: (ctx) => brandOf(ctx)?.brandName,
+    },
+    {
+      id: "brand-evidence-type",
+      title: "Jenis Bukti Merek",
+      question: "Apakah jenis dokumen yang diunggah sesuai dengan jenis bukti merek yang dipilih pemohon?",
+      criteria: ["Dokumen berupa Sertifikat Merek, Tanda Pendaftaran Merek, atau Tanda Pendaftaran Merek Internasional."],
+      getValue: (ctx) => detailsOf(ctx)?.evidenceTypeLabel,
+    },
+    {
+      id: "brand-registration-number",
+      title: "Nomor Sertifikat / Pendaftaran",
+      question: "Apakah nomor sertifikat atau nomor pendaftaran pada dokumen sama dengan data permohonan?",
+      criteria: ["Nomor tercantum jelas pada dokumen.", "Nomor sama dengan data permohonan."],
+      getValue: (ctx) => detailsOf(ctx)?.registrationNumber,
+    },
+    {
+      id: "brand-issue-date",
+      title: "Tanggal Penerbitan",
+      question: "Apakah tanggal penerbitan pada dokumen sama dengan data permohonan?",
+      criteria: ["Tanggal penerbitan tercantum pada dokumen.", "Tanggal sama dengan data permohonan."],
+      getValue: (ctx) => formatTanggal(detailsOf(ctx)?.registrationDate),
+    },
+    {
+      id: "brand-expiry-date",
+      title: "Tanggal Kedaluwarsa",
+      question: "Apakah perlindungan merek masih berlaku pada saat permohonan diajukan?",
+      criteria: ["Tanggal kedaluwarsa sama dengan data permohonan.", "Merek belum kedaluwarsa."],
+      getValue: (ctx) => formatTanggal(detailsOf(ctx)?.registrationExpiryDate),
+    },
+    {
+      id: "brand-class",
+      title: "Kelas Merek",
+      question: "Apakah kelas merek pada dokumen mencakup jenis barang yang diimpor?",
+      criteria: ["Kelas merek sama dengan data permohonan.", "Uraian kelas mencakup produk yang diajukan."],
+      getValue: (ctx) => detailsOf(ctx)?.trademarkClasses.join("; "),
+    },
+    {
+      id: "brand-owner",
+      title: "Pemilik Merek",
+      question: "Apakah nama pemilik merek pada dokumen sama dengan pemilik merek dalam data permohonan?",
+      criteria: ["Nama pemilik tercantum jelas pada dokumen.", "Nama pemilik sama dengan data permohonan."],
+      getValue: (ctx) => detailsOf(ctx)?.ownerName,
+    },
+    {
+      id: "brand-applicant-relationship",
+      title: "Hubungan dengan Pemohon VIU Konsumsi",
+      question: "Apakah hubungan pemohon dengan merek didukung dokumen yang sesuai dengan perannya?",
+      criteria: [
+        "Pemohon pemilik merek: nama pemilik pada sertifikat sama dengan nama perusahaan pemohon.",
+        "Pemohon bukan pemilik merek: tersedia dokumen penunjukan/lisensi yang dipersyaratkan.",
+      ],
+      getValue: (ctx) => detailsOf(ctx)?.applicantRelationship,
+    },
+  ];
+}
+
 export function getChecklistItems(key: string): ChecklistItemDef[] {
+  const brandEvidenceMatch = key.match(/^konsumsi-brand:([^:]+):evidence$/);
+  if (brandEvidenceMatch) return brandEvidenceItems(brandEvidenceMatch[1]);
+
   const electricityMatch = key.match(/^vki-support:listrik:(.+)$/);
   if (electricityMatch) return electricityBillItems(electricityMatch[1]);
 

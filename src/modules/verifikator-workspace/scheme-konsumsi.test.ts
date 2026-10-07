@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { findForbiddenTerms } from "@/modules/schemes";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { buildDocumentChecklist } from "./schema";
+import { getChecklistItems } from "./document-checklist-items";
 import { createComplianceResolver } from "./scheme-compliance";
 import { createSchemeReport } from "./scheme-report";
 import type { NarrativeContext } from "./report-narrative";
@@ -33,7 +34,21 @@ const payload = {
   productGroupCertificates: [{ brandId: "B1", commodityGroupId: "G1", filePath: "d/qt.pdf" }],
 } as unknown as ApplicationWizardValues;
 const brands = [
-  { brandId: "B1", brandName: "MEREKKU", registrationDocumentPath: "d/merek.pdf", requiredRelationshipDocuments: [{ code: "importer_appointment", label: "Surat Penunjukan Importir" }] },
+  {
+    brandId: "B1",
+    brandName: "MEREKKU",
+    registrationDocumentPath: "d/merek.pdf",
+    requiredRelationshipDocuments: [{ code: "importer_appointment", label: "Surat Penunjukan Importir" }],
+    details: {
+      evidenceTypeLabel: "Sertifikat Merek",
+      registrationNumber: "IDM000123456",
+      registrationDate: "2024-03-01T00:00:00.000Z",
+      registrationExpiryDate: "2034-03-01T00:00:00.000Z",
+      trademarkClasses: ["Kelas 25 — Pakaian"],
+      ownerName: "PT PEMILIK MEREK",
+      applicantRelationship: "Hanya Bertindak sebagai Importir (ditunjuk oleh Pemilik Merek)",
+    },
+  },
 ];
 
 describe("VIU Barang Konsumsi checklist & report (scheme module)", () => {
@@ -88,3 +103,78 @@ describe("VIU Barang Konsumsi checklist & report (scheme module)", () => {
     }
   });
 });
+
+describe("Sertifikat Merek — Uraian yang Diperiksa", () => {
+  const items = getChecklistItems("konsumsi-brand:B1:evidence");
+  const ctx = { payload, businessAddress: null, companyLegal: null, companyLocations: null, konsumsiBrands: brands } as unknown as Parameters<
+    NonNullable<(typeof items)[number]["getValue"]>
+  >[0];
+  const valueOf = (id: string) => items.find((item) => item.id === id)?.getValue?.(ctx);
+
+  it("lists the eight brand points in order", () => {
+    assert.deepEqual(
+      items.map((item) => item.title),
+      [
+        "Nama Merek",
+        "Jenis Bukti Merek",
+        "Nomor Sertifikat / Pendaftaran",
+        "Tanggal Penerbitan",
+        "Tanggal Kedaluwarsa",
+        "Kelas Merek",
+        "Pemilik Merek",
+        "Hubungan dengan Pemohon VIU Konsumsi",
+      ],
+    );
+  });
+
+  it("fills each point from the brand record and the application's brand entry", () => {
+    assert.equal(valueOf("brand-name"), "MEREKKU");
+    assert.equal(valueOf("brand-evidence-type"), "Sertifikat Merek");
+    assert.equal(valueOf("brand-registration-number"), "IDM000123456");
+    assert.equal(valueOf("brand-issue-date"), "1 Maret 2024");
+    assert.equal(valueOf("brand-expiry-date"), "1 Maret 2034");
+    assert.equal(valueOf("brand-class"), "Kelas 25 — Pakaian");
+    assert.equal(valueOf("brand-owner"), "PT PEMILIK MEREK");
+    assert.equal(valueOf("brand-applicant-relationship"), "Hanya Bertindak sebagai Importir (ditunjuk oleh Pemilik Merek)");
+  });
+
+  it("leaves relationship documents on the generic points", () => {
+    assert.ok(!getChecklistItems("konsumsi-brand:B1:rel:importer_appointment").some((item) => item.id === "brand-name"));
+  });
+});
+
+describe("Sertifikat Merek — Laporan Verifikasi Dokumen", () => {
+  const items = buildDocumentChecklist(payload, null, [], brands, new Map());
+  const report = createSchemeReport({ verificationType: "VIU", payload, companyLocations: null })!;
+  const rows = report.relevantRows(items.map((i) => ({ ...i, status: "VALID" })));
+  const ctx = {
+    payload,
+    company: "PT CONTOH JAYA",
+    businessAddress: null,
+    companyLegal: null,
+    companyLocations: null,
+    partners: [],
+    konsumsiBrands: brands,
+    documentStatuses: Object.fromEntries(rows.map((r) => [r.key, "VALID"])),
+  } as unknown as NarrativeContext;
+  const page = report.buildCategoryDocs("Dokumen Merek", rows, ctx).find((d) => d.key === "konsumsi-brand:B1:evidence")!;
+
+  it("prints the same brand points as the review modal", () => {
+    const fields = Object.fromEntries(page.fields(ctx).map((f) => [f.label, f.value]));
+    assert.equal(fields["Nama Merek"], "MEREKKU");
+    assert.equal(fields["Jenis Bukti Merek"], "Sertifikat Merek");
+    assert.equal(fields["Nomor Sertifikat / Pendaftaran"], "IDM000123456");
+    assert.equal(fields["Tanggal Penerbitan"], "1 Maret 2024");
+    assert.equal(fields["Tanggal Kedaluwarsa"], "1 Maret 2034");
+    assert.equal(fields["Kelas Merek"], "Kelas 25 — Pakaian");
+    assert.equal(fields["Pemilik Merek"], "PT PEMILIK MEREK");
+    assert.equal(fields["Hubungan dengan Pemohon VIU Konsumsi"], "Hanya Bertindak sebagai Importir (ditunjuk oleh Pemilik Merek)");
+  });
+
+  it("findings cite the examined certificate data", () => {
+    const text = page.findings(ctx).join(" ");
+    assert.match(text, /Nomor IDM000123456/);
+    assert.match(text, /PT PEMILIK MEREK/);
+  });
+});
+

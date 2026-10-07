@@ -2,6 +2,7 @@ import { MODAL_STATEMENT_LETTER_DOC_DEF, NON_INDUSTRI_SUPPORT_DOC_DEFS, type App
 import { OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS, splitKbliEntries, type LocationValues } from "@/modules/shared/schema";
 import type { CompanyLegalContext } from "./company-context";
 import type { ChecklistPartnerContext } from "./schema";
+import type { ChecklistKonsumsiBrandContext } from "./konsumsi-brand-context";
 
 export type NarrativeContext = {
   payload: ApplicationWizardValues;
@@ -11,6 +12,8 @@ export type NarrativeContext = {
    * entry — see `buildPartnerIndustriDocuments` below. Defaults to `[]` when a caller doesn't
    * resolve partners (non-VIU-industri applications never have any enabled entries anyway). */
   partners?: ChecklistPartnerContext[];
+  /** VIU Barang Konsumsi brands — data printed on each Sertifikat Merek page. */
+  konsumsiBrands?: ChecklistKonsumsiBrandContext[];
   /**
    * Live Company fields for NIB/SK/Notarial/NPWP/SKT — `payload.Xxx` is a
    * snapshot frozen at submission time; once the company edits and
