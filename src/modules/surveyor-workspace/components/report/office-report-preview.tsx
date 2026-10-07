@@ -570,7 +570,7 @@ export function OfficeReportPreview({
           <p className="rd-lede">
             Verifikasi lapangan terhadap lokasi kantor {company} di {data.address}
             {data.city ? `, ${data.city}` : ""} dilaksanakan pada {fmtDate(ov.actualVisitDate)} oleh surveyor
-            bersertifikat IndustrialVerify, meliputi kesesuaian alamat, status kepemilikan, kondisi fisik, dan
+            lembaga pelaksana verifikasi PT Tribhakti Inspektama, meliputi kesesuaian alamat, status kepemilikan, kondisi fisik, dan
             aktivitas operasional kantor terhadap dokumen permohonan {data.verificationType}.
           </p>
 

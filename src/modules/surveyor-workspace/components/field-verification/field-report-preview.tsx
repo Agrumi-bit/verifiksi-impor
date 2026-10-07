@@ -598,7 +598,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
           <p className="rd-lede">
             Verifikasi lapangan terhadap lokasi {label.toLowerCase()} {company} di {data.address}
             {data.city ? `, ${data.city}` : ""} dilaksanakan pada {fmtDate(fv.actualVisitDate)} oleh surveyor
-            bersertifikat IndustrialVerify, meliputi kesesuaian alamat, status kepemilikan, kondisi fisik, dan
+            lembaga pelaksana verifikasi PT Tribhakti Inspektama, meliputi kesesuaian alamat, status kepemilikan, kondisi fisik, dan
             aktivitas operasional {label.toLowerCase()} terhadap dokumen permohonan {data.verificationType}.
           </p>
 
