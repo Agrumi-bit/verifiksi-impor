@@ -15,7 +15,6 @@ type LartasRow = MasterDataRow & {
   hsCode: {
     hsCode: string;
     description: string;
-    commoditySubGroup?: { name: string } | null;
   };
   apiP: boolean;
   apiUIndustri: boolean;
@@ -253,7 +252,6 @@ export function LartasMasterDataPage() {
                 <th rowSpan={3} className={th}>NO</th>
                 <th rowSpan={3} className={th}>POS TARIF/HS</th>
                 <th rowSpan={3} className={`${th} min-w-[220px]`}>URAIAN BARANG</th>
-                <th rowSpan={3} className={th}>SUB KELOMPOK KOMODITAS</th>
                 <th colSpan={5} className={th}>PELAKU USAHA SEBAGAI PEMOHON</th>
                 <th rowSpan={3} className={th}>STATUS</th>
               </tr>
@@ -279,7 +277,7 @@ export function LartasMasterDataPage() {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="p-6 text-center text-[13px] text-[#8a7565]">
+                  <td colSpan={9} className="p-6 text-center text-[13px] text-[#8a7565]">
                     {rows.length === 0 ? "Belum ada data." : "Tidak ada data yang cocok dengan pencarian."}
                   </td>
                 </tr>
@@ -291,7 +289,6 @@ export function LartasMasterDataPage() {
                     <td className={`${td} text-center text-[#4a4038]`}>{index + 1}</td>
                     <td className={`${td} font-bold text-[#261813]`}>{row.hsCode.hsCode}</td>
                     <td className={`${td} text-[#4a4038]`}>{row.hsCode.description}</td>
-                    <td className={`${td} text-[#4a4038]`}>{row.hsCode.commoditySubGroup?.name ?? "—"}</td>
                     <Mark on={row.apiP} />
                     <Mark on={row.apiUIndustri} />
                     <Mark on={row.apiUNonIndustri} />
