@@ -235,7 +235,7 @@ export function AssignmentDetail({ id }: Props) {
         {activeTab === "Report" && <ReportTab assignmentId={id} />}
       </main>
 
-      <footer className="sticky bottom-0 flex flex-shrink-0 flex-wrap items-center justify-between gap-4 border-l-4 border-l-sv-primary-container border-t border-[#e8d5c5] bg-white px-7 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+      <footer data-bottom-action-bar className="sticky bottom-0 flex flex-shrink-0 flex-wrap items-center justify-between gap-4 border-l-4 border-l-sv-primary-container border-t border-[#e8d5c5] bg-white px-7 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
         <div>
           <div className="text-base font-extrabold">Ready to Start Verification?</div>
           <div className="text-[13px] text-[#594138]">

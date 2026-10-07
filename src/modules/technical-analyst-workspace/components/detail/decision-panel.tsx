@@ -31,7 +31,7 @@ export function DecisionPanel({ assignmentId, status, readyForDecision }: Props)
 
   if (status !== "SUBMITTED") {
     return (
-      <footer className="sticky bottom-0 flex flex-shrink-0 items-center justify-between gap-4 border-t border-[#f0ded0] bg-white px-7 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+      <footer data-bottom-action-bar className="sticky bottom-0 flex flex-shrink-0 items-center justify-between gap-4 border-t border-[#f0ded0] bg-white px-7 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
         <div className="text-sm text-[#4a4038]">
           {status === "COMPLETED" && (
             <span className="flex items-center gap-2 font-semibold text-[#1a9850]">
@@ -80,7 +80,7 @@ export function DecisionPanel({ assignmentId, status, readyForDecision }: Props)
 
   return (
     <>
-      <footer className="sticky bottom-0 flex flex-shrink-0 flex-wrap items-center justify-between gap-4 border-t border-[#f0ded0] bg-white px-7 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+      <footer data-bottom-action-bar className="sticky bottom-0 flex flex-shrink-0 flex-wrap items-center justify-between gap-4 border-t border-[#f0ded0] bg-white px-7 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
         <div>
           <div className="text-base font-extrabold text-[#20180f]">Siap Mengambil Keputusan?</div>
           <div className="text-[13px] text-[#8a7565]">
