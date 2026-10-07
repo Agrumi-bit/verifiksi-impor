@@ -111,6 +111,7 @@ export type ProductRow = {
   // generic Jenis Produk / Bahan Baku layout. The fields below are only set on those rows.
   source: "generic" | "konsumsi";
   productName?: string;
+  brandId?: string;
   brandName?: string;
   kelompokKomoditas?: string;
   subKelompokKomoditas?: string;
@@ -1219,7 +1220,12 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   // product's own info plus every raw material linked to it via
   // rawMaterialConversions (mirrors Product Verification's live card layout).
   const descForHsCode = (hsCode: string | undefined) => hsCodeOptions.find((o) => o.value === hsCode)?.hint ?? "";
-  const products = data.products.map((p) => (p.hsDesc ? p : { ...p, hsDesc: descForHsCode(p.hsCode) }));
+  const brandNameById = new Map((data.konsumsiBrands ?? []).map((b) => [b.brandId, b.brandName]));
+  const products = data.products.map((p) => ({
+    ...p,
+    hsDesc: p.hsDesc || descForHsCode(p.hsCode),
+    brandName: p.brandName || (p.brandId ? brandNameById.get(p.brandId) : undefined) || "",
+  }));
   const rawMaterials = data.rawMaterials.map((rm) => (rm.hsDesc ? rm : { ...rm, hsDesc: descForHsCode(rm.hsCode) }));
   const rawMaterialConversion = data.rawMaterialConversion.map((c) => (c.hsDesc ? c : { ...c, hsDesc: descForHsCode(c.hsCode) }));
   const hasProductChapter = products.length > 0;

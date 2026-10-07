@@ -130,6 +130,10 @@ export function KonsumsiProductVerificationTab({ assignmentId, assignmentStatus 
                   <div className="text-[19px] font-extrabold text-[#e0662e]">{row.productName || "—"}</div>
                 </div>
                 <div className="min-w-35">
+                  <div className="text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Merek</div>
+                  <div className="text-[19px] font-extrabold text-[#20180f]">{row.brandName || "—"}</div>
+                </div>
+                <div className="min-w-35">
                   <div className="text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">HS Code</div>
                   <div className="font-mono text-[19px] font-extrabold text-[#20180f]">{row.hsCode || "—"}</div>
                 </div>
@@ -147,8 +151,7 @@ export function KonsumsiProductVerificationTab({ assignmentId, assignmentStatus 
               <DetailField label="Sub Kelompok Komoditas" value={row.subKelompokKomoditas} />
               <DetailField label="Komoditas" value={row.komoditas} />
             </div>
-            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-4">
-              <DetailField label="Merek" value={row.brandName} />
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
               <DetailField label="Negara Asal" value={row.originCountryNames.join(", ")} />
               <DetailField label="Jumlah Permohonan" value={[row.estimatedVolume, row.volumeUnit].filter(Boolean).join(" ")} />
               <DetailField

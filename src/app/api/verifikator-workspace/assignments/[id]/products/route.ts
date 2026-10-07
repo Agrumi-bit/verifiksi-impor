@@ -47,10 +47,18 @@ export async function GET(
   const payload = assignment.application.payload as ApplicationWizardValues;
   const checklist = buildProductChecklist(payload);
   const decisions = productVerificationsSchema.parse(assignment.productVerifications ?? {});
+  // Konsumsi rows without a submit-time snapshot still show their brand, from Merek Management.
+  const missingBrandIds = [...new Set(checklist.filter((item) => item.brandId && !item.brandName).map((item) => item.brandId!))];
+  const brandNameById = new Map(
+    missingBrandIds.length
+      ? (await db.merk.findMany({ where: { id: { in: missingBrandIds } }, select: { id: true, brandName: true } })).map((m) => [m.id, m.brandName])
+      : [],
+  );
 
   return NextResponse.json({
     data: checklist.map((item) => ({
       ...item,
+      ...(item.brandId && !item.brandName ? { brandName: brandNameById.get(item.brandId) ?? "" } : {}),
       status: decisions[item.id]?.status ?? "PENDING",
       note: decisions[item.id]?.note ?? "",
       verifiedAt: decisions[item.id]?.verifiedAt ?? null,

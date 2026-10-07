@@ -576,6 +576,7 @@ export type ProductChecklistItem = {
   // Konsumsi only — its products are named by the applicant and sit in a 3-level commodity chain
   // (Kelompok > Sub Kelompok > Komoditas) derived from the HS Code; generic products have neither.
   productName?: string;
+  brandId?: string;
   brandName?: string;
   kelompokKomoditas?: string;
   subKelompokKomoditas?: string;
@@ -617,6 +618,9 @@ export function buildProductChecklist(payload: ApplicationWizardValues): Product
     photoPath: null,
     source: "konsumsi" as const,
     productName: product.productName ?? "",
+    brandId: product.brandId,
+    // Snapshot is written at submit; drafts/legacy rows lack it — callers with DB access fill it
+    // from Merek Management (see the products route and the document report).
     brandName: product.productSnapshot?.brandName ?? "",
     originCountryNames: product.originCountryNames ?? product.productSnapshot?.countryOfOriginNames ?? [],
     averageUnitPrice: product.averageUnitPrice ?? "",
