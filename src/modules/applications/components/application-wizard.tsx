@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { CompanyProfileFields } from "@/components/wizard/company-profile-fields";
 import { CompanyPickerField } from "./company-picker-field";
 import { LockedCompanyField } from "./locked-company-field";
+import { applyCompanyToForm, type CompanyOption } from "../apply-company-to-form";
 import type { CompanyAddressValues } from "@/components/wizard/locations-field";
 import { LOCATION_TYPES } from "@/modules/shared/schema";
 import { Step1ApplicationInformation } from "./steps/step1-application-information";
@@ -231,6 +232,20 @@ export function ApplicationWizard({
     return handleSubmitApplication(values);
   }
 
+  /** A saved draft carries the company data as it was when the draft was last saved; the company
+   * may have edited its profile since (KBLI, NIB, legal and tax documents). Re-apply the live
+   * profile so eligibility checks and submit use current data — location selection is kept. */
+  async function refreshCompanyDataFromProfile() {
+    try {
+      const response = await fetch("/api/company-workspace/profile");
+      if (!response.ok) throw new Error("Gagal memuat profil perusahaan");
+      const { data: company } = (await response.json()) as { data: CompanyOption };
+      applyCompanyToForm(form.setValue, company, { includeLocations: false });
+    } catch {
+      toast.error("Data perusahaan terbaru gagal dimuat. Muat ulang halaman sebelum submit.");
+    }
+  }
+
   useEffect(() => {
     if (!resumeDraftId || hasLoadedDraft.current) return;
     hasLoadedDraft.current = true;
@@ -254,6 +269,7 @@ export function ApplicationWizard({
         return;
       }
       form.reset(data.payload);
+      if (hideCompanyPicker) await refreshCompanyDataFromProfile();
       setDraftApplicationId(resumeDraftId);
       // Resolve the saved step by its stable key against the step list the
       // RESUMED payload's own verificationType/importTypes produce — not

@@ -54,7 +54,12 @@ function toDateInputValue(value: string | null | undefined): string {
  * the admin's manual CompanyPickerField and the company-workspace's
  * auto-locked entry point, so the two never drift out of sync.
  */
-export function applyCompanyToForm(setValue: UseFormSetValue<ApplicationWizardValues>, company: CompanyOption): void {
+export function applyCompanyToForm(
+  setValue: UseFormSetValue<ApplicationWizardValues>,
+  company: CompanyOption,
+  options: { includeLocations?: boolean } = {},
+): void {
+  const { includeLocations = true } = options;
   setValue("companyId", company.id, { shouldValidate: true });
   setValue("companyApiType", company.apiType ?? "", { shouldValidate: true });
   setValue("companyName", company.companyName, { shouldValidate: true });
@@ -100,7 +105,9 @@ export function applyCompanyToForm(setValue: UseFormSetValue<ApplicationWizardVa
   setValue("sktDate", toDateInputValue(company.sktDate));
   setValue("sktDocumentPath", company.sktDocumentPath ?? "");
   // Every company location starts selected, each linked back to its Company.locations entry —
-  // Step 5 lets the applicant untick any they aren't applying for.
+  // Step 5 lets the applicant untick any they aren't applying for. Skipped when refreshing a
+  // saved draft, which already carries the applicant's own selection.
+  if (!includeLocations) return;
   setValue(
     "locations",
     company.locations.map((location) => ({ ...location, companyLocationId: location.id })),
