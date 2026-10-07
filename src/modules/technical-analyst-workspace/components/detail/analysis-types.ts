@@ -7,6 +7,26 @@ import type {
 import type { TechnicalAnalysisData } from "../../schema";
 import type { TechnicalModuleStatusValue } from "../../status";
 
+export type KonsumsiImportPlanProduct = {
+  id: string;
+  productName: string;
+  brandName: string | null;
+  hsCode: string;
+  quantity: number;
+  stockQuantity: number;
+  unit: string | null;
+  averageUnitPrice: number;
+  currency: string;
+  total: number;
+};
+
+export type KonsumsiImportPlan = {
+  products: KonsumsiImportPlanProduct[];
+  totalsByCurrency: Record<string, number>;
+  /** Jumlah Modal Kerja on the Surat Pernyataan Kepemilikan Modal Kerja (Rp). */
+  modalKerja: number | null;
+};
+
 export type ElectricityMonth = {
   id: string;
   bulan?: string;
@@ -20,6 +40,12 @@ export type AnalysisData = {
   /** SUBMITTED, or reopened after a resubmitted revision — see isAssignmentReviewable. */
   reviewable?: boolean;
   verificationType: string;
+  /** VIU import types (BAHAN_BAKU_INDUSTRI / BAHAN_BAKU_NON_INDUSTRI / BARANG_KONSUMSI) — pick the scheme's modules. */
+  importTypes?: string[];
+  /** VIU Barang Konsumsi only — the application's own product lines and their totals per currency. */
+  konsumsiImportPlan?: KonsumsiImportPlan | null;
+  /** VIU only — Jumlah Modal Kerja from each scheme's own Surat Pernyataan Kepemilikan Modal Kerja (Rp). */
+  modalKerjaFromApplication?: { bahanBaku: number | null; konsumsi: number | null } | null;
   technicalAnalysisData: TechnicalAnalysisData;
   machines: MachineChecklistItem[];
   electricityMonths: ElectricityMonth[];

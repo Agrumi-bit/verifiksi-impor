@@ -109,8 +109,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         sktNumber: company?.sktNumber ?? null,
       },
       siblings,
-      overallStatus: overallTechnicalStatus(assignment.application.verificationType, technicalAnalysisData),
-      readyForDecision: allModulesDecided(assignment.application.verificationType, technicalAnalysisData),
+      overallStatus: overallTechnicalStatus(assignment.application.verificationType, technicalAnalysisData, payload.importTypes),
+      readyForDecision: allModulesDecided(assignment.application.verificationType, technicalAnalysisData, payload.importTypes),
     },
   });
 }

@@ -41,8 +41,47 @@ export const TECHNICAL_MODULE_STATUS_BADGE: Record<TechnicalModuleStatusValue, s
 };
 
 export const VKI_MODULE_KEYS = ["listrik", "kapasitas", "bahanbaku"] as const;
+/** Legacy VIU set (= VIU Bahan Baku Industri) — the fallback for a VIU application whose import types are unknown. */
 export const VIU_MODULE_KEYS = ["rencana", "penyimpanan", "modal"] as const;
-export type TechnicalModuleKey = (typeof VKI_MODULE_KEYS)[number] | (typeof VIU_MODULE_KEYS)[number];
+/** Every module any scheme can use — the PATCH endpoint accepts these. */
+export const ALL_TECHNICAL_MODULE_KEYS = [
+  "listrik",
+  "kapasitas",
+  "bahanbaku",
+  "rencana",
+  "kebutuhanNonIndustri",
+  "stokKonsumsi",
+  "penyimpanan",
+  "modal",
+] as const;
+export type TechnicalModuleKey = (typeof ALL_TECHNICAL_MODULE_KEYS)[number];
+
+/**
+ * Technical-analysis modules per scheme (Permenperin 27/2025):
+ * - VKI (Ps 31 ayat (2) huruf b, Ps 32 ayat (3) huruf c-f): energi listrik, kapasitas produksi, kebutuhan bahan baku.
+ * - VIU Bahan Baku Industri (Ps 37 ayat (2) huruf a, Ps 39 ayat (3) huruf d-e): HS Code & volume vs LHVKI mitra industri.
+ * - VIU Bahan Baku Non Industri (Ps 37 ayat (2) huruf b, Ps 39 ayat (4) huruf d): kebutuhan mitra non industri (kontrak) vs rencana impor.
+ * - VIU Barang Konsumsi (Ps 37 ayat (2) huruf c, Ps 39 ayat (5) huruf d-f): stok terkini & rencana impor per HS.
+ * Every VIU scheme also gets Kapasitas Gudang and Kepemilikan Modal API-U — company-level, so a VIU application
+ * with several import types gets them once, after its scheme-specific modules.
+ */
+const VIU_IMPORT_TYPE_MODULE: Record<string, TechnicalModuleKey> = {
+  BAHAN_BAKU_INDUSTRI: "rencana",
+  BAHAN_BAKU_NON_INDUSTRI: "kebutuhanNonIndustri",
+  BARANG_KONSUMSI: "stokKonsumsi",
+};
+const VIU_IMPORT_TYPE_ORDER = ["BAHAN_BAKU_INDUSTRI", "BAHAN_BAKU_NON_INDUSTRI", "BARANG_KONSUMSI"] as const;
+
+export function technicalModuleKeysFor(
+  verificationType: string | null | undefined,
+  importTypes?: readonly string[] | null,
+): readonly TechnicalModuleKey[] {
+  if (verificationType !== "VIU") return VKI_MODULE_KEYS;
+  const selected = new Set(importTypes ?? []);
+  const schemeModules = VIU_IMPORT_TYPE_ORDER.filter((t) => selected.has(t)).map((t) => VIU_IMPORT_TYPE_MODULE[t]);
+  if (schemeModules.length === 0) return VIU_MODULE_KEYS;
+  return [...schemeModules, "penyimpanan", "modal"];
+}
 
 export const TECHNICAL_MODULE_LABELS: Record<TechnicalModuleKey, string> = {
   listrik: "Analisis Kebutuhan dan Pemakaian Energi Listrik",
@@ -52,6 +91,8 @@ export const TECHNICAL_MODULE_LABELS: Record<TechnicalModuleKey, string> = {
   // requested HS Code/volume against the mitra industri's own LHVKI need; penyimpanan and modal
   // check the import plan against API-U's own storage capacity and capital.
   rencana: "Analisis Kesesuaian HS Code dan Volume Permohonan API-U terhadap LHVKI Mitra Industri",
+  kebutuhanNonIndustri: "Analisis Kesesuaian Rencana Impor API-U terhadap Kebutuhan Perusahaan Non Industri Mitra",
+  stokKonsumsi: "Analisis Stok Terkini dan Rencana Impor Produk Tekstil Barang Konsumsi per Pos Tarif/HS",
   penyimpanan: "Analisis Pengajuan Impor vs Kapasitas Gudang API-U",
   modal: "Analisis Pengajuan Impor vs Kepemilikan Modal Perusahaan Importir Umum (API-U)",
 };
@@ -64,6 +105,8 @@ export const TECHNICAL_MODULE_NAV_LABELS: Record<TechnicalModuleKey, string> = {
   kapasitas: "Kapasitas Produksi",
   bahanbaku: "Kebutuhan Bahan Baku",
   rencana: "HS Code & Volume vs LHVKI",
+  kebutuhanNonIndustri: "Kebutuhan Mitra Non Industri",
+  stokKonsumsi: "Stok & Rencana Impor per HS",
   penyimpanan: "Kapasitas Gudang API-U",
   modal: "Kepemilikan Modal API-U",
 };

@@ -26,7 +26,7 @@ export async function GET() {
       verificationType: assignment.application.verificationType,
       status: assignment.status,
       dueDate: assignment.dueDate,
-      overallStatus: overallTechnicalStatus(assignment.application.verificationType, technicalAnalysisData),
+      overallStatus: overallTechnicalStatus(assignment.application.verificationType, technicalAnalysisData, (assignment.application.payload as { importTypes?: string[] } | null)?.importTypes),
     };
   });
 

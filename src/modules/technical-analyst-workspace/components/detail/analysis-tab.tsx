@@ -6,8 +6,7 @@ import { toast } from "sonner";
 
 import {
   TECHNICAL_MODULE_NAV_LABELS,
-  VIU_MODULE_KEYS,
-  VKI_MODULE_KEYS,
+  technicalModuleKeysFor,
   type TechnicalModuleKey,
   type TechnicalModuleStatusValue,
 } from "../../status";
@@ -18,6 +17,8 @@ import { BahanBakuModule } from "./analysis/bahanbaku-module";
 import { RencanaModule } from "./analysis/rencana-module";
 import { PenyimpananModule } from "./analysis/penyimpanan-module";
 import { ModalModule } from "./analysis/modal-module";
+import { KebutuhanNonIndustriModule } from "./analysis/kebutuhan-non-industri-module";
+import { StokKonsumsiModule } from "./analysis/stok-konsumsi-module";
 
 type AnalysisTabProps = {
   assignmentNumber: string;
@@ -31,14 +32,15 @@ const MODULE_COMPONENT: Record<TechnicalModuleKey, (props: ModuleProps) => React
   kapasitas: KapasitasModule,
   bahanbaku: BahanBakuModule,
   rencana: RencanaModule,
+  kebutuhanNonIndustri: KebutuhanNonIndustriModule,
+  stokKonsumsi: StokKonsumsiModule,
   penyimpanan: PenyimpananModule,
   modal: ModalModule,
 };
 
 export function AnalysisTab({ assignmentNumber, verificationType }: AnalysisTabProps) {
   const queryClient = useQueryClient();
-  const moduleKeys = verificationType === "VIU" ? VIU_MODULE_KEYS : VKI_MODULE_KEYS;
-  const [activeModule, setActiveModule] = useState<TechnicalModuleKey>(moduleKeys[0]);
+  const [selectedModule, setSelectedModule] = useState<TechnicalModuleKey | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [submittingKey, setSubmittingKey] = useState<string | null>(null);
 
@@ -74,6 +76,10 @@ export function AnalysisTab({ assignmentNumber, verificationType }: AnalysisTabP
   if (isError || !data) return <div className="p-6 text-center text-[#c1361f]">Gagal memuat data analisis.</div>;
 
   const analysisData = data;
+  // Modules follow the application's scheme(s): VKI, or each VIU import type's own module plus Gudang & Modal.
+  const moduleKeys = technicalModuleKeysFor(analysisData.verificationType ?? verificationType, analysisData.importTypes);
+  const activeModule: TechnicalModuleKey = selectedModule && moduleKeys.includes(selectedModule) ? selectedModule : moduleKeys[0];
+  const setActiveModule = setSelectedModule;
   // SUBMITTED, or reopened after a resubmitted revision (see isAssignmentReviewable).
   const canEdit = analysisData.reviewable ?? analysisData.status === "SUBMITTED";
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { TECHNICAL_MODULE_STATUSES, VKI_MODULE_KEYS, VIU_MODULE_KEYS, type TechnicalModuleStatusValue } from "./status";
+import { TECHNICAL_MODULE_STATUSES, technicalModuleKeysFor, type TechnicalModuleStatusValue } from "./status";
 
 export const technicalModuleDecisionSchema = z.object({
   status: z.enum(TECHNICAL_MODULE_STATUSES).default("PENDING"),
@@ -26,8 +26,9 @@ export const decisionSchema = z.object({
 export function overallTechnicalStatus(
   verificationType: "VKI" | "VIU" | string,
   data: TechnicalAnalysisData | null | undefined,
+  importTypes?: readonly string[] | null,
 ): TechnicalModuleStatusValue {
-  const moduleKeys = verificationType === "VIU" ? VIU_MODULE_KEYS : VKI_MODULE_KEYS;
+  const moduleKeys = technicalModuleKeysFor(verificationType, importTypes);
   const statuses = moduleKeys.map((key) => data?.[key]?.status ?? "PENDING");
   if (statuses.some((s) => s === "TIDAK_SESUAI")) return "TIDAK_SESUAI";
   if (statuses.every((s) => s === "SESUAI")) return "SESUAI";
@@ -35,7 +36,11 @@ export function overallTechnicalStatus(
 }
 
 /** Gates the Decision Panel — every applicable module must have a verdict before Approve/Return is allowed. */
-export function allModulesDecided(verificationType: "VKI" | "VIU" | string, data: TechnicalAnalysisData | null | undefined): boolean {
-  const moduleKeys = verificationType === "VIU" ? VIU_MODULE_KEYS : VKI_MODULE_KEYS;
+export function allModulesDecided(
+  verificationType: "VKI" | "VIU" | string,
+  data: TechnicalAnalysisData | null | undefined,
+  importTypes?: readonly string[] | null,
+): boolean {
+  const moduleKeys = technicalModuleKeysFor(verificationType, importTypes);
   return moduleKeys.every((key) => (data?.[key]?.status ?? "PENDING") !== "PENDING");
 }

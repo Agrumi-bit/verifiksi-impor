@@ -24,7 +24,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const technicalAnalysisData = technicalAnalysisDataSchema.parse(assignment.technicalAnalysisData ?? {});
-  if (!allModulesDecided(assignment.application.verificationType, technicalAnalysisData)) {
+  if (!allModulesDecided(assignment.application.verificationType, technicalAnalysisData, (assignment.application.payload as { importTypes?: string[] } | null)?.importTypes)) {
     return NextResponse.json(
       { error: "Seluruh modul analisis teknis harus dinilai terlebih dahulu." },
       { status: 400 },

@@ -59,7 +59,7 @@ export async function GET(request: Request) {
       validatedAt: assignment.validatedAt,
       revisionCount: assignment.revisionCount,
       revisionReceivedAt: assignment.revisionReceivedAt,
-      overallStatus: overallTechnicalStatus(assignment.application.verificationType, technicalAnalysisData),
+      overallStatus: overallTechnicalStatus(assignment.application.verificationType, technicalAnalysisData, (assignment.application.payload as { importTypes?: string[] } | null)?.importTypes),
     };
   });
 
