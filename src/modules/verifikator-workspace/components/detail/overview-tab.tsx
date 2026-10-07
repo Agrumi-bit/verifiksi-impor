@@ -132,7 +132,7 @@ export function OverviewTab({ data }: { data: AssignmentDetailData }) {
             label="Requested Products"
             value={
               verificationProgram.products.length
-                ? `${verificationProgram.products.length} produk — ${verificationProgram.products.map((p) => p.materialType).join(", ")}`
+                ? `${verificationProgram.products.length} produk — ${verificationProgram.products.map((p) => (p.source === "konsumsi" ? p.productName : p.materialType) || "—").join(", ")}`
                 : "—"
             }
           />

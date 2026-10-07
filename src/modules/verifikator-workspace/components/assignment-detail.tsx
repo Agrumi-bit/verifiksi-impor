@@ -25,6 +25,7 @@ import { FieldVerificationTab } from "./detail/field-verification-tab";
 import { DocumentVerificationTab } from "./detail/document-verification-tab";
 import { MachineVerificationTab } from "./detail/machine-verification-tab";
 import { ProductVerificationTab } from "./detail/product-verification-tab";
+import { KonsumsiProductVerificationTab } from "./detail/konsumsi-product-verification-tab";
 import { ProductionQuantityTab } from "./detail/production-quantity-tab";
 import { DraftReportTab } from "./detail/draft-report-tab";
 import { TeamTab } from "./detail/team-tab";
@@ -87,7 +88,16 @@ export type AssignmentDetailData = {
   verificationProgram: {
     type: string;
     importTypes: string[];
-    products: { id: string; materialType: string; hsCode: string; estimatedVolume: string; volumeUnit: string; intendedUse: string }[];
+    products: {
+      id: string;
+      materialType: string;
+      hsCode: string;
+      estimatedVolume: string;
+      volumeUnit: string;
+      intendedUse: string;
+      source: "generic" | "konsumsi";
+      productName?: string;
+    }[];
   };
   surveyInformation: {
     surveyorName: string;
@@ -178,6 +188,10 @@ export function AssignmentDetail({ id }: Props) {
   // Tabs/decision panel only act on a reviewable assignment — SUBMITTED, or reopened
   // (IN_PROGRESS, "Revisi ke-N") after the company resubmitted a revision.
   const reviewStatus = isAssignmentReviewable(data) ? "SUBMITTED" : data.status;
+  // Konsumsi products have their own tab and never share the generic (VKI / Bahan Baku) layout;
+  // an application combining both kinds shows each in its own section.
+  const hasKonsumsiProducts = (data.application.payload.konsumsiProducts ?? []).length > 0;
+  const hasGenericProducts = (data.application.payload.products ?? []).length > 0;
 
   return (
     <div className="p-6">
@@ -300,14 +314,21 @@ export function AssignmentDetail({ id }: Props) {
           <MachineVerificationTab assignmentId={id} assignmentStatus={reviewStatus} />
         )}
         {activeTab === "Product Verification" && (
-          <ProductVerificationTab
-            assignmentId={id}
-            assignmentStatus={reviewStatus}
-            payload={data.application.payload}
-            focusProductId={rawMaterialFocus?.productId ?? null}
-            focusConversionId={rawMaterialFocus?.conversionId ?? null}
-            onFocusHandled={() => setRawMaterialFocus(null)}
-          />
+          <div className="flex flex-col gap-5">
+            {hasKonsumsiProducts && (
+              <KonsumsiProductVerificationTab assignmentId={id} assignmentStatus={reviewStatus} />
+            )}
+            {(!hasKonsumsiProducts || hasGenericProducts) && (
+              <ProductVerificationTab
+                assignmentId={id}
+                assignmentStatus={reviewStatus}
+                payload={data.application.payload}
+                focusProductId={rawMaterialFocus?.productId ?? null}
+                focusConversionId={rawMaterialFocus?.conversionId ?? null}
+                onFocusHandled={() => setRawMaterialFocus(null)}
+              />
+            )}
+          </div>
         )}
         {activeTab === "Verifikasi Jumlah Produksi" && (
           <ProductionQuantityTab

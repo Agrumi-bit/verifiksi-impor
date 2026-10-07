@@ -112,23 +112,9 @@ export async function PATCH(
         data: { payload: { ...payload, products } },
       });
     } else {
-      // Konsumsi product — its own shape has no kategori/materialType/photoPath, only the
-      // overlapping fields are corrected here (see buildProductChecklist's mapping).
-      const { hsCode, hsDesc, deskripsi } = parsed.data.productData;
-      const konsumsiProducts = (payload.konsumsiProducts ?? []).map((p) =>
-        p.id === parsed.data.id
-          ? {
-              ...p,
-              ...(hsCode !== undefined ? { hsCode } : {}),
-              ...(hsDesc !== undefined ? { hsDescription: hsDesc } : {}),
-              ...(deskripsi !== undefined ? { productName: deskripsi } : {}),
-            }
-          : p,
-      );
-      await db.application.update({
-        where: { id: assignment.applicationId },
-        data: { payload: { ...payload, konsumsiProducts } },
-      });
+      // Konsumsi products are derived from HS Code master data (hsCodeId is the source of truth),
+      // so a verifikator records a decision on them but never rewrites their data.
+      return NextResponse.json({ error: "Data produk Konsumsi tidak dapat diubah oleh verifikator" }, { status: 400 });
     }
   }
 

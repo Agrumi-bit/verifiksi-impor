@@ -667,7 +667,9 @@ export function ProductVerificationTab({
     },
   });
 
-  const rows = data ?? [];
+  // Konsumsi products have their own scheme-specific tab (KonsumsiProductVerificationTab); this one
+  // is the generic (VKI / Bahan Baku) layout and never lists them.
+  const rows = (data ?? []).filter((row) => row.source !== "konsumsi");
   const rawMaterials = payload.rawMaterials ?? [];
   const rawMaterialConversions = payload.rawMaterialConversions ?? [];
   // "Bahan Baku yang Digunakan" picks HS Code from what this application itself already

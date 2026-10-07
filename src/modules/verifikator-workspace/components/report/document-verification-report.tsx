@@ -102,6 +102,17 @@ export type ProductRow = {
   intendedUse: string;
   photoPath: string | null;
   status: "PENDING" | "VERIFIED" | "NEED_REVISION" | "REJECTED";
+  // "konsumsi" rows are VIU Barang Konsumsi products — rendered by their own card, never the
+  // generic Jenis Produk / Bahan Baku layout. The fields below are only set on those rows.
+  source: "generic" | "konsumsi";
+  productName?: string;
+  brandName?: string;
+  kelompokKomoditas?: string;
+  subKelompokKomoditas?: string;
+  komoditas?: string;
+  originCountryNames?: string[];
+  averageUnitPrice?: string;
+  currency?: string;
 };
 
 export type RawMaterialRow = {
@@ -899,6 +910,54 @@ function RawMaterialConversionCard({ m }: { m: RawMaterialConversionRow }) {
   );
 }
 
+function KonsumsiField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div style={{ fontSize: 8.5, letterSpacing: "0.05em", color: MUTED_2, marginBottom: 4 }}>{label.toUpperCase()}</div>
+      <div style={{ background: CREAM, borderRadius: 8, padding: "9px 12px", fontSize: 10.5, lineHeight: 1.5, color: INK }}>{value || "—"}</div>
+    </div>
+  );
+}
+
+/** One VIU Barang Konsumsi product — its own shape (HS Code-derived commodity chain, brand, origin,
+ * quantity, price), no photo and no "Bahan Baku yang Digunakan". */
+function KonsumsiProductCard({ p }: { p: ProductRow }) {
+  const meta = PRODUCT_STATUS_META[p.status];
+  return (
+    <div style={{ border: `1px solid ${ORANGE_LIGHT}`, borderRadius: 16, padding: "16px 18px", marginBottom: 14, background: "#fff" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 32 }}>
+          <div>
+            <div style={{ fontSize: 9, letterSpacing: "0.05em", color: MUTED_2 }}>NAMA PRODUK</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: ORANGE_TEXT }}>{p.productName || "—"}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 9, letterSpacing: "0.05em", color: MUTED_2 }}>HS CODE</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: INK }}>{p.hsCode || "—"}</div>
+          </div>
+        </div>
+        <Badge color={meta.color} bg={meta.bg}>
+          {meta.label}
+        </Badge>
+      </div>
+      <div style={{ display: "grid", gap: 10 }}>
+        <KonsumsiField label="Uraian HS Code" value={p.hsDesc} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+          <KonsumsiField label="Kelompok Komoditas" value={p.kelompokKomoditas ?? ""} />
+          <KonsumsiField label="Sub Kelompok Komoditas" value={p.subKelompokKomoditas ?? ""} />
+          <KonsumsiField label="Komoditas" value={p.komoditas ?? ""} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10 }}>
+          <KonsumsiField label="Merek" value={p.brandName ?? ""} />
+          <KonsumsiField label="Negara Asal" value={(p.originCountryNames ?? []).join(", ")} />
+          <KonsumsiField label="Jumlah Permohonan" value={[p.estimatedVolume, p.volumeUnit].filter(Boolean).join(" ")} />
+          <KonsumsiField label="Harga Satuan Rata-rata" value={p.averageUnitPrice ? `${p.currency ?? ""} ${p.averageUnitPrice}`.trim() : ""} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProductChapter({
   products,
   rawMaterialConversion,
@@ -949,6 +1008,17 @@ function ProductChapter({
       </section>
 
       {products.map((p, idx) => {
+        if (p.source === "konsumsi") {
+          return (
+            <PageShell key={p.id} pageNo={startPage + 1 + idx} totalPages={totalPages} companyName={company} landscape>
+              <Eyebrow>DATA PRODUK</Eyebrow>
+              <div style={{ fontSize: 11, fontWeight: 700, color: INK, textAlign: "center", margin: "0 0 12px" }}>
+                Produk {idx + 1} dari {products.length}
+              </div>
+              <KonsumsiProductCard p={p} />
+            </PageShell>
+          );
+        }
         const meta = PRODUCT_STATUS_META[p.status];
         const materials = rawMaterialConversion.filter((c) => c.productId === p.id);
         return (

@@ -573,6 +573,16 @@ export type ProductChecklistItem = {
   // linking concept). "konsumsi" = payload.konsumsiProducts, which has no raw-material concept at
   // all, so the UI must not offer "Bahan Baku yang Digunakan" linking on these rows.
   source: "generic" | "konsumsi";
+  // Konsumsi only — its products are named by the applicant and sit in a 3-level commodity chain
+  // (Kelompok > Sub Kelompok > Komoditas) derived from the HS Code; generic products have neither.
+  productName?: string;
+  brandName?: string;
+  kelompokKomoditas?: string;
+  subKelompokKomoditas?: string;
+  komoditas?: string;
+  originCountryNames?: string[];
+  averageUnitPrice?: string;
+  currency?: string;
 };
 
 export function buildProductChecklist(payload: ApplicationWizardValues): ProductChecklistItem[] {
@@ -606,6 +616,14 @@ export function buildProductChecklist(payload: ApplicationWizardValues): Product
     intendedUse: "",
     photoPath: null,
     source: "konsumsi" as const,
+    productName: product.productName ?? "",
+    brandName: product.productSnapshot?.brandName ?? "",
+    originCountryNames: product.originCountryNames ?? product.productSnapshot?.countryOfOriginNames ?? [],
+    averageUnitPrice: product.averageUnitPrice ?? "",
+    currency: product.currency ?? "",
+    kelompokKomoditas: product.industryName ?? "",
+    subKelompokKomoditas: product.commodityName ?? "",
+    komoditas: product.commoditySubGroupName ?? "",
   }));
   return [...generic, ...konsumsi];
 }
