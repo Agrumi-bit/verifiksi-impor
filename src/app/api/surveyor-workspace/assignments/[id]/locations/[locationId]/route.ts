@@ -49,7 +49,7 @@ export async function GET(
   const liveLocation = liveLocations?.find((loc) => loc.id === payloadLocationSnapshot?.id) ?? null;
   const payloadLocation = liveLocation ?? payloadLocationSnapshot;
 
-  // Document Information (version/uploader/upload date) for the same 3 "Dokumen yang diperiksa"
+  // Document Information (version/uploader/upload date) for the same "Dokumen yang diperiksa"
   // rows Section1Documents shows — reuses the exact tracking verifikator's own checklist reads:
   // nib/akta are company-mapped (CompanyDocumentVersion), the location ownership/lease doc is
   // application-only (ApplicationDocumentVersion), keyed the same way buildDocumentChecklist does.
@@ -60,18 +60,25 @@ export async function GET(
       ? `location:${payloadLocation.id}:${isSewa ? "lease" : "ownership"}:${ownershipDocs[0].type}`
       : null;
 
+  const tdgVersionKey =
+    payloadLocation && payloadLocation.warehouseRegistrationDocumentPath
+      ? `location:${payloadLocation.id}:warehouseRegistration`
+      : null;
+
   const companyMetaKeys: ("nibDocumentPath" | "notarialDocumentPath")[] = [];
   if (company?.nibDocumentPath) companyMetaKeys.push("nibDocumentPath");
   if (company?.notarialDocumentPath) companyMetaKeys.push("notarialDocumentPath");
   const companyMeta = company && companyMetaKeys.length ? await getDocumentMeta(company.id, companyMetaKeys, company.createdAt) : {};
-  const appMeta = kepemilikanVersionKey
-    ? await getApplicationDocumentMeta(application.id, [kepemilikanVersionKey], application.createdAt)
+  const appMetaKeys = [kepemilikanVersionKey, tdgVersionKey].filter((key): key is string => key !== null);
+  const appMeta = appMetaKeys.length
+    ? await getApplicationDocumentMeta(application.id, appMetaKeys, application.createdAt)
     : {};
 
   const documentMeta: Record<string, DocumentMetaEntry | null> = {
     nib: companyMeta.nibDocumentPath ?? null,
     akta: companyMeta.notarialDocumentPath ?? null,
     kepemilikan: kepemilikanVersionKey ? (appMeta[kepemilikanVersionKey] ?? null) : null,
+    tdg: tdgVersionKey ? (appMeta[tdgVersionKey] ?? null) : null,
   };
 
   return NextResponse.json({

@@ -80,13 +80,33 @@ type LocationDetail = {
   documentMeta: Record<string, DocumentMetaEntry | null>;
 };
 
-function buildDefaultSection1Docs(company: LocationDetail["company"], payloadLocation: PayloadLocation | null): DocCheckValues[] {
+const TDG_DOC_KEY = "tdg";
+
+// Gudang is checked against its Tanda Daftar Gudang plus the sewa / kepemilikan document of the
+// location; company-level NIB and Akta Notaris only apply to the other location kinds.
+function buildDefaultSection1Docs(
+  kind: FieldKind,
+  company: LocationDetail["company"],
+  payloadLocation: PayloadLocation | null,
+): DocCheckValues[] {
   const docs: DocCheckValues[] = [];
-  if (company.nibDocumentPath) {
-    docs.push({ key: "nib", name: "NIB", status: "pending", addressText: "", documentPath: company.nibDocumentPath });
-  }
-  if (company.notarialDocumentPath) {
-    docs.push({ key: "akta", name: "Akta Notaris", status: "pending", addressText: "", documentPath: company.notarialDocumentPath });
+  if (kind === "GUDANG") {
+    if (payloadLocation?.warehouseRegistrationDocumentPath) {
+      docs.push({
+        key: TDG_DOC_KEY,
+        name: "Tanda Daftar Gudang (TDG)",
+        status: "pending",
+        addressText: "",
+        documentPath: payloadLocation.warehouseRegistrationDocumentPath,
+      });
+    }
+  } else {
+    if (company.nibDocumentPath) {
+      docs.push({ key: "nib", name: "NIB", status: "pending", addressText: "", documentPath: company.nibDocumentPath });
+    }
+    if (company.notarialDocumentPath) {
+      docs.push({ key: "akta", name: "Akta Notaris", status: "pending", addressText: "", documentPath: company.notarialDocumentPath });
+    }
   }
   const isSewa = payloadLocation?.buildingStatus === "SEWA";
   const ownershipDocs = (isSewa ? payloadLocation?.leaseDocuments : payloadLocation?.ownershipDocuments) ?? [];
@@ -100,6 +120,16 @@ function buildDefaultSection1Docs(company: LocationDetail["company"], payloadLoc
     });
   }
   return docs;
+}
+
+// A Gudang visit started before TDG replaced NIB / Akta keeps its saved rows: drop the two company
+// documents and put the TDG row in front, leaving the surveyor's verdict on the sewa / kepemilikan
+// row untouched.
+function migrateGudangSection1Docs(saved: DocCheckValues[], defaults: DocCheckValues[]): DocCheckValues[] {
+  const kept = saved.filter((d) => d.key !== "nib" && d.key !== "akta");
+  const tdgRow = kept.find((d) => d.key === TDG_DOC_KEY) ?? defaults.find((d) => d.key === TDG_DOC_KEY);
+  const rest = kept.filter((d) => d.key !== TDG_DOC_KEY);
+  return tdgRow ? [tdgRow, ...rest] : rest;
 }
 
 type Props = { kind: FieldKind; assignmentId: string; locationId: string };
@@ -132,6 +162,7 @@ export function FieldVerificationWizard({ kind, assignmentId, locationId }: Prop
 
   if (data && data.id !== loadedForId) {
     setLoadedForId(data.id);
+    const defaultSection1Docs = buildDefaultSection1Docs(kind, data.company, data.payloadLocation);
     const base = data[dataField]
       ? // Re-parsed instead of used as-is: records saved before a schema field existed (e.g.
         // documentationOther) come back from the DB without it, and this is the one place that
@@ -140,10 +171,14 @@ export function FieldVerificationWizard({ kind, assignmentId, locationId }: Prop
         fieldVerificationSchema.parse(data[dataField])
       : {
           ...emptyFieldVerification(),
-          section1Docs: buildDefaultSection1Docs(data.company, data.payloadLocation),
+          section1Docs: defaultSection1Docs,
         };
     setValues({
       ...base,
+      section1Docs:
+        kind === "GUDANG" && data[dataField]
+          ? migrateGudangSection1Docs(base.section1Docs, defaultSection1Docs)
+          : base.section1Docs,
       // Pre-fill from Customer Relation's actual assignment date (synced regardless of Surat
       // Tugas draft/approval status) whenever the surveyor hasn't already set one themselves.
       // Tanggal Penugasan is CR's date (scheduledDate, as a Jakarta calendar date) — it wins
