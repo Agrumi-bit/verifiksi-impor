@@ -97,10 +97,10 @@ async function validateKonsumsiProducts(
       return { error: `HS Code pada produk "${product.productName}" tidak ditemukan atau tidak aktif.` };
     }
     if (hsRow.commodityGroup.status !== "ACTIVE") {
-      return { error: `Kelompok Komoditas "${hsRow.commodityGroup.name}" untuk HS Code "${hsRow.hsCode}" pada produk "${product.productName}" tidak aktif.` };
+      return { error: `Sub Kelompok Komoditas "${hsRow.commodityGroup.name}" untuk HS Code "${hsRow.hsCode}" pada produk "${product.productName}" tidak aktif.` };
     }
     if (hsRow.commoditySubGroup.status !== "ACTIVE") {
-      return { error: `Sub Kelompok Komoditas "${hsRow.commoditySubGroup.name}" untuk HS Code "${hsRow.hsCode}" pada produk "${product.productName}" tidak aktif.` };
+      return { error: `Komoditas "${hsRow.commoditySubGroup.name}" untuk HS Code "${hsRow.hsCode}" pada produk "${product.productName}" tidak aktif.` };
     }
     const resolvedCountries = product.originCountries.map((code) => countryByCode.get(code));
     const missingIndex = resolvedCountries.findIndex((country) => !country || country.status !== "ACTIVE");
