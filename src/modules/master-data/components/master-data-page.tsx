@@ -27,6 +27,9 @@ type Props = {
   formNotice?: FormNotice;
   /** Dropdown filters rendered next to the search box, applied together with the search. */
   filters?: MasterDataFilter[];
+  /** Shows a "Hapus" button per row (permanent delete, confirmed in a dialog). The API refuses with
+   * a reason when the row is still referenced — that message is shown as-is. */
+  allowDelete?: boolean;
 };
 
 function cellValue(row: MasterDataRow, column: MasterDataColumn): string {
@@ -53,6 +56,7 @@ export function MasterDataPage({
   headerActions,
   formNotice,
   filters,
+  allowDelete,
 }: Props) {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -65,6 +69,8 @@ export function MasterDataPage({
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_OPTIONS[0]);
   const [page, setPage] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState<MasterDataRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const hasActiveFilter = Object.values(filterValues).some(Boolean) || search.trim() !== "";
 
@@ -190,6 +196,24 @@ export function MasterDataPage({
       setDeactivateReason("");
     } finally {
       setIsDeactivating(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`${apiPath}/${deleteTarget.id}`, { method: "DELETE" });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        toast.error(body?.error ?? "Gagal menghapus data");
+        return;
+      }
+      toast.success("Data berhasil dihapus.");
+      setDeleteTarget(null);
+      queryClient.invalidateQueries({ queryKey: [queryKey] });
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -382,7 +406,7 @@ export function MasterDataPage({
                   </div>
                 )}
               </div>
-              <div className="text-right">
+              <div className="flex justify-end gap-1.5">
                 <button
                   type="button"
                   onClick={() => openEditDialog(row)}
@@ -390,6 +414,15 @@ export function MasterDataPage({
                 >
                   Edit
                 </button>
+                {allowDelete && (
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget(row)}
+                    className="rounded-lg border border-[#dc2626] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#dc2626]"
+                  >
+                    Hapus
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -431,6 +464,41 @@ export function MasterDataPage({
         onSubmit={handleSubmit}
         formNotice={formNotice}
       />
+
+      {deleteTarget && (
+        <div
+          onClick={() => !isDeleting && setDeleteTarget(null)}
+          style={{ background: "rgba(43,36,32,.45)" }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
+          <div onClick={(event) => event.stopPropagation()} className="w-105 max-w-[92vw] rounded-2xl bg-white p-7">
+            <div className="mb-1.5 text-[16px] font-extrabold text-[#2b2420]">Hapus {title}</div>
+            <p className="mb-1 text-[13px] font-semibold text-[#261813]">{cellValue(deleteTarget, columns[0])}</p>
+            <p className="text-[13px] text-[#8a7565]">
+              Data akan dihapus permanen dan tidak dapat dikembalikan. Jika hanya tidak dipakai lagi, gunakan
+              tombol Nonaktif.
+            </p>
+            <div className="mt-5 flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={isDeleting}
+                className="rounded-lg border border-[#e1bfb3] bg-white px-4.5 py-2.5 text-[13px] font-semibold text-[#261813] disabled:opacity-60"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="rounded-lg bg-[#ba1a1a] px-4.5 py-2.5 text-[13px] font-bold text-white disabled:opacity-40"
+              >
+                {isDeleting ? "Menghapus..." : "Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {deactivateTarget && (
         <div

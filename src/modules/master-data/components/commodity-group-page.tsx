@@ -21,6 +21,7 @@ export function CommodityGroupPage() {
 
   return (
     <MasterDataPage
+      allowDelete
       title="Sub Kelompok Komoditas"
       description="Sub kelompok komoditas tekstil dan produk tekstil (TPT), di bawah Kelompok Komoditas."
       apiPath="/api/master-data/commodity-group"

@@ -38,6 +38,7 @@ export function CommoditySubGroupPage() {
 
   return (
     <MasterDataPage
+      allowDelete
       title="Komoditas"
       description="Sub kategori dari Sub Kelompok Komoditas."
       apiPath="/api/master-data/commodity-sub-group"

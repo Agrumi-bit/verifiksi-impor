@@ -68,6 +68,7 @@ export function IndustryGroupPage() {
 
   return (
     <MasterDataPage
+      allowDelete
       title="Kelompok Komoditas"
       description="Level tertinggi hierarki komoditas: Kelompok Komoditas > Sub Kelompok Komoditas > Komoditas. Impor Excel di sini bisa mengisi ketiga level sekaligus."
       apiPath="/api/master-data/industry-group"
