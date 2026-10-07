@@ -8,12 +8,30 @@ type LegacyKonsumsiProduct = ApplicationKonsumsiProductValues & {
   countryOfOriginCode?: string;
 };
 
+/** `productSnapshot` as first written (single `countryOfOriginName`, no `countryOfOriginNames`). */
+type LegacyProductSnapshot = Record<string, unknown> & { countryOfOriginName?: unknown; countryOfOriginNames?: unknown };
+
+/** Upgrades an old-format snapshot to the current shape: `countryOfOriginName` (string) becomes
+ * `countryOfOriginNames: [name]` (fallback: the product's own country names) and the old key is dropped. */
+function normalizeProductSnapshot(
+  snapshot: ApplicationKonsumsiProductValues["productSnapshot"],
+  fallbackNames: string[] | undefined,
+): ApplicationKonsumsiProductValues["productSnapshot"] {
+  if (!snapshot) return snapshot;
+  const { countryOfOriginName, ...rest } = snapshot as unknown as LegacyProductSnapshot;
+  if (Array.isArray(rest.countryOfOriginNames)) return rest as unknown as typeof snapshot;
+  const names =
+    typeof countryOfOriginName === "string" && countryOfOriginName ? [countryOfOriginName] : (fallbackNames ?? []);
+  return { ...rest, countryOfOriginNames: names } as unknown as typeof snapshot;
+}
+
 function normalizeKonsumsiProduct(product: LegacyKonsumsiProduct): ApplicationKonsumsiProductValues {
   const originCountries =
     product.originCountries ?? (product.countryOfOriginCode ? [product.countryOfOriginCode] : []);
   const originCountryNames =
     product.originCountryNames ?? (product.countryOfOrigin ? [product.countryOfOrigin] : undefined);
-  return { ...product, originCountries, originCountryNames };
+  const productSnapshot = normalizeProductSnapshot(product.productSnapshot, originCountryNames);
+  return { ...product, originCountries, originCountryNames, productSnapshot };
 }
 
 /**

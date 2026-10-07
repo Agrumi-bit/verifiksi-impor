@@ -62,7 +62,10 @@ export const applicationBrandEntrySchema = z.object({
       readinessAtSubmission: z.enum(["READY", "INCOMPLETE", "NOT_ELIGIBLE"]),
       requiredDocumentLabels: z.array(z.string()),
     })
-    .optional(),
+    .optional()
+    // Server-written, display-only: a snapshot in an older shape must never block editing — drop it
+    // (the server rebuilds it at submit; the review falls back to a live Brand Master lookup).
+    .catch(undefined),
 });
 export type ApplicationBrandEntryValues = z.infer<typeof applicationBrandEntrySchema>;
 export type ApplicationBrandSubmissionSnapshot = NonNullable<ApplicationBrandEntryValues["submissionSnapshot"]>;
@@ -281,7 +284,9 @@ export const konsumsiProductSchema = z.object({
   stockQuantity: nonNegativeNumberString("Jumlah stock tidak valid").default("0"),
   averageUnitPrice: nonNegativeNumberString("Harga satuan rata-rata tidak valid"),
   currency: z.enum(KONSUMSI_PRODUCT_CURRENCIES).default("USD"),
-  productSnapshot: konsumsiProductSnapshotSchema.optional(),
+  // Server-written, display-only: a snapshot in an older shape (see normalizeKonsumsiPayload) must
+  // never block editing — dropped if still invalid; the server rewrites it at submit.
+  productSnapshot: konsumsiProductSnapshotSchema.optional().catch(undefined),
   // Set by `resyncKonsumsiProductCommodities` when the HS Code master data moved this product to a
   // different Sub Kelompok after it was entered — the OLD Sub Kelompok name, shown as "Sub Kelompok
   // diperbarui mengikuti master HS Code". Display-only; cleared by the server at submit.
