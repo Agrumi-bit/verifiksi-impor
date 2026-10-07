@@ -2,10 +2,9 @@ import * as XLSX from "xlsx";
 
 export type LartasFlagKey = "apiP" | "apiUIndustri" | "apiUNonIndustri" | "barangKonsumsi" | "ppbb";
 
-export const LARTAS_EXCEL_COLUMNS: { key: "no" | "hsCode" | "description" | LartasFlagKey; header: string; example: string }[] = [
+export const LARTAS_EXCEL_COLUMNS: { key: "no" | "hsCode" | LartasFlagKey; header: string; example: string }[] = [
   { key: "no", header: "No", example: "1" },
   { key: "hsCode", header: "Pos Tarif/HS", example: "5205.31.00" },
-  { key: "description", header: "Uraian Barang", example: "Benang katun, tunggal, dari serat tidak disikat" },
   { key: "apiP", header: "API-P Bahan Baku dan/atau Bahan Penolong", example: "√" },
   { key: "apiUIndustri", header: "API-U Perusahaan Industri", example: "√" },
   { key: "apiUNonIndustri", header: "API-U Perusahaan Non Industri", example: "" },
@@ -13,7 +12,10 @@ export const LARTAS_EXCEL_COLUMNS: { key: "no" | "hsCode" | "description" | Lart
   { key: "ppbb", header: "PPBB", example: "" },
 ];
 
-/** Template mirrors the Lampiran's own column order (Pelaku Usaha sebagai Pemohon) — a mark ("√") means the HS Code is open to that applicant type. */
+/**
+ * Template mirrors the Lampiran's own column order (Pelaku Usaha sebagai Pemohon) — a mark ("√") means the HS Code is open to
+ * that applicant type. No Uraian Barang column: the description always comes from HS Code master data.
+ */
 export function downloadLartasExcelTemplate(): void {
   const headerRow = LARTAS_EXCEL_COLUMNS.map((c) => c.header);
   const exampleRow = LARTAS_EXCEL_COLUMNS.map((c) => c.example);
