@@ -9,6 +9,7 @@ import {
   type SchemeTerms,
 } from "@/modules/schemes";
 import { createComplianceResolver, type ComplianceResolver } from "./scheme-compliance";
+import { qualityTestReviewValues } from "./konsumsi-quality-test";
 import {
   buildLocationDocuments,
   KONSUMSI_MODAL_FINANSIAL_DOCUMENTS,
@@ -113,6 +114,27 @@ function brandEvidenceDoc(row: ReportRow, brandId: string): DocDetail {
   };
 }
 
+/** Same points as the review modal's "Uraian yang Diperiksa" for Sertifikat Uji Mutu. */
+function qualityTestDoc(row: ReportRow, brandId: string, commodityGroupId: string): DocDetail {
+  const hasDocument = Boolean(row.documentPath);
+  const field = (label: string, value: string | null | undefined): DocField => ({ label, value: value || "—", ok: Boolean(value) });
+  return {
+    ...genericDoc(row),
+    fields: (ctx) => {
+      const values = qualityTestReviewValues(ctx.payload, ctx.konsumsiBrands, brandId, commodityGroupId);
+      return [
+        field("Merek", values?.brandName),
+        field("Sub Kelompok Komoditas", values?.subKelompokKomoditas),
+        field("Nomor Test Report", values?.reportNumber),
+        field("Laboratorium", values?.laboratoryName),
+        field("Tanggal Terbit", values?.issueDate),
+        field("Batas Pengajuan 6 Bulan", values?.submissionWindow),
+        { label: "Status Unggah", value: hasDocument ? "Diunggah" : "Belum Diunggah", ok: hasDocument },
+      ];
+    },
+  };
+}
+
 function fmtTanggal(value: string): string {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime())
@@ -177,8 +199,14 @@ export function createSchemeReport(source: {
       .filter((row) => row.category === category)
       .map((row, i) => {
         const brandEvidenceId = row.key.match(/^konsumsi-brand:([^:]+):evidence$/)?.[1];
+        const qualityTestMatch = row.key.match(/^konsumsi-qt:([^:]+):(.+)$/);
         const base =
-          legacy.find((d) => d.key === row.key) ?? (brandEvidenceId ? brandEvidenceDoc(row, brandEvidenceId) : genericDoc(row));
+          legacy.find((d) => d.key === row.key) ??
+          (brandEvidenceId
+            ? brandEvidenceDoc(row, brandEvidenceId)
+            : qualityTestMatch
+              ? qualityTestDoc(row, qualityTestMatch[1], qualityTestMatch[2])
+              : genericDoc(row));
         const found = defFor(row.key, ctx);
         const text: DocumentNarrative | string = found
           ? (getScheme(found.scheme).narrative?.documents[found.def.id] ?? belumDiatur(found.scheme, `narasi dokumen "${found.def.label}"`))

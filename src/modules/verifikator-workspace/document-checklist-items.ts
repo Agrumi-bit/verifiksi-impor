@@ -26,6 +26,7 @@ import {
 } from "@/modules/shared/schema";
 import type { CompanyLegalContext } from "./company-context";
 import type { ChecklistKonsumsiBrandContext } from "./konsumsi-brand-context";
+import { qualityTestReviewValues } from "./konsumsi-quality-test";
 
 /** @deprecated import `CompanyLegalContext` from `./company-context` directly — kept as an alias so existing imports don't need to change. */
 export type ChecklistCompanyLegal = CompanyLegalContext;
@@ -961,7 +962,62 @@ function brandEvidenceItems(brandId: string): ChecklistItemDef[] {
   ];
 }
 
+/**
+ * Sertifikat Hasil Uji Mutu (VIU Barang Konsumsi) — one set per Merek x Sub Kelompok Komoditas,
+ * keyed `konsumsi-qt:${brandId}:${commodityGroupId}`. Values come from the certificate entry the
+ * applicant attached in Step "Sertifikat Uji Mutu" (payload.productGroupCertificates).
+ */
+function qualityTestItems(brandId: string, commodityGroupId: string): ChecklistItemDef[] {
+  const valuesOf = (ctx: ChecklistContext) => qualityTestReviewValues(ctx.payload, ctx.konsumsiBrands, brandId, commodityGroupId);
+  return [
+    {
+      id: "qt-brand",
+      title: "Merek",
+      question: "Apakah merek pada sertifikat sama dengan merek yang diajukan dalam permohonan?",
+      criteria: ["Merek tercantum jelas pada sertifikat.", "Merek sama dengan data permohonan."],
+      getValue: (ctx) => valuesOf(ctx)?.brandName,
+    },
+    {
+      id: "qt-sub-kelompok",
+      title: "Sub Kelompok Komoditas",
+      question: "Apakah produk yang diuji termasuk Sub Kelompok Komoditas yang diajukan?",
+      criteria: ["Jenis produk yang diuji sesuai dengan Sub Kelompok Komoditas pada permohonan."],
+      getValue: (ctx) => valuesOf(ctx)?.subKelompokKomoditas,
+    },
+    {
+      id: "qt-report-number",
+      title: "Nomor Test Report",
+      question: "Apakah nomor test report pada sertifikat sama dengan data permohonan?",
+      criteria: ["Nomor tercantum jelas pada sertifikat.", "Nomor sama dengan data permohonan."],
+      getValue: (ctx) => valuesOf(ctx)?.reportNumber,
+    },
+    {
+      id: "qt-laboratory",
+      title: "Laboratorium",
+      question: "Apakah sertifikat diterbitkan oleh laboratorium uji yang tercantum dalam permohonan?",
+      criteria: ["Nama laboratorium sama dengan data permohonan.", "Laboratorium merupakan laboratorium uji."],
+      getValue: (ctx) => valuesOf(ctx)?.laboratoryName,
+    },
+    {
+      id: "qt-issue-date",
+      title: "Tanggal Terbit",
+      question: "Apakah tanggal terbit pada sertifikat sama dengan data permohonan?",
+      criteria: ["Tanggal terbit tercantum pada sertifikat.", "Tanggal sama dengan data permohonan."],
+      getValue: (ctx) => valuesOf(ctx)?.issueDate,
+    },
+    {
+      id: "qt-submission-window",
+      title: "Diajukan paling lama 6 (enam) bulan sejak diterbitkan",
+      question: "Apakah sertifikat diajukan paling lama 6 (enam) bulan sejak tanggal diterbitkan?",
+      criteria: ["Tanggal pengajuan permohonan tidak lebih dari 6 (enam) bulan setelah tanggal terbit sertifikat."],
+      getValue: (ctx) => valuesOf(ctx)?.submissionWindow,
+    },
+  ];
+}
+
 export function getChecklistItems(key: string): ChecklistItemDef[] {
+  const qualityTestMatch = key.match(/^konsumsi-qt:([^:]+):(.+)$/);
+  if (qualityTestMatch) return qualityTestItems(qualityTestMatch[1], qualityTestMatch[2]);
   const brandEvidenceMatch = key.match(/^konsumsi-brand:([^:]+):evidence$/);
   if (brandEvidenceMatch) return brandEvidenceItems(brandEvidenceMatch[1]);
 

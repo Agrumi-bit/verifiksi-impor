@@ -31,7 +31,18 @@ const payload = {
   applicationBrands: [{ brandId: "B1", applicantRole: "IMPORTER_ONLY", relationshipDocuments: { importer_appointment: { filePath: "d/tunjuk.pdf" } } }],
   labelStatementDocument: { filePath: "d/label.pdf", fileName: "label.pdf" },
   konsumsiProducts: [{ brandId: "B1", commodityGroupId: "G1", commodityName: "Kemeja", hsCode: "6205.20.00" }],
-  productGroupCertificates: [{ brandId: "B1", commodityGroupId: "G1", filePath: "d/qt.pdf" }],
+  productGroupCertificates: [
+    {
+      brandId: "B1",
+      commodityGroupId: "G1",
+      commodityName: "Kemeja",
+      certificateNumber: "TR-2026-0042",
+      laboratoryName: "Balai Besar Tekstil",
+      issueDate: "2026-04-10",
+      filePath: "d/qt.pdf",
+    },
+  ],
+  submissionDate: "2026-10-05",
 } as unknown as ApplicationWizardValues;
 const brands = [
   {
@@ -175,6 +186,52 @@ describe("Sertifikat Merek — Laporan Verifikasi Dokumen", () => {
     const text = page.findings(ctx).join(" ");
     assert.match(text, /Nomor IDM000123456/);
     assert.match(text, /PT PEMILIK MEREK/);
+  });
+});
+
+describe("Sertifikat Uji Mutu — Uraian yang Diperiksa & Laporan", () => {
+  const items = getChecklistItems("konsumsi-qt:B1:G1");
+  const checklistCtx = { payload, businessAddress: null, companyLegal: null, companyLocations: null, konsumsiBrands: brands } as unknown as Parameters<
+    NonNullable<(typeof items)[number]["getValue"]>
+  >[0];
+  const valueOf = (id: string) => items.find((item) => item.id === id)?.getValue?.(checklistCtx);
+
+  it("lists the six quality-test points in order", () => {
+    assert.deepEqual(
+      items.map((item) => item.title),
+      ["Merek", "Sub Kelompok Komoditas", "Nomor Test Report", "Laboratorium", "Tanggal Terbit", "Diajukan paling lama 6 (enam) bulan sejak diterbitkan"],
+    );
+  });
+
+  it("fills each point from the attached certificate and the application's Tanggal Pengajuan", () => {
+    assert.equal(valueOf("qt-brand"), "MEREKKU");
+    assert.equal(valueOf("qt-sub-kelompok"), "Kemeja");
+    assert.equal(valueOf("qt-report-number"), "TR-2026-0042");
+    assert.equal(valueOf("qt-laboratory"), "Balai Besar Tekstil");
+    assert.equal(valueOf("qt-issue-date"), "10 April 2026");
+    assert.match(String(valueOf("qt-submission-window")), /^Memenuhi/);
+  });
+
+  it("prints the same points on the report page", () => {
+    const checklist = buildDocumentChecklist(payload, null, [], brands, new Map());
+    const report = createSchemeReport({ verificationType: "VIU", payload, companyLocations: null })!;
+    const rows = report.relevantRows(checklist.map((i) => ({ ...i, status: "VALID" })));
+    const ctx = {
+      payload,
+      company: "PT CONTOH JAYA",
+      businessAddress: null,
+      companyLegal: null,
+      companyLocations: null,
+      partners: [],
+      konsumsiBrands: brands,
+      documentStatuses: Object.fromEntries(rows.map((r) => [r.key, "VALID"])),
+    } as unknown as NarrativeContext;
+    const page = report.buildCategoryDocs("Sertifikat Uji Mutu", rows, ctx).find((d) => d.key === "konsumsi-qt:B1:G1")!;
+    const fields = Object.fromEntries(page.fields(ctx).map((f) => [f.label, f.value]));
+    assert.equal(fields["Nomor Test Report"], "TR-2026-0042");
+    assert.equal(fields["Laboratorium"], "Balai Besar Tekstil");
+    assert.match(fields["Batas Pengajuan 6 Bulan"], /^Memenuhi/);
+    assert.match(page.findings(ctx).join(" "), /TR-2026-0042/);
   });
 });
 

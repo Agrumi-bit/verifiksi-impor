@@ -285,7 +285,8 @@ const ujiMutu: DocumentNarrative = {
   findings: (p) =>
     p.hasDocument
       ? [
-          `Berdasarkan hasil pemeriksaan dokumen, ${p.company} menyampaikan sertifikat hasil uji mutu untuk ${titleContext(p)}. Pemeriksaan meliputi kesesuaian merek dan komoditas/subkomoditas, laboratorium penerbit, serta tanggal terbit yang tidak lebih dari 6 (enam) bulan pada saat diajukan.`,
+          `Berdasarkan hasil pemeriksaan dokumen, ${p.company} menyampaikan sertifikat hasil uji mutu untuk merek ${p.field("Merek")} pada Sub Kelompok Komoditas ${p.field("Sub Kelompok Komoditas")}, dengan Nomor Test Report ${p.field("Nomor Test Report")} yang diterbitkan oleh ${p.field("Laboratorium")} pada tanggal ${p.field("Tanggal Terbit")}.`,
+          `Terhadap ketentuan pengajuan paling lama 6 (enam) bulan sejak diterbitkan: ${p.field("Batas Pengajuan 6 Bulan")}.`,
           "Hasil uji mutu dimuat dalam LHVIU apabila standar nasional Indonesia atau spesifikasi teknis tidak diberlakukan secara wajib, sesuai Pasal 39 ayat (5) huruf g " + PERMENPERIN + ".",
         ]
       : [`Berdasarkan hasil pemeriksaan, sertifikat hasil uji mutu untuk ${titleContext(p)} belum disampaikan.`],
