@@ -11,6 +11,7 @@ import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { EDIT_REASON_MIN_LENGTH, getAdminEditBlockReason } from "@/modules/applications/edit-rules";
 import { diffApplicationPayload } from "@/modules/applications/payload-diff";
 import { prepareApplicationSubmission, runApplicationSubmissionSyncs } from "@/modules/applications/server/submission";
+import { submissionDateToDb } from "@/modules/applications/submission-date";
 
 export async function GET(
   _request: Request,
@@ -54,8 +55,9 @@ const editRequestSchema = z.object({
 /**
  * Admin "Simpan Perubahan" — rewrites a non-draft application's payload in place. Same
  * validation and side effects as a submit (prepareApplicationSubmission /
- * runApplicationSubmissionSyncs); status, application number and submission date are left
- * alone. Records the change set in ApplicationAuditLog (EDIT) and tells the company via a
+ * runApplicationSubmissionSyncs); status and application number are left alone. The "Tanggal
+ * Pengajuan" can be changed here (and is how an Admin fills it in for an application that predates
+ * the field); `createdAt` is never touched. Records the change set in ApplicationAuditLog (EDIT) and tells the company via a
  * SYSTEM message. The company and verification type can't be swapped out by an edit.
  */
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -98,7 +100,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   await db.$transaction([
     db.application.update({
       where: { id: application.id },
-      data: { payload: values, applicationCategory: values.applicationCategory },
+      data: {
+        payload: values,
+        applicationCategory: values.applicationCategory,
+        submissionDate: submissionDateToDb(values.submissionDate),
+      },
     }),
     db.applicationAuditLog.create({
       data: {

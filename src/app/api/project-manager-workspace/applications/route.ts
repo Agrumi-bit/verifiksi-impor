@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requireProjectManagerSession } from "@/lib/require-project-manager-session";
 import { computeApplicationStage, type SiblingForStage } from "@/modules/project-manager-workspace/stage";
 import { collectApplicationVisits, groupVisitsByLocation, assignmentLocations, locationKey, type SurveyPayloadLocation } from "@/modules/shared/survey-visit-scope";
+import { compareBySubmissionDate, effectiveSubmissionDate } from "@/modules/applications/submission-date";
 
 export type PmApplicationRow = {
   applicationNumber: string;
@@ -51,6 +52,8 @@ export async function GET(request: Request) {
     orderBy: { createdAt: "desc" },
   });
 
+  applications.sort((a, b) => compareBySubmissionDate(b, a));
+
   const rows: PmApplicationRow[] = applications.map((app) => {
     const payload = app.payload as { companyName?: string; locations?: (SurveyPayloadLocation & { city: string })[] };
     const dokumen = app.assignments.find((a) => a.scheduleType === "dokumen") ?? null;
@@ -88,7 +91,7 @@ export async function GET(request: Request) {
       slaLabel,
       slaDetail,
       slaColor,
-      submitted: app.createdAt.toISOString(),
+      submitted: effectiveSubmissionDate(app).value,
     };
   });
 

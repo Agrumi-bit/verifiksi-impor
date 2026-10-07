@@ -16,6 +16,7 @@ import { AssignTab } from "./review/assign-tab";
 import { TimelineTab } from "./review/timeline-tab";
 import type { DocVerificationStatusValue } from "../status";
 import { missingRequiredLocationTypes, REQUIRED_LOCATION_TYPE_LABELS } from "@/modules/shared/schema";
+import { SYSTEM_DATE_NOTE } from "@/modules/applications/submission-date";
 
 export type ApplicationDetail = {
   id: string;
@@ -26,6 +27,7 @@ export type ApplicationDetail = {
   status: string;
   importTypes: string[];
   submitted: string;
+  submittedIsSystemDate?: boolean;
   picName: string;
   picPhone: string;
   picEmail: string;
@@ -159,7 +161,7 @@ export function ApplicationReview({ id }: { id: string }) {
         <div>
           <div className="text-[20px] font-extrabold text-[#2b2420]">{data.company}</div>
           <div className="mt-0.5 text-[12px] text-[#8a7565]">
-            {data.applicationNumber} · {data.jenis} · Diajukan {fmtDate(data.submitted)}
+            {data.applicationNumber} · {data.jenis} · Diajukan {fmtDate(data.submitted)}{data.submittedIsSystemDate ? ` ${SYSTEM_DATE_NOTE}` : ""}
           </div>
         </div>
       </div>
@@ -223,7 +225,7 @@ export function ApplicationReview({ id }: { id: string }) {
             { label: "Nama Perusahaan", value: data.company },
             { label: "Jenis Verifikasi", value: data.jenis },
             { label: "Klasifikasi Permohonan", value: data.category },
-            { label: "Tanggal Pengajuan", value: fmtDate(data.submitted) },
+            { label: "Tanggal Pengajuan", value: `${fmtDate(data.submitted)}${data.submittedIsSystemDate ? ` ${SYSTEM_DATE_NOTE}` : ""}` },
             { label: "Due Date", value: "-" },
           ].map((f) => (
             <div key={f.label}>

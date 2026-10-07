@@ -1,11 +1,7 @@
 "use client";
 
 import type { PmApplicationDetail } from "./types";
-
-function fmtDate(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-}
+import { formatSubmissionDate } from "@/modules/applications/submission-date";
 
 function fmtDateTime(value: string): string {
   return new Date(value).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -29,7 +25,7 @@ export function OverviewTab({ data }: { data: PmApplicationDetail }) {
         <div className="grid grid-cols-2 gap-3.5">
           <Field label="Application ID" value={data.applicationNumber} />
           <Field label="Application Type" value={data.verificationType} />
-          <Field label="Submission Date" value={fmtDate(data.createdAt)} />
+          <Field label="Submission Date" value={formatSubmissionDate(data, true)} />
           <Field label="Current Stage" value={data.stage} />
           <Field label="Application Status" value={data.status} />
           <Field label="SLA" value={data.slaDetail} />
@@ -84,7 +80,7 @@ export function ApplicationInfoTab({ data }: { data: PmApplicationDetail }) {
     { title: "Application Information", fields: [{ label: "Application ID", value: data.applicationNumber }, { label: "Application Type", value: data.verificationType }] },
     { title: "Applicant Information", fields: [{ label: "Company", value: data.company.companyName }, { label: "NIB", value: data.company.nibNumber }] },
     { title: "Business Activity", fields: (data.company.kbliEntries ?? []).slice(0, 2).map((k) => ({ label: k.code, value: k.description })) },
-    { title: "Submission Information", fields: [{ label: "Submitted On", value: fmtDate(data.createdAt) }, { label: "Category", value: data.applicationCategory }] },
+    { title: "Submission Information", fields: [{ label: "Submitted On", value: formatSubmissionDate(data, true) }, { label: "Category", value: data.applicationCategory }] },
   ];
   return (
     <div className="rounded-[10px] border border-[#f0ded0] bg-white p-5 flex flex-col gap-4">

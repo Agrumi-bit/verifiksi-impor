@@ -37,6 +37,7 @@ import { VkiStep11RawMaterialUsage } from "./steps/vki-step11-raw-material-usage
 import { VkiStep12Sales } from "./steps/vki-step12-sales";
 import { VkiStep13Preview } from "./steps/vki-step13-preview";
 import { VkiStep14Submit } from "./steps/vki-step14-submit";
+import { SubmissionDateField } from "./submission-date-field";
 import type { ApplicationWizardValues, VerificationType } from "../schema";
 import { getViuWizardSteps, VKI_WIZARD_STEPS } from "../wizard-steps-meta";
 
@@ -707,8 +708,16 @@ export function ApplicationWizard({
               {isVki && currentStep === 11 && <VkiStep11RawMaterialUsage form={form} />}
               {isVki && currentStep === 12 && <VkiStep12Sales form={form} />}
               {isVki && currentStep === 13 && <VkiStep13Preview form={form} onEditStep={goToStep} />}
+              {/* Admin edit has no Submit button on VKI's last step, but "Tanggal Pengajuan" still has to be
+                  editable (and is how an Admin fills it in for an application that predates the field). */}
+              {isVki && currentStep === 14 && isAdminEdit && (
+                <div className="mx-auto w-full max-w-md py-6">
+                  <SubmissionDateField form={form} />
+                </div>
+              )}
               {isVki && currentStep === 14 && !isAdminEdit && (
                 <VkiStep14Submit
+                  form={form}
                   isSubmitting={isSubmitting}
                   onConfirmSubmit={() => form.handleSubmit(handleSubmitApplication, handleInvalidSubmit)()}
                 />

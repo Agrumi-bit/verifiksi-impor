@@ -4,6 +4,7 @@ import { Controller, type UseFormReturn } from "react-hook-form";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import type { ApplicationWizardValues } from "../../schema";
+import { SubmissionDateField } from "../submission-date-field";
 
 type Step8Props = {
   form: UseFormReturn<ApplicationWizardValues>;
@@ -19,6 +20,8 @@ export function Step8Submit({ form }: Step8Props) {
         aplikasi dan status permohonan berubah menjadi <b>Submitted</b>.
         Pastikan seluruh data pada step sebelumnya sudah benar.
       </p>
+
+      <SubmissionDateField form={form} />
 
       <Controller
         control={control}

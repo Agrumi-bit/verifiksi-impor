@@ -111,6 +111,11 @@ model Application {
   payload             Json
   companyId           String?
   company             Company?          @relation(fields: [companyId], references: [id])
+  // "Tanggal Pengajuan" — the date the applicant/Admin chooses on the wizard's last step (a calendar
+  // date, stored as UTC midnight of that day like Assignment.scheduledDate). Every "Diajukan" /
+  // "Tanggal Pengajuan" display uses it; `createdAt` stays as the system audit trail and is the
+  // fallback for applications that predate this field (null until an Admin fills it in via Edit).
+  submissionDate      DateTime?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 

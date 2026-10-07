@@ -12,6 +12,7 @@ import {
   type ApplicationStatusValue,
 } from "../status";
 import { getApplicationStatusDisplay } from "../application-status-display";
+import { formatSubmissionDate } from "@/modules/applications/submission-date";
 
 type ApplicationListItem = {
   id: string;
@@ -22,13 +23,10 @@ type ApplicationListItem = {
   status: ApplicationStatusValue;
   displayStatus: ApplicationStatusValue;
   createdAt: string;
+  submissionDate: string | null;
 };
 
 const PAGE_SIZE = 10;
-
-function fmtDate(value: string): string {
-  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-}
 
 export function CompanyApplicationTable() {
   const router = useRouter();
@@ -165,7 +163,7 @@ export function CompanyApplicationTable() {
                   {application.verificationType}
                 </span>
               </div>
-              <div className="text-[13px] text-[#594138]">{fmtDate(application.createdAt)}</div>
+              <div className="text-[13px] text-[#594138]">{formatSubmissionDate(application, false)}</div>
               <div className="flex items-center gap-2">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#f2ece5]">
                   <div

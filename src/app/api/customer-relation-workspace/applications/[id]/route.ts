@@ -19,6 +19,7 @@ import {
   editApplicationFieldsSchema,
 } from "@/modules/customer-relation-workspace/schema";
 import { CR_OUTCOMES, SCHEDULE_TYPE_DEFS, type ScheduleType } from "@/modules/customer-relation-workspace/status";
+import { effectiveSubmissionDate } from "@/modules/applications/submission-date";
 
 async function loadApplication(id: string) {
   return db.application.findUnique({
@@ -133,7 +134,8 @@ export async function GET(
       category: application.applicationCategory,
       status: application.status,
       importTypes: payload.importTypes ?? [],
-      submitted: application.createdAt.toISOString(),
+      submitted: effectiveSubmissionDate(application).value,
+      submittedIsSystemDate: effectiveSubmissionDate(application).isFallback,
       picName: payload.contactFullName || "",
       picPhone: payload.contactPhone || "",
       picEmail: payload.contactEmail || "",

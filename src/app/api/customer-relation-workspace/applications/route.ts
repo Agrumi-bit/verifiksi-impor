@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requireCustomerRelationSession } from "@/lib/require-customer-relation-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { buildDocumentChecklist } from "@/modules/verifikator-workspace/schema";
+import { compareBySubmissionDate, effectiveSubmissionDate } from "@/modules/applications/submission-date";
 
 export async function GET() {
   const { error } = await requireCustomerRelationSession();
@@ -14,8 +15,11 @@ export async function GET() {
     include: { assignments: { select: { id: true } } },
   });
 
+  applications.sort((a, b) => compareBySubmissionDate(b, a));
+
   const data = applications.map((application) => {
     const payload = application.payload as ApplicationWizardValues;
+    const submittedOn = effectiveSubmissionDate(application);
     const checklist = buildDocumentChecklist(payload);
     const docsTotal = checklist.length;
     const docsLengkap = checklist.filter((d) => d.documentPath).length;
@@ -35,7 +39,8 @@ export async function GET() {
       company: payload.companyName || "—",
       jenis: application.verificationType,
       category: application.applicationCategory,
-      submitted: application.createdAt.toISOString(),
+      submitted: submittedOn.value,
+      submittedIsSystemDate: submittedOn.isFallback,
       picName: payload.contactFullName || "",
       picPhone: payload.contactPhone || "",
       picEmail: payload.contactEmail || "",

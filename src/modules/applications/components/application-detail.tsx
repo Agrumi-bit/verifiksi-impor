@@ -13,6 +13,7 @@ import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { ReturnForRevisionDialog } from "./return-for-revision-dialog";
 import { ApplicationAuditHistory, type ApplicationAuditEntry } from "./application-audit-history";
 import { getAdminEditBlockReason } from "../edit-rules";
+import { formatSubmissionDate } from "@/modules/applications/submission-date";
 
 type ApplicationDetailData = {
   id: string;
@@ -21,6 +22,7 @@ type ApplicationDetailData = {
   applicationCategory: string;
   status: string;
   createdAt: string;
+  submissionDate: string | null;
   payload: ApplicationWizardValues;
   assignments: { status: string }[];
   auditLogs: ApplicationAuditEntry[];
@@ -107,10 +109,8 @@ export function ApplicationDetail({ id }: Props) {
         <Item label="Verification Type" value={payload.verificationType} />
         <Item label="Application Category" value={payload.applicationCategory} />
         <Item label="Jenis Impor" value={payload.importTypes?.join(", ")} />
-        <Item
-          label="Tanggal Submit"
-          value={new Date(data.createdAt).toLocaleString("id-ID")}
-        />
+        <Item label="Tanggal Pengajuan" value={formatSubmissionDate(data, true)} />
+        <Item label="Dicatat di sistem" value={new Date(data.createdAt).toLocaleString("id-ID")} />
       </Section>
 
       <Section title="Company Information">

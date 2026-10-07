@@ -4,13 +4,18 @@ import { useState } from "react";
 import { Send, HelpCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import type { UseFormReturn } from "react-hook-form";
+
+import type { ApplicationWizardValues } from "../../schema";
+import { SubmissionDateField } from "../submission-date-field";
 
 type Props = {
+  form: UseFormReturn<ApplicationWizardValues>;
   onConfirmSubmit: () => void;
   isSubmitting: boolean;
 };
 
-export function VkiStep14Submit({ onConfirmSubmit, isSubmitting }: Props) {
+export function VkiStep14Submit({ form, onConfirmSubmit, isSubmitting }: Props) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   return (
@@ -23,6 +28,9 @@ export function VkiStep14Submit({ onConfirmSubmit, isSubmitting }: Props) {
         Pastikan seluruh data pada tahap sebelumnya telah benar. Setelah dikirim, permohonan akan masuk ke
         antrean review dan tidak dapat diedit kembali tanpa persetujuan verifikator.
       </p>
+      <div className="mt-3 w-full max-w-md text-left">
+        <SubmissionDateField form={form} />
+      </div>
       <Button type="button" className="mt-4" onClick={() => setShowConfirm(true)}>
         Submit Permohonan
       </Button>

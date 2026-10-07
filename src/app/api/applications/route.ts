@@ -8,6 +8,7 @@ import { type ApplicationWizardValues } from "@/modules/applications/schema";
 import { reopenReturnedAssignments } from "@/modules/applications/server/reopen-assignments";
 import { prepareApplicationSubmission, runApplicationSubmissionSyncs } from "@/modules/applications/server/submission";
 import { computeDisplayStatus } from "@/modules/company-workspace/workflow-stage";
+import { compareBySubmissionDate, submissionDateToDb } from "@/modules/applications/submission-date";
 
 function generateApplicationNumber(verificationType: string): string {
   const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -26,6 +27,9 @@ export async function GET() {
     },
   });
 
+  // Newest first by the chosen "Tanggal Pengajuan" (createdAt for applications that predate it).
+  applications.sort((a, b) => compareBySubmissionDate(b, a));
+
   const data = applications.map((application) => {
     const payload = application.payload as { companyName?: string; importTypes?: string[] } | null;
     return {
@@ -41,6 +45,7 @@ export async function GET() {
       // every other workspace shows instead of freezing at "Submitted".
       status: computeDisplayStatus(application, application.assignments),
       createdAt: application.createdAt,
+      submissionDate: application.submissionDate,
       importTypes: payload?.importTypes ?? [],
       assignmentStatuses: application.assignments.map((a) => a.status),
     };
@@ -83,6 +88,7 @@ export async function POST(request: Request) {
           applicationCategory: values.applicationCategory,
           payload: values,
           status: "SUBMITTED",
+          submissionDate: submissionDateToDb(values.submissionDate),
         },
       });
       await db.applicationMessage.create({
@@ -132,6 +138,7 @@ export async function POST(request: Request) {
       applicationCategory: values.applicationCategory,
       payload: values,
       companyId: values.companyId,
+      submissionDate: submissionDateToDb(values.submissionDate),
     },
   });
   await db.applicationMessage.create({

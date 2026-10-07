@@ -160,6 +160,7 @@ export type PartnerIndustriEntryValues = z.infer<typeof partnerIndustriEntrySche
 export type { FinancialDocPriority as NonIndustriDocPriority, FinancialDocDef as NonIndustriSupportDocDef } from "./financial-capability-defs";
 export { MODAL_STATEMENT_LETTER_DOC_DEF, NON_INDUSTRI_SUPPORT_DOC_DEFS } from "./financial-capability-defs";
 import { MODAL_STATEMENT_LETTER_DOC_DEF, NON_INDUSTRI_SUPPORT_DOC_DEFS } from "./financial-capability-defs";
+import { validateSubmissionDate } from "./submission-date";
 
 /** `enabled` is a per-document on/off toggle — not every applicant has every one of these
  * (e.g. a shareholder loan only "jika memang ada dan sah"), so the upload field only appears
@@ -252,7 +253,17 @@ function validateProductItems(products: z.infer<typeof productItemSchema>[], ctx
 /** VIU submission declaration checkbox — Submit step. */
 export const declarationSchema = z.object({
   declarationAccepted: z.boolean().default(false),
+  // "Tanggal Pengajuan" ("YYYY-MM-DD"), chosen on the last step by VIU and VKI alike. Empty is fine in
+  // a draft; every non-draft write requires it (see applySubmissionDateRule).
+  submissionDate: z.string().trim().default(""),
 });
+/** "Tanggal Pengajuan" is required and may not lie in the future — every non-draft write (submit, resubmit
+ * after a revision, Admin edit) is held to it, VIU and VKI alike. */
+function applySubmissionDateRule(value: string, ctx: z.RefinementCtx): void {
+  const message = validateSubmissionDate(value);
+  if (message) ctx.addIssue({ code: "custom", path: ["submissionDate"], message });
+}
+
 // Declaration checkbox is a VIU-only gate (checked via superRefine below) — the VKI
 // wizard's design has no such checkbox, submission is gated by the confirm modal instead.
 
@@ -489,6 +500,7 @@ function applyRequiredLocationsRule(
 // Exported for scripts/test-viu-konsumsi-scheme-separation.mjs's submit-rule
 // parity regression — not otherwise imported outside this file.
 export function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardShape>, ctx: z.RefinementCtx): void {
+  applySubmissionDateRule(data.submissionDate, ctx);
   applyRequiredLocationsRule(data.locations, "VIU", ctx);
   if (data.declarationAccepted !== true) {
     ctx.addIssue({
@@ -575,6 +587,7 @@ export const applicationWizardSchema = applicationWizardShape.superRefine((data,
   // comment) — validated live here too, not just at final submit, so this matches the inline
   // error display VkiStep8Product had before these fields moved off the item schema itself.
   else if (data.verificationType === "VKI") {
+    applySubmissionDateRule(data.submissionDate, ctx);
     applyRequiredLocationsRule(data.locations, "VKI", ctx);
     validateProductItems(data.products, ctx);
   }
@@ -595,6 +608,7 @@ const viuSubmitSchema = applicationWizardShape
 // `importTypes`/Konsumsi concept at all) — preserved explicitly now that `productsSchema` itself
 // no longer carries a static `.min(1)` (see that schema's own comment).
 const vkiSubmitSchema = applicationWizardShape.extend({ verificationType: z.literal("VKI") }).superRefine((data, ctx) => {
+  applySubmissionDateRule(data.submissionDate, ctx);
   applyRequiredLocationsRule(data.locations, "VKI", ctx);
   if (data.products.length < 1) {
     ctx.addIssue({
@@ -767,7 +781,7 @@ export const VIU_STEP_FIELD_NAMES: Record<string, (keyof ApplicationWizardValues
   // handleInvalidSubmit's generic "Lainnya" bucket instead of pointing at this step.
   "product-info": ["products", "konsumsiProducts", "productGroupCertificates"],
   preview: [],
-  submit: ["declarationAccepted"],
+  submit: ["declarationAccepted", "submissionDate"],
   ...KONSUMSI_STEP_FIELD_NAMES,
 };
 
@@ -791,7 +805,7 @@ export const VKI_STEP_FIELD_NAMES: Record<string, (keyof ApplicationWizardValues
   "raw-material-usage": ["rawMaterialUsage"],
   sales: ["sales"],
   preview: [],
-  submit: [],
+  submit: ["submissionDate"],
 };
 
 // Backward-compatible alias — existing imports keep working.

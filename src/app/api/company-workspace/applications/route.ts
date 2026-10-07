@@ -7,6 +7,7 @@ import { getServerSession } from "@/lib/get-session";
 import type { ApplicationStatusValue } from "@/modules/company-workspace/status";
 import { APPLICATION_STATUSES } from "@/modules/company-workspace/status";
 import { computeDisplayStatus } from "@/modules/company-workspace/workflow-stage";
+import { compareBySubmissionDate } from "@/modules/applications/submission-date";
 
 export async function GET(request: Request) {
   const session = await getServerSession();
@@ -39,6 +40,8 @@ export async function GET(request: Request) {
     },
     orderBy: { createdAt: sort },
   });
+  // Ordered by the chosen "Tanggal Pengajuan" (createdAt for applications that predate it).
+  applications.sort((a, b) => (sort === "asc" ? compareBySubmissionDate(a, b) : compareBySubmissionDate(b, a)));
 
   const filtered = q
     ? applications.filter((application) => {
@@ -66,6 +69,7 @@ export async function GET(request: Request) {
       status: application.status,
       displayStatus: computeDisplayStatus(application, application.assignments),
       createdAt: application.createdAt,
+      submissionDate: application.submissionDate,
       updatedAt: application.updatedAt,
     };
   });

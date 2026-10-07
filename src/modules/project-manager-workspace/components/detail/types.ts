@@ -8,6 +8,7 @@ export type PmApplicationDetail = {
   verificationType: string;
   applicationCategory: string;
   createdAt: string;
+  submissionDate: string | null;
   payload: ApplicationWizardValues;
   businessAddress: string | null;
   company: { companyName: string; nibNumber: string; kbliEntries: { code: string; description: string }[]; sktNumber: string | null };

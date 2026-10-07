@@ -45,6 +45,7 @@ import { composeLocationAddress, OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_
 import { TERMINAL_STATUSES, type ApplicationStatusValue } from "../status";
 import { getApplicationStatusDisplay, WORKFLOW_STAGE_LABELS } from "../application-status-display";
 import { formatAssignmentDate, formatRecordedAt } from "@/lib/assignment-date";
+import { formatSubmissionDate } from "@/modules/applications/submission-date";
 
 type VerificationStatusValue = "NOT_YET_VERIFIED" | "VERIFIED" | "NEED_REVISION" | "REJECTED" | "NOT_APPLICABLE" | "EXPIRED";
 
@@ -132,6 +133,7 @@ type ApplicationDetailData = {
   displayStatus: ApplicationStatusValue;
   createdAt: string;
   updatedAt: string;
+  submissionDate: string | null;
   payload: ApplicationWizardValues;
   assignedSurveyorName: string | null;
   surveyDate: string | null;
@@ -917,7 +919,7 @@ export function CompanyApplicationDetail({ id }: Props) {
           <div className="mt-2 flex flex-wrap items-center gap-3.5 text-[12.5px] text-[#8a7565]">
             <span className="inline-flex items-center gap-1.25">
               <Calendar className="size-3.5" />
-              Created {fmtDate(data.createdAt)}
+              Diajukan {formatSubmissionDate(data, true)}
             </span>
             <span className="inline-flex items-center gap-1.25">
               <Calendar className="size-3.5" />
@@ -1034,7 +1036,7 @@ export function CompanyApplicationDetail({ id }: Props) {
         <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
           <TabField label="Jenis Verifikasi" value={data.verificationType} />
           <TabField label="Kategori Permohonan" value={data.applicationCategory} />
-          <TabField label="Tanggal Pengajuan" value={fmtDate(data.createdAt)} />
+          <TabField label="Tanggal Pengajuan" value={formatSubmissionDate(data, true)} />
           <TabField label="Surveyor Ditugaskan" value={data.assignedSurveyorName} />
           <TabField label="Progress" value={`${display.progress}%`} />
         </div>

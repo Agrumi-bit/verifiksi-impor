@@ -56,6 +56,7 @@ export function useApplicationWizard() {
       rawMaterialUsage: [],
       sales: [],
       declarationAccepted: false,
+      submissionDate: "",
     },
   });
 

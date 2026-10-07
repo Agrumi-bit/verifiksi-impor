@@ -10,6 +10,7 @@ import { STATUS_LABELS, ACTIVE_STATUSES, type ApplicationStatusValue } from "@/m
 import { APPLICATION_STATUS_STYLE } from "../status-style";
 import { ReturnForRevisionDialog } from "./return-for-revision-dialog";
 import type { VerificationType } from "../schema";
+import { formatSubmissionDate } from "@/modules/applications/submission-date";
 
 type ApplicationListItem = {
   id: string;
@@ -19,13 +20,10 @@ type ApplicationListItem = {
   companyName: string;
   status: ApplicationStatusValue;
   createdAt: string;
+  submissionDate: string | null;
   importTypes: string[];
   assignmentStatuses: string[];
 };
-
-function fmtDate(value: string): string {
-  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-}
 
 export function ApplicationTable() {
   const router = useRouter();
@@ -206,7 +204,7 @@ export function ApplicationTable() {
                 {application.verificationType}
               </span>
             </div>
-            <div className="text-[12.5px] text-[#4a4038]">{fmtDate(application.createdAt)}</div>
+            <div className="text-[12.5px] text-[#4a4038]">{formatSubmissionDate(application, false)}</div>
             <div>
               <span
                 className="rounded-full px-2.5 py-1 text-[10.5px] font-bold"

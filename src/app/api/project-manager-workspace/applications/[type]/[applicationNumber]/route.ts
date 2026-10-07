@@ -21,6 +21,7 @@ import {
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
 import { computeApplicationStage, type SiblingForStage } from "@/modules/project-manager-workspace/stage";
 import { buildApplicationDocumentChecklist } from "@/modules/verifikator-workspace/application-checklist";
+import { effectiveSubmissionDate } from "@/modules/applications/submission-date";
 
 type DecisionMap = Record<string, { status?: string; note?: string }>;
 
@@ -150,6 +151,7 @@ export async function GET(
       verificationType: application.verificationType,
       applicationCategory: application.applicationCategory,
       createdAt: application.createdAt,
+      submissionDate: application.submissionDate,
       payload,
       businessAddress,
       locationSummaries: summarizeApplicationLocations(
@@ -260,12 +262,12 @@ export async function GET(
 }
 
 function buildTimeline(
-  application: { createdAt: Date },
+  application: { createdAt: Date; submissionDate: Date | null },
   survey: { createdAt: Date; scheduledDate: Date | null; letterStatus: string; updatedAt: Date; status: string } | null,
   dokumen: { createdAt: Date; validatedAt: Date | null; letterStatus: string; status: string } | null,
   technical: { createdAt: Date; validatedAt: Date | null; letterStatus: string; status: string } | null,
 ) {
-  const events: { title: string; time: string }[] = [{ title: "Application Submitted", time: application.createdAt.toISOString() }];
+  const events: { title: string; time: string }[] = [{ title: "Application Submitted", time: effectiveSubmissionDate(application).value }];
   if (dokumen) {
     events.push({ title: "Dokumen Assignment Created", time: dokumen.createdAt.toISOString() });
     if (dokumen.validatedAt) events.push({ title: `Document Verification ${dokumen.status}`, time: dokumen.validatedAt.toISOString() });
