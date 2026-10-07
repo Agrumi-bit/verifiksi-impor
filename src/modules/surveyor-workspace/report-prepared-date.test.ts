@@ -5,6 +5,7 @@ import {
   defaultReportPreparedDateMode,
   effectiveReportPreparedDate,
   resolveReportPreparedDate,
+  surveyVisitDates,
   validateReportPreparedDate,
 } from "./report-prepared-date";
 
@@ -99,3 +100,33 @@ describe("resolveReportPreparedDate (what the report prints)", () => {
     assert.equal(resolveReportPreparedDate(null, null), null);
   });
 });
+
+describe("surveyVisitDates — Survey Date / Completed At shown to verifikator and PM", () => {
+  const submittedAt = "2026-10-06T03:00:00.000Z";
+
+  it("Survey Date is the surveyor's actual visit date and Completed At the report prepared date", () => {
+    const dates = surveyVisitDates({
+      submittedAt,
+      warehouseVerification: { actualVisitDate: "2026-10-01", reportPreparedDate: "2026-10-03", reportPreparedDateMode: "CUSTOM" },
+    });
+    assert.deepEqual(dates, { surveyDate: "2026-10-01", completedAt: "2026-10-03" });
+  });
+
+  it("reads whichever form the location used (office, warehouse or factory)", () => {
+    assert.equal(surveyVisitDates({ submittedAt, officeVerification: { actualVisitDate: "2026-09-30" } }).surveyDate, "2026-09-30");
+    assert.equal(surveyVisitDates({ submittedAt, factoryVerification: { actualVisitDate: "2026-09-29" } }).surveyDate, "2026-09-29");
+  });
+
+  it("VISIT_DATE mode completes on the visit date", () => {
+    const dates = surveyVisitDates({
+      submittedAt,
+      officeVerification: { actualVisitDate: "2026-10-01", reportPreparedDate: "2026-09-01", reportPreparedDateMode: "VISIT_DATE" },
+    });
+    assert.equal(dates.completedAt, "2026-10-01");
+  });
+
+  it("falls back to the submit time for reports filed before these fields existed", () => {
+    assert.deepEqual(surveyVisitDates({ submittedAt }), { surveyDate: null, completedAt: submittedAt });
+  });
+});
+

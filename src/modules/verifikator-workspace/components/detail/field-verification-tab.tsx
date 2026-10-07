@@ -19,6 +19,8 @@ import {
 } from "../../report-checklist-items";
 import type { ReportItemResult, ReportItemResultValue, ReportDecisionValue, ReportVerificationState } from "../../report-verification";
 import type { LocationVisitSummary } from "../assignment-detail";
+import { surveyVisitDates } from "@/modules/surveyor-workspace/report-prepared-date";
+import { formatAssignmentDate } from "@/lib/assignment-date";
 
 type LocationReportItem = {
   id: string;
@@ -40,11 +42,6 @@ const STATUS_BADGE: Record<LocationVisitStatusValue, string> = {
   IN_PROGRESS: "bg-[#faf1de] text-[#a6791f]",
   COMPLETED: "bg-[#e2f7ea] text-[#1a9850]",
 };
-
-function fmtDate(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-}
 
 function stubToast() {
   toast.info("Fitur ini akan tersedia di iterasi berikutnya.");
@@ -170,14 +167,14 @@ export function FieldVerificationTab({ assignmentId, surveyorName, applicationNu
                         <MaterialIcon name="calendar_month" className="text-[15px]" />
                         Survey Date
                       </div>
-                      <div className="mt-0.75 text-[13px] font-bold text-[#20180f]">{fmtDate(loc.submittedAt)}</div>
+                      <div className="mt-0.75 text-[13px] font-bold text-[#20180f]">{formatAssignmentDate(surveyVisitDates(loc).surveyDate)}</div>
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 text-[11px] text-[#8a7565]">
                         <MaterialIcon name="schedule" className="text-[15px]" />
                         Completed At
                       </div>
-                      <div className="mt-0.75 text-[13px] font-bold text-[#20180f]">{fmtDate(loc.submittedAt)}</div>
+                      <div className="mt-0.75 text-[13px] font-bold text-[#20180f]">{formatAssignmentDate(surveyVisitDates(loc).completedAt)}</div>
                     </div>
                   </div>
 
@@ -293,7 +290,7 @@ function buildReportChecklistContext(
     applicationNumber: extra.applicationNumber,
     companyName: extra.companyName,
     surveyorName: extra.surveyorName,
-    visitDate: loc.officeVerification?.actualVisitDate || loc.submittedAt,
+    visitDate: surveyVisitDates(loc).surveyDate || loc.submittedAt,
     address: loc.address,
     city: loc.city,
     buildingStatus: matchedLocation?.buildingStatus ?? null,
@@ -372,10 +369,10 @@ function ReportViewModal({
               {surveyorName || "—"}
             </ReportInfoRow>
             <ReportInfoRow icon="calendar_month" label="Survey Date">
-              {fmtDate(loc.submittedAt)}
+              {formatAssignmentDate(surveyVisitDates(loc).surveyDate)}
             </ReportInfoRow>
             <ReportInfoRow icon="schedule" label="Completed At">
-              {fmtDate(loc.submittedAt)}
+              {formatAssignmentDate(surveyVisitDates(loc).completedAt)}
             </ReportInfoRow>
           </div>
         </div>

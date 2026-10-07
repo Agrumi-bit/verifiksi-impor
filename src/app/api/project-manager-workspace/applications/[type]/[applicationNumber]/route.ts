@@ -22,6 +22,7 @@ import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/compa
 import { computeApplicationStage, type SiblingForStage } from "@/modules/project-manager-workspace/stage";
 import { buildApplicationDocumentChecklist } from "@/modules/verifikator-workspace/application-checklist";
 import { effectiveSubmissionDate } from "@/modules/applications/submission-date";
+import { surveyVisitDates } from "@/modules/surveyor-workspace/report-prepared-date";
 
 type DecisionMap = Record<string, { status?: string; note?: string }>;
 
@@ -201,6 +202,8 @@ export async function GET(
                   assignmentNumber: v.assignmentNumber,
                   scheduledDate: v.scheduledDate,
                   submittedAt: v.submittedAt,
+                  // Surveyor's own Tanggal Kunjungan Aktual / Tanggal Penyusunan Laporan.
+                  ...surveyVisitDates(v as Parameters<typeof surveyVisitDates>[0]),
                   findingsCount,
                   surveyorConclusion: v.reportSummary || v.fieldObservationNotes || null,
                   decision: reportVerification?.decision ?? null,

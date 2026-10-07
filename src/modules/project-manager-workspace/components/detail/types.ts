@@ -41,6 +41,10 @@ export type PmApplicationDetail = {
         assignmentNumber: string;
         scheduledDate: string | null;
         submittedAt: string | null;
+        /** Surveyor's Tanggal Kunjungan Aktual (YYYY-MM-DD). */
+        surveyDate: string | null;
+        /** Surveyor's Tanggal Penyusunan Laporan, else submittedAt for older reports. */
+        completedAt: string | null;
         findingsCount: number;
         surveyorConclusion: string | null;
         decision: "VERIFIED" | "REJECTED" | "REVISION" | null;

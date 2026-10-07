@@ -14,11 +14,6 @@ function fmtDate(value: string | null): string {
   return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function fmtDateTime(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-}
-
 const DECISION_META: Record<string, { label: string; bg: string; color: string }> = {
   VERIFIED: { label: "Sesuai", bg: "#e6f6ec", color: "#1a9850" },
   REJECTED: { label: "Tidak Sesuai", bg: "#fdeceb", color: "#e15241" },
@@ -167,14 +162,14 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
                       <MaterialIcon name="event" className="text-[13px]" />
                       Survey Date
                     </div>
-                    <div className="mt-0.75 text-[12.5px] font-bold text-[#20180f]">{formatAssignmentDate(visit.scheduledDate)}</div>
+                    <div className="mt-0.75 text-[12.5px] font-bold text-[#20180f]">{formatAssignmentDate(visit.surveyDate)}</div>
                   </div>
                   <div>
                     <div className="flex items-center gap-1 text-[10.5px] font-bold text-[#a68f80]">
                       <MaterialIcon name="schedule" className="text-[13px]" />
                       Completed At
                     </div>
-                    <div className="mt-0.75 text-[12.5px] font-bold text-[#20180f]">{fmtDateTime(visit.submittedAt)}</div>
+                    <div className="mt-0.75 text-[12.5px] font-bold text-[#20180f]">{formatAssignmentDate(visit.completedAt)}</div>
                   </div>
                 </div>
 

@@ -74,3 +74,27 @@ export function resolveReportPreparedDate<S extends string | Date | null | undef
   if (form?.reportPreparedDateMode === "VISIT_DATE" && form.actualVisitDate) return form.actualVisitDate;
   return form?.reportPreparedDate || form?.actualVisitDate || submittedAt || null;
 }
+
+type SurveyFormDates = {
+  actualVisitDate?: string | null;
+  reportPreparedDate?: string | null;
+  reportPreparedDateMode?: ReportPreparedDateMode | null;
+};
+
+/**
+ * "Survey Date" and "Completed At" for a location visit as reviewers see them: the surveyor's own
+ * Tanggal Kunjungan Aktual and Tanggal Penyusunan Laporan — not `submittedAt`, which is only when
+ * the Submit button was clicked. Reports filed before those fields existed fall back to submittedAt.
+ */
+export function surveyVisitDates<S extends string | Date | null | undefined>(visit: {
+  submittedAt?: S;
+  officeVerification?: SurveyFormDates | null;
+  warehouseVerification?: SurveyFormDates | null;
+  factoryVerification?: SurveyFormDates | null;
+}): { surveyDate: string | null; completedAt: string | NonNullable<S> | null } {
+  const form = visit.officeVerification ?? visit.warehouseVerification ?? visit.factoryVerification ?? null;
+  return {
+    surveyDate: form?.actualVisitDate || null,
+    completedAt: resolveReportPreparedDate(form, visit.submittedAt),
+  };
+}
