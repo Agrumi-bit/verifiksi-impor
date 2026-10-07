@@ -128,11 +128,14 @@ export function UploadBox({
   value,
   onFile,
   hint,
+  onRemove,
 }: {
   label: string;
   value?: string;
   onFile: (path: string) => void;
   hint?: string;
+  /** Only passed for optional documents — clears the attached file; required ones are replaced, never removed. */
+  onRemove?: () => void;
 }) {
   async function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -154,6 +157,20 @@ export function UploadBox({
         {value ? value.split("/").pop() : label}
       </div>
       {hint && <div className="mt-0.5 text-[11.5px] text-[#a68f80]">{hint}</div>}
+      {value && onRemove && (
+        <button
+          type="button"
+          onClick={(event) => {
+            // The box is a <label>: without this the click would also open the file picker.
+            event.preventDefault();
+            event.stopPropagation();
+            onRemove();
+          }}
+          className="mt-2.5 rounded-md border border-[#e3b5a8] px-3 py-1 text-[12px] font-semibold text-[#c0392b] hover:bg-[#fdf0ed]"
+        >
+          Hapus file
+        </button>
+      )}
       <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={handleChange} />
     </label>
   );

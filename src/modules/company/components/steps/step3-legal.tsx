@@ -378,7 +378,7 @@ export function Step3Legal({ form }: { form: UseFormReturn<CompanyWizardValues> 
                   control={control}
                   name="notarialAmendmentDocPath"
                   render={({ field }) => (
-                    <UploadBox label="Dokumen Akta Perubahan" hint="Format: PDF" value={field.value} onFile={field.onChange} />
+                    <UploadBox label="Dokumen Akta Perubahan" hint="Format: PDF" value={field.value} onFile={field.onChange} onRemove={() => field.onChange("")} />
                   )}
                 />
               </Field>
@@ -396,6 +396,7 @@ export function Step3Legal({ form }: { form: UseFormReturn<CompanyWizardValues> 
                   hint="Format: PDF"
                   value={field.value}
                   onFile={field.onChange}
+                  onRemove={() => field.onChange("")}
                 />
               )}
             />
@@ -424,7 +425,7 @@ export function Step3Legal({ form }: { form: UseFormReturn<CompanyWizardValues> 
               control={control}
               name="skDocumentPath"
               render={({ field }) => (
-                <UploadBox label="Dokumen SK Kemenkumham" hint="Format: PDF" value={field.value} onFile={field.onChange} />
+                <UploadBox label="Dokumen SK Kemenkumham" hint="Format: PDF" value={field.value} onFile={field.onChange} onRemove={() => field.onChange("")} />
               )}
             />
           </Field>
