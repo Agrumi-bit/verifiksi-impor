@@ -3,6 +3,7 @@ import { OWNERSHIP_DOCUMENT_TYPE_LABELS, LEASE_DOCUMENT_TYPE_LABELS, splitKbliEn
 import type { CompanyLegalContext } from "./company-context";
 import type { ChecklistPartnerContext } from "./schema";
 import type { ChecklistKonsumsiBrandContext } from "./konsumsi-brand-context";
+import { WAREHOUSE_REGISTRATION_TYPE_LABELS } from "./document-checklist-items";
 
 export type NarrativeContext = {
   payload: ApplicationWizardValues;
@@ -876,12 +877,24 @@ export function buildLocationDocuments(ctx: NarrativeContext): DocDetail[] {
         intro: () => [
           "Verifikasi terhadap Tanda Daftar Gudang dilakukan untuk memastikan bahwa fasilitas gudang perusahaan telah terdaftar secara resmi sesuai dengan ketentuan peraturan perundang-undangan di bidang perdagangan dan perindustrian.",
         ],
+        // Same points as the review modal's "Uraian yang Diperiksa" (document-checklist-items.ts
+        // warehouseRegistrationItems): jenis, nomor, tanggal terbit & instansi penerbit.
         fields: () => [
           { label: "Alamat Gudang", value: loc.address || "—", ok: Boolean(loc.address) },
+          {
+            label: "Jenis Tanda Daftar",
+            value: loc.warehouseRegistrationType ? (WAREHOUSE_REGISTRATION_TYPE_LABELS[loc.warehouseRegistrationType] ?? loc.warehouseRegistrationType) : "—",
+            ok: Boolean(loc.warehouseRegistrationType),
+          },
+          { label: "Nomor Tanda Daftar Gudang", value: loc.warehouseRegistrationNumber || "—", ok: Boolean(loc.warehouseRegistrationNumber) },
+          { label: "Tanggal Terbit", value: fmtDate(loc.warehouseRegistrationIssueDate), ok: Boolean(loc.warehouseRegistrationIssueDate) },
+          { label: "Instansi Penerbit", value: loc.warehouseRegistrationIssuingAuthority || "—", ok: Boolean(loc.warehouseRegistrationIssuingAuthority) },
           { label: "Status Pendaftaran", value: loc.warehouseRegistrationDocumentPath ? "Terdaftar" : "Belum Terdaftar", ok: Boolean(loc.warehouseRegistrationDocumentPath) },
         ],
         findings: ({ company }) => [
-          `Berdasarkan hasil pemeriksaan dokumen, gudang milik ${company} yang beralamat di ${loc.address || "—"} ${loc.warehouseRegistrationDocumentPath ? "telah memiliki Tanda Daftar Gudang yang sah" : "belum dilengkapi dengan Tanda Daftar Gudang"}.`,
+          loc.warehouseRegistrationDocumentPath
+            ? `Berdasarkan hasil pemeriksaan dokumen, gudang milik ${company} yang beralamat di ${loc.address || "—"} telah memiliki ${loc.warehouseRegistrationType ? (WAREHOUSE_REGISTRATION_TYPE_LABELS[loc.warehouseRegistrationType] ?? loc.warehouseRegistrationType) : "Tanda Daftar Gudang"} Nomor ${loc.warehouseRegistrationNumber || "—"} yang diterbitkan oleh ${loc.warehouseRegistrationIssuingAuthority || "—"} pada tanggal ${fmtDate(loc.warehouseRegistrationIssueDate)}.`
+            : `Berdasarkan hasil pemeriksaan dokumen, gudang milik ${company} yang beralamat di ${loc.address || "—"} belum dilengkapi dengan Tanda Daftar Gudang.`,
         ],
         kesimpulan: (ctx) => {
           const { company } = ctx;

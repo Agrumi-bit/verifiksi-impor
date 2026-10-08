@@ -22,7 +22,7 @@ const payload = {
   companyAge: "OVER_3",
   locations: [
     { id: "L1", locationType: "KANTOR", buildingStatus: "SEWA", address: "Jl. A", leaseDocuments: [{ type: "SEWA_MENYEWA", documentPath: "d/sewa.pdf" }] },
-    { id: "L2", locationType: "GUDANG", buildingStatus: "MILIK_SENDIRI", address: "Jl. B", ownershipDocuments: [{ type: "SHM", documentPath: "d/shm.pdf" }], warehouseRegistrationDocumentPath: "d/tdg.pdf" },
+    { id: "L2", locationType: "GUDANG", buildingStatus: "MILIK_SENDIRI", address: "Jl. B", ownershipDocuments: [{ type: "SHM", documentPath: "d/shm.pdf" }], warehouseRegistrationDocumentPath: "d/tdg.pdf", warehouseRegistrationType: "TANDA_DAFTAR_GUDANG", warehouseRegistrationNumber: "TDG-503/2025", warehouseRegistrationIssueDate: "2025-02-14", warehouseRegistrationIssuingAuthority: "DPMPTSP Kota Bekasi" },
     { id: "L3", locationType: "PABRIK", buildingStatus: "MILIK_SENDIRI", address: "Jl. C", ownershipDocuments: [{ type: "SHM", documentPath: "d/shm2.pdf" }] },
   ],
   konsumsiFinancialDocuments: [{ key: "surat-pernyataan-modal-kerja", documentPath: "d/modal.pdf", amount: "500000000" }],
@@ -232,6 +232,32 @@ describe("Sertifikat Uji Mutu — Uraian yang Diperiksa & Laporan", () => {
     assert.equal(fields["Laboratorium"], "Balai Besar Tekstil");
     assert.match(fields["Batas Pengajuan 6 Bulan"], /^Memenuhi/);
     assert.match(page.findings(ctx).join(" "), /TR-2026-0042/);
+  });
+});
+
+describe("Tanda Daftar Gudang — Laporan mengikuti Uraian yang Diperiksa", () => {
+  it("prints jenis, nomor, tanggal terbit and instansi penerbit, and the findings cite them", () => {
+    const checklist = buildDocumentChecklist(payload, null, [], brands, new Map());
+    const report = createSchemeReport({ verificationType: "VIU", payload, companyLocations: null })!;
+    const rows = report.relevantRows(checklist.map((i) => ({ ...i, status: "VALID" })));
+    const ctx = {
+      payload,
+      company: "PT CONTOH JAYA",
+      businessAddress: null,
+      companyLegal: null,
+      companyLocations: null,
+      partners: [],
+      konsumsiBrands: brands,
+      documentStatuses: Object.fromEntries(rows.map((r) => [r.key, "VALID"])),
+    } as unknown as NarrativeContext;
+    const row = rows.find((r) => r.key === "location:L2:warehouseRegistration")!;
+    const page = report.buildCategoryDocs(row.category, rows, ctx).find((d) => d.key === row.key)!;
+    const fields = Object.fromEntries(page.fields(ctx).map((f) => [f.label, f.value]));
+    assert.equal(fields["Jenis Tanda Daftar"], "Tanda Daftar Gudang");
+    assert.equal(fields["Nomor Tanda Daftar Gudang"], "TDG-503/2025");
+    assert.equal(fields["Tanggal Terbit"], "14 Februari 2025");
+    assert.equal(fields["Instansi Penerbit"], "DPMPTSP Kota Bekasi");
+    assert.match(page.findings(ctx).join(" "), /Nomor TDG-503\/2025 yang diterbitkan oleh DPMPTSP Kota Bekasi/);
   });
 });
 

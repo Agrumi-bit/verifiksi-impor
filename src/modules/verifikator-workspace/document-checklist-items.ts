@@ -748,9 +748,9 @@ function ownershipDocumentItems(locationId: string, type: OwnershipDocumentType)
     {
       id: "location-ownership-field-match",
       title: "Kesesuaian dengan Kondisi Lapangan",
-      description: "Kesesuaian dokumen dengan kondisi aktual bangunan diverifikasi melalui observasi lokasi industri.",
-      question: "Apakah bangunan yang tercantum dalam dokumen benar-benar tersedia dan digunakan untuk kegiatan produksi?",
-      criteria: ["Bangunan sesuai dengan yang tercantum dalam dokumen.", "Bangunan digunakan untuk kegiatan produksi sesuai permohonan."],
+      description: "Kesesuaian dokumen dengan kondisi aktual bangunan diverifikasi melalui observasi lapangan oleh surveyor.",
+      question: "Apakah bangunan yang tercantum dalam dokumen benar-benar tersedia dan digunakan sesuai fungsi lokasi yang dimohonkan?",
+      criteria: ["Bangunan sesuai dengan yang tercantum dalam dokumen.", "Bangunan digunakan sesuai fungsi lokasi pada permohonan (kantor, gudang, atau pabrik)."],
     },
   ];
 }
@@ -804,14 +804,14 @@ function leaseDocumentItems(locationId: string, type: LeaseDocumentType): Checkl
     {
       id: "location-lease-field-match",
       title: "Kesesuaian dengan Kondisi Lapangan",
-      description: "Kesesuaian dokumen dengan kondisi aktual bangunan diverifikasi melalui observasi lokasi industri.",
-      question: "Apakah bangunan yang tercantum dalam dokumen benar-benar tersedia dan digunakan untuk kegiatan produksi?",
-      criteria: ["Bangunan sesuai dengan yang tercantum dalam dokumen.", "Bangunan digunakan untuk kegiatan produksi sesuai permohonan."],
+      description: "Kesesuaian dokumen dengan kondisi aktual bangunan diverifikasi melalui observasi lapangan oleh surveyor.",
+      question: "Apakah bangunan yang tercantum dalam dokumen benar-benar tersedia dan digunakan sesuai fungsi lokasi yang dimohonkan?",
+      criteria: ["Bangunan sesuai dengan yang tercantum dalam dokumen.", "Bangunan digunakan sesuai fungsi lokasi pada permohonan (kantor, gudang, atau pabrik)."],
     },
   ];
 }
 
-const WAREHOUSE_REGISTRATION_TYPE_LABELS: Record<string, string> = {
+export const WAREHOUSE_REGISTRATION_TYPE_LABELS: Record<string, string> = {
   TANDA_DAFTAR_GUDANG: "Tanda Daftar Gudang",
   PENETAPAN_GUDANG_BERIKAT: "Penetapan Gudang Berikat",
   GUDANG_PENIMBUNAN_SEMENTARA: "Gudang Penimbunan Sementara",
@@ -856,9 +856,9 @@ function warehouseRegistrationItems(locationId: string): ChecklistItemDef[] {
     {
       id: "location-warehouse-registration-field-match",
       title: "Kesesuaian dengan Kondisi Lapangan",
-      description: "Kesesuaian dokumen dengan kondisi aktual gudang diverifikasi melalui observasi lokasi industri.",
-      question: "Apakah gudang yang tercantum dalam dokumen benar-benar tersedia dan digunakan untuk kegiatan produksi?",
-      criteria: ["Gudang sesuai dengan yang tercantum dalam dokumen.", "Gudang digunakan untuk kegiatan produksi sesuai permohonan."],
+      description: "Kesesuaian dokumen dengan kondisi aktual gudang diverifikasi melalui observasi lapangan oleh surveyor.",
+      question: "Apakah gudang yang tercantum dalam dokumen benar-benar tersedia dan digunakan untuk penyimpanan barang?",
+      criteria: ["Gudang sesuai dengan yang tercantum dalam dokumen.", "Gudang digunakan untuk penyimpanan barang sesuai kegiatan usaha yang dimohonkan."],
     },
   ];
 }
@@ -884,9 +884,9 @@ function warehouseLayoutItems(locationId: string): ChecklistItemDef[] {
     {
       id: "location-warehouse-layout-field-match",
       title: "Kesesuaian dengan Kondisi Lapangan",
-      description: "Kesesuaian dokumen dengan kondisi aktual gudang diverifikasi melalui observasi lokasi industri.",
-      question: "Apakah gudang yang tercantum dalam dokumen benar-benar tersedia dan digunakan untuk kegiatan produksi?",
-      criteria: ["Gudang sesuai dengan yang tercantum dalam dokumen.", "Gudang digunakan untuk kegiatan produksi sesuai permohonan."],
+      description: "Kesesuaian dokumen dengan kondisi aktual gudang diverifikasi melalui observasi lapangan oleh surveyor.",
+      question: "Apakah gudang yang tercantum dalam dokumen benar-benar tersedia dan digunakan untuk penyimpanan barang?",
+      criteria: ["Gudang sesuai dengan yang tercantum dalam dokumen.", "Gudang digunakan untuk penyimpanan barang sesuai kegiatan usaha yang dimohonkan."],
     },
   ];
 }

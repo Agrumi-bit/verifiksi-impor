@@ -191,7 +191,9 @@ const warehouseRegistration: DocumentNarrative = {
     `Verifikasi terhadap Tanda Daftar Gudang dilakukan untuk memastikan bahwa gudang Perusahaan API-U telah terdaftar, atau ditetapkan sebagai gudang berikat/tempat penimbunan sementara, sebagaimana dipersyaratkan dalam ${cite(L.tandaDaftarGudang)}.`,
   ],
   findings: (p) => [
-    `Berdasarkan hasil pemeriksaan dokumen, gudang ${p.company} yang beralamat di ${p.field("Alamat Gudang")} ${p.hasDocument ? "telah memiliki tanda daftar gudang yang sah" : "belum dilengkapi dengan tanda daftar gudang"}.`,
+    p.hasDocument
+      ? `Berdasarkan hasil pemeriksaan dokumen, gudang ${p.company} yang beralamat di ${p.field("Alamat Gudang")} telah memiliki ${p.field("Jenis Tanda Daftar")} Nomor ${p.field("Nomor Tanda Daftar Gudang")} yang diterbitkan oleh ${p.field("Instansi Penerbit")} pada tanggal ${p.field("Tanggal Terbit")}.`
+      : `Berdasarkan hasil pemeriksaan dokumen, gudang ${p.company} yang beralamat di ${p.field("Alamat Gudang")} belum dilengkapi dengan tanda daftar gudang.`,
   ],
   conclusion: (p) =>
     `${p.company} ${p.hasDocument ? "telah melengkapi" : "belum melengkapi"} tanda daftar gudang sesuai ${cite(L.tandaDaftarGudang)}. Aspek ini dinyatakan ${statusHtml(p)}.`,
