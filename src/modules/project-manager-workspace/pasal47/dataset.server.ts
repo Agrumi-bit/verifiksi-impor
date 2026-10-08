@@ -136,7 +136,8 @@ export async function buildPasal47Dataset(period: { from: string; to: string }):
         productName: p.productName, brandId: p.brandId, brandName: p.productSnapshot?.brandName ?? "",
         hs: p.hsCode, hsDescription: p.hsDescription ?? p.productSnapshot?.hsDescription ?? "",
         kelompok: p.industryName ?? "", subKelompok: p.commodityName ?? p.productSnapshot?.commodityName ?? "", komoditas: p.commoditySubGroupName ?? "",
-        countries: p.originCountryNames?.length ? p.originCountryNames : (p.productSnapshot?.countryOfOriginNames ?? p.originCountries),
+        // Older products carry no origin country at all — always an array, the report pages count it.
+        countries: p.originCountryNames?.length ? p.originCountryNames : (p.productSnapshot?.countryOfOriginNames ?? p.originCountries ?? []),
         quantity: Number(p.quantity) || 0, stock: Number(p.stockQuantity) || 0, unit: p.unit ?? "",
         price: Number(p.averageUnitPrice) || 0, currency: p.currency ?? "USD", total: konsumsiProductTotal(p),
       });
