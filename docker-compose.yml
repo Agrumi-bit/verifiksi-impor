@@ -54,8 +54,52 @@ services:
     depends_on:
       - app
 
+  # Daily disk housekeeping: removes Docker images/build cache unused for 72h (old app versions left
+  # behind by each deploy). Never touches volumes — postgres_data / app_storage / caddy_* are safe.
+  cleaner:
+    image: docker:27-cli
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          echo "[cleaner] $$(date -u) pruning images/build cache older than 72h"
+          docker image prune -a -f --filter "until=72h"
+          docker builder prune -a -f --filter "until=72h"
+          sleep 86400
+        done
+
+  # Daily PostgreSQL backup (gzip pg_dump) into the db_backups volume; keeps the last 14 days.
+  # Also runs once right after every deploy/restart.
+  db-backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          f=/backups/verifikasi_impor_$$(date -u +%Y-%m-%d_%H%M).sql.gz
+          if pg_dump -h postgres -U postgres verifikasi_impor | gzip > "$$f.tmp"; then
+            mv "$$f.tmp" "$$f"; echo "[db-backup] saved $$f"
+          else
+            rm -f "$$f.tmp"; echo "[db-backup] FAILED"
+          fi
+          find /backups -name 'verifikasi_impor_*.sql.gz' -mtime +14 -delete
+          sleep 86400
+        done
+
 volumes:
   postgres_data:
   app_storage:
   caddy_data:
   caddy_config:
+  db_backups:
