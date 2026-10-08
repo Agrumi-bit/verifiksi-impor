@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { MaterialIcon } from "./material-icon";
 import { PdfViewer } from "@/components/pdf-viewer";
+import { prefetchPdf } from "@/lib/pdf-bytes-cache";
 import { buildDisplayFileName } from "@/lib/document-filename";
 import { documentFieldCode } from "@/modules/company/document-fields";
 
@@ -543,6 +544,9 @@ function DocumentCard({
         <button
           type="button"
           onClick={onView}
+          onMouseEnter={() => {
+            if (doc.path && !isImagePath(doc.path)) prefetchPdf(fileHref(doc.path));
+          }}
           className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] px-3.5 py-2 text-[12px] font-semibold text-[#261813]"
         >
           <MaterialIcon name={doc.path ? "visibility" : "upload_file"} className="text-[15px]" />

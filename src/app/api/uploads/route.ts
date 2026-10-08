@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { storage, STORAGE_NAMESPACES, type StorageNamespace } from "@/lib/storage";
+import { schedulePdfPreview } from "@/lib/pdf-preview";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
@@ -42,6 +43,8 @@ export async function POST(request: Request) {
   const buffer = Buffer.from(await file.arrayBuffer());
   const key = `${randomUUID()}-${sanitizeFileName(file.name)}`;
   const path = await storage.save(namespace, key, buffer);
+  // Large scanned PDFs get a compressed viewing copy in the background (original untouched).
+  schedulePdfPreview(path);
 
   return NextResponse.json({ path, name: file.name, size: file.size });
 }

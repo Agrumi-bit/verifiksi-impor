@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { loadPdfBytes, viewerUrl } from "@/lib/pdf-bytes-cache";
+
 type Props = {
   url: string;
   title?: string;
@@ -23,12 +25,16 @@ const PRELOAD_MARGIN = "800px 0px";
  *
  * Rendering is progressive: page 1 is rasterized and shown immediately, the rest are rasterized
  * lazily as they scroll near the viewport. A 40-page document no longer blocks the "ready" state
- * on rasterizing all 40 canvases up front. Paired with HTTP Range support on `/api/files`, pdf.js
- * fetches only the bytes it needs for the pages actually viewed.
+ * on rasterizing all 40 canvases up front.
+ *
+ * Bytes come from `loadPdfBytes` (one download with progress, cached for re-opens, prefetchable)
+ * of the server's compressed viewing copy (`variant=preview`) — uploads are capped at 10 MB, so a
+ * single request beats pdf.js's parallel stream + range requests competing on a slow link.
  */
 export function PdfViewer({ url, title, className }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [progress, setProgress] = useState<{ loaded: number; total: number | null } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,14 +42,20 @@ export function PdfViewer({ url, title, className }: Props) {
 
     async function run() {
       setStatus("loading");
+      setProgress(null);
       try {
+        const bytesPromise = loadPdfBytes(viewerUrl(url), (loaded, total) => {
+          if (!cancelled) setProgress({ loaded, total });
+        });
         const pdfjsLib = await import("pdfjs-dist");
         pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
           "pdfjs-dist/build/pdf.worker.min.mjs",
           import.meta.url,
         ).toString();
 
-        const loadingTask = pdfjsLib.getDocument({ url });
+        const data = await bytesPromise;
+        if (cancelled) return;
+        const loadingTask = pdfjsLib.getDocument({ data });
         const pdf = await loadingTask.promise;
         if (cancelled) {
           void loadingTask.destroy();
@@ -153,8 +165,32 @@ export function PdfViewer({ url, title, className }: Props) {
 
   return (
     <div className={className}>
-      {status === "loading" && <p className="p-8 text-center text-[13px] text-[#a68f80]">Memuat dokumen...</p>}
+      {status === "loading" && (
+        <div className="p-8 text-center text-[13px] text-[#a68f80]">
+          <p>Memuat dokumen...</p>
+          {progress && progress.loaded > 0 && (
+            <div className="mx-auto mt-2.5 max-w-[260px]">
+              {progress.total ? (
+                <div className="h-1.5 overflow-hidden rounded-full bg-[#f1e9df]">
+                  <div
+                    className="h-full rounded-full bg-[#e0662e] transition-[width]"
+                    style={{ width: `${Math.min(100, Math.round((progress.loaded / progress.total) * 100))}%` }}
+                  />
+                </div>
+              ) : null}
+              <p className="mt-1 text-[11px]">
+                {formatKb(progress.loaded)}
+                {progress.total ? ` / ${formatKb(progress.total)}` : ""}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
       <div ref={containerRef} aria-label={title} className="mx-auto max-w-full" />
     </div>
   );
+}
+
+function formatKb(bytes: number) {
+  return bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
 }

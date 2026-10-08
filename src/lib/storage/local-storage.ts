@@ -2,9 +2,9 @@ import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createReadStream, existsSync } from "node:fs";
 import path from "node:path";
 
-import type { StorageNamespace, StorageService } from "./types";
+import type { InternalStorageNamespace, StorageNamespace, StorageService } from "./types";
 
-const STORAGE_ROOT = path.resolve(
+export const STORAGE_ROOT = path.resolve(
   /* turbopackIgnore: true */ process.cwd(),
   process.env.STORAGE_ROOT ?? "storage",
 );
@@ -18,7 +18,7 @@ function resolveSafePath(relativePath: string): string {
 }
 
 export const localStorageService: StorageService = {
-  async save(namespace: StorageNamespace, key: string, data) {
+  async save(namespace: StorageNamespace | InternalStorageNamespace, key: string, data) {
     const relativePath = path.join(namespace, key);
     const fullPath = resolveSafePath(relativePath);
     await mkdir(path.dirname(fullPath), { recursive: true });

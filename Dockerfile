@@ -27,6 +27,10 @@ CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx scripts/seed-regions.mjs 
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+# Ghostscript builds the compressed viewing copies of large scanned PDFs (src/lib/pdf-preview.ts).
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ghostscript \
+  && rm -rf /var/lib/apt/lists/*
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 

@@ -14,6 +14,10 @@ export const STORAGE_NAMESPACES = [
 
 export type StorageNamespace = (typeof STORAGE_NAMESPACES)[number];
 
+/** Server-only namespaces — never accepted from `/api/uploads`. `previews` holds the compressed
+ * viewing copies of large PDFs (see `src/lib/pdf-preview.ts`). */
+export type InternalStorageNamespace = "previews";
+
 export type StorageFileStat = {
   /** File size in bytes — used for `Content-Length` and HTTP Range validation. */
   size: number;
@@ -31,7 +35,7 @@ export type StorageReadRange = {
 export type StorageService = {
   /** Persists a file under `namespace/key` and returns the path to store in the database. */
   save(
-    namespace: StorageNamespace,
+    namespace: StorageNamespace | InternalStorageNamespace,
     key: string,
     data: Buffer | Uint8Array,
   ): Promise<string>;

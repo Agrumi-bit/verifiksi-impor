@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { MaterialIcon } from "../material-icon";
 import { PdfViewer } from "@/components/pdf-viewer";
+import { prefetchPdf } from "@/lib/pdf-bytes-cache";
 import { buildDisplayFileName } from "@/lib/document-filename";
 import { checklistItemCode } from "../../schema";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
@@ -86,6 +87,11 @@ const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png"]);
 function isImagePath(path: string): boolean {
   const extension = path.split(".").pop()?.toLowerCase() ?? "";
   return IMAGE_EXTENSIONS.has(extension);
+}
+
+/** Start downloading a row's PDF in the background (hover on Review / next rows) so it opens instantly. */
+function prefetchRowPdf(row: { documentPath: string | null }) {
+  if (row.documentPath && !isImagePath(row.documentPath)) prefetchPdf(fileHref(row.documentPath));
 }
 
 export function docStatusLabel(row: ComplianceRow): { label: string; bg: string; color: string } {
@@ -364,6 +370,7 @@ export function ComplianceTable<Row extends ComplianceRow>({
                   <button
                     type="button"
                     onClick={() => onReview(row)}
+                    onMouseEnter={() => prefetchRowPdf(row)}
                     className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#e1bfb3] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#261813]"
                   >
                     <MaterialIcon name="visibility" className="text-[14px]" />
@@ -918,6 +925,14 @@ export function DocumentVerificationTab({
 
   const rows = useMemo(() => data ?? [], [data]);
 
+  // While one document is open, quietly fetch the next two so "next" opens without waiting.
+  useEffect(() => {
+    if (!reviewingRow) return;
+    const index = rows.findIndex((r) => r.key === reviewingRow.key);
+    if (index < 0) return;
+    rows.slice(index + 1).filter((r) => r.documentPath && !isImagePath(r.documentPath)).slice(0, 2).forEach(prefetchRowPdf);
+  }, [reviewingRow, rows]);
+
   const stats = useMemo(() => {
     const total = rows.length;
     const valid = rows.filter((r) => r.status === "VALID").length;
@@ -1142,6 +1157,7 @@ export function DocumentVerificationTab({
                     <button
                       type="button"
                       onClick={() => setReviewingRow(row)}
+                      onMouseEnter={() => prefetchRowPdf(row)}
                       className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#261813]"
                     >
                       <MaterialIcon name="visibility" className="text-[15px]" />
@@ -1178,6 +1194,7 @@ export function DocumentVerificationTab({
                     <button
                       type="button"
                       onClick={() => setReviewingRow(row)}
+                      onMouseEnter={() => prefetchRowPdf(row)}
                       className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#261813]"
                     >
                       <MaterialIcon name="visibility" className="text-[15px]" />

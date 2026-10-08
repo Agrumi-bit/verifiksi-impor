@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { storage } from "@/lib/storage";
 import type { StorageFileStat } from "@/lib/storage";
 import { getServerSession } from "@/lib/get-session";
+import { resolvePdfPreview } from "@/lib/pdf-preview";
 
 const CONTENT_TYPES: Record<string, string> = {
   pdf: "application/pdf",
@@ -17,9 +18,10 @@ const CONTENT_TYPES: Record<string, string> = {
   webp: "image/webp",
 };
 
-/** Stored files are immutable per version (a new upload gets a new path), so a long
- * private cache is safe and lets re-opens skip the round trip entirely. */
-const CACHE_CONTROL = "private, max-age=3600, must-revalidate";
+/** Stored files are immutable per version (a new upload gets a new UUID path), so a long
+ * private cache is safe and lets re-opens skip the download entirely. After expiry the browser
+ * revalidates with If-None-Match and gets a body-less 304. */
+const CACHE_CONTROL = "private, max-age=604800";
 
 type ResolvedFile = {
   path: string;
@@ -57,9 +59,25 @@ async function resolveFile(request: Request): Promise<Resolution> {
     return { ok: false, response: NextResponse.json({ error: "Path tidak valid" }, { status: 400 }) };
   }
 
+  const filename = path.split("/").pop() ?? path;
+
+  // In-app viewer asks for `variant=preview`: serve the compressed viewing copy when one is ready
+  // (else the original, and a copy gets queued). Downloads never pass it, so they get the original.
+  if (contentType === "application/pdf" && new URL(request.url).searchParams.get("variant") === "preview") {
+    const previewPath = await resolvePdfPreview(path).catch(() => null);
+    if (previewPath) {
+      try {
+        const previewStat = await storage.stat(previewPath);
+        return { ok: true, file: { path: previewPath, filename, contentType, stat: previewStat } };
+      } catch {
+        // fall through to the original
+      }
+    }
+  }
+
   return {
     ok: true,
-    file: { path, filename: path.split("/").pop() ?? path, contentType, stat },
+    file: { path, filename, contentType, stat },
   };
 }
 
@@ -70,7 +88,7 @@ function baseHeaders(file: ResolvedFile): Record<string, string> {
     "Cache-Control": CACHE_CONTROL,
     "Accept-Ranges": "bytes",
     "Last-Modified": new Date(file.stat.mtimeMs).toUTCString(),
-    ETag: `"${file.stat.size.toString(16)}-${Math.round(file.stat.mtimeMs).toString(16)}"`,
+    ETag: etagOf(file),
   };
 }
 
@@ -102,6 +120,21 @@ function parseRange(header: string | null, size: number): { start: number; end: 
   return { start, end };
 }
 
+function etagOf(file: ResolvedFile) {
+  return `"${file.stat.size.toString(16)}-${Math.round(file.stat.mtimeMs).toString(16)}"`;
+}
+
+/** Body-less 304 when the browser's cached copy (by ETag) is still current. */
+function notModified(request: Request, file: ResolvedFile): NextResponse | null {
+  const ifNoneMatch = request.headers.get("if-none-match");
+  if (!ifNoneMatch) return null;
+  const tags = ifNoneMatch.split(",").map((t) => t.trim().replace(/^W\//, ""));
+  if (!tags.includes(etagOf(file)) && !tags.includes("*")) return null;
+  const headers = baseHeaders(file);
+  delete headers["Content-Type"];
+  return new NextResponse(null, { status: 304, headers });
+}
+
 function streamBody(nodeStream: Readable): ReadableStream {
   return Readable.toWeb(nodeStream) as unknown as ReadableStream;
 }
@@ -122,6 +155,8 @@ export async function GET(request: Request): Promise<NextResponse> {
   if (!resolution.ok) return resolution.response;
 
   const { file } = resolution;
+  const cached = notModified(request, file);
+  if (cached) return cached;
   const { size } = file.stat;
   const headers = baseHeaders(file);
 

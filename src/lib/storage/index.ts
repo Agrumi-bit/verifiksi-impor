@@ -2,6 +2,7 @@ import { localStorageService } from "./local-storage";
 import type { StorageService } from "./types";
 
 export type {
+  InternalStorageNamespace,
   StorageFileStat,
   StorageNamespace,
   StorageReadRange,
