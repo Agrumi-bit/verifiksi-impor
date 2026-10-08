@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { MaterialIcon } from "../material-icon";
 import type { PmApplicationDetail } from "./types";
-import { PmApprovalDialog } from "./pm-approval-dialog";
+import { PmSurveyReviewModal } from "./pm-survey-review-modal";
 import { formatAssignmentDate } from "@/lib/assignment-date";
 
 const DECISION_META: Record<string, { label: string; bg: string; color: string }> = {
@@ -20,7 +20,7 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
   const survey = data.assignments.survey;
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const queryClient = useQueryClient();
-  const [pending, setPending] = useState<{ assignmentId: string; assignmentNumber: string; decision: "APPROVED" | "REJECTED" } | null>(null);
+  const [reviewing, setReviewing] = useState<{ visitId: string; decision: "APPROVED" | "REJECTED" | null } | null>(null);
 
   if (!survey || survey.locationVisits.length === 0) {
     return (
@@ -56,7 +56,7 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
     return survey!.locationVisits.filter((v) => v.assignmentNumber === assignmentNumber).length;
   }
   function refresh() {
-    setPending(null);
+    setReviewing(null);
     queryClient.invalidateQueries({ queryKey: ["project-manager-workspace", "applications", data.verificationType, applicationNumber] });
     queryClient.invalidateQueries({ queryKey: ["project-manager-workspace", "dashboard"] });
   }
@@ -260,6 +260,16 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
                         )}
                       </div>
                       {sa.pmReviewNote && <div className="mb-2 text-[12px] text-[#6b5b4c]">Catatan: {sa.pmReviewNote}</div>}
+                      {sa.pmReviewStatus && (
+                        <button
+                          type="button"
+                          onClick={() => setReviewing({ visitId: visit.id, decision: null })}
+                          className="flex items-center gap-1.5 rounded-lg border border-[#e0d5c8] bg-white px-3 py-1.75 text-[11.5px] font-bold text-[#5c4a3d]"
+                        >
+                          <MaterialIcon name="visibility" className="text-[14px]" />
+                          Lihat Review
+                        </button>
+                      )}
                       {shared && (
                         <div className="mb-2 text-[11.5px] text-[#8a7565]">Berlaku untuk seluruh lokasi pada penugasan ini.</div>
                       )}
@@ -276,7 +286,7 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
                           <button
                             type="button"
                             disabled={!sa.ready}
-                            onClick={() => setPending({ assignmentId: sa.id, assignmentNumber: sa.assignmentNumber, decision: "APPROVED" })}
+                            onClick={() => setReviewing({ visitId: visit.id, decision: "APPROVED" })}
                             className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#1a9850] py-2.5 text-[13px] font-extrabold text-white disabled:opacity-50"
                           >
                             <MaterialIcon name="task_alt" className="text-[16px]" />
@@ -285,7 +295,7 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
                           <button
                             type="button"
                             disabled={!sa.ready}
-                            onClick={() => setPending({ assignmentId: sa.id, assignmentNumber: sa.assignmentNumber, decision: "REJECTED" })}
+                            onClick={() => setReviewing({ visitId: visit.id, decision: "REJECTED" })}
                             className="flex items-center justify-center gap-2 rounded-lg border border-[#e1bfb3] bg-white px-4 py-2.5 text-[13px] font-bold text-[#c1361f] disabled:opacity-50"
                           >
                             <MaterialIcon name="cancel" className="text-[16px]" />
@@ -302,15 +312,22 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
         );
       })}
 
-      <PmApprovalDialog
-        assignmentId={pending?.assignmentId ?? ""}
-        category="laporanSurvey"
-        decision={pending?.decision ?? null}
-        reportLabel={`Laporan Survey ${pending?.assignmentNumber ?? ""}`.trim()}
-        approveHint="Laporan survey akan berstatus disetujui Project Manager; sampul laporan berganti menjadi TANGGAL TERBIT dengan tanggal hari ini."
-        onClose={() => setPending(null)}
-        onDone={refresh}
-      />
+      {(() => {
+        const visit = reviewing ? survey.locationVisits.find((v) => v.id === reviewing.visitId) : null;
+        if (!reviewing || !visit) return null;
+        const sa = assignmentFor(visit.assignmentNumber);
+        return (
+          <PmSurveyReviewModal
+            key={visit.id}
+            assignment={sa}
+            visit={visit}
+            sharedLocations={locationsOf(sa.assignmentNumber)}
+            initialDecision={reviewing.decision}
+            onClose={() => setReviewing(null)}
+            onDone={refresh}
+          />
+        );
+      })()}
     </div>
   );
 }
