@@ -85,6 +85,7 @@ export function ApplicationBrandRow({ form, index, apiBase, brandDetailHrefBase,
       officialRepresentativeCompanyId: entry.officialRepresentativeCompanyId ?? null,
       relationshipDocuments: entry.relationshipDocuments,
     },
+    watch("submissionDate"),
   );
 
   function setRole(role: ApplicantBrandRole) {

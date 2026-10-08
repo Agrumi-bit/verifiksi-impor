@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import type { MerkEvidenceType } from "@/modules/merk/schema";
-import { getVIUConsumptionBrandRequirements } from "../business-rules";
+import { getVIUConsumptionBrandRequirements, trademarkEvidenceAsOf } from "../business-rules";
 import { deriveProductGroups, productGroupKey } from "../schema";
 import type {
   ApplicationBrandEntryValues,
@@ -33,6 +33,7 @@ type ValidateKonsumsiSubmitInput = Pick<
   | "productGroupCertificates"
   | "labelStatementDocument"
   | "labelDocumentationDocument"
+  | "submissionDate"
 >;
 
 /** A refusal; `stepKey` + `messages` (when set) let the wizard show it in its validation panel
@@ -374,6 +375,9 @@ export async function validateKonsumsiSubmit(
       appointmentSource: entry.appointmentSource ?? null,
       officialRepresentativeCompanyId: entry.officialRepresentativeCompanyId ?? null,
       availableDocumentCodes: new Set(Object.keys(entry.relationshipDocuments ?? {})),
+      // Judged at the application's Tanggal Pengajuan, not the day it is saved (an Admin may edit
+      // an older application, or backdate it).
+      now: trademarkEvidenceAsOf(values.submissionDate),
     });
 
     if (requirements.evidenceValidity.status === "EXPIRED_9_MONTH_LIMIT") {

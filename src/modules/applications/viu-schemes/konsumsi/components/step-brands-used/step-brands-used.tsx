@@ -53,17 +53,19 @@ function RowReadinessTracker({
   apiBase,
   entry,
   onChange,
+  submissionDate,
 }: {
   apiBase: string;
   entry: BrandEntry;
   onChange: (brandId: string, readiness: BrandApplicationReadiness) => void;
+  submissionDate?: string | null;
 }) {
   const { requirements } = useBrandApplicationDetail(apiBase, entry.brandId, {
     applicantRole: entry.applicantRole ?? null,
     appointmentSource: entry.appointmentSource ?? null,
     officialRepresentativeCompanyId: entry.officialRepresentativeCompanyId ?? null,
     relationshipDocuments: entry.relationshipDocuments,
-  });
+  }, submissionDate);
   const readiness = requirements?.readiness ?? "NOT_ELIGIBLE";
 
   useEffect(() => {
@@ -85,6 +87,7 @@ export function StepBrandsUsed({ form, apiBase, brandDetailHrefBase, application
   const importTypes = useWatch({ control, name: "importTypes" }) ?? [];
   const { fields, append, remove } = useFieldArray({ control, name: "applicationBrands" });
   const entries = useWatch({ control, name: "applicationBrands" }) ?? [];
+  const submissionDate = useWatch({ control, name: "submissionDate" });
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   // Admin (generic wizard entry point) sees every registered Brand, not just
   // the applying company's own — see useApplicationBrandOptions.
@@ -139,7 +142,7 @@ export function StepBrandsUsed({ form, apiBase, brandDetailHrefBase, application
   return (
     <div className="flex flex-col gap-5">
       {entries.map((entry) => (
-        <RowReadinessTracker key={entry.brandId} apiBase={apiBase} entry={entry} onChange={handleReadinessChange} />
+        <RowReadinessTracker key={entry.brandId} apiBase={apiBase} entry={entry} onChange={handleReadinessChange} submissionDate={submissionDate} />
       ))}
 
       <div>

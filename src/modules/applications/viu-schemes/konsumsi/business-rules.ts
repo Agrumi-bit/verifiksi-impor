@@ -140,6 +140,18 @@ function addMonths(date: Date, months: number): Date {
 }
 
 /**
+ * The moment the 9-month rule is judged at: the application's Tanggal Pengajuan (Pasal 37 ayat (7) —
+ * the evidence must still be usable when the permohonan is submitted), not "today". An empty or
+ * malformed date falls back to now (a new application whose date is not chosen yet).
+ */
+export function trademarkEvidenceAsOf(submissionDate: string | null | undefined): Date | undefined {
+  const day = submissionDate?.trim().slice(0, 10);
+  if (!day || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return undefined;
+  const date = new Date(`${day}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+/**
  * "Tanda Pendaftaran Merek" (TANDA_DAFTAR_MEREK) and "Tanda Pendaftaran Merek
  * Internasional" (SERTIFIKAT_INTERNASIONAL) may stand in for a Sertifikat
  * Merek for at most 9 months from their registration/notification date.

@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { MerkEvidenceType, MerkOwnerLocation } from "@/modules/merk/schema";
 import {
   getVIUConsumptionBrandRequirements,
+  trademarkEvidenceAsOf,
   type ApplicantBrandRole,
   type ImportAppointmentSource,
   type VIUBrandRequirementsResult,
@@ -47,6 +48,8 @@ export function useBrandApplicationDetail(
      * applicationBrandEntrySchema's own comment on why. */
     relationshipDocuments?: Record<string, { filePath: string; fileName: string }>;
   },
+  /** The application's Tanggal Pengajuan — the 9-month trademark rule is judged at this date. */
+  submissionDate?: string | null,
 ) {
   const query = useQuery({
     queryKey: ["applications", "brand-detail", apiBase, brandId],
@@ -81,6 +84,7 @@ export function useBrandApplicationDetail(
       appointmentSource: relationship.appointmentSource,
       officialRepresentativeCompanyId: relationship.officialRepresentativeCompanyId ?? null,
       availableDocumentCodes: new Set(Object.keys(relationship.relationshipDocuments ?? {})),
+      now: trademarkEvidenceAsOf(submissionDate),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- ownerLocation/ownerTitle are derived from query.data, not independent inputs
   }, [
@@ -89,6 +93,7 @@ export function useBrandApplicationDetail(
     relationship.appointmentSource,
     relationship.officialRepresentativeCompanyId,
     relationship.relationshipDocuments,
+    submissionDate,
   ]);
 
   return {
