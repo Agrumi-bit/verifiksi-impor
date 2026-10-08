@@ -6,6 +6,8 @@ import { requireTechnicalAnalystSession } from "@/lib/require-technical-analyst-
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { activeVisitsForApplication, collectApplicationVisits, type SurveyPayloadLocation } from "@/modules/shared/survey-visit-scope";
 import { allModulesDecided, overallTechnicalStatus, technicalAnalysisDataSchema } from "@/modules/technical-analyst-workspace/schema";
+import { isDocumentReportVerified } from "@/modules/technical-analyst-workspace/document-report-review";
+import { readDocumentReportReview } from "@/modules/technical-analyst-workspace/document-report-review-store";
 
 const ASSIGNMENT_STATUS_RANK: Record<string, number> = { ASSIGNED: 0, SCHEDULED: 1, IN_PROGRESS: 2, SUBMITTED: 3, RETURNED: 3, COMPLETED: 4 };
 
@@ -72,6 +74,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     : null;
   const siblings = await loadSiblingSummaries(assignment.applicationId, payload.locations ?? []);
   const technicalAnalysisData = technicalAnalysisDataSchema.parse(assignment.technicalAnalysisData ?? {});
+  const modulesDecided = allModulesDecided(assignment.application.verificationType, technicalAnalysisData, payload.importTypes);
+  const documentReportReview = await readDocumentReportReview(assignment.id);
 
   const kantorLocation = payload.locations?.find((loc) => loc.locationType === "KANTOR") ?? payload.locations?.[0];
 
@@ -110,7 +114,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       },
       siblings,
       overallStatus: overallTechnicalStatus(assignment.application.verificationType, technicalAnalysisData, payload.importTypes),
-      readyForDecision: allModulesDecided(assignment.application.verificationType, technicalAnalysisData, payload.importTypes),
+      modulesDecided,
+      documentReportReview,
+      // Approve/Return needs every analysis module judged AND the Laporan Verifikasi Dokumen reviewed as Verified.
+      readyForDecision: modulesDecided && isDocumentReportVerified(documentReportReview),
     },
   });
 }

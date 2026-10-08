@@ -20,9 +20,11 @@ type Props = {
   assignmentId: string;
   status: AssignmentStatusValue;
   readyForDecision: boolean;
+  modulesDecided?: boolean;
+  documentReportVerified?: boolean;
 };
 
-export function DecisionPanel({ assignmentId, status, readyForDecision }: Props) {
+export function DecisionPanel({ assignmentId, status, readyForDecision, modulesDecided, documentReportVerified }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [decision, setDecision] = useState<"COMPLETED" | "RETURNED" | null>(null);
@@ -84,7 +86,14 @@ export function DecisionPanel({ assignmentId, status, readyForDecision }: Props)
         <div>
           <div className="text-base font-extrabold text-[#20180f]">Siap Mengambil Keputusan?</div>
           <div className="text-[13px] text-[#8a7565]">
-            {readyForDecision ? "Seluruh modul analisis teknis telah dinilai." : "Masih ada modul analisis teknis yang belum dinilai."}
+            {readyForDecision
+              ? "Seluruh modul analisis teknis telah dinilai dan Laporan Verifikasi Dokumen telah direview."
+              : [
+                  modulesDecided === false || modulesDecided === undefined ? "Masih ada modul analisis teknis yang belum dinilai." : null,
+                  documentReportVerified === false ? "Laporan Verifikasi Dokumen belum direview dengan hasil Verified." : null,
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
           </div>
         </div>
         <div className="flex flex-wrap gap-3">

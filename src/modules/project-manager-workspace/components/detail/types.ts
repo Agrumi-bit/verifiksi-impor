@@ -1,6 +1,7 @@
 import type { ApplicationLocationSummary } from "@/modules/shared/location-meta";
 
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import type { DocumentReportReview } from "@/modules/technical-analyst-workspace/document-report-review";
 
 export type PmApplicationDetail = {
   locationSummaries?: ApplicationLocationSummary[];
@@ -83,6 +84,8 @@ export type PmApplicationDetail = {
       pmReviewedAt: string | null;
       validatedAt: string | null;
       technicalAnalysisData: Record<string, { status?: string; keterangan?: string; kesimpulan?: string; inputs?: Record<string, string> }>;
+      /** Technical Analyst's review of the Laporan Verifikasi Dokumen. */
+      documentReportReview?: DocumentReportReview | null;
     } | null;
   };
   documentChecklist: {

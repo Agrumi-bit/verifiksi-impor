@@ -1123,6 +1123,11 @@ model Assignment {
   // Baku for VKI, Rencana/Penyimpanan/Modal for VIU) — same keyed-JSON-map
   // convention as the verifikator decision fields above, keyed by module.
   technicalAnalysisData      Json?
+  // Technical Analyst's review of the verifikator's Laporan Verifikasi Dokumen (technical assignment
+  // row only): per-checklist PASS/FAIL + decision VERIFIED/REVISION/REJECTED, note, date and reviewer.
+  // A record, not a workflow switch — it never reopens the dokumen assignment; VERIFIED is required
+  // before the analyst can Approve (see technical-analyst-workspace/document-report-review.ts).
+  documentReportReview       Json?
   validationNotes            String?
   validatedAt                DateTime?
 

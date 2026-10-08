@@ -23,6 +23,7 @@ import { computeApplicationStage, type SiblingForStage } from "@/modules/project
 import { buildApplicationDocumentChecklist } from "@/modules/verifikator-workspace/application-checklist";
 import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
 import { buildKonsumsiImportPlan, buildModalKerjaFromApplication } from "@/modules/applications/viu-import-plan";
+import { readDocumentReportReview } from "@/modules/technical-analyst-workspace/document-report-review-store";
 import { effectiveSubmissionDate } from "@/modules/applications/submission-date";
 import { surveyVisitDates } from "@/modules/surveyor-workspace/report-prepared-date";
 
@@ -147,6 +148,8 @@ export async function GET(
 
   // VIU per-scheme data for the PM's Overview/Verification views (VKI uses the production data above).
   const viu = application.verificationType === "VIU" ? await buildViuDetail(payload, products) : null;
+  // Technical Analyst's review of the Laporan Verifikasi Dokumen (null until there is a technical assignment).
+  const documentReportReview = technical ? await readDocumentReportReview(technical.id) : null;
 
   const kantorLocation = payload.locations?.find((loc) => loc.locationType === "KANTOR") ?? payload.locations?.[0];
   const businessAddress = kantorLocation ? `${kantorLocation.address}, ${kantorLocation.city}, ${kantorLocation.province}` : null;
@@ -252,6 +255,7 @@ export async function GET(
               pmReviewedAt: technical.pmReviewedAt,
               validatedAt: technical.validatedAt,
               technicalAnalysisData: technical.technicalAnalysisData ?? {},
+              documentReportReview,
             }
           : null,
       },

@@ -4,6 +4,11 @@ import DOMPurify from "dompurify";
 
 import { technicalModuleKeysFor, TECHNICAL_MODULE_LABELS, TECHNICAL_MODULE_STATUS_BADGE, TECHNICAL_MODULE_STATUS_LABELS } from "@/modules/technical-analyst-workspace/status";
 import type { PmApplicationDetail } from "./types";
+import { formatAssignmentDate } from "@/lib/assignment-date";
+import {
+  DOCUMENT_REPORT_REVIEW_DECISION_BADGE,
+  DOCUMENT_REPORT_REVIEW_DECISION_LABELS,
+} from "@/modules/technical-analyst-workspace/document-report-review";
 
 /** Renders rich-text HTML written by a technical analyst via RichTextEditor — sanitized before injection, same pattern as the printed report's SanitizedHtml. */
 function SanitizedHtml({ html }: { html: string }) {
@@ -23,8 +28,27 @@ export function AnalisisTab({ data }: { data: PmApplicationDetail }) {
     );
   }
 
+  const docReview = technical.documentReportReview ?? null;
+
   return (
     <div className="flex flex-col gap-3.5">
+      <div className="rounded-[10px] border border-[#f0ded0] bg-white p-5">
+        <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+          <div className="text-[13.5px] font-extrabold text-[#20180f]">Review Laporan Verifikasi Dokumen oleh Technical Analyst</div>
+          {docReview?.decision ? (
+            <span className={`rounded-full px-2.5 py-0.75 text-[10.5px] font-bold ${DOCUMENT_REPORT_REVIEW_DECISION_BADGE[docReview.decision]}`}>
+              {DOCUMENT_REPORT_REVIEW_DECISION_LABELS[docReview.decision]}
+            </span>
+          ) : (
+            <span className="rounded-full bg-[#f2ece5] px-2.5 py-0.75 text-[10.5px] font-bold text-[#6b5b4c]">Belum Direview</span>
+          )}
+        </div>
+        <div className="text-[12.5px] text-[#4a4038]">
+          {docReview?.decision
+            ? `Diperiksa ${formatAssignmentDate(docReview.verifiedAt)}${docReview.verifiedByName ? ` oleh ${docReview.verifiedByName}` : ""}.${docReview.note ? ` Catatan: ${docReview.note}` : ""}`
+            : "Technical Analyst belum mereview Laporan Verifikasi Dokumen."}
+        </div>
+      </div>
       {moduleKeys.map((key) => {
         const moduleData = technical.technicalAnalysisData[key] ?? {};
         const status = moduleData.status ?? "PENDING";

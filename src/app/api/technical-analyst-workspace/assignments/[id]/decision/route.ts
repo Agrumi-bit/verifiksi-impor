@@ -5,6 +5,8 @@ import { isAssignmentReviewable } from "@/modules/applications/assignment-review
 import { requireTechnicalAnalystSession } from "@/lib/require-technical-analyst-session";
 import { returnApplicationForRevision } from "@/modules/applications/return-for-revision";
 import { allModulesDecided, decisionSchema, technicalAnalysisDataSchema } from "@/modules/technical-analyst-workspace/schema";
+import { isDocumentReportVerified } from "@/modules/technical-analyst-workspace/document-report-review";
+import { readDocumentReportReview } from "@/modules/technical-analyst-workspace/document-report-review-store";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { session, error } = await requireTechnicalAnalystSession();
@@ -27,6 +29,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!allModulesDecided(assignment.application.verificationType, technicalAnalysisData, (assignment.application.payload as { importTypes?: string[] } | null)?.importTypes)) {
     return NextResponse.json(
       { error: "Seluruh modul analisis teknis harus dinilai terlebih dahulu." },
+      { status: 400 },
+    );
+  }
+  if (!isDocumentReportVerified(await readDocumentReportReview(assignment.id))) {
+    return NextResponse.json(
+      { error: "Laporan Verifikasi Dokumen harus direview dengan hasil Verified terlebih dahulu." },
       { status: 400 },
     );
   }

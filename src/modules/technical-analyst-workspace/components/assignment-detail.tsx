@@ -23,6 +23,7 @@ import { SurveyorReportTab } from "./detail/surveyor-report-tab";
 import { DocumentReportTab } from "./detail/document-report-tab";
 import { AnalysisTab } from "./detail/analysis-tab";
 import { DecisionPanel } from "./detail/decision-panel";
+import { isDocumentReportVerified, type DocumentReportReview } from "../document-report-review";
 import { formatAssignmentDate } from "@/lib/assignment-date";
 
 export type AssignmentDetailData = {
@@ -61,6 +62,8 @@ export type AssignmentDetailData = {
   };
   overallStatus: TechnicalModuleStatusValue;
   readyForDecision: boolean;
+  modulesDecided?: boolean;
+  documentReportReview?: DocumentReportReview;
 };
 
 const TAB_NAMES = ["Laporan Surveyor", "Laporan Verifikasi Dokumen", "Analisis Teknis"] as const;
@@ -169,7 +172,10 @@ export function AssignmentDetail({ id }: { id: string }) {
       {tab === "Analisis Teknis" && <AnalysisTab assignmentNumber={data.assignmentNumber} verificationType={data.application.verificationType} />}
 
       <div className="mt-5 -mx-7 -mb-7">
-        <DecisionPanel assignmentId={data.assignmentNumber} status={isAssignmentReviewable(data) ? "SUBMITTED" : data.status} readyForDecision={data.readyForDecision} />
+        <DecisionPanel assignmentId={data.assignmentNumber} status={isAssignmentReviewable(data) ? "SUBMITTED" : data.status} readyForDecision={data.readyForDecision}
+          modulesDecided={data.modulesDecided}
+          documentReportVerified={isDocumentReportVerified(data.documentReportReview)}
+        />
       </div>
     </div>
   );

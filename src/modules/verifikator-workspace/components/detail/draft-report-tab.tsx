@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SignaturePad } from "@/components/form/signature-pad";
+import { TechnicalReviewBanner } from "./technical-review-banner";
 
 function todayInputValue(): string {
   return new Date().toISOString().slice(0, 10);
@@ -157,6 +158,7 @@ export function DraftReportTab({ assignmentId, initialNotes }: Props) {
 
   return (
     <div className="rounded-[10px] border border-[#f0ded0] bg-white p-5.5">
+      <TechnicalReviewBanner assignmentId={assignmentId} />
       <div className="mb-1.5 text-[13.5px] font-bold text-[#20180f]">
         Kesimpulan Verifikator <span className="text-[#e0662e]">*</span>
       </div>
