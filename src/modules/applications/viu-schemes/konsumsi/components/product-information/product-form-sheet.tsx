@@ -86,7 +86,8 @@ export function ProductFormSheet({
   }
 
   function handleCountriesChange(next: string[]) {
-    update({ originCountries: next, originCountryNames: next.map((code) => countries.find((c) => c.code === code)?.name ?? code) });
+    // A country picked by hand replaces a system-filled one, so the "diisi sistem" mark goes away.
+    update({ originCountries: next, originCountryNames: next.map((code) => countries.find((c) => c.code === code)?.name ?? code), originCountryAutoFilled: false });
     setErrors((e) => ({ ...e, originCountries: undefined }));
   }
 

@@ -46,6 +46,8 @@ export type P47Line = {
   subKelompok: string;
   komoditas: string;
   countries: string[];
+  /** Negara Asal was filled by the system (migration 38), not by the applicant. */
+  countryAutoFilled?: boolean;
   quantity: number;
   stock: number;
   unit: string;

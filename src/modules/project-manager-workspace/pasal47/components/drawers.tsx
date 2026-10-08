@@ -160,7 +160,7 @@ export function countryDrawer(country: string, ds: P47Dataset): DrawerSpec {
     body: (
       <>
         <Sec title="Relasi produk">
-          <Mini head={["HS", "Merek", "API-U", "Alokasi"]} rows={lines.map((l) => [<span key="h" className="mono">{l.hs}</span>, l.brandName, l.company, l.countries.length > 1 ? <Badge key="a" tone="warn">tidak ada</Badge> : <Badge key="a" tone="ok">tunggal</Badge>])} />
+          <Mini head={["HS", "Merek", "API-U", "Alokasi"]} rows={lines.map((l) => [<span key="h" className="mono">{l.hs}</span>, l.brandName, l.company, <span key="a">{l.countries.length > 1 ? <Badge tone="warn">tidak ada</Badge> : <Badge tone="ok">tunggal</Badge>}{l.countryAutoFilled && <> <Badge tone="warn">diisi sistem</Badge></>}</span>])} />
         </Sec>
         <p style={{ margin: 0, color: "var(--ink-2)" }}>Volume tidak ditampilkan per negara karena {lines.filter((l) => l.countries.length > 1).length} product line memiliki lebih dari satu negara asal tanpa alokasi kuantitas.</p>
       </>

@@ -272,6 +272,9 @@ export const konsumsiProductSchema = z.object({
     .refine((codes) => new Set(codes).size === codes.length, "Negara asal tidak boleh duplikat"),
   // Display cache parallel to `originCountries` (same index order) — never the source of truth.
   originCountryNames: z.array(z.string()).optional(),
+  // True when the system filled Negara Asal (REP. RAKYAT CINA) because the product was submitted without
+  // one (migration 38); cleared once someone picks the countries themselves. Shown as "diisi sistem".
+  originCountryAutoFilled: z.boolean().optional(),
   // "Jumlah Permohonan" — how much of this product THIS application is requesting to import,
   // never the company's on-hand stock (see `stockQuantity` below, a separate concept).
   quantity: positiveNumberString("Jumlah permohonan harus lebih besar dari 0"),

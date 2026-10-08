@@ -27,6 +27,8 @@ export function dataQualityAlerts(ds: P47Dataset): Alert[] {
   const alerts: Alert[] = [];
   const noLhviu = ds.applications.filter((a) => lhviuStatus(a).label === "Belum Diunggah").length;
   if (noLhviu) alerts.push({ tone: "warn", text: `${noLhviu} permohonan selesai belum memiliki file LHVIU.` });
+  const autoFilled = ds.lines.filter((l) => l.countryAutoFilled).length;
+  if (autoFilled) alerts.push({ tone: "warn", text: `${autoFilled} product line negara asalnya diisi sistem (REP. RAKYAT CINA) karena kosong saat diajukan; perlu dikonfirmasi.` });
   const multi = ds.lines.filter((l) => l.countries.length > 1).length;
   if (multi) alerts.push({ tone: "warn", text: `${multi} product line memiliki lebih dari satu negara asal tanpa alokasi kuantitas.` });
   const expired = ds.technical.filter((t) => t.status.label === "Kedaluwarsa").length;

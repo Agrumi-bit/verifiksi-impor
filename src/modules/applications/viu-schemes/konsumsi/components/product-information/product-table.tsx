@@ -84,6 +84,11 @@ export function ProductTable({
               <td className="px-3 py-2 text-xs text-muted-foreground">{product.hsDescription}</td>
               <td className="px-3 py-2">
                 <OriginCountriesCell names={product.originCountryNames ?? product.originCountries ?? []} />
+                {product.originCountryAutoFilled && (
+                  <span className="mt-1 block text-[11px] text-amber-700" title="Negara asal diisi otomatis karena kosong saat diajukan">
+                    diisi sistem
+                  </span>
+                )}
               </td>
               <td className="px-3 py-2">{Number(product.quantity).toLocaleString("id-ID")}</td>
               <td className="px-3 py-2">{product.unit}</td>

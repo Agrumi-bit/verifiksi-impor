@@ -1,7 +1,9 @@
--- Data fix: VIU Konsumsi products submitted without any Negara Asal (older applications) get
--- REP. RAKYAT CINA (ISO "CN"), as instructed by the Project Manager. Only products where EVERY
+-- Data fix: VIU Konsumsi products of SUBMITTED applications (anything past DRAFT) that have no Negara Asal
+-- at all get REP. RAKYAT CINA (ISO "CN"), as instructed by the Project Manager. Only products where EVERY
 -- origin field is empty are touched (originCountries, originCountryNames, productSnapshot's
--- countryOfOriginNames and the legacy single-value countryOfOrigin); everything else is unchanged.
+-- countryOfOriginNames and the legacy single-value countryOfOrigin); drafts and every other product are
+-- unchanged. Each filled product is marked "originCountryAutoFilled": true so it stays traceable and can
+-- be corrected later (the app shows it as "diisi sistem").
 
 UPDATE "application" AS a
 SET "payload" = jsonb_set(
@@ -16,7 +18,8 @@ SET "payload" = jsonb_set(
          AND COALESCE(t.p ->> 'countryOfOrigin', '') = ''
         THEN t.p || jsonb_build_object(
           'originCountries', '["CN"]'::jsonb,
-          'originCountryNames', '["REP. RAKYAT CINA"]'::jsonb
+          'originCountryNames', '["REP. RAKYAT CINA"]'::jsonb,
+          'originCountryAutoFilled', true
         )
         ELSE t.p
       END
@@ -25,7 +28,8 @@ SET "payload" = jsonb_set(
     FROM jsonb_array_elements(a."payload" -> 'konsumsiProducts') WITH ORDINALITY AS t(p, ord)
   )
 )
-WHERE jsonb_typeof(a."payload" -> 'konsumsiProducts') = 'array'
+WHERE a."status" <> 'DRAFT'
+  AND jsonb_typeof(a."payload" -> 'konsumsiProducts') = 'array'
   AND EXISTS (
     SELECT 1
     FROM jsonb_array_elements(a."payload" -> 'konsumsiProducts') AS e(p)

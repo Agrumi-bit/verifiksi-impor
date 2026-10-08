@@ -47,3 +47,12 @@ describe("summary", () => {
     assert.match(text, /1 isu material/);
   });
 });
+
+describe("system-filled origin country", () => {
+  it("is raised as a data-quality alert", async () => {
+    const { dataQualityAlerts } = await import("./summary");
+    const withAuto = { ...ds, lines: ds.lines.map((l) => ({ ...l, countryAutoFilled: true })) };
+    assert.ok(dataQualityAlerts(withAuto).some((a) => /diisi sistem/.test(a.text)));
+    assert.ok(!dataQualityAlerts(ds).some((a) => /diisi sistem/.test(a.text)));
+  });
+});
