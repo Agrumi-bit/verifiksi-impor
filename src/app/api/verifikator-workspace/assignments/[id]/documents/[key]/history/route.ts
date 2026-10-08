@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+
+import { syncLocationDocumentToCompany } from "@/modules/applications/server/sync-location-document";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
@@ -159,6 +161,7 @@ export async function PATCH(
 
   const updatedPayload = applyChecklistDocumentPath(payload, key, path);
   await db.application.update({ where: { id: assignment.application.id }, data: { payload: updatedPayload } });
+  await syncLocationDocumentToCompany(assignment.application.companyId, key, path);
 
   if (key in COMPANY_MAPPED_DOCUMENT_KEYS) {
     if (!company) {

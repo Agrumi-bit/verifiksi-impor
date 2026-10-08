@@ -296,7 +296,8 @@ export function buildDocumentChecklist(
     // Prefer the live Company.locations entry (same id, edited via Company Workspace's
     // Facilities tab after submission) over the frozen payload snapshot — see
     // `ChecklistCompanyContext.locations` above.
-    const loc = company?.locations?.find((l) => l.id === payloadLoc.id) ?? payloadLoc;
+    const liveLoc = company?.locations?.find((l) => l.id === payloadLoc.id);
+    const loc = liveLoc ? withPayloadDocumentFallback(liveLoc, payloadLoc) : payloadLoc;
     const label = LOCATION_TYPE_NAMES[loc.locationType] ?? loc.locationType;
     locationTypeById[loc.id] = loc.locationType;
     if (loc.buildingStatus === "MILIK_SENDIRI") {
@@ -1012,4 +1013,29 @@ export function buildSalesChecklist(payload: ApplicationWizardValues): SalesRow[
       satuan: s.satuan ?? "",
     };
   });
+}
+
+/**
+ * The live Company.locations entry wins, but any document it lacks falls back to the application's
+ * own payload copy. A CR/Verifikator "Upload New Document" on a location row used to write only
+ * `payload.locations`, so when the company profile had no file the row kept showing "belum
+ * diunggah" even though version 2 existed.
+ */
+function withPayloadDocumentFallback(live: LocationValues, snapshot: LocationValues): LocationValues {
+  const mergeEntries = <T extends { type: string; documentPath?: string | null }>(liveList: T[] | undefined, snapList: T[] | undefined): T[] => {
+    const merged = (liveList ?? []).map((entry) =>
+      entry.documentPath ? entry : { ...entry, documentPath: snapList?.find((s) => s.type === entry.type)?.documentPath ?? entry.documentPath },
+    );
+    for (const entry of snapList ?? []) {
+      if (entry.documentPath && !merged.some((m) => m.type === entry.type)) merged.push(entry);
+    }
+    return merged;
+  };
+  return {
+    ...live,
+    ownershipDocuments: mergeEntries(live.ownershipDocuments, snapshot.ownershipDocuments),
+    leaseDocuments: mergeEntries(live.leaseDocuments, snapshot.leaseDocuments),
+    warehouseRegistrationDocumentPath: live.warehouseRegistrationDocumentPath || snapshot.warehouseRegistrationDocumentPath,
+    warehouseLayoutDocumentPath: live.warehouseLayoutDocumentPath || snapshot.warehouseLayoutDocumentPath,
+  };
 }
