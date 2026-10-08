@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 
+import { getServerSession } from "@/lib/get-session";
 import { storage, STORAGE_NAMESPACES, type StorageNamespace } from "@/lib/storage";
 import { schedulePdfPreview } from "@/lib/pdf-preview";
 
@@ -23,6 +24,13 @@ function sanitizeFileName(name: string): string {
 }
 
 export async function POST(request: Request) {
+  // Every upload screen (company wizard, workspaces, admin) runs behind login; signup itself never
+  // uploads. `/api/*` is outside the proxy's auth gate, so check here — before reading the body.
+  const session = await getServerSession();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const formData = await request.formData();
   const file = formData.get("file");
   const namespace = formData.get("namespace");
