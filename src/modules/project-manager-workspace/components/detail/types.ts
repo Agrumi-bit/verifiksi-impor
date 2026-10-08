@@ -33,6 +33,15 @@ export type PmApplicationDetail = {
       pmReviewNote: string | null;
       pmReviewedAt: string | null;
       allLocationsCompleted: boolean;
+      /** Every survey assignment of the application with its own PM decision; `ready` = all its locations surveyed. */
+      assignments?: {
+        id: string;
+        assignmentNumber: string;
+        pmReviewStatus: string | null;
+        pmReviewNote: string | null;
+        pmReviewedAt: string | null;
+        ready: boolean;
+      }[];
       locationVisits: {
         id: string;
         locationType: string;

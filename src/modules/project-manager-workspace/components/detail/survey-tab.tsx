@@ -3,10 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 
 import { MaterialIcon } from "../material-icon";
 import type { PmApplicationDetail } from "./types";
+import { PmApprovalDialog } from "./pm-approval-dialog";
 import { formatAssignmentDate } from "@/lib/assignment-date";
 
 function fmtDate(value: string | null): string {
@@ -25,7 +25,7 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
   const survey = data.assignments.survey;
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const queryClient = useQueryClient();
-  const [approving, setApproving] = useState(false);
+  const [pending, setPending] = useState<{ assignmentId: string; assignmentNumber: string; decision: "APPROVED" | "REJECTED" } | null>(null);
 
   if (!survey || survey.locationVisits.length === 0) {
     return (
@@ -41,32 +41,30 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
   const needsReview = survey.locationVisits.filter((v) => v.status === "COMPLETED" && v.decision !== "VERIFIED").length;
   const progressPct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  async function handleApprove() {
-    if (!survey) return;
-    setApproving(true);
-    const response = await fetch(`/api/project-manager-workspace/approvals/${survey.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ category: "laporanSurvey", decision: "APPROVED" }),
-    });
-    setApproving(false);
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      toast.error(body?.error ?? "Gagal menyetujui laporan survey");
-      return;
-    }
-    toast.success("Laporan survey disetujui.");
-    queryClient.invalidateQueries({ queryKey: ["project-manager-workspace", "applications", data.verificationType, applicationNumber] });
+  // Each survey assignment carries its own PM decision — a per-location schedule means one approval per
+  // location. Older API responses without `assignments` fall back to the single most-progressed row.
+  const surveyAssignments = survey.assignments ?? [
+    {
+      id: survey.id,
+      assignmentNumber: survey.assignmentNumber,
+      pmReviewStatus: survey.pmReviewStatus,
+      pmReviewNote: survey.pmReviewNote,
+      pmReviewedAt: survey.pmReviewedAt,
+      ready: survey.allLocationsCompleted,
+    },
+  ];
+  const approvedCount = surveyAssignments.filter((a) => a.pmReviewStatus === "APPROVED").length;
+  function assignmentFor(assignmentNumber: string) {
+    return surveyAssignments.find((a) => a.assignmentNumber === assignmentNumber) ?? surveyAssignments[0];
   }
-
-  const approveDisabled = approving || !survey.allLocationsCompleted || Boolean(survey.pmReviewStatus);
-  const approveLabel = survey.pmReviewStatus
-    ? `Laporan Survey Sudah ${survey.pmReviewStatus === "APPROVED" ? "Disetujui" : "Ditolak"}`
-    : !survey.allLocationsCompleted
-      ? "Menunggu Semua Lokasi Selesai"
-      : approving
-        ? "Menyimpan..."
-        : "Review dan Approve Report for This Location";
+  function locationsOf(assignmentNumber: string) {
+    return survey!.locationVisits.filter((v) => v.assignmentNumber === assignmentNumber).length;
+  }
+  function refresh() {
+    setPending(null);
+    queryClient.invalidateQueries({ queryKey: ["project-manager-workspace", "applications", data.verificationType, applicationNumber] });
+    queryClient.invalidateQueries({ queryKey: ["project-manager-workspace", "dashboard"] });
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -75,7 +73,7 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
           <div className="text-[13.5px] font-extrabold text-[#20180f]">Field Verification Summary</div>
           <div className="mt-0.5 text-[11.5px] text-[#a68f80]">Overview of field verification results from surveyor</div>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           <div className="rounded-[9px] bg-[#eaf1fd] p-3.5 text-center">
             <div className="text-[19px] font-extrabold text-[#3355c8]">{total}</div>
             <div className="mt-0.5 text-[10.5px] font-semibold text-[#5c6b9c]">Total Locations</div>
@@ -91,6 +89,12 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
           <div className="rounded-[9px] bg-[#fdf1de] p-3.5 text-center">
             <div className="text-[19px] font-extrabold text-[#c9701f]">{needsReview}</div>
             <div className="mt-0.5 text-[10.5px] font-semibold text-[#b58a5c]">Needs Review</div>
+          </div>
+          <div className="rounded-[9px] bg-[#e6f6ec] p-3.5 text-center">
+            <div className="text-[19px] font-extrabold text-[#0f7a4d]">
+              {approvedCount}/{surveyAssignments.length}
+            </div>
+            <div className="mt-0.5 text-[10.5px] font-semibold text-[#5c8a6b]">Disetujui PM</div>
           </div>
         </div>
         <div className="mt-4">
@@ -140,7 +144,7 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
                 </div>
               </div>
               <div className="shrink-0 text-right">
-                <div className="text-[10.5px] text-[#a68f80]">Status Hasil Survey</div>
+                <div className="text-[10.5px] text-[#a68f80]">Review Verifikator</div>
                 <span className="mt-0.75 inline-block rounded-full px-2.5 py-0.75 text-[11px] font-bold" style={{ background: resultMeta.bg, color: resultMeta.color }}>
                   {resultMeta.label}
                 </span>
@@ -217,20 +221,77 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
                   </div>
                 )}
 
-                <button
-                  type="button"
-                  disabled={approveDisabled}
-                  onClick={handleApprove}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#1a9850] py-3 text-[13px] font-extrabold text-white disabled:opacity-50"
-                >
-                  <MaterialIcon name="play_circle" className="text-[16px]" />
-                  {approveLabel}
-                </button>
+                {(() => {
+                  const sa = assignmentFor(visit.assignmentNumber);
+                  const shared = locationsOf(sa.assignmentNumber) > 1;
+                  return (
+                    <div className="rounded-[9px] border border-[#f0ded0] bg-white p-3.5">
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-[13px] font-extrabold text-[#20180f]">Persetujuan PM — Laporan Survey {sa.assignmentNumber}</span>
+                        {sa.pmReviewStatus ? (
+                          <span
+                            className={`rounded-full px-2.5 py-0.75 text-[10.5px] font-bold ${
+                              sa.pmReviewStatus === "APPROVED" ? "bg-[#e2f7ea] text-[#1a9850]" : "bg-[#fbe4de] text-[#c1361f]"
+                            }`}
+                          >
+                            {sa.pmReviewStatus === "APPROVED" ? "Disetujui" : "Ditolak"} · {formatAssignmentDate(sa.pmReviewedAt)}
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-[#f2ece5] px-2.5 py-0.75 text-[10.5px] font-bold text-[#6b5b4c]">Belum Diputuskan</span>
+                        )}
+                      </div>
+                      {sa.pmReviewNote && <div className="mb-2 text-[12px] text-[#6b5b4c]">Catatan: {sa.pmReviewNote}</div>}
+                      {shared && (
+                        <div className="mb-2 text-[11.5px] text-[#8a7565]">Berlaku untuk seluruh lokasi pada penugasan ini.</div>
+                      )}
+                      {!sa.pmReviewStatus && sa.ready && visit.decision !== "VERIFIED" && (
+                        <div className="mb-2.5 flex items-start gap-2 rounded-lg bg-[#faf1de] px-3 py-2 text-[12px] text-[#a6791f]">
+                          <MaterialIcon name="info" className="mt-0.5 text-[15px]" />
+                          {visit.decision
+                            ? "Verifikator tidak menyatakan laporan lokasi ini Sesuai — periksa kesimpulannya sebelum menyetujui."
+                            : "Laporan lokasi ini belum direview verifikator."}
+                        </div>
+                      )}
+                      {!sa.pmReviewStatus && (
+                        <div className="flex flex-wrap gap-2.5">
+                          <button
+                            type="button"
+                            disabled={!sa.ready}
+                            onClick={() => setPending({ assignmentId: sa.id, assignmentNumber: sa.assignmentNumber, decision: "APPROVED" })}
+                            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#1a9850] py-2.5 text-[13px] font-extrabold text-white disabled:opacity-50"
+                          >
+                            <MaterialIcon name="task_alt" className="text-[16px]" />
+                            {sa.ready ? "Review & Approve Laporan Survey" : "Menunggu Survey Lokasi Selesai"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!sa.ready}
+                            onClick={() => setPending({ assignmentId: sa.id, assignmentNumber: sa.assignmentNumber, decision: "REJECTED" })}
+                            className="flex items-center justify-center gap-2 rounded-lg border border-[#e1bfb3] bg-white px-4 py-2.5 text-[13px] font-bold text-[#c1361f] disabled:opacity-50"
+                          >
+                            <MaterialIcon name="cancel" className="text-[16px]" />
+                            Tolak
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
         );
       })}
+
+      <PmApprovalDialog
+        assignmentId={pending?.assignmentId ?? ""}
+        category="laporanSurvey"
+        decision={pending?.decision ?? null}
+        reportLabel={`Laporan Survey ${pending?.assignmentNumber ?? ""}`.trim()}
+        approveHint="Laporan survey akan berstatus disetujui Project Manager; sampul laporan berganti menjadi TANGGAL TERBIT dengan tanggal hari ini."
+        onClose={() => setPending(null)}
+        onDone={refresh}
+      />
     </div>
   );
 }

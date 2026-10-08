@@ -128,7 +128,7 @@ export function ApplicationDetail({ applicationNumber, jenis }: { applicationNum
       {tab === "Assignment" && <AssignmentTab data={data} applicationNumber={applicationNumber} jenis={jenis} />}
       {tab === "Application" && <ApplicationInfoTab data={data} />}
       {tab === "Company" && <CompanyTab data={data} />}
-      {tab === "Documents" && <DocumentsTab data={data} />}
+      {tab === "Documents" && <DocumentsTab data={data} applicationNumber={applicationNumber} />}
       {tab === "Survey" && <SurveyTab data={data} applicationNumber={applicationNumber} />}
       {tab === "Verification" && <VerificationTab data={data} />}
       {tab === "Analisis" && <AnalisisTab data={data} />}

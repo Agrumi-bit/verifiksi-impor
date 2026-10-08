@@ -3,7 +3,7 @@ import type { LocationValues } from "@/modules/shared/schema";
 import { summarizeApplicationLocations } from "@/modules/shared/location-meta";
 import { db } from "@/lib/db";
 import { requireProjectManagerSession } from "@/lib/require-project-manager-session";
-import { collectApplicationVisits, groupVisitsByLocation } from "@/modules/shared/survey-visit-scope";
+import { collectApplicationVisits, groupVisitsByLocation, isAssignmentSurveyComplete } from "@/modules/shared/survey-visit-scope";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
 import { getDocumentMeta } from "@/modules/company/document-versions";
@@ -196,6 +196,16 @@ export async function GET(
               pmReviewNote: survey.pmReviewNote,
               pmReviewedAt: survey.pmReviewedAt,
               allLocationsCompleted: locationStatuses.length > 0 && locationStatuses.every((v) => v.status === "COMPLETED"),
+              // Every survey assignment of the application — a per-location schedule gives each location
+              // its own assignment, and the PM approves each one's report (pmReviewStatus) separately.
+              assignments: surveySiblings.map((sibling) => ({
+                id: sibling.id,
+                assignmentNumber: sibling.assignmentNumber,
+                pmReviewStatus: sibling.pmReviewStatus,
+                pmReviewNote: sibling.pmReviewNote,
+                pmReviewedAt: sibling.pmReviewedAt,
+                ready: isAssignmentSurveyComplete(sibling, collectApplicationVisits(surveySiblings), payloadLocations),
+              })),
               locationVisits: mergedLocationVisits.map((v) => {
                 const findingsCount = Array.isArray(v.findings) ? v.findings.length : 0;
                 const reportVerification = v.reportVerification as

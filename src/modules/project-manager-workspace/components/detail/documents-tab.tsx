@@ -6,6 +6,7 @@ import Link from "next/link";
 import { MaterialIcon } from "../material-icon";
 import { DOC_VERIFICATION_STATUS_BADGE, DOC_VERIFICATION_STATUS_LABELS, type DocVerificationStatusValue } from "@/modules/verifikator-workspace/status";
 import type { PmApplicationDetail } from "./types";
+import { DocumentReportApproval } from "./document-report-approval";
 
 function fileHref(path: string): string {
   return `/api/files?path=${encodeURIComponent(path)}`;
@@ -20,7 +21,7 @@ const SUB_TABS = ["checklist", "report"] as const;
 type SubTab = (typeof SUB_TABS)[number];
 const SUB_TAB_LABELS: Record<SubTab, string> = { checklist: "Document Checklist", report: "Document Report" };
 
-export function DocumentsTab({ data }: { data: PmApplicationDetail }) {
+export function DocumentsTab({ data, applicationNumber }: { data: PmApplicationDetail; applicationNumber: string }) {
   const [sub, setSub] = useState<SubTab>("checklist");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -185,32 +186,37 @@ export function DocumentsTab({ data }: { data: PmApplicationDetail }) {
         <div>
           {!dokumen && <p className="text-[13px] text-[#a68f80]">Belum ada penugasan verifikasi dokumen untuk permohonan ini.</p>}
           {dokumen && dokumen.status !== "COMPLETED" && (
-            <p className="text-[13px] text-[#a68f80]">Verifikasi dokumen masih berlangsung — laporan tersedia setelah verifikator menyelesaikan review.</p>
+            <p className="mb-3 text-[13px] text-[#a68f80]">Verifikasi dokumen masih berlangsung — laporan tersedia setelah verifikator menyelesaikan review.</p>
           )}
-          {dokumen && dokumen.status === "COMPLETED" && (
-            <div className="max-w-70">
-              <div className="flex aspect-[1/1.414] flex-col overflow-hidden rounded-lg border border-[#f0ded0] bg-white p-4 shadow-sm">
-                <div className="text-center text-[10px] font-extrabold tracking-wide text-[#20180f]">LAPORAN VERIFIKASI DOKUMEN</div>
-                <div className="mt-1 text-center text-[8px] text-[#a68f80]">{data.verificationType === "VKI" ? "Verifikasi Kemampuan Industri" : "Verifikasi Importir Umum"}</div>
-                <div className="my-2.5 h-px bg-[#f0ded0]" />
-                <div className="flex flex-1 flex-col gap-1.5">
-                  {[90, 100, 75, 95, 88, 60, 92, 70].map((w, i) => (
-                    <div key={i} className="h-1.5 rounded-sm bg-[#f1e9df]" style={{ width: `${w}%` }} />
-                  ))}
+          {dokumen && (
+            <div className="flex flex-col gap-4 md:flex-row md:items-start">
+              {dokumen.status === "COMPLETED" && (
+                <div className="w-full max-w-70 shrink-0">
+                  <div className="flex aspect-[1/1.414] flex-col overflow-hidden rounded-lg border border-[#f0ded0] bg-white p-4 shadow-sm">
+                    <div className="text-center text-[10px] font-extrabold tracking-wide text-[#20180f]">LAPORAN VERIFIKASI DOKUMEN</div>
+                    <div className="mt-1 text-center text-[8px] text-[#a68f80]">{data.verificationType === "VKI" ? "Verifikasi Kemampuan Industri" : "Verifikasi Importir Umum"}</div>
+                    <div className="my-2.5 h-px bg-[#f0ded0]" />
+                    <div className="flex flex-1 flex-col gap-1.5">
+                      {[90, 100, 75, 95, 88, 60, 92, 70].map((w, i) => (
+                        <div key={i} className="h-1.5 rounded-sm bg-[#f1e9df]" style={{ width: `${w}%` }} />
+                      ))}
+                    </div>
+                    <div className="mt-2 text-center text-[7px] text-[#c7b6a6]">{dokumen.assignmentNumber}</div>
+                  </div>
+                  <div className="mt-2.5 flex flex-col gap-1">
+                    <div className="text-[12.5px] font-bold text-[#20180f]">Laporan Verifikasi Dokumen</div>
+                    <div className="text-[11px] text-[#a68f80]">{fmtDate(dokumen.validatedAt)}</div>
+                    <Link
+                      href={`/project-manager-workspace/assignments/${dokumen.assignmentNumber}/document-report`}
+                      className="mt-1.5 flex items-center justify-center gap-1.5 rounded-lg border border-[#f0ded0] bg-white px-3.5 py-2 text-[12.5px] font-semibold text-[#2b2420]"
+                    >
+                      <MaterialIcon name="description" className="text-[15px]" />
+                      Lihat Laporan
+                    </Link>
+                  </div>
                 </div>
-                <div className="mt-2 text-center text-[7px] text-[#c7b6a6]">{dokumen.assignmentNumber}</div>
-              </div>
-              <div className="mt-2.5 flex flex-col gap-1">
-                <div className="text-[12.5px] font-bold text-[#20180f]">Laporan Verifikasi Dokumen</div>
-                <div className="text-[11px] text-[#a68f80]">{fmtDate(dokumen.validatedAt)}</div>
-                <Link
-                  href={`/project-manager-workspace/assignments/${dokumen.assignmentNumber}/document-report`}
-                  className="mt-1.5 flex items-center justify-center gap-1.5 rounded-lg border border-[#f0ded0] bg-white px-3.5 py-2 text-[12.5px] font-semibold text-[#2b2420]"
-                >
-                  <MaterialIcon name="description" className="text-[15px]" />
-                  Lihat Laporan
-                </Link>
-              </div>
+              )}
+              <DocumentReportApproval data={data} applicationNumber={applicationNumber} />
             </div>
           )}
         </div>
