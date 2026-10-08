@@ -1155,12 +1155,16 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   const pending = documents.filter((d) => d.status === "PENDING").length;
   const completionPct = documents.length > 0 ? Math.round((verified / documents.length) * 100) : 0;
   const isFinal = data.status === "COMPLETED" || data.status === "RETURNED";
+  // Tanggal penyusunan = the date the verifikator chose in the Submit Report dialog ("Tanggal untuk bagian
+  // Disusun Oleh", signatureDate) — falling back to the submit timestamp (validatedAt) for reports submitted
+  // before that field existed. Every "disusun" date in the report uses it, so the cover and the
+  // Disusun Oleh signature can never disagree.
+  const preparedDate = isFinal ? (data.signatureDate ?? data.validatedAt) : null;
   // Cover date: "TANGGAL TERBIT" only once the Project Manager has approved this report (dated to that
-  // approval). Before that it is "TANGGAL PENYUSUNAN", dated to when the verifikator clicked Submit
-  // Report (validatedAt) — still "—" while the report is a draft.
+  // approval). Before that it is "TANGGAL PENYUSUNAN" — still "—" while the report is a draft.
   const isPmApproved = data.pmReviewStatus === "APPROVED";
   const coverDateLabel = isPmApproved ? "TANGGAL TERBIT" : "TANGGAL PENYUSUNAN";
-  const coverDateValue = isPmApproved ? (data.pmReviewedAt ?? null) : data.validatedAt;
+  const coverDateValue = isPmApproved ? (data.pmReviewedAt ?? null) : preparedDate;
 
   const rawCategories = [...new Set(documents.map((d) => d.category))];
   const categories = schemeReport ? schemeReport.orderCategories(rawCategories) : rawCategories;
@@ -1376,12 +1380,12 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                     style={{ height: 44, maxWidth: "100%", objectFit: "contain", marginBottom: 6 }}
                   />
                   <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, color: GREEN }}>
-                    ● {fmtDate(data.signatureDate ?? data.validatedAt)}
+                    ● {fmtDate(preparedDate ?? data.signatureDate)}
                   </div>
                 </>
               ) : (
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, color: isFinal ? GREEN : ORANGE_TEXT }}>
-                  ● {isFinal ? `${fmtDate(data.validatedAt)}` : "Draf"}
+                  ● {isFinal ? `${fmtDate(preparedDate)}` : "Draf"}
                 </div>
               )}
             </div>
@@ -1517,7 +1521,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                 <div style={{ fontSize: 11, color: "#ffe3cc", marginBottom: 6 }}>Status Laporan</div>
                 <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>{isFinal ? "TERBIT" : "DRAF"}</div>
                 <div style={{ fontSize: 11, color: "#ffe3cc", lineHeight: 1.5 }}>
-                  Laporan verifikasi dokumen {isFinal ? `telah disusun oleh verifikator pada tanggal ${fmtDate(data.validatedAt)}.` : "masih dalam proses pengerjaan oleh verifikator."}
+                  Laporan verifikasi dokumen {isFinal ? `telah disusun oleh verifikator pada tanggal ${fmtDate(preparedDate)}.` : "masih dalam proses pengerjaan oleh verifikator."}
                 </div>
               </div>
             </div>
@@ -2086,7 +2090,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: ORANGE_TEXT, marginBottom: 10 }}>B. RIWAYAT PERUBAHAN DOKUMEN</div>
           <div style={{ background: "#fff", borderRadius: 10, padding: "14px 16px" }}>
             <div style={{ fontWeight: 600, fontSize: 12, color: INK, marginBottom: 2 }}>Versi 1.0</div>
-            <div style={{ fontSize: 11.5, color: MUTED_2 }}>Disusun oleh verifikator — {fmtDate(data.validatedAt)}</div>
+            <div style={{ fontSize: 11.5, color: MUTED_2 }}>Disusun oleh verifikator — {fmtDate(preparedDate)}</div>
           </div>
         </PageShell>
       </main>
