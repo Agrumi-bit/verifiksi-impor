@@ -9,11 +9,6 @@ import type { PmApplicationDetail } from "./types";
 import { PmApprovalDialog } from "./pm-approval-dialog";
 import { formatAssignmentDate } from "@/lib/assignment-date";
 
-function fmtDate(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-}
-
 const DECISION_META: Record<string, { label: string; bg: string; color: string }> = {
   VERIFIED: { label: "Sesuai", bg: "#e6f6ec", color: "#1a9850" },
   REJECTED: { label: "Tidak Sesuai", bg: "#fdeceb", color: "#e15241" },
@@ -153,7 +148,7 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
 
             {isOpen && (
               <div className="border-t border-[#f0ded0] p-4">
-                <div className="mb-3 grid grid-cols-1 gap-3 rounded-[9px] bg-[#f7f2ec] p-3.5 sm:grid-cols-3">
+                <div className="mb-3 grid grid-cols-1 gap-3 rounded-[9px] bg-[#f7f2ec] p-3.5 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
                     <div className="flex items-center gap-1 text-[10.5px] font-bold text-[#a68f80]">
                       <MaterialIcon name="person" className="text-[13px]" />
@@ -164,16 +159,28 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
                   <div>
                     <div className="flex items-center gap-1 text-[10.5px] font-bold text-[#a68f80]">
                       <MaterialIcon name="event" className="text-[13px]" />
-                      Survey Date
+                      Tanggal Kunjungan
                     </div>
                     <div className="mt-0.75 text-[12.5px] font-bold text-[#20180f]">{formatAssignmentDate(visit.surveyDate)}</div>
                   </div>
                   <div>
                     <div className="flex items-center gap-1 text-[10.5px] font-bold text-[#a68f80]">
-                      <MaterialIcon name="schedule" className="text-[13px]" />
-                      Completed At
+                      <MaterialIcon name="edit_document" className="text-[13px]" />
+                      Disusun oleh Surveyor
                     </div>
-                    <div className="mt-0.75 text-[12.5px] font-bold text-[#20180f]">{formatAssignmentDate(visit.completedAt)}</div>
+                    <div className="mt-0.75 text-[12.5px] font-bold text-[#20180f]">
+                      {visit.status === "COMPLETED" ? formatAssignmentDate(visit.completedAt) : "Belum disusun"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1 text-[10.5px] font-bold text-[#a68f80]">
+                      <MaterialIcon name="fact_check" className="text-[13px]" />
+                      Diperiksa oleh Verifikator
+                    </div>
+                    <div className="mt-0.75 text-[12.5px] font-bold text-[#20180f]">
+                      {visit.decision ? formatAssignmentDate(visit.verifiedAt) : "Belum diperiksa"}
+                    </div>
+                    {visit.decision && visit.verifiedByName && <div className="text-[11px] text-[#8a7565]">{visit.verifiedByName}</div>}
                   </div>
                 </div>
 
@@ -183,7 +190,7 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
                       <MaterialIcon name="description" className="text-[16px] text-[#8a7565]" />
                       <div>
                         <div className="text-[10px] font-bold text-[#a68f80]">Field Report</div>
-                        <div className="mt-0.5 text-[12px] font-bold text-[#20180f]">{visit.locationType} — {survey.assignmentNumber}</div>
+                        <div className="mt-0.5 text-[12px] font-bold text-[#20180f]">{visit.locationType} — {visit.assignmentNumber}</div>
                       </div>
                     </div>
                     <Link
@@ -207,19 +214,31 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
                     </div>
                   </div>
                   <div className="text-[12.5px] leading-relaxed text-[#5c4a3d]">{visit.surveyorConclusion || "Belum ada kesimpulan dari surveyor."}</div>
+                  <div className="mt-2.5 border-t border-[#f5ebe1] pt-2 text-[11px] text-[#a68f80]">
+                    {visit.status === "COMPLETED"
+                      ? `Disusun oleh ${survey.surveyorName ?? "surveyor"} · ${formatAssignmentDate(visit.completedAt)}`
+                      : "Laporan belum disusun surveyor"}
+                  </div>
                 </div>
 
-                {visit.decisionNote && (
-                  <div className="mb-3 rounded-lg border border-dashed border-[#e8b1a3] bg-[#fbf8f4] p-3 text-[12px] leading-relaxed text-[#4a4038]">
-                    <div className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-[#a68f80]">Kesimpulan Verifikator</div>
-                    {visit.decisionNote}
-                    {visit.verifiedByName && (
-                      <div className="mt-1.5 text-[10.5px] text-[#a68f80]">
-                        — {visit.verifiedByName}, {fmtDate(visit.verifiedAt)}
-                      </div>
-                    )}
+                {/* Verifikator's desk review of this location's report (Verifikasi Lapangan tab) — always shown,
+                    "Belum Direview" until the verifikator has decided. */}
+                <div className="mb-3 rounded-[9px] border border-[#f0ded0] bg-white p-3.5">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[13px] font-extrabold text-[#20180f]">Kesimpulan Verifikator</span>
+                    <span className="rounded-full px-2.5 py-0.75 text-[10.5px] font-bold" style={{ background: resultMeta.bg, color: resultMeta.color }}>
+                      {resultMeta.label}
+                    </span>
                   </div>
-                )}
+                  <div className="whitespace-pre-line text-[12.5px] leading-relaxed text-[#5c4a3d]">
+                    {visit.decisionNote || (visit.decision ? "Tidak ada catatan dari verifikator." : "Laporan lokasi ini belum direview verifikator.")}
+                  </div>
+                  <div className="mt-2.5 border-t border-[#f5ebe1] pt-2 text-[11px] text-[#a68f80]">
+                    {visit.decision
+                      ? `Diperiksa oleh ${visit.verifiedByName ?? "verifikator"} · ${formatAssignmentDate(visit.verifiedAt)}`
+                      : "Belum diperiksa verifikator"}
+                  </div>
+                </div>
 
                 {(() => {
                   const sa = assignmentFor(visit.assignmentNumber);
