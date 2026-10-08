@@ -109,6 +109,22 @@ export async function loadPdfBytes(url: string, onProgress?: Progress): Promise<
   }
 }
 
+/** True when the bytes are already downloaded or being downloaded (e.g. by a prefetch). */
+export function hasPdfBytes(url: string): boolean {
+  return cache.has(url);
+}
+
+/** Hold background prefetches while the viewer lazily streams a document page by page. */
+export async function asForeground<T>(work: Promise<T>): Promise<T> {
+  foregroundLoads += 1;
+  try {
+    return await work;
+  } finally {
+    foregroundLoads -= 1;
+    void drainPrefetch();
+  }
+}
+
 /** Warm the cache for documents the user is likely to open next. Low priority, one at a time. */
 export function prefetchPdf(url: string | null | undefined) {
   if (!url || typeof window === "undefined") return;

@@ -134,6 +134,9 @@ function runGhostscript(input: string, output: string): Promise<boolean | "missi
     "-sDEVICE=pdfwrite",
     "-dCompatibilityLevel=1.5",
     "-dPDFSETTINGS=/ebook",
+    // Linearized ("Fast Web View"): page 1's objects sit at the front of the file, so the viewer's
+    // range requests can show it before the rest of the document has downloaded.
+    "-dFastWebView=true",
     "-dDetectDuplicateImages=true",
     "-dDownsampleColorImages=true",
     "-dColorImageResolution=150",

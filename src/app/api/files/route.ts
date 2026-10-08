@@ -28,6 +28,8 @@ type ResolvedFile = {
   filename: string;
   contentType: string;
   stat: StorageFileStat;
+  /** Which copy is served — exposed as `X-Pdf-Variant` so the lazy viewer can pin its range requests. */
+  variant: "original" | "preview";
 };
 
 type Resolution = { ok: true; file: ResolvedFile } | { ok: false; response: NextResponse };
@@ -68,7 +70,7 @@ async function resolveFile(request: Request): Promise<Resolution> {
     if (previewPath) {
       try {
         const previewStat = await storage.stat(previewPath);
-        return { ok: true, file: { path: previewPath, filename, contentType, stat: previewStat } };
+        return { ok: true, file: { path: previewPath, filename, contentType, stat: previewStat, variant: "preview" } };
       } catch {
         // fall through to the original
       }
@@ -77,7 +79,7 @@ async function resolveFile(request: Request): Promise<Resolution> {
 
   return {
     ok: true,
-    file: { path, filename, contentType, stat },
+    file: { path, filename, contentType, stat, variant: "original" },
   };
 }
 
@@ -89,6 +91,7 @@ function baseHeaders(file: ResolvedFile): Record<string, string> {
     "Accept-Ranges": "bytes",
     "Last-Modified": new Date(file.stat.mtimeMs).toUTCString(),
     ETag: etagOf(file),
+    "X-Pdf-Variant": file.variant,
   };
 }
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { loadPdfBytes, viewerUrl } from "@/lib/pdf-bytes-cache";
+import { asForeground, hasPdfBytes, loadPdfBytes, viewerUrl } from "@/lib/pdf-bytes-cache";
 
 type Props = {
   url: string;
@@ -27,16 +27,46 @@ const PRELOAD_MARGIN = "800px 0px";
  * lazily as they scroll near the viewport. A 40-page document no longer blocks the "ready" state
  * on rasterizing all 40 canvases up front.
  *
- * Bytes come from `loadPdfBytes` (one download with progress, cached for re-opens, prefetchable)
- * of the server's compressed viewing copy (`variant=preview`) — uploads are capped at 10 MB, so a
- * single request beats pdf.js's parallel stream + range requests competing on a slow link.
+ * Loading is lazy at three levels:
+ * 1. The viewer doesn't fetch anything until it scrolls into (or near) view.
+ * 2. Not yet downloaded → pdf.js range mode with auto-fetch and streaming off: it requests only the
+ *    byte ranges the pages being rendered need (page 1 first, later pages as they scroll near), of
+ *    the server's compressed, linearized viewing copy (`variant=preview`, "Fast Web View").
+ * 3. Already downloaded / prefetched (`prefetchPdf`) → rendered straight from memory.
  */
+/** Range-request granularity for lazy loading — small enough that page 1 arrives quickly on a slow
+ * link, large enough to keep the number of (authenticated) requests reasonable. */
+const RANGE_CHUNK_SIZE = 128 * 1024;
+
 export function PdfViewer({ url, title, className }: Props) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Lazy start: only begin loading once the viewer is on (or close to) the screen.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || typeof IntersectionObserver === "undefined") {
+      setIsVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "300px 0px" },
+    );
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, []);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [progress, setProgress] = useState<{ loaded: number; total: number | null } | null>(null);
 
   useEffect(() => {
+    if (!isVisible) return;
     let cancelled = false;
     const cleanups: Array<() => void> = [];
 
@@ -44,19 +74,42 @@ export function PdfViewer({ url, title, className }: Props) {
       setStatus("loading");
       setProgress(null);
       try {
-        const bytesPromise = loadPdfBytes(viewerUrl(url), (loaded, total) => {
+        const target = viewerUrl(url);
+        const onProgress = (loaded: number, total: number | null) => {
           if (!cancelled) setProgress({ loaded, total });
-        });
+        };
+        // Already in memory (or being prefetched) → reuse those bytes; otherwise go page-by-page.
+        const bytesPromise = hasPdfBytes(target) ? loadPdfBytes(target, onProgress) : null;
         const pdfjsLib = await import("pdfjs-dist");
         pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
           "pdfjs-dist/build/pdf.worker.min.mjs",
           import.meta.url,
         ).toString();
 
-        const data = await bytesPromise;
-        if (cancelled) return;
-        const loadingTask = pdfjsLib.getDocument({ data });
-        const pdf = await loadingTask.promise;
+        let loadingTask;
+        if (bytesPromise) {
+          const data = await bytesPromise;
+          if (cancelled) return;
+          loadingTask = pdfjsLib.getDocument({ data });
+        } else {
+          // Pin every range request to ONE copy: if the compressed copy finished generating halfway
+          // through, `variant=preview` would switch files between ranges and corrupt the document.
+          // The HEAD tells us which copy is served now; a ready preview never goes away, and the
+          // plain URL always serves the original.
+          const head = await fetch(target, { method: "HEAD", credentials: "same-origin" });
+          if (cancelled) return;
+          if (!head.ok) throw new Error(`HTTP ${head.status}`);
+          const pinned = head.headers.get("x-pdf-variant") === "preview" ? target : url;
+          loadingTask = pdfjsLib.getDocument({
+            url: pinned,
+            disableStream: true,
+            disableAutoFetch: true,
+            rangeChunkSize: RANGE_CHUNK_SIZE,
+          });
+          loadingTask.onProgress = ({ loaded, total }: { loaded: number; total: number }) =>
+            onProgress(loaded, total > 0 ? total : null);
+        }
+        const pdf = await asForeground(loadingTask.promise);
         if (cancelled) {
           void loadingTask.destroy();
           return;
@@ -123,7 +176,7 @@ export function PdfViewer({ url, title, className }: Props) {
           container.appendChild(canvas);
 
           if (pageNum === 1) {
-            const ok = await renderPage(1, canvas);
+            const ok = await asForeground(renderPage(1, canvas));
             if (cancelled) return;
             if (!ok) {
               setStatus("error");
@@ -148,7 +201,7 @@ export function PdfViewer({ url, title, className }: Props) {
       cancelled = true;
       for (const cleanup of cleanups) cleanup();
     };
-  }, [url]);
+  }, [url, isVisible]);
 
   if (status === "error") {
     return (
@@ -164,7 +217,7 @@ export function PdfViewer({ url, title, className }: Props) {
   }
 
   return (
-    <div className={className}>
+    <div ref={rootRef} className={className}>
       {status === "loading" && (
         <div className="p-8 text-center text-[13px] text-[#a68f80]">
           <p>Memuat dokumen...</p>
