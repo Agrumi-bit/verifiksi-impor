@@ -13,7 +13,10 @@ export default function ProjectManagerWorkspaceLayout({
   const pathname = usePathname();
   // A4 print-style report pages (survey report + document verification report) are standalone,
   // same as every other workspace's equivalents — no sidebar chrome.
-  const isStandalonePage = /^\/project-manager-workspace\/assignments\/[^/]+\/(report\/|document-report)/.test(pathname ?? "");
+  const isStandalonePage =
+    /^\/project-manager-workspace\/assignments\/[^/]+\/(report\/|document-report|technical-report)/.test(pathname ?? "") ||
+    // LHVIU merged reports (Laporan Verifikasi / Laporan Lengkap) print the same way.
+    /^\/project-manager-workspace\/applications\/[^/]+\/[^/]+\/lhviu\//.test(pathname ?? "");
 
   if (isStandalonePage) {
     return (

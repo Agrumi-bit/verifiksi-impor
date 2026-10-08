@@ -116,6 +116,9 @@ model Application {
   // "Tanggal Pengajuan" display uses it; `createdAt` stays as the system audit trail and is the
   // fallback for applications that predate this field (null until an Admin fills it in via Edit).
   submissionDate      DateTime?
+  // LHVIU: the signed Laporan Hasil VIU PDF uploaded by the Project Manager — { path, fileName, uploadedAt,
+  // uploadedByName }. Read/written with SQL (project-manager-workspace/lhviu-store.ts).
+  lhviuDocument       Json?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 

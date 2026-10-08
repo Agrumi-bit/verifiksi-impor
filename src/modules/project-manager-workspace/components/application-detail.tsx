@@ -2,6 +2,7 @@
 
 import { ApplicationLocationsPanel } from "@/modules/applications/components/application-locations-panel";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
@@ -15,8 +16,10 @@ import { SurveyTab } from "./detail/survey-tab";
 import { VerificationTab } from "./detail/verification-tab";
 import { AnalisisTab } from "./detail/analisis-tab";
 import type { PmApplicationDetail } from "./detail/types";
+import { LhviuTab } from "./lhviu/lhviu-tab";
+import "./lhviu/lhviu-combined.css";
 
-const TAB_NAMES = ["Overview", "Assignment", "Application", "Company", "Documents", "Survey", "Verification", "Analisis", "Communication", "Timeline"] as const;
+const TAB_NAMES = ["Overview", "Assignment", "Application", "Company", "Documents", "Survey", "Verification", "Analisis", "LHVIU", "Communication", "Timeline"] as const;
 type TabName = (typeof TAB_NAMES)[number];
 
 const STATUS_BADGE: Record<string, string> = {
@@ -28,7 +31,9 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export function ApplicationDetail({ applicationNumber, jenis }: { applicationNumber: string; jenis: string }) {
-  const [tab, setTab] = useState<TabName>("Overview");
+  const searchParams = useSearchParams();
+  const initialTab = searchParams?.get("tab");
+  const [tab, setTab] = useState<TabName>(TAB_NAMES.includes(initialTab as TabName) ? (initialTab as TabName) : "Overview");
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["project-manager-workspace", "applications", jenis, applicationNumber],
@@ -107,7 +112,7 @@ export function ApplicationDetail({ applicationNumber, jenis }: { applicationNum
       </div>
 
       <div className="mb-4 flex flex-wrap gap-1 overflow-x-auto border-b border-[#f0ded0]">
-        {TAB_NAMES.map((name) => (
+        {TAB_NAMES.filter((name) => name !== "LHVIU" || data.verificationType === "VIU").map((name) => (
           <button
             key={name}
             type="button"
@@ -132,6 +137,7 @@ export function ApplicationDetail({ applicationNumber, jenis }: { applicationNum
       {tab === "Survey" && <SurveyTab data={data} applicationNumber={applicationNumber} />}
       {tab === "Verification" && <VerificationTab data={data} />}
       {tab === "Analisis" && <AnalisisTab data={data} />}
+      {tab === "LHVIU" && data.verificationType === "VIU" && <LhviuTab data={data} applicationNumber={applicationNumber} jenis={jenis} />}
       {tab === "Communication" && (
         messageThreadAssignmentNumber ? (
           <CommunicationTab assignmentId={messageThreadAssignmentNumber} basePath="/api/project-manager-workspace" />

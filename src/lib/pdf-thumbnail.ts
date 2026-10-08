@@ -25,9 +25,21 @@ const PDFJS_RESOURCES = {
  * which can't be suppressed from the embedding page.
  */
 export async function renderPdfFirstPageToPng(pdfBuffer: Buffer, targetWidth = 480): Promise<Buffer> {
+  return renderPdfPageToPng(pdfBuffer, 1, targetWidth);
+}
+
+/** Number of pages in a PDF. */
+export async function getPdfPageCount(pdfBuffer: Buffer): Promise<number> {
   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer), ...PDFJS_RESOURCES }).promise;
-  const page = await pdf.getPage(1);
+  return pdf.numPages;
+}
+
+/** Rasterizes one page (1-based) of a PDF to PNG — used to place an uploaded PDF inside a printable report. */
+export async function renderPdfPageToPng(pdfBuffer: Buffer, pageNumber: number, targetWidth = 480): Promise<Buffer> {
+  const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer), ...PDFJS_RESOURCES }).promise;
+  const page = await pdf.getPage(Math.min(Math.max(1, Math.floor(pageNumber)), pdf.numPages));
 
   const baseViewport = page.getViewport({ scale: 1 });
   const scale = targetWidth / baseViewport.width;

@@ -1,0 +1,49 @@
+/* LHVIU merged report: several report-doc components stacked as one printable document. */
+.lhviu-combined .lhviu-part .rd-topbar {
+  display: none !important;
+}
+.lhviu-combined .lhviu-part .rd-main {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.lhviu-combined .lhviu-part + .lhviu-part {
+  break-before: page;
+  page-break-before: always;
+}
+.lhviu-combined .lhviu-divider {
+  display: flex;
+  justify-content: center;
+  padding: 18px 0 10px;
+  font-family: var(--font-ibm-plex-sans), sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #8a7565;
+}
+.lhviu-combined .lhviu-pdf-sheet {
+  width: 210mm;
+  max-width: 100%;
+  margin: 0 auto 28px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.12);
+}
+.lhviu-combined .lhviu-pdf-sheet img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+@media print {
+  .lhviu-combined .lhviu-divider {
+    display: none !important;
+  }
+  .lhviu-combined .lhviu-pdf-sheet {
+    margin: 0;
+    box-shadow: none;
+    break-after: page;
+    page-break-after: always;
+  }
+  .lhviu-combined .lhviu-pdf-sheet:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+}
