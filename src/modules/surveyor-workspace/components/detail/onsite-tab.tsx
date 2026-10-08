@@ -267,6 +267,7 @@ export function OnSiteTab({ assignmentId }: Props) {
                 <div className="mt-auto flex gap-2">
                   {!loc.canEdit ? (
                     isCompleted && loc.id ? (
+                      <>
                       <button
                         type="button"
                         onClick={() =>
@@ -281,6 +282,21 @@ export function OnSiteTab({ assignmentId }: Props) {
                         <MaterialIcon name="description" className="text-base" />
                         View Report
                       </button>
+                      {/* This location belongs to another survey assignment (per-location schedule), so it
+                          can only be reopened from there — send the surveyor to it instead of leaving a
+                          "revision requested" card with no way to act on it. */}
+                      {needsRevision && loc.owner?.assignmentNumber && loc.owner.assignmentNumber !== assignmentId && (
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/surveyor-workspace/assignments/${loc.owner!.assignmentNumber}?tab=onsite`)}
+                          title={`Lokasi ini milik penugasan ${loc.owner.assignmentNumber} — revisi dibuka dari sana`}
+                          className="flex flex-1 items-center justify-center gap-2 rounded-[9px] bg-[#ba1a1a] py-2.5 text-[13px] font-bold text-white"
+                        >
+                          <MaterialIcon name="rate_review" className="text-base" />
+                          Revisi di {loc.owner.assignmentNumber.slice(-8)}
+                        </button>
+                      )}
+                      </>
                     ) : (
                       <div className="flex-1 rounded-[9px] bg-[#f2f0ee] py-2.5 text-center text-[12.5px] font-semibold text-[#8a7565]">
                         Read-only — lokasi penugasan lain
