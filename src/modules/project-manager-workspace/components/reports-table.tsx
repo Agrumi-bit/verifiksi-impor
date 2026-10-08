@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
 import { MaterialIcon } from "./material-icon";
+import { viuSchemeHref, type PmViuScheme } from "../viu-schemes";
 import type { PmReportItem } from "@/app/api/project-manager-workspace/reports/route";
 
 function fmtDate(value: string | null): string {
@@ -12,13 +13,14 @@ function fmtDate(value: string | null): string {
   return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
-export function ReportsTable({ jenis }: { jenis: "VKI" | "VIU" }) {
+export function ReportsTable({ jenis, scheme }: { jenis: "VKI" | "VIU"; scheme?: PmViuScheme }) {
+  const scopeLabel = scheme?.label ?? jenis;
   const [search, setSearch] = useState("");
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["project-manager-workspace", "reports", jenis],
+    queryKey: ["project-manager-workspace", "reports", jenis, scheme?.slug ?? null],
     queryFn: async () => {
-      const response = await fetch(`/api/project-manager-workspace/reports?type=${jenis}`);
+      const response = await fetch(`/api/project-manager-workspace/reports?type=${jenis}${scheme ? `&scheme=${scheme.slug}` : ""}`);
       if (!response.ok) throw new Error("Gagal memuat laporan");
       const json = (await response.json()) as { data: PmReportItem[] };
       return json.data;
@@ -31,8 +33,8 @@ export function ReportsTable({ jenis }: { jenis: "VKI" | "VIU" }) {
   return (
     <div>
       <div className="mb-5">
-        <div className="text-[22px] font-extrabold text-[#20180f]">Report {jenis}</div>
-        <div className="mt-1 text-[13px] text-[#8a7565]">Aplikasi {jenis} dengan minimal satu item yang telah disetujui Project Manager.</div>
+        <div className="text-[22px] font-extrabold text-[#20180f]">Report {scopeLabel}</div>
+        <div className="mt-1 text-[13px] text-[#8a7565]">Aplikasi {scopeLabel} dengan minimal satu item yang telah disetujui Project Manager.</div>
       </div>
 
       <input
@@ -58,7 +60,7 @@ export function ReportsTable({ jenis }: { jenis: "VKI" | "VIU" }) {
               <div className="text-[11.5px] text-[#a68f80]">{r.applicationNumber}</div>
               <div className="text-[11.5px] text-[#8a7565]">{fmtDate(r.lastApprovedAt)} · {r.approvedCount} item disetujui</div>
               <Link
-                href={`/project-manager-workspace/applications/${jenis}/${r.applicationNumber}`}
+                href={scheme ? viuSchemeHref(scheme, `/applications/${r.applicationNumber}`) : `/project-manager-workspace/applications/${jenis}/${r.applicationNumber}`}
                 className="mt-2 flex items-center justify-center gap-1.5 rounded-[7px] border border-[#e1bfb3] bg-white px-3 py-2 text-[12px] font-semibold text-[#261813]"
               >
                 <MaterialIcon name="visibility" className="text-[15px]" />

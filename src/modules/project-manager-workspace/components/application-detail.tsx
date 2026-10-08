@@ -1,8 +1,8 @@
 "use client";
 
 import { ApplicationLocationsPanel } from "@/modules/applications/components/application-locations-panel";
-import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
@@ -16,6 +16,7 @@ import { SurveyTab } from "./detail/survey-tab";
 import { VerificationTab } from "./detail/verification-tab";
 import { AnalisisTab } from "./detail/analisis-tab";
 import type { PmApplicationDetail } from "./detail/types";
+import { viuSchemeHref, viuSchemeOf, type PmViuScheme } from "../viu-schemes";
 import { LhviuTab } from "./lhviu/lhviu-tab";
 import "./lhviu/lhviu-combined.css";
 
@@ -30,7 +31,9 @@ const STATUS_BADGE: Record<string, string> = {
   Completed: "bg-[#e6f6ec] text-[#1a9850]",
 };
 
-export function ApplicationDetail({ applicationNumber, jenis }: { applicationNumber: string; jenis: string }) {
+/** `scheme` is set when opened from a VIU sub menu (/viu/{scheme}/applications/{number}). */
+export function ApplicationDetail({ applicationNumber, jenis, scheme }: { applicationNumber: string; jenis: string; scheme?: PmViuScheme }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = searchParams?.get("tab");
   const [tab, setTab] = useState<TabName>(TAB_NAMES.includes(initialTab as TabName) ? (initialTab as TabName) : "Overview");
@@ -44,7 +47,15 @@ export function ApplicationDetail({ applicationNumber, jenis }: { applicationNum
     },
   });
 
-  if (isLoading) return <div className="p-8 text-center text-[13px] text-[#8a7565]">Memuat...</div>;
+  // An application belongs to exactly one VIU sub menu. Opened under another one (a stale link, a typed
+  // address), send it to its own — a scheme's sub menu never shows another scheme's application.
+  const ownScheme = data ? viuSchemeOf(data.importTypes) : null;
+  const belongsElsewhere = Boolean(scheme && ownScheme && ownScheme.slug !== scheme.slug);
+  useEffect(() => {
+    if (belongsElsewhere && ownScheme) router.replace(viuSchemeHref(ownScheme, `/applications/${applicationNumber}`));
+  }, [belongsElsewhere, ownScheme, applicationNumber, router]);
+
+  if (isLoading || belongsElsewhere) return <div className="p-8 text-center text-[13px] text-[#8a7565]">Memuat...</div>;
   if (isError || !data) return <div className="p-8 text-center text-[13px] text-[#c1361f]">Gagal memuat aplikasi.</div>;
 
   const stageIdx = APPLICATION_STAGE_KEYS.indexOf(data.stage as (typeof APPLICATION_STAGE_KEYS)[number]);
@@ -55,9 +66,12 @@ export function ApplicationDetail({ applicationNumber, jenis }: { applicationNum
 
   return (
     <div className="p-8">
-      <Link href={`/project-manager-workspace/applications/${jenis}`} className="mb-3.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-[#8a7565]">
+      <Link
+        href={scheme ? viuSchemeHref(scheme, "/applications") : `/project-manager-workspace/applications/${jenis}`}
+        className="mb-3.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-[#8a7565]"
+      >
         <MaterialIcon name="arrow_back" className="text-base" />
-        Kembali ke Application List
+        Kembali ke Application List{scheme ? ` ${scheme.label}` : ""}
       </Link>
 
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">

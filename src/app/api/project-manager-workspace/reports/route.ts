@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { requireProjectManagerSession } from "@/lib/require-project-manager-session";
+import { applicationMatchesViuScheme, viuSchemeFromSlug } from "@/modules/project-manager-workspace/viu-schemes";
 
 export type PmReportItem = {
   applicationNumber: string;
@@ -21,12 +22,18 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") === "VIU" ? "VIU" : "VKI";
+  const scheme = viuSchemeFromSlug(searchParams.get("scheme"));
 
-  const applications = await db.application.findMany({
+  const allApplications = await db.application.findMany({
     where: { verificationType: type },
     include: { assignments: true, company: true },
     orderBy: { createdAt: "desc" },
   });
+  const applications = scheme
+    ? allApplications.filter((app) =>
+        applicationMatchesViuScheme(app.verificationType, (app.payload as { importTypes?: string[] } | null)?.importTypes, scheme),
+      )
+    : allApplications;
 
   const rows: PmReportItem[] = [];
   for (const app of applications) {

@@ -5,6 +5,7 @@ import { requireProjectManagerSession } from "@/lib/require-project-manager-sess
 import { computeApplicationStage, type SiblingForStage } from "@/modules/project-manager-workspace/stage";
 import { collectApplicationVisits, groupVisitsByLocation, assignmentLocations, locationKey, type SurveyPayloadLocation } from "@/modules/shared/survey-visit-scope";
 import { compareBySubmissionDate, effectiveSubmissionDate } from "@/modules/applications/submission-date";
+import { applicationMatchesViuScheme, viuSchemeFromSlug } from "@/modules/project-manager-workspace/viu-schemes";
 
 export type PmApplicationRow = {
   applicationNumber: string;
@@ -35,8 +36,10 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") === "VIU" ? "VIU" : "VKI";
+  // ?scheme=industri|non-industri|konsumsi narrows VIU to one import type (a PM VIU sub menu).
+  const scheme = viuSchemeFromSlug(searchParams.get("scheme"));
 
-  const applications = await db.application.findMany({
+  const allApplications = await db.application.findMany({
     where: { verificationType: type },
     include: {
       company: true,
@@ -51,6 +54,11 @@ export async function GET(request: Request) {
     },
     orderBy: { createdAt: "desc" },
   });
+  const applications = scheme
+    ? allApplications.filter((app) =>
+        applicationMatchesViuScheme(app.verificationType, (app.payload as { importTypes?: string[] } | null)?.importTypes, scheme),
+      )
+    : allApplications;
 
   applications.sort((a, b) => compareBySubmissionDate(b, a));
 

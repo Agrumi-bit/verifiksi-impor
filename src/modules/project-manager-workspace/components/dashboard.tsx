@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { MaterialIcon } from "./material-icon";
+import { applicationMatchesViuScheme, type PmViuScheme } from "../viu-schemes";
 import type { PmApprovalItem } from "@/app/api/project-manager-workspace/dashboard/route";
 import {
   APPROVAL_CATEGORIES,
@@ -133,7 +134,7 @@ type DashboardData = {
 };
 
 /** Optional `jenis` scopes this to a VKI/VIU sub-dashboard (design's `isSubDashboard`); omitted = global dashboard. */
-export function ProjectManagerDashboard({ jenis }: { jenis?: "VKI" | "VIU" }) {
+export function ProjectManagerDashboard({ jenis, scheme }: { jenis?: "VKI" | "VIU"; scheme?: PmViuScheme }) {
   const queryClient = useQueryClient();
   const [categoryFilter, setCategoryFilter] = useState<ApprovalCategory | "ALL">("ALL");
   const [groupByCompany, setGroupByCompany] = useState(false);
@@ -152,7 +153,10 @@ export function ProjectManagerDashboard({ jenis }: { jenis?: "VKI" | "VIU" }) {
   if (isLoading) return <p className="p-6 text-center text-[13px] text-[#8a7565]">Memuat...</p>;
   if (isError || !data) return <p className="p-6 text-center text-[13px] text-[#c1361f]">Gagal memuat dashboard.</p>;
 
-  const scoped = jenis ? data.items.filter((i) => i.jenis === jenis) : data.items;
+  const scoped = jenis
+    ? data.items.filter((i) => i.jenis === jenis && (!scheme || applicationMatchesViuScheme(i.jenis, i.importTypes, scheme)))
+    : data.items;
+  const scopeLabel = scheme?.label ?? jenis;
   const pending = scoped.filter((i) => i.status === "PENDING" && (categoryFilter === "ALL" || i.category === categoryFilter));
 
   const groupedByCompany = groupByCompany
@@ -189,10 +193,10 @@ export function ProjectManagerDashboard({ jenis }: { jenis?: "VKI" | "VIU" }) {
   return (
     <div>
       <div className="mb-5.5">
-        <div className="text-[22px] font-extrabold">{jenis ? `Dashboard ${jenis}` : "Dashboard"}</div>
+        <div className="text-[22px] font-extrabold">{jenis ? `Dashboard ${scopeLabel}` : "Dashboard"}</div>
         <div className="mt-1 text-[13px] text-[#8a7565]">
           {jenis
-            ? `Ringkasan status persetujuan untuk permohonan ${jenis}.`
+            ? `Ringkasan status persetujuan untuk permohonan ${scopeLabel}.`
             : "Ringkasan seluruh item yang menunggu persetujuan Project Manager."}
         </div>
       </div>

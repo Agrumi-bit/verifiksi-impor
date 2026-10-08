@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
 import { MaterialIcon } from "./material-icon";
+import { viuSchemeHref, type PmViuScheme } from "../viu-schemes";
 import type { PmApplicationRow } from "@/app/api/project-manager-workspace/applications/route";
 
 const STATUS_BADGE: Record<string, string> = {
@@ -19,17 +20,18 @@ function fmtDate(value: string): string {
   return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 }
 
-type Props = { jenis: "VKI" | "VIU" };
+type Props = { jenis: "VKI" | "VIU"; scheme?: PmViuScheme };
 
-export function ApplicationList({ jenis }: Props) {
+export function ApplicationList({ jenis, scheme }: Props) {
+  const scopeLabel = scheme?.label ?? jenis;
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [stageFilter, setStageFilter] = useState("");
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["project-manager-workspace", "applications", jenis],
+    queryKey: ["project-manager-workspace", "applications", jenis, scheme?.slug ?? null],
     queryFn: async () => {
-      const response = await fetch(`/api/project-manager-workspace/applications?type=${jenis}`);
+      const response = await fetch(`/api/project-manager-workspace/applications?type=${jenis}${scheme ? `&scheme=${scheme.slug}` : ""}`);
       if (!response.ok) throw new Error("Gagal memuat daftar aplikasi");
       const json = (await response.json()) as { data: { rows: PmApplicationRow[]; kpis: Record<string, number> } };
       return json.data;
@@ -62,8 +64,8 @@ export function ApplicationList({ jenis }: Props) {
   return (
     <div>
       <div className="mb-5.5">
-        <div className="text-[22px] font-extrabold">Application List {jenis}</div>
-        <div className="mt-1 text-[13px] text-[#8a7565]">Seluruh permohonan {jenis} beserta status persetujuan lintas unit.</div>
+        <div className="text-[22px] font-extrabold">Application List {scopeLabel}</div>
+        <div className="mt-1 text-[13px] text-[#8a7565]">Seluruh permohonan {scopeLabel} beserta status persetujuan lintas unit.</div>
       </div>
 
       <div className="mb-4 grid grid-cols-3 gap-3 sm:grid-cols-6">
@@ -153,7 +155,7 @@ export function ApplicationList({ jenis }: Props) {
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5">
                   <Link
-                    href={`/project-manager-workspace/applications/${jenis}/${r.applicationNumber}`}
+                    href={scheme ? viuSchemeHref(scheme, `/applications/${r.applicationNumber}`) : `/project-manager-workspace/applications/${jenis}/${r.applicationNumber}`}
                     className="flex items-center gap-1 text-[11.5px] font-bold text-[#2f6fe0]"
                   >
                     <MaterialIcon name="visibility" className="text-[14px]" />

@@ -12,6 +12,8 @@ export type PmApprovalItem = {
   title: string;
   company: string;
   jenis: string;
+  /** The application's `payload.importTypes` — lets a VIU sub dashboard keep only its own scheme. */
+  importTypes: string[];
   refId: string;
   meta: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
@@ -53,6 +55,7 @@ export async function GET() {
     const payload = a.application.payload as { companyName?: string; locations?: SurveyPayloadLocation[] } | null;
     const company = payload?.companyName ?? "—";
     const jenis = a.application.verificationType;
+    const importTypes = (a.application.payload as { importTypes?: string[] } | null)?.importTypes ?? [];
 
     if (a.letterStatus === "PENDING" || a.letterStatus === "APPROVED") {
       items.push({
@@ -62,6 +65,7 @@ export async function GET() {
         title: `Surat Tugas ${a.scheduleType ?? ""}`.trim(),
         company,
         jenis,
+        importTypes,
         refId: a.letterNumber ?? a.assignmentNumber,
         meta: `Personel: ${a.surveyor?.name ?? a.verifikator?.name ?? a.technicalReviewer?.name ?? "—"}`,
         status: a.letterStatus === "APPROVED" ? "APPROVED" : "PENDING",
@@ -83,6 +87,7 @@ export async function GET() {
           title: "Laporan Hasil Survey Lapangan",
           company,
           jenis,
+        importTypes,
           refId: a.assignmentNumber,
           meta: `Surveyor: ${a.surveyor?.name ?? "—"}`,
           status: a.pmReviewStatus ?? "PENDING",
@@ -100,6 +105,7 @@ export async function GET() {
         title: "Laporan Verifikasi Dokumen",
         company,
         jenis,
+        importTypes,
         refId: a.assignmentNumber,
         meta: `Verifikator: ${a.verifikator?.name ?? "—"}`,
         status: a.pmReviewStatus ?? "PENDING",
@@ -116,6 +122,7 @@ export async function GET() {
         title: "Laporan Analisis Teknis",
         company,
         jenis,
+        importTypes,
         refId: a.assignmentNumber,
         meta: `Analis: ${a.technicalReviewer?.name ?? "—"}`,
         status: a.pmReviewStatus ?? "PENDING",
