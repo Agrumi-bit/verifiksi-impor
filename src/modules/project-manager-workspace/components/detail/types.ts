@@ -157,5 +157,46 @@ export type PmApplicationDetail = {
     keterangan: string;
   }[];
   sales: { id: string; productName: string; dalamNegeri: string; luarNegeri: string; satuan: string }[];
+  /** VIU Jenis Impor — BAHAN_BAKU_INDUSTRI / BAHAN_BAKU_NON_INDUSTRI / BARANG_KONSUMSI. Empty for VKI. */
+  importTypes?: string[];
+  /** VIU per-scheme content (null for VKI) — see buildViuDetail in the PM application route. */
+  viu?: PmViuDetail | null;
   timeline: { title: string; time: string }[];
+};
+
+export type PmProductDecision = { status: string; note: string; verifiedAt: string | null };
+
+export type PmViuDetail = {
+  partners: { partnerId: string; companyName: string; lhvki: string | null; hasLhvkiDocument: boolean }[];
+  bahanBakuProducts: ({
+    id: string;
+    materialType: string;
+    hsCode: string;
+    hsDesc: string;
+    estimatedVolume: string;
+    volumeUnit: string;
+    intendedUse: string;
+    partnerIndustriId: string | null;
+  } & PmProductDecision)[];
+  konsumsi: {
+    products: ({
+      id: string;
+      productName: string;
+      brandId: string;
+      brandName: string | null;
+      hsCode: string;
+      hsDescription: string | null;
+      subKelompokKomoditas: string | null;
+      originCountryNames: string[];
+      quantity: number;
+      stockQuantity: number;
+      unit: string | null;
+      averageUnitPrice: number;
+      currency: string;
+      total: number;
+    } & PmProductDecision)[];
+    totalsByCurrency: Record<string, number>;
+    modalKerja: number | null;
+  } | null;
+  modalKerja: { bahanBaku: number | null; konsumsi: number | null } | null;
 };

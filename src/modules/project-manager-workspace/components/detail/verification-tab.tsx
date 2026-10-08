@@ -13,6 +13,7 @@ import {
 } from "@/modules/verifikator-workspace/status";
 import { MACHINE_KONDISI_LABELS, type MachineKondisiValue } from "@/modules/applications/schema";
 import type { PmApplicationDetail } from "./types";
+import { ViuVerificationTab } from "./viu-scheme-views";
 
 function fileHref(path: string): string {
   return `/api/files?path=${encodeURIComponent(path)}`;
@@ -387,7 +388,12 @@ function ProductSection({ data }: { data: PmApplicationDetail }) {
   );
 }
 
+/** VKI shows its production-capability verification; VIU gets its own per-scheme view (viu-scheme-views.tsx). */
 export function VerificationTab({ data }: { data: PmApplicationDetail }) {
+  return data.verificationType === "VIU" ? <ViuVerificationTab data={data} /> : <VkiVerificationTab data={data} />;
+}
+
+function VkiVerificationTab({ data }: { data: PmApplicationDetail }) {
   const [sub, setSub] = useState<SubTab>("summary");
   const dokumen = data.assignments.dokumen;
 

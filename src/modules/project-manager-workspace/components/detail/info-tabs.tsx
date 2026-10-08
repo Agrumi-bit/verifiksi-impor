@@ -2,6 +2,7 @@
 
 import type { PmApplicationDetail } from "./types";
 import { formatSubmissionDate } from "@/modules/applications/submission-date";
+import { applicationTypeLabel, ViuOverviewCards } from "./viu-scheme-views";
 
 function fmtDateTime(value: string): string {
   return new Date(value).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -24,7 +25,7 @@ export function OverviewTab({ data }: { data: PmApplicationDetail }) {
         <div className="mb-3 text-[14px] font-extrabold text-[#20180f]">Application Summary</div>
         <div className="grid grid-cols-2 gap-3.5">
           <Field label="Application ID" value={data.applicationNumber} />
-          <Field label="Application Type" value={data.verificationType} />
+          <Field label="Application Type" value={applicationTypeLabel(data)} />
           <Field label="Submission Date" value={formatSubmissionDate(data, true)} />
           <Field label="Current Stage" value={data.stage} />
           <Field label="Application Status" value={data.status} />
@@ -62,22 +63,27 @@ export function OverviewTab({ data }: { data: PmApplicationDetail }) {
         </div>
       </div>
 
-      <div className="rounded-[10px] border border-[#f0ded0] bg-white p-5">
-        <div className="mb-3 text-[14px] font-extrabold text-[#20180f]">Production Capability</div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Field label="Machines" value={String(data.machines.length)} />
-          <Field label="Products" value={String(data.products.length)} />
-          <Field label="Raw Materials" value={String(data.rawMaterialUsage.length)} />
-          <Field label="Sales Records" value={String(data.sales.length)} />
+      {data.verificationType === "VIU" ? (
+        // VIU: one card per Jenis Impor (Industri / Non Industri / Barang Konsumsi) — see viu-scheme-views.tsx.
+        <ViuOverviewCards data={data} />
+      ) : (
+        <div className="rounded-[10px] border border-[#f0ded0] bg-white p-5">
+          <div className="mb-3 text-[14px] font-extrabold text-[#20180f]">Production Capability</div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Field label="Machines" value={String(data.machines.length)} />
+            <Field label="Products" value={String(data.products.length)} />
+            <Field label="Raw Materials" value={String(data.rawMaterialUsage.length)} />
+            <Field label="Sales Records" value={String(data.sales.length)} />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
 export function ApplicationInfoTab({ data }: { data: PmApplicationDetail }) {
   const sections = [
-    { title: "Application Information", fields: [{ label: "Application ID", value: data.applicationNumber }, { label: "Application Type", value: data.verificationType }] },
+    { title: "Application Information", fields: [{ label: "Application ID", value: data.applicationNumber }, { label: "Application Type", value: applicationTypeLabel(data) }] },
     { title: "Applicant Information", fields: [{ label: "Company", value: data.company.companyName }, { label: "NIB", value: data.company.nibNumber }] },
     { title: "Business Activity", fields: (data.company.kbliEntries ?? []).slice(0, 2).map((k) => ({ label: k.code, value: k.description })) },
     { title: "Submission Information", fields: [{ label: "Submitted On", value: formatSubmissionDate(data, true) }, { label: "Category", value: data.applicationCategory }] },

@@ -4,28 +4,9 @@ import type {
   ProductionQtyChecklistItem,
   RawMaterialConversionRow,
 } from "@/modules/verifikator-workspace/schema";
+import type { KonsumsiImportPlan } from "@/modules/applications/viu-import-plan";
 import type { TechnicalAnalysisData } from "../../schema";
 import type { TechnicalModuleStatusValue } from "../../status";
-
-export type KonsumsiImportPlanProduct = {
-  id: string;
-  productName: string;
-  brandName: string | null;
-  hsCode: string;
-  quantity: number;
-  stockQuantity: number;
-  unit: string | null;
-  averageUnitPrice: number;
-  currency: string;
-  total: number;
-};
-
-export type KonsumsiImportPlan = {
-  products: KonsumsiImportPlanProduct[];
-  totalsByCurrency: Record<string, number>;
-  /** Jumlah Modal Kerja on the Surat Pernyataan Kepemilikan Modal Kerja (Rp). */
-  modalKerja: number | null;
-};
 
 export type ElectricityMonth = {
   id: string;

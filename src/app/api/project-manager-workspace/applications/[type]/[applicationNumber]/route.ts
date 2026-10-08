@@ -21,6 +21,8 @@ import {
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
 import { computeApplicationStage, type SiblingForStage } from "@/modules/project-manager-workspace/stage";
 import { buildApplicationDocumentChecklist } from "@/modules/verifikator-workspace/application-checklist";
+import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
+import { buildKonsumsiImportPlan, buildModalKerjaFromApplication } from "@/modules/applications/viu-import-plan";
 import { effectiveSubmissionDate } from "@/modules/applications/submission-date";
 import { surveyVisitDates } from "@/modules/surveyor-workspace/report-prepared-date";
 
@@ -143,6 +145,9 @@ export async function GET(
   const rawMaterialConversion = buildRawMaterialConversionRows(payload);
   const sales = buildSalesChecklist(payload);
 
+  // VIU per-scheme data for the PM's Overview/Verification views (VKI uses the production data above).
+  const viu = application.verificationType === "VIU" ? await buildViuDetail(payload, products) : null;
+
   const kantorLocation = payload.locations?.find((loc) => loc.locationType === "KANTOR") ?? payload.locations?.[0];
   const businessAddress = kantorLocation ? `${kantorLocation.address}, ${kantorLocation.city}, ${kantorLocation.province}` : null;
 
@@ -259,9 +264,74 @@ export async function GET(
       rawMaterialUsage,
       rawMaterialConversion,
       sales,
+      importTypes: payload.importTypes ?? [],
+      viu,
       timeline: buildTimeline(application, survey, dokumen, technical),
     },
   });
+}
+
+/**
+ * Scheme-specific content for a VIU application (Permenperin 27/2025 Ps 37 ayat (2) and Ps 39 ayat (3)-(5)):
+ * Bahan Baku Industri — products per Partner Industri and its LHVKI; Bahan Baku Non Industri — products for
+ * non-industri partners; Barang Konsumsi — products per merek with stock and value. Verification statuses come
+ * from the verifikator's own product decisions so every workspace shows the same verdict.
+ */
+async function buildViuDetail(
+  payload: ApplicationWizardValues,
+  products: { id: string; status: string; note: string; verifiedAt: string | null }[],
+) {
+  const decisionById = new Map(products.map((p) => [p.id, { status: p.status, note: p.note, verifiedAt: p.verifiedAt }]));
+  const types = new Set(payload.importTypes ?? []);
+
+  const partnerContexts = types.has("BAHAN_BAKU_INDUSTRI") ? await resolvePartnerContexts(payload) : [];
+  const partnerNameById = new Map(partnerContexts.map((p) => [p.partnerId, p.companyName]));
+  const partners = (payload.partnerIndustriEntries ?? [])
+    .filter((entry) => entry.enabled)
+    .map((entry) => ({
+      partnerId: entry.partnerId,
+      companyName: partnerNameById.get(entry.partnerId) ?? "—",
+      lhvki: entry.lhvki ?? null,
+      hasLhvkiDocument: Boolean(entry.lhvkiDocumentPath),
+    }));
+
+  const bahanBakuProducts = (payload.products ?? []).map((product) => ({
+    id: product.id,
+    materialType: product.materialType ?? "",
+    hsCode: product.hsCode ?? "",
+    hsDesc: product.hsDesc ?? "",
+    estimatedVolume: product.estimatedVolume ?? "",
+    volumeUnit: product.volumeUnit ?? "",
+    intendedUse: product.intendedUse ?? "",
+    partnerIndustriId: product.partnerIndustriId || null,
+    ...(decisionById.get(product.id) ?? { status: "PENDING", note: "", verifiedAt: null }),
+  }));
+
+  const missingBrandIds = [
+    ...new Set((payload.konsumsiProducts ?? []).filter((p) => p.brandId && !p.productSnapshot?.brandName).map((p) => p.brandId)),
+  ];
+  const brandNameById = new Map(
+    missingBrandIds.length
+      ? (await db.merk.findMany({ where: { id: { in: missingBrandIds } }, select: { id: true, brandName: true } })).map((m) => [m.id, m.brandName])
+      : [],
+  );
+  const plan = buildKonsumsiImportPlan(payload, brandNameById);
+  const konsumsi = plan
+    ? {
+        ...plan,
+        products: plan.products.map((product) => ({
+          ...product,
+          ...(decisionById.get(product.id) ?? { status: "PENDING", note: "", verifiedAt: null }),
+        })),
+      }
+    : null;
+
+  return {
+    partners,
+    bahanBakuProducts,
+    konsumsi,
+    modalKerja: buildModalKerjaFromApplication(payload),
+  };
 }
 
 function buildTimeline(
