@@ -36,23 +36,31 @@ export async function GET(
   // matter which assignment created it. The tab lists exactly as many locations as the application.
   const locationVisits = activeVisitsForApplication(collectApplicationVisits(siblingAssignments), payloadLocations);
 
-  const data = locationVisits.map((visit) => ({
-    id: visit.id,
-    locationType: visit.locationType,
-    address: visit.address,
-    city: visit.city,
-    status: visit.status,
-    scheduledDate: visit.scheduledDate,
-    scheduledTime: visit.scheduledTime,
-    submittedAt: visit.submittedAt,
-    checklist: visit.checklist ?? [],
-    findings: visit.findings ?? [],
-    reportSummary: visit.reportSummary,
-    fieldObservationNotes: visit.fieldObservationNotes,
-    officeVerification: visit.officeVerification,
-    warehouseVerification: visit.warehouseVerification,
-    factoryVerification: visit.factoryVerification,
-  }));
+  const data = locationVisits.map((visit) => {
+    // The verifikator's own desk review of this report (Verified / Reject / Revisi), so the tab can
+    // tell "start reviewing" from "review again".
+    const review = visit.reportVerification as { decision?: string | null; verifiedAt?: string | null; verifiedByName?: string | null } | null;
+    return {
+      id: visit.id,
+      locationType: visit.locationType,
+      address: visit.address,
+      city: visit.city,
+      status: visit.status,
+      scheduledDate: visit.scheduledDate,
+      scheduledTime: visit.scheduledTime,
+      submittedAt: visit.submittedAt,
+      checklist: visit.checklist ?? [],
+      findings: visit.findings ?? [],
+      reportSummary: visit.reportSummary,
+      fieldObservationNotes: visit.fieldObservationNotes,
+      officeVerification: visit.officeVerification,
+      warehouseVerification: visit.warehouseVerification,
+      factoryVerification: visit.factoryVerification,
+      reportDecision: review?.decision ?? null,
+      reportVerifiedAt: review?.verifiedAt ?? null,
+      reportVerifiedByName: review?.verifiedByName ?? null,
+    };
+  });
 
   return NextResponse.json({ data });
 }

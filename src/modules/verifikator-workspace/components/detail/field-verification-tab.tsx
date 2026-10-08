@@ -35,6 +35,10 @@ type LocationReportItem = {
   officeVerification: OfficeVerificationValues | null;
   warehouseVerification: FieldVerificationValues | null;
   factoryVerification: FieldVerificationValues | null;
+  /** Verifikator's last decision on this report — null until it has been reviewed once. */
+  reportDecision: ReportDecisionValue | null;
+  reportVerifiedAt: string | null;
+  reportVerifiedByName: string | null;
 };
 
 const STATUS_BADGE: Record<LocationVisitStatusValue, string> = {
@@ -238,14 +242,26 @@ export function FieldVerificationTab({ assignmentId, surveyorName, applicationNu
                     </div>
                   )}
 
+                  {loc.reportDecision && (
+                    <div className="flex flex-wrap items-center gap-2 rounded-[9px] bg-[#f7f2ec] px-3.5 py-2.5 text-[12px] text-[#4a4038]">
+                      <MaterialIcon name="fact_check" className="text-[16px] text-[#16a34a]" />
+                      <span>Sudah direview:</span>
+                      <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${REVIEW_DECISION_BADGE[loc.reportDecision]}`}>
+                        {DECISION_LABELS[loc.reportDecision]}
+                      </span>
+                      {loc.reportVerifiedAt && <span>· {formatAssignmentDate(loc.reportVerifiedAt)}</span>}
+                      {loc.reportVerifiedByName && <span>· oleh {loc.reportVerifiedByName}</span>}
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     disabled={!hasReport}
                     onClick={() => setReviewingLoc(loc)}
                     className="flex items-center justify-center gap-2 rounded-[9px] bg-[#16a34a] py-3 text-[13.5px] font-bold text-white disabled:opacity-60"
                   >
-                    <MaterialIcon name="play_circle" className="text-[18px]" />
-                    Mulai Review Laporan Verifikasi Lapangan
+                    <MaterialIcon name={loc.reportDecision ? "replay" : "play_circle"} className="text-[18px]" />
+                    {loc.reportDecision ? "Review Ulang Laporan Verifikasi Lapangan" : "Mulai Review Laporan Verifikasi Lapangan"}
                   </button>
                 </div>
               )}
@@ -471,6 +487,11 @@ function ReportChecklistItemRow({
 }
 
 const DECISION_LABELS: Record<ReportDecisionValue, string> = { VERIFIED: "Verified", REJECTED: "Reject", REVISION: "Revisi" };
+const REVIEW_DECISION_BADGE: Record<ReportDecisionValue, string> = {
+  VERIFIED: "bg-[#e2f7ea] text-[#1a9850]",
+  REJECTED: "bg-[#fbe4de] text-[#c1361f]",
+  REVISION: "bg-[#faf1de] text-[#a6791f]",
+};
 
 /**
  * "Uraian Verifikasi Laporan Hasil Survei Verifikasi Lapangan" — the
