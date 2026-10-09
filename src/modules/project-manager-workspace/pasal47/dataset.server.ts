@@ -25,12 +25,25 @@ const num = (v: string | undefined) => {
   return Number.isFinite(n) && String(v ?? "").trim() !== "" ? n : null;
 };
 
-function place(loc: Partial<LocationValues> | undefined): P47Place {
+const REGISTRATION_LABEL: Record<string, string> = { TANDA_DAFTAR_GUDANG: "TDG", PENETAPAN_GUDANG_BERIKAT: "Gudang Berikat", GUDANG_PENIMBUNAN_SEMENTARA: "TPS" };
+
+type VisitLike = { companyLocationId: string | null; locationType: string; address: string; officeVerification: unknown; warehouseVerification: unknown };
+
+function place(loc: Partial<LocationValues> | undefined, visits: VisitLike[] = []): P47Place {
+  // The surveyor's visit for this location: by its Company.locations id, else by type + street.
+  const visit = visits.find((v) => v.companyLocationId && (v.companyLocationId === loc?.id || v.companyLocationId === loc?.companyLocationId))
+    ?? visits.find((v) => v.locationType === loc?.locationType && !!loc?.address && v.address.startsWith(loc.address));
+  const form = (loc?.locationType === "KANTOR" ? visit?.officeVerification : visit?.warehouseVerification) as { capacity?: { luasTotal?: number | null }; conclusionStatus?: string | null } | null | undefined;
+  const regType = loc?.warehouseRegistrationType ? REGISTRATION_LABEL[loc.warehouseRegistrationType] ?? loc.warehouseRegistrationType : "";
   return {
     address: composeLocationAddress({ address: loc?.address, addressDesa: loc?.addressDesa, addressKecamatan: loc?.addressKecamatan }),
     city: loc?.city ?? "",
     province: loc?.province ?? "",
     ownership: OWNERSHIP_LABEL[loc?.buildingStatus ?? ""] ?? "",
+    registration: loc?.locationType === "GUDANG" ? [regType, loc?.warehouseRegistrationNumber?.trim()].filter(Boolean).join(" ") : "",
+    leaseEnd: loc?.buildingStatus === "SEWA" ? (loc?.leaseEndDate ?? "").slice(0, 10) : "",
+    area: typeof form?.capacity?.luasTotal === "number" && form.capacity.luasTotal > 0 ? form.capacity.luasTotal : null,
+    fieldConclusion: form?.conclusionStatus ?? "",
   };
 }
 
@@ -62,7 +75,7 @@ export async function buildPasal47Dataset(period: { from: string; to: string }):
     where: { verificationType: "VIU", status: { notIn: ["DRAFT", "WITHDRAWN"] } },
     include: {
       company: true,
-      locationVisits: { select: { id: true, locationType: true, address: true, findings: true, reportVerification: true } },
+      locationVisits: { select: { id: true, locationType: true, address: true, companyLocationId: true, officeVerification: true, warehouseVerification: true, findings: true, reportVerification: true } },
       assignments: {
         select: {
           scheduleType: true, technicalAnalysisData: true, productVerifications: true,
@@ -131,8 +144,8 @@ export async function buildPasal47Dataset(period: { from: string; to: string }):
             issuedAt: typeof lhviu.issuedAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(lhviu.issuedAt) ? lhviu.issuedAt : null,
           }
         : null,
-      kantor: locs.find((l) => l.locationType === "KANTOR") ? place(locs.find((l) => l.locationType === "KANTOR")) : null,
-      gudang: locs.filter((l) => l.locationType === "GUDANG").map(place),
+      kantor: locs.find((l) => l.locationType === "KANTOR") ? place(locs.find((l) => l.locationType === "KANTOR"), a.locationVisits) : null,
+      gudang: locs.filter((l) => l.locationType === "GUDANG").map((l) => place(l, a.locationVisits)),
     });
 
     // Product lines ------------------------------------------------------------------------------
@@ -198,6 +211,7 @@ export async function buildPasal47Dataset(period: { from: string; to: string }):
         id: `${a.id}:${l.id}`, applicationId: a.id, applicationNumber: a.applicationNumber, company, place: place(l),
         capacity: i === 0 ? num(penyimpanan?.inputs?.kapasitasGudang) : null,
         analystStock: i === 0 ? num(penyimpanan?.inputs?.stokTerkini) : null,
+        analystPlan: i === 0 ? num(penyimpanan?.inputs?.rencanaImpor) : null,
         declaredStock: i === 0 ? stockByUnit : {},
         analystDecision: penyimpanan?.status === "SESUAI" ? "Sesuai" : penyimpanan?.status === "TIDAK_SESUAI" ? "Tidak Sesuai" : "Belum Dianalisis",
       });

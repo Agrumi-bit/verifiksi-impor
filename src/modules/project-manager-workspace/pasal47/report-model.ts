@@ -1,8 +1,16 @@
 import { VIU_KONSUMSI_KBLI } from "../../schemes/viu-konsumsi/terms";
 
 import { kbliRows } from "./company-chapter";
-import { brandCertificateStatus, countryRows, currenciesOf, hsRows, unitsOf } from "./derive";
-import { compact, fdLong, joinId, sum, sym, uniq, withWords } from "./format";
+import { brandCertificateStatus, hsRows, unitsOf } from "./derive";
+import { compact, fdLong, joinId, nf, sum, sym, uniq, withWords } from "./format";
+import { bab3 } from "./report-bab3";
+import { bab5 } from "./report-bab5";
+import { bab6 } from "./report-bab6";
+import { bab7 } from "./report-bab7";
+import { bab8 } from "./report-bab8";
+import { bab9 } from "./report-bab9";
+import { bab10 } from "./report-bab10";
+import { rupiahValuer } from "./report-value";
 import { dataQualityAlerts, kpis, materialityOf } from "./summary";
 import type { P47Application, P47Dataset, P47Report } from "./types";
 
@@ -16,15 +24,15 @@ import type { P47Application, P47Dataset, P47Report } from "./types";
  * chapter still prints until it gets its own figures and narrative. */
 export const CHAPTERS: { no: string; title: string; sources: string[] }[] = [
   { no: "8.2", title: "Data Perusahaan API-U", sources: [] },
-  { no: "8.3", title: "Komoditas & Pos Tarif/HS", sources: ["8.3", "8.11"] },
-  { no: "8.4", title: "Negara Asal", sources: ["8.4"] },
-  { no: "8.5", title: "Analisis Struktur Merek", sources: ["8.5", "8.6", "8.12"] },
-  { no: "8.7", title: "Persyaratan Teknis", sources: ["8.7"] },
-  { no: "8.8", title: "Persediaan Produk Tekstil", sources: ["8.8"] },
-  { no: "8.9", title: "Modal Operasi & Rencana Nilai Impor", sources: ["8.9"] },
-  { no: "8.10", title: "Konsentrasi Rencana Impor", sources: ["8.10"] },
+  { no: "8.3", title: "Komoditas & Pos Tarif/HS", sources: [] },
+  { no: "8.4", title: "Negara Asal", sources: [] },
+  { no: "8.5", title: "Analisis Struktur Merek", sources: [] },
+  { no: "8.7", title: "Persyaratan Teknis", sources: [] },
+  { no: "8.8", title: "Persediaan Produk Tekstil", sources: [] },
+  { no: "8.9", title: "Modal Operasi & Rencana Nilai Impor", sources: [] },
+  { no: "8.10", title: "Konsentrasi Rencana Impor", sources: [] },
   { no: "8.12f", title: "Analisis Fasilitas & Lokasi Pemohon VIU", sources: [] },
-  { no: "8.13", title: "Temuan Analitis & Rekomendasi", sources: ["8.13"] },
+  { no: "8.13", title: "Temuan Analitis & Rekomendasi", sources: [] },
 ];
 
 export const KBLI_REQUIRED: readonly string[] = VIU_KONSUMSI_KBLI;
@@ -39,12 +47,21 @@ const monthShort = (key: string) => `${MONTHS[Number(key.slice(5, 7)) - 1]} ${ke
 
 /** Main currency of the plan (USD when present) and the plan total per company in it. */
 export function planValues(ds: P47Dataset) {
-  const currency = currenciesOf(ds.lines)[0] ?? "USD";
-  const lines = ds.lines.filter((l) => l.currency === currency);
+  const valueOf = rupiahValuer(ds);
   const byCompany = new Map<string, number>();
-  for (const l of lines) byCompany.set(l.company, (byCompany.get(l.company) ?? 0) + l.total);
+  let total = 0;
+  let unconverted = 0;
+  for (const l of ds.lines) {
+    const v = valueOf(l);
+    if (v === null) {
+      unconverted += 1;
+      continue;
+    }
+    total += v;
+    byCompany.set(l.company, (byCompany.get(l.company) ?? 0) + v);
+  }
   const ranked = [...byCompany.entries()].sort((a, b) => b[1] - a[1]);
-  return { currency, total: sum(lines.map((l) => l.total)), ranked, otherCurrencies: currenciesOf(ds.lines).slice(1) };
+  return { currency: "IDR", total, ranked, unconverted };
 }
 
 /* ------------------------------------------------------------------ LHVIU */
@@ -82,6 +99,12 @@ export function lhviuValidity(issuedAt: string, asOf: string) {
 }
 
 /* ------------------------------------------------------------------ KBLI */
+
+/** Companies holding none of the KBLI required by Pasal 37 ayat (2). */
+export const kbliNonCompliant = (ds: P47Dataset) => {
+  const k = kbliCompliance(ds);
+  return k.companies.filter((c) => !k.compliant.includes(c));
+};
 
 export function kbliCompliance(ds: P47Dataset) {
   const apps = ds.applications;
@@ -249,11 +272,12 @@ export function chapterDivider(no: string, ds: P47Dataset, report: P47Report): D
       };
     }
     case "8.4": {
-      const r = countryRows(ds.lines);
+      const b = bab3(ds);
+      const top = b.countries[0];
       return {
-        lead: "Negara asal Produk Tekstil yang direncanakan untuk diimpor, dilihat dari jumlah Perusahaan API-U, pos tarif/HS, merek, dan relasi product line.",
-        scope: ["Negara asal produk", "Rencana volume dan nilai per negara", "Produk per negara", "Pola pencantuman negara asal", "Negara asal menurut perusahaan"],
-        stats: [[n(k.countries), "NEGARA ASAL"], [n(k.relations), "RELASI PRODUCT LINE"], [r[0]?.country ?? "—", "NEGARA DOMINAN"], [n(r[0]?.lines ?? 0), "RELASI NEGARA DOMINAN"]],
+        lead: "Negara asal Produk Tekstil yang direncanakan untuk diimpor: rencana volume, nilai, dan share per negara (estimasi), tren menurut periode pelaksanaan VIU, produk, importir, dan pola pencantuman negara asal.",
+        scope: ["Negara asal produk", "Rencana volume, nilai, dan share", "Tren rencana impor per negara", "Produk/bab HS per negara", "Profil negara asal utama", "Pola pencantuman negara asal", "Negara asal menurut perusahaan"],
+        stats: [[n(b.countries.length), "NEGARA ASAL"], [nf(b.relations), "RELASI PRODUCT LINE"], [top?.name ?? "—", "NEGARA DOMINAN"], [top && b.totalValue ? pct1(top.value, b.totalValue) : "—", "SHARE NILAI (ESTIMASI)"]],
       };
     }
     case "8.5": {
@@ -261,54 +285,60 @@ export function chapterDivider(no: string, ds: P47Dataset, report: P47Report): D
       const active = ds.brands.filter((b) => brandCertificateStatus(b, ds.period.to).tone === "ok").length;
       return {
         lead: "Struktur merek dalam rencana impor: merek yang diajukan, pemilik dan perwakilannya, bukti kepemilikan merek, serta hubungan Pemohon VIU dengan pemilik merek.",
-        scope: ["Merek dan pemilik merek", "Asal merek", "Status pendaftaran merek", "Hubungan Pemohon VIU dengan pemilik merek", "Rencana impor per merek", "Ketersediaan data rantai pasok"],
+        scope: ["Merek dan pemilik merek", "Asal merek: lokal dan luar negeri", "Status pendaftaran merek", "Hubungan Pemohon VIU dengan pemilik merek", "Kelas merek", "Rencana impor per merek", "Tren jumlah merek", "Merek dengan lebih dari satu importir", "Bukti kepemilikan merek"],
         stats: [[n(ds.brands.length), "MEREK"], [n(uniq(uses.map((u) => u.company)).length), "PEMOHON VIU"], [`${uses.filter((u) => u.docStatus.tone === "ok").length}/${uses.length}`, "DOKUMEN VALID"], [`${active}/${ds.brands.length}`, "BUKTI MEREK AKTIF"]],
       };
     }
-    case "8.7":
+    case "8.7": {
+      const b = bab5(ds);
       return {
-        lead: "Pemenuhan persyaratan teknis berupa Sertifikat Hasil Uji Mutu per merek dan sub kelompok komoditas, serta Surat Pernyataan Label Berbahasa Indonesia.",
-        scope: ["Ketentuan dan cakupan bukti pemenuhan", "Laboratorium dan masa berlaku", "Label Bahasa Indonesia", "Rincian per perusahaan"],
-        stats: [[n(ds.technical.length), "SERTIFIKAT UJI MUTU"], [n(ds.technical.filter((t) => t.status.tone === "ok").length), "LENGKAP"], [n(ds.technical.filter((t) => t.status.label === "Ditolak").length), "DITOLAK"], [`${ds.technical.filter((t) => t.labelStatement.tone === "ok").length}/${ds.technical.length}`, "LABEL VALID"]],
+        lead: `Bukti pemenuhan persyaratan teknis yang dilampirkan ${b.companies.length} Perusahaan API-U: Sertifikat Hasil Uji Mutu per merek dan sub kelompok komoditas beserta cakupannya terhadap ${nf(ds.lines.length)} product line, status, laboratorium, masa berlaku, dan Surat Pernyataan Label Berbahasa Indonesia.`,
+        scope: ["Ketentuan dan cakupan bukti pemenuhan", "Status sertifikat uji mutu", "Laboratorium penguji", "Masa berlaku dan batas pengajuan", "Satu sertifikat untuk beberapa product line", "Label Berbahasa Indonesia", "Rincian per perusahaan"],
+        stats: [[`${nf(b.covered.length)}/${nf(ds.lines.length)}`, "PRODUCT LINE TERCAKUP"], [n(b.certs.length), "SERTIFIKAT UJI MUTU"], [`${b.certs.filter((c) => c.status.tone === "ok").length}/${b.certs.length}`, "SERTIFIKAT LENGKAP"], [n(b.certs.filter((c) => c.validity === "Kedaluwarsa").length), "KEDALUWARSA"]],
       };
-    case "8.8":
+    }
+    case "8.8": {
+      const b = bab6(ds);
       return {
-        lead: "Persediaan Produk Tekstil yang dilaporkan Perusahaan API-U per product line, serta kapasitas dan stok gudang hasil analisis teknis.",
-        scope: ["Ringkasan persediaan", "Persediaan per perusahaan", "Kapasitas dan stok gudang (analis)"],
-        stats: [[n(ds.lines.filter((l) => l.stock > 0).length), "PRODUCT LINE BERSTOK"], [n(ds.lines.filter((l) => l.stock <= 0).length), "STOK NOL"], [n(ds.warehouses.length), "GUDANG"], [`${ds.warehouses.filter((w) => w.capacity !== null).length}/${ds.warehouses.length}`, "DATA KAPASITAS"]],
+        lead: `Persediaan Produk Tekstil yang dilaporkan ${b.companies.length} Perusahaan API-U per product line dan perbandingannya dengan rencana impor, serta analisis kapasitas gudang oleh Technical Analyst.`,
+        scope: ["Ringkasan persediaan", "Persediaan per perusahaan", "Persediaan menurut kelompok komoditas", "Kapasitas gudang", "Rincian per perusahaan"],
+        stats: [[nf(ds.lines.length), "PRODUCT LINE"], [ds.lines.length ? pct1(b.zero.length, ds.lines.length) : "—", "LINE STOK NOL"], [nf(Math.round(b.stockByUnit[0] ?? 0)), `PERSEDIAAN ${b.unit.toUpperCase()}`], [n(b.companies.filter((c) => c.stocked === 0).length), "API-U TANPA STOK"]],
       };
+    }
     case "8.9": {
-      const v = planValues(ds);
+      const b = bab7(ds);
       return {
-        lead: "Rencana nilai impor per Pemohon VIU dan per pos tarif/HS, dicatat per mata uang, dibandingkan dengan modal kerja yang dinyatakan perusahaan.",
-        scope: ["Ringkasan modal operasi dan rencana nilai", "Rencana nilai per pemohon", "Rasio rencana impor terhadap modal", "Nilai per pos tarif/HS"],
-        stats: [[`${sym(v.currency)} ${compact(v.total)}`, "RENCANA NILAI IMPOR"], [n(v.ranked.length), "PEMOHON"], [n(currenciesOf(ds.lines).length), "MATA UANG"], [`${ds.values.filter((x) => x.modalKerja !== null).length}/${ds.values.length}`, "MODAL KERJA TERCATAT"]],
+        lead: "Perbandingan modal operasi Pemohon VIU dengan rencana nilai impor yang diajukan, serta rasio rencana impor terhadap modal operasi dan penilaian modal oleh Technical Analyst.",
+        scope: ["Ringkasan modal operasi dan rencana nilai impor", "Distribusi modal operasi", "Rencana nilai impor per pemohon", "Modal operasi dan rencana nilai impor", "Rasio rencana impor terhadap modal operasi", "Penilaian modal dan rincian per pemohon"],
+        stats: [[n(b.rows.length), "PERMOHONAN VIU"], [`Rp ${compact(b.totalPlan)}`, "RENCANA NILAI IMPOR"], [`${b.withModal.length}/${b.rows.length}`, "MODAL TERCATAT"], [n(b.withModal.filter((r) => (r.ratio ?? 0) > 1).length), "RASIO > 100%"]],
       };
     }
     case "8.10": {
-      const v = planValues(ds);
-      const top3 = sum(v.ranked.slice(0, 3).map(([, x]) => x));
+      const b = bab8(ds);
+      const [company, owner] = b.dims;
       return {
-        lead: "Tingkat konsentrasi rencana impor menurut pos tarif/HS, merek, negara asal, dan Pemohon VIU.",
+        lead: "Tingkat konsentrasi rencana nilai impor menurut enam dimensi, diukur dengan rasio konsentrasi (CR1, CR3, CR5) dan Herfindahl-Hirschman Index (HHI).",
         scope: ["Metode pengukuran konsentrasi", "Indeks konsentrasi per dimensi", "Entitas dengan pangsa terbesar"],
-        stats: [[v.ranked[0] ? pct1(v.ranked[0][1], v.total) : "—", "PANGSA PEMOHON TERBESAR"], [v.ranked.length ? pct1(top3, v.total) : "—", "PANGSA 3 PEMOHON"], [n(k.hs), "POS TARIF/HS"], [n(k.brands), "MEREK"]],
+        stats: [[nf(company.hhi), "HHI PEMOHON"], [company.total ? pct1(company.cr3, 1) : "—", "CR3 PEMOHON"], [nf(owner.hhi), "HHI PEMILIK MEREK"], [n(b.dims.filter((d) => d.level === "Tinggi").length), "DIMENSI KONSENTRASI TINGGI"]],
       };
     }
     case "8.12f": {
-      const kantor = apps.flatMap((a) => (a.kantor ? [a.kantor] : []));
-      const gudang = apps.flatMap((a) => a.gudang);
+      const b = bab9(ds);
+      const areas = b.gudang.map((g) => g.area).filter((v): v is number => typeof v === "number" && v > 0);
       return {
-        lead: "Fasilitas kantor dan gudang Pemohon VIU: lokasi, status kepemilikan, serta keterkaitannya dengan rencana impor.",
-        scope: ["Ringkasan fasilitas", "Kantor: kepemilikan dan lokasi", "Gudang: kepemilikan dan lokasi", "Luas gudang dan rencana impor"],
-        stats: [[n(kantor.length), "KANTOR"], [n(gudang.length), "GUDANG"], [n(uniq(kantor.map((p) => p.province).filter(Boolean)).length), "PROVINSI KANTOR"], [n(gudang.filter((g) => g.ownership === "Milik Sendiri").length), "GUDANG MILIK SENDIRI"]],
+        lead: "Fasilitas kantor dan gudang Pemohon VIU: lokasi, status kepemilikan, legalitas, luas, dan keterkaitannya dengan rencana impor.",
+        scope: ["Ringkasan fasilitas", "Kantor: kepemilikan dan lokasi", "Gudang: kepemilikan, lokasi, dan legalitas", "Luas gudang dan rencana impor"],
+        stats: [[n(b.rows.length), "PEMOHON VIU"], [n(b.gudang.length), "GUDANG"], [`${b.gudang.filter((g) => g.registration).length}/${b.gudang.length}`, "GUDANG BERTANDA DAFTAR"], [areas.length ? `${nf(Math.round(sum(areas) / areas.length))} m²` : "—", "RATA-RATA LUAS GUDANG"]],
       };
     }
-    case "8.13":
+    case "8.13": {
+      const b = bab10(ds, report, kbliNonCompliant(ds));
       return {
-        lead: "Temuan dari survei lapangan, verifikasi dokumen, verifikasi produk, dan analisis teknis, beserta tingkat keparahan, materialitas pelaporan, dan rekomendasi tindak lanjut.",
-        scope: ["Dasar penetapan temuan dan prioritas", "Temuan dan rekomendasi", "Kebutuhan data"],
-        stats: [[n(k.findings), "TEMUAN"], [n(ds.findings.filter((f) => f.severity === "Major").length), "MAJOR"], [n(ds.findings.filter((f) => f.severity === "Minor").length), "MINOR"], [n(k.material), "ISU MATERIAL"]],
+        lead: "Temuan analitis hasil penelaahan data Bab 1 sampai dengan Bab 9, temuan pelaksanaan verifikasi beserta materialitasnya, rekomendasi tindak lanjut, dan kebutuhan data untuk melengkapi analisis.",
+        scope: ["Dasar penetapan temuan dan prioritas", "Temuan analitis dan rekomendasi", "Temuan pelaksanaan verifikasi", "Kebutuhan data"],
+        stats: [[n(b.analytic.length), "TEMUAN ANALITIS"], [n(b.analytic.filter((x) => x.priority === "Tinggi").length), "PRIORITAS TINGGI"], [n(ds.findings.length), "TEMUAN VERIFIKASI"], [n(k.material), "ISU MATERIAL"]],
       };
+    }
   }
   return { lead: "", scope: [], stats: [] };
 }
@@ -339,7 +369,7 @@ export function executiveSummary(ds: P47Dataset, report: P47Report): Executive {
   const apps = ds.applications;
   const period = `${fdLong(ds.period.from)} sampai dengan ${fdLong(ds.period.to)}`;
   const v = planValues(ds);
-  const valueText = v.total ? `, dengan rencana nilai ${sym(v.currency)} ${compact(v.total)}${v.otherCurrencies.length ? ` ditambah nilai dalam ${joinId(v.otherCurrencies)}` : ""}` : "";
+  const valueText = v.total ? `, dengan rencana nilai ${sym(v.currency)} ${compact(v.total)}${v.unconverted ? ` (di luar ${v.unconverted} product line dalam mata uang asing yang belum memiliki kurs)` : ""}` : "";
   const lead = apps.length
     ? `Pada periode ${period}, PT Tribhakti Inspektama melaksanakan VIU Produk Tekstil sebagai Barang Konsumsi terhadap ${k.companies} Perusahaan API-U atas ${k.applications} permohonan dan menerbitkan ${k.lhviu} LHVIU. Rencana impor mencakup ${k.lines} product line, ${k.hs} pos tarif/HS, ${k.brands} merek, dan ${k.countries} negara asal${valueText}.`
     : `Pada periode ${period} belum terdapat permohonan VIU Produk Tekstil sebagai Barang Konsumsi.`;
@@ -349,7 +379,7 @@ export function executiveSummary(ds: P47Dataset, report: P47Report): Executive {
   if (apps.length) {
     if (v.ranked.length >= 3 && v.total) {
       const top3 = sum(v.ranked.slice(0, 3).map(([, x]) => x));
-      findings.push(`Rencana nilai impor terkonsentrasi: tiga Pemohon VIU mencakup ${pct1(top3, v.total)} dan ${v.ranked[0][0]} sendiri mencakup ${pct1(v.ranked[0][1], v.total)} dari total rencana nilai dalam ${v.currency} (Bab 8).`);
+      findings.push(`Rencana nilai impor terkonsentrasi: tiga Pemohon VIU mencakup ${pct1(top3, v.total)} dan ${v.ranked[0][0]} sendiri mencakup ${pct1(v.ranked[0][1], v.total)} dari total rencana nilai (Bab 8).`);
     }
     const uses = ds.brands.flatMap((b) => b.uses);
     const notValid = uses.filter((u) => u.docStatus.tone !== "ok");
@@ -365,10 +395,10 @@ export function executiveSummary(ds: P47Dataset, report: P47Report): Executive {
     const kb = kbliCompliance(ds);
     findings.push(`${kb.compliant.length} dari ${kb.companies.length} Perusahaan API-U memiliki KBLI yang dipersyaratkan Pasal 37; ${k.lhviu} dari ${k.applications} permohonan telah memperoleh LHVIU (Bab 1).`);
     if (kb.compliant.length < kb.companies.length) recs.push(`Mengonfirmasi KBLI ${kb.companies.length - kb.compliant.length} Perusahaan API-U yang belum memiliki KBLI yang dipersyaratkan.`);
-    const c = countryRows(ds.lines)[0];
+    const c = bab3(ds).countries[0];
     const auto = ds.lines.filter((l) => l.countryAutoFilled).length;
     if (c) {
-      findings.push(`${c.country} tercantum sebagai negara asal pada ${c.lines} dari ${k.lines} product line${auto ? `; negara asal ${auto} product line diisi sistem karena kosong saat diajukan` : ""} (Bab 3).`);
+      findings.push(`${c.name} tercantum sebagai negara asal pada ${c.lines} dari ${k.lines} product line${auto ? `; negara asal ${auto} product line diisi sistem karena kosong saat diajukan` : ""} (Bab 3).`);
       if (auto) recs.push(`Mengonfirmasi negara asal ${auto} product line yang diisi sistem (REP. RAKYAT CINA) kepada Pemohon VIU.`);
     }
     if (k.findings) findings.push(`Terdapat ${k.findings} temuan pelaksanaan verifikasi; ${k.material} ditetapkan material oleh Project Manager (Bab 10).`);

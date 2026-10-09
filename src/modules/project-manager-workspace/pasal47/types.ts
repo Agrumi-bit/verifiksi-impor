@@ -13,6 +13,14 @@ export type P47Place = {
   province: string;
   /** "Milik Sendiri" | "Sewa" | "" when the applicant did not say. */
   ownership: string;
+  /** Gudang only: jenis and nomor tanda daftar gudang, "" when not filled. */
+  registration?: string;
+  /** Akhir masa sewa (YYYY-MM-DD) of a rented location, "" otherwise. */
+  leaseEnd?: string;
+  /** Luas total (m²) measured by the surveyor during verifikasi lapangan; null when not measured. */
+  area?: number | null;
+  /** Kesimpulan verifikasi lapangan by the surveyor: "Sesuai" | "Tidak Sesuai" | "" when not concluded. */
+  fieldConclusion?: string;
 };
 
 export type P47Application = {
@@ -106,10 +114,12 @@ export type P47Warehouse = {
   applicationNumber: string;
   company: string;
   place: P47Place;
-  /** Kapasitas Gudang entered by the Technical Analyst (penyimpanan module); unit as entered. */
+  /** Kapasitas Gudang entered by the Technical Analyst (penyimpanan module), in m³. */
   capacity: number | null;
   /** Stok Terkini entered by the Technical Analyst, same unit as capacity. */
   analystStock: number | null;
+  /** Volume Pengajuan Impor entered by the Technical Analyst, same unit as capacity. */
+  analystPlan: number | null;
   /** Stock declared per product line, per unit — never summed across units. */
   declaredStock: Record<string, number>;
   analystDecision: string;
