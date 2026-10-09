@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { assignmentDateFromInput, assignmentDateKey } from "@/lib/assignment-date";
 import { db } from "@/lib/db";
 import { requireProjectManagerSession } from "@/lib/require-project-manager-session";
 import { APPROVAL_CATEGORIES } from "@/modules/project-manager-workspace/status";
@@ -10,6 +11,12 @@ const patchSchema = z.object({
   category: z.enum(APPROVAL_CATEGORIES),
   decision: z.enum(["APPROVED", "REJECTED"]),
   note: z.string().trim().optional(),
+  /** "Tanggal Review" (YYYY-MM-DD) chosen by the PM — prints as the report's TANGGAL TERBIT.
+   * Defaults to today; never in the future. */
+  reviewedAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal review tidak valid")
+    .optional(),
 });
 
 const CATEGORY_SCHEDULE_TYPE: Record<string, string> = {
@@ -98,9 +105,15 @@ export async function PATCH(
     return NextResponse.json({ error: "Laporan ini belum siap untuk direview." }, { status: 400 });
   }
 
+  const reviewedAtKey = parsed.data.reviewedAt;
+  if (reviewedAtKey && reviewedAtKey > assignmentDateKey(new Date())) {
+    return NextResponse.json({ error: "Tanggal review tidak boleh melebihi hari ini." }, { status: 400 });
+  }
+  const reviewedAtDate = reviewedAtKey ? assignmentDateFromInput(reviewedAtKey) : new Date();
+
   const updated = await db.assignment.update({
     where: { id: assignmentId },
-    data: { pmReviewStatus: decision, pmReviewNote: note ?? null, pmReviewedAt: new Date() },
+    data: { pmReviewStatus: decision, pmReviewNote: note ?? null, pmReviewedAt: reviewedAtDate },
   });
 
   return NextResponse.json({ data: { pmReviewStatus: updated.pmReviewStatus, pmReviewNote: updated.pmReviewNote } });

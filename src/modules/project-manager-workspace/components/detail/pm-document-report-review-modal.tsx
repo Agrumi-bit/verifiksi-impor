@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { MaterialIcon } from "../material-icon";
-import { formatAssignmentDate } from "@/lib/assignment-date";
+import { assignmentDateKey, formatAssignmentDate } from "@/lib/assignment-date";
 import {
   DOC_VERIFICATION_STATUS_BADGE,
   DOC_VERIFICATION_STATUS_LABELS,
@@ -43,6 +43,8 @@ export function PmDocumentReportReviewModal({
   const [decision, setDecision] = useState<Decision | null>(initialDecision ?? null);
   const [note, setNote] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  // "Tanggal Review" — defaults to today (Asia/Jakarta), may be backdated, never in the future.
+  const [reviewedAt, setReviewedAt] = useState(() => assignmentDateKey(new Date()));
   const [saving, setSaving] = useState(false);
 
   const checklist = data.documentChecklist ?? [];
@@ -58,6 +60,10 @@ export function PmDocumentReportReviewModal({
       toast.error("Catatan penolakan wajib diisi.");
       return;
     }
+    if (!reviewedAt) {
+      toast.error("Pilih tanggal review terlebih dahulu.");
+      return;
+    }
     if (!confirmed) {
       toast.error("Centang konfirmasi terlebih dahulu.");
       return;
@@ -66,7 +72,7 @@ export function PmDocumentReportReviewModal({
     const response = await fetch(`/api/project-manager-workspace/approvals/${dokumen.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ category: "laporanVerifikasi", decision, note: note.trim() || undefined }),
+      body: JSON.stringify({ category: "laporanVerifikasi", decision, note: note.trim() || undefined, reviewedAt }),
     });
     setSaving(false);
     if (!response.ok) {
@@ -239,9 +245,21 @@ export function PmDocumentReportReviewModal({
                     disabled={saving}
                     className="mt-3 w-full resize-none rounded-lg border border-[#e8dccd] bg-[#faf7f4] p-2.5 text-[12.5px] text-[#20180f] outline-none disabled:bg-[#f2ece5]"
                   />
-                  {decision === "APPROVED" && (
-                    <p className="mt-1 text-[10.5px] text-[#8a7565]">Sampul laporan berganti menjadi TANGGAL TERBIT dengan tanggal hari ini.</p>
-                  )}
+                  <div className="mt-3">
+                    <label className="mb-1.5 block text-[11.5px] font-bold text-[#20180f]" htmlFor="pm-review-date">
+                      Tanggal Review
+                    </label>
+                    <input
+                      id="pm-review-date"
+                      type="date"
+                      value={reviewedAt}
+                      max={assignmentDateKey(new Date())}
+                      onChange={(event) => setReviewedAt(event.target.value)}
+                      disabled={saving}
+                      className="w-full rounded-lg border border-[#e8dccd] bg-[#faf7f4] px-2.5 py-2 text-[12.5px] text-[#20180f] outline-none disabled:bg-[#f2ece5]"
+                    />
+                    <p className="mt-1 text-[10.5px] text-[#8a7565]">Tanggal ini tercetak sebagai TANGGAL TERBIT pada sampul laporan bila disetujui.</p>
+                  </div>
                   <label className="mt-3 flex items-start gap-2 text-[11.5px] text-[#20180f]">
                     <input
                       type="checkbox"
@@ -254,7 +272,7 @@ export function PmDocumentReportReviewModal({
                   </label>
                   <button
                     type="button"
-                    disabled={saving || !decision || !confirmed || (decision === "REJECTED" && !note.trim())}
+                    disabled={saving || !decision || !confirmed || !reviewedAt || (decision === "REJECTED" && !note.trim())}
                     onClick={submit}
                     className="mt-3 w-full rounded-lg bg-[#16a34a] py-2.5 text-[12.5px] font-bold text-white disabled:opacity-50"
                   >
