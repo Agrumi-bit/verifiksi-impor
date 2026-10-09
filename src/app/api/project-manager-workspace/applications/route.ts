@@ -73,6 +73,7 @@ export async function GET(request: Request) {
       scheduleType: a.scheduleType,
       status: a.status,
       dueDate: a.dueDate?.toISOString() ?? null,
+      pmReviewStatus: a.pmReviewStatus,
       // One status per location this assignment is responsible for (NOT_STARTED when it has no
       // visit yet), taken from the application location's single active visit.
       locationVisits: assignmentLocations(a, payload.locations ?? []).map((loc) => ({

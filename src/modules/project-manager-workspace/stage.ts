@@ -3,7 +3,16 @@ export type SiblingForStage = {
   status: string;
   dueDate: string | null;
   locationVisits: { status: string }[];
+  /** PM's decision on this assignment's report. A survey assignment never becomes COMPLETED — it
+   * stops at SUBMITTED once every location is surveyed, and its report review ends with the PM
+   * approving the Laporan Survey — so for a survey that approval is what "done" means. */
+  pmReviewStatus?: string | null;
 };
+
+function isSiblingDone(sibling: SiblingForStage): boolean {
+  if (sibling.status === "COMPLETED") return true;
+  return sibling.scheduleType === "survey" && sibling.pmReviewStatus === "APPROVED";
+}
 
 export const APPLICATION_STAGE_KEYS = [
   "Submitted",
@@ -59,11 +68,11 @@ export function computeApplicationStage(
     stage = "Survey Assignment";
   } else if (!survey.locationVisits.every((v) => v.status === "COMPLETED")) {
     stage = "Field Survey";
-  } else if (survey.status !== "COMPLETED") {
+  } else if (!isSiblingDone(survey)) {
     stage = "Survey Report Review";
   } else if (technical && technical.status !== "COMPLETED") {
     stage = "Verification Review";
-  } else if (relevant.every((s) => s.status === "COMPLETED")) {
+  } else if (relevant.every(isSiblingDone)) {
     stage = "Completed";
   } else {
     stage = "Verification Review";

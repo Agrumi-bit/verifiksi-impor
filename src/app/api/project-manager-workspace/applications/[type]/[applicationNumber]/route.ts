@@ -98,7 +98,15 @@ export async function GET(
     ...(dokumen ? [{ scheduleType: "dokumen", status: dokumen.status, dueDate: dokumen.dueDate?.toISOString() ?? null, locationVisits: [] }] : []),
     ...(technical ? [{ scheduleType: "technical", status: technical.status, dueDate: technical.dueDate?.toISOString() ?? null, locationVisits: [] }] : []),
     ...(survey
-      ? [{ scheduleType: "survey", status: survey.status, dueDate: survey.dueDate?.toISOString() ?? null, locationVisits: locationStatuses }]
+      ? [
+          {
+            scheduleType: "survey",
+            status: survey.status,
+            dueDate: survey.dueDate?.toISOString() ?? null,
+            locationVisits: locationStatuses,
+            pmReviewStatus: survey.pmReviewStatus,
+          },
+        ]
       : []),
   ];
   const stageResult = computeApplicationStage(siblingsForStage, application.status);
