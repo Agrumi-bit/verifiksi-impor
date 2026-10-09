@@ -200,11 +200,13 @@ function ReviewDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="flex max-h-[94vh] w-[96vw] max-w-[1500px] flex-col gap-3 overflow-hidden sm:max-w-[1500px]">
         <DialogHeader>
           <DialogTitle>Review Laporan Verifikasi Dokumen</DialogTitle>
         </DialogHeader>
 
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto lg:h-[70vh] lg:flex-row lg:overflow-hidden">
+        <div className="flex w-full shrink-0 flex-col gap-3 lg:w-[500px] lg:overflow-y-auto lg:pr-1">
         <div className="flex flex-col gap-2.5">
           {DOCUMENT_REPORT_REVIEW_ITEMS.map((item, index) => {
             const value = items[item.key];
@@ -294,6 +296,16 @@ function ReviewDialog({
           <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="mt-0.5" />
           Saya telah memeriksa Laporan Verifikasi Dokumen dan hasil review di atas sesuai dengan pemeriksaan saya.
         </label>
+        </div>
+
+        <div className="min-h-[70vh] flex-1 overflow-hidden rounded-lg border border-[#efe2d4] bg-[#f4f1ed]">
+          <iframe
+            title="Laporan Verifikasi Dokumen"
+            src={`/technical-analyst-workspace/assignments/${assignmentNumber}/document-report`}
+            className="size-full min-h-[70vh] border-0"
+          />
+        </div>
+        </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={saving}>
