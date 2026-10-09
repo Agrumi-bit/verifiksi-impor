@@ -8,11 +8,14 @@ import { MaterialIcon } from "../../components/material-icon";
 import {
   Badge, CARD_BORDER, CREAM, Eyebrow, GREEN, INK, MUTED, MUTED_2, NAVY, ORANGE, ORANGE_LIGHT, ORANGE_TEXT, PageHead,
 } from "@/modules/verifikator-workspace/components/report/document-verification-report";
+import { companyChapterNarrative } from "../company-chapter";
 import { resolvePeriod, type ReportingPeriod } from "../derive";
 import { buildExportSections, EXPORT_PARTS, type ExportSection, type ExportTable } from "../export-sections";
-import { fdLong, nf } from "../format";
-import { conclusionSections, dataQualityAlerts, introductionParagraphs, kpis } from "../summary";
+import { compact, fdLong, nf, sym } from "../format";
+import { bab1, chapterDivider, CHAPTERS, executiveSummary, GLOSSARY, planValues } from "../report-model";
+import { introductionParagraphs, kpis } from "../summary";
 import type { P47Dataset, P47Report } from "../types";
+import { C, ColumnChart, DividerBody, Donut, Figure, HBarList, Ikhtisar, Limits, Para, SubHead, TableCaption } from "./report-figures";
 import "@/modules/surveyor-workspace/components/report/office-report-preview.css";
 
 const TITLE = "Laporan Pelaksanaan VIU – Produk Tekstil sebagai Barang Konsumsi";
@@ -21,7 +24,7 @@ const STATUS_BADGE = { DRAFT: { color: "#7a4a10", bg: "#ffebce" }, REVIEWED: { c
 
 /** Why each section is in the report — printed under its title. */
 const SECTION_INTRO: Record<string, string> = {
-  "8.2": "Daftar Perusahaan API-U yang melaksanakan Verifikasi Importir Umum (VIU) Produk Tekstil sebagai Barang Konsumsi pada periode laporan, beserta KBLI Utama, lokasi kantor dan gudang, serta status Laporan Hasil Verifikasi Importir Umum (LHVIU).",
+  "8.2": "Bab ini menyajikan profil Perusahaan pemegang Angka Pengenal Importir Umum (API-U) yang mengajukan Verifikasi Importir Umum (VIU) Produk Tekstil sebagai Barang Konsumsi pada periode laporan: periode penerbitan Laporan Hasil Verifikasi Importir Umum (LHVIU), kesesuaian KBLI terhadap persyaratan Pasal 37, serta daftar perusahaan dan status LHVIU. Sebaran kantor dan gudang dibahas pada Bab 9.",
   "8.3": "Pos tarif/HS dan komoditas Produk Tekstil yang diajukan. Rencana kebutuhan dijumlahkan hanya di dalam satu HS dengan satuan yang sama.",
   "8.4": "Negara asal produk menurut jumlah relasi product line. Volume per negara tidak dicantumkan karena sebagian product line memiliki lebih dari satu negara asal tanpa alokasi kuantitas.",
   "8.5": "Merek yang diimpor dan hubungan setiap Perusahaan API-U dengan merek tersebut, termasuk status kelengkapan dokumen hubungan merek.",
@@ -33,15 +36,20 @@ const SECTION_INTRO: Record<string, string> = {
   "8.11": "Rencana kebutuhan impor per bulan menurut tanggal pengajuan permohonan, per satuan. Data realisasi impor belum tersedia pada sistem.",
   "8.12": "Status ketersediaan data pada setiap tahap rantai pasok merek, dari pemilik merek hingga konsumen. Tahap hilir tidak diverifikasi oleh VIU.",
   "8.13": "Temuan pelaksanaan verifikasi dengan tingkat keparahan operasional dan materialitas pelaporan yang ditetapkan Project Manager.",
+  "8.12f": "Lokasi kantor dan gudang Pemohon VIU beserta status kepemilikannya, sebagaimana dicatat pada permohonan.",
 };
 
 type Plan =
   | { kind: "approval" }
   | { kind: "toc" }
+  | { kind: "glossary" }
   | { kind: "intro"; part: 1 | 2 }
   | { kind: "summary" }
-  | { kind: "narrative"; section: ExportSection }
-  | { kind: "table"; section: ExportSection; table: ExportTable; tableIndex: number; rows: (string | number)[][]; part: number; parts: number; first: boolean; landscape: boolean }
+  | { kind: "divider"; ch: number }
+  | { kind: "bab1"; part: 1 | 2 | 3 }
+  | { kind: "bab1list"; rows: (string | number)[][]; part: number; parts: number }
+  | { kind: "facility" }
+  | { kind: "table"; ch: number; table: ExportTable; tableNo: string; rows: (string | number)[][]; part: number; parts: number; first: boolean; landscape: boolean }
   | { kind: "conclusion" }
   | { kind: "appendix" };
 
@@ -50,37 +58,59 @@ const rowsPerPage = (t: ExportTable, landscape: boolean) => {
   return landscape ? (longText ? 8 : 12) : longText ? 10 : 16;
 };
 
-/** Page plan: approval, contents, summary, one or more pages per section table, conclusion, appendix. */
-function planPages(sections: ExportSection[]): Plan[] {
+const chunk = <T,>(rows: T[], size: number): T[][] => (rows.length ? Array.from({ length: Math.ceil(rows.length / size) }, (_, i) => rows.slice(i * size, (i + 1) * size)) : [[]]);
+
+/** The tables a chapter still prints from the export model (chapters without their own figures yet). */
+function chapterTables(no: string, sections: ExportSection[]): ExportTable[] {
+  if (no === "8.12f") return sections.find((s) => s.no === "8.2")?.tables.slice(1, 2) ?? [];
+  const sources = CHAPTERS.find((c) => c.no === no)?.sources ?? [];
+  return sources.flatMap((src) => sections.find((s) => s.no === src)?.tables ?? []);
+}
+
+/** Page plan, following the reference report: front matter, ten chapters each opened by a divider, closing pages. */
+function planPages(sections: ExportSection[], companyRows: (string | number)[][]): Plan[] {
   // Pendahuluan runs ~500 words, so it gets two pages rather than overflowing one A4 sheet.
-  const plan: Plan[] = [{ kind: "approval" }, { kind: "toc" }, { kind: "intro", part: 1 }, { kind: "intro", part: 2 }, { kind: "summary" }];
-  for (const section of sections.filter((s) => s.no !== "8.14")) {
-    if (section.narrative?.length) plan.push({ kind: "narrative", section });
-    section.tables.forEach((table, tableIndex) => {
+  const plan: Plan[] = [{ kind: "approval" }, { kind: "toc" }, { kind: "glossary" }, { kind: "intro", part: 1 }, { kind: "intro", part: 2 }, { kind: "summary" }];
+  CHAPTERS.forEach((chapter, ch) => {
+    plan.push({ kind: "divider", ch });
+    if (chapter.no === "8.2") {
+      plan.push({ kind: "bab1", part: 1 }, { kind: "bab1", part: 2 }, { kind: "bab1", part: 3 });
+      const parts = chunk(companyRows, 16);
+      parts.forEach((rows, i) => plan.push({ kind: "bab1list", rows, part: i + 1, parts: parts.length }));
+      return;
+    }
+    if (chapter.no === "8.12f") plan.push({ kind: "facility" });
+    chapterTables(chapter.no, sections).forEach((table, tableIndex) => {
       const landscape = table.headers.length > 6;
-      const size = rowsPerPage(table, landscape);
-      const chunks = table.rows.length ? Array.from({ length: Math.ceil(table.rows.length / size) }, (_, i) => table.rows.slice(i * size, (i + 1) * size)) : [[]];
-      chunks.forEach((rows, i) => plan.push({ kind: "table", section, table, tableIndex, rows, part: i + 1, parts: chunks.length, first: tableIndex === 0 && i === 0, landscape }));
+      const parts = chunk(table.rows, rowsPerPage(table, landscape));
+      parts.forEach((rows, i) =>
+        plan.push({ kind: "table", ch, table, tableNo: `${ch + 1}.${tableIndex + 1}`, rows, part: i + 1, parts: parts.length, first: tableIndex === 0 && i === 0 && chapter.no !== "8.12f", landscape }),
+      );
     });
-  }
+  });
   plan.push({ kind: "conclusion" }, { kind: "appendix" });
   return plan;
 }
 
-function Shell({ pageNo, total, landscape, id, children }: { pageNo: number; total: number; landscape?: boolean; id?: string; children: ReactNode }) {
+function Shell({ pageNo, total, landscape, dark, label, id, children }: { pageNo: number; total: number; landscape?: boolean; dark?: boolean; label?: string; id?: string; children: ReactNode }) {
   return (
-    <section className={landscape ? "rd-sheet rd-sheet-landscape" : "rd-sheet"} id={id} style={{ background: CREAM, color: INK, padding: "40px 48px", display: "flex", flexDirection: "column" }}>
-      <PageHead />
+    <section
+      className={landscape ? "rd-sheet rd-sheet-landscape" : "rd-sheet"}
+      id={id}
+      style={{ background: dark ? NAVY : CREAM, color: dark ? "#fff" : INK, padding: "40px 48px", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}
+    >
+      {dark && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 6, background: ORANGE_LIGHT }} />}
+      <PageHead dark={dark} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, marginTop: 18 }}>{children}</div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: MUTED_2, borderTop: `1px solid ${CARD_BORDER}`, paddingTop: 12, marginTop: 12 }}>
-        <div>Laporan Pelaksanaan VIU Barang Konsumsi — Pelaporan Pasal 47</div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: dark ? "#8a97a8" : MUTED_2, borderTop: `1px solid ${dark ? "#1e2a38" : CARD_BORDER}`, paddingTop: 12, marginTop: 12 }}>
+        <div>{label ?? "Laporan Pelaksanaan VIU Barang Konsumsi — Pelaporan Pasal 47"}</div>
         <div>{pageNo} dari {total}</div>
       </div>
     </section>
   );
 }
 
-function DataTable({ table, rows }: { table: ExportTable; rows: (string | number)[][] }) {
+function DataTable({ table, rows }: { table: Pick<ExportTable, "headers" | "rows">; rows: (string | number)[][] }) {
   return (
     <div style={{ border: `1px solid ${CARD_BORDER}`, borderRadius: 10, overflow: "hidden", background: "#fff" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9.5 }}>
@@ -131,19 +161,33 @@ export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
 
   const { dataset: ds, report } = data;
   const sections = buildExportSections(ds, report, EXPORT_PARTS.map(([no]) => no));
-  const plan = planPages(sections);
+  const b1 = bab1(ds);
+  const plan = planPages(sections, b1.companyRows);
   const total = plan.length;
-  const startPage = (no: string) => plan.findIndex((p) => (p.kind === "narrative" && p.section.no === no) || (p.kind === "table" && p.section.no === no && p.first)) + 1;
-  const conclusionPage = plan.findIndex((p) => p.kind === "conclusion") + 1;
-  const appendixPage = plan.findIndex((p) => p.kind === "appendix") + 1;
-  const introPage = plan.findIndex((p) => p.kind === "intro") + 1;
-  const summaryPage = plan.findIndex((p) => p.kind === "summary") + 1;
+  const pageOf = (pred: (p: Plan) => boolean) => plan.findIndex(pred) + 1;
   const intro = introductionParagraphs(ds, report);
   const INTRO_SPLIT = 4;
   const k = kpis(ds, report);
+  const ex = executiveSummary(ds, report);
+  const value = planValues(ds);
   const preparedOn = report.updatedAt ?? ds.generatedAt;
   const isApproved = report.status === "APPROVED";
   const badge = STATUS_BADGE[report.status];
+  const SOURCE = `data sistem per ${new Date(ds.generatedAt).toLocaleString("id-ID")}, diolah`;
+  const h1 = (text: string) => <h1 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 10px", lineHeight: 1.15 }}>{text}</h1>;
+  const lead = (text: string) => <p style={{ fontSize: 12.5, lineHeight: 1.6, color: MUTED, margin: "0 0 10px" }}>{text}</p>;
+  const brandsActive = ds.brands.filter((b) => b.registrationNumber).length;
+
+  const tocRows: [string, string, number, string, boolean][] = [
+    ["i", "Halaman Persetujuan", pageOf((p) => p.kind === "approval"), "persetujuan", false],
+    ["ii", "Daftar Isi", pageOf((p) => p.kind === "toc"), "daftar-isi", false],
+    ["iii", "Daftar Istilah dan Singkatan", pageOf((p) => p.kind === "glossary"), "istilah", false],
+    ["iv", "Pendahuluan", pageOf((p) => p.kind === "intro"), "pendahuluan", false],
+    ["v", "Ringkasan Eksekutif", pageOf((p) => p.kind === "summary"), "ringkasan", false],
+    ...CHAPTERS.map((c, ch): [string, string, number, string, boolean] => [String(ch + 1), `Bab ${ch + 1}  ${c.title}`, pageOf((p) => p.kind === "divider" && p.ch === ch), `bab-${ch + 1}`, true]),
+    ["K", "Kesimpulan dan Rekomendasi", pageOf((p) => p.kind === "conclusion"), "kesimpulan", true],
+    ["L", "Lampiran: Sumber Data dan Keterbatasan", pageOf((p) => p.kind === "appendix"), "lampiran", false],
+  ];
 
   const page = (p: Plan, i: number): ReactNode => {
     const n = i + 1;
@@ -187,18 +231,28 @@ export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
         return (
           <Shell key={i} pageNo={n} total={total} id="daftar-isi">
             <Eyebrow>DAFTAR ISI</Eyebrow>
-            <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 20px" }}>Daftar Isi</h1>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {[["1", "Halaman Persetujuan", 1, "persetujuan", NAVY], ["2", "Daftar Isi", 2, "daftar-isi", NAVY], ["3", "Pendahuluan", introPage, "pendahuluan", NAVY], ["4", "Ringkasan Eksekutif", summaryPage, "ringkasan", NAVY],
-                ...sections.filter((s) => s.no !== "8.14").map((s) => [s.no, s.title, startPage(s.no), `bab-${s.no}`, ORANGE]),
-                ["8.14", "Kesimpulan Pelaksanaan VIU", conclusionPage, "kesimpulan", ORANGE], ["A", "Lampiran: Sumber Data & Keterbatasan", appendixPage, "lampiran", NAVY],
-              ].map(([no, label, pg, anchor, color]) => (
-                <a key={String(anchor)} href={`#${anchor}`} style={{ display: "flex", alignItems: "center", gap: 14, background: "#fff", borderRadius: 10, padding: "9px 16px", textDecoration: "none" }}>
-                  <div style={{ minWidth: 34, height: 22, borderRadius: 11, background: String(color), color: "#fff", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 6px" }}>{no}</div>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: "#1a3a6b", flex: 1 }}>{label}</div>
-                  <div style={{ fontSize: 12, color: MUTED_2 }}>{String(pg).padStart(2, "0")}</div>
+            <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 18px" }}>Daftar Isi</h1>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {tocRows.map(([no, label, pg, anchor, chapter]) => (
+                <a key={anchor} href={`#${anchor}`} style={{ display: "flex", alignItems: "center", gap: 14, background: "#fff", border: `1px solid ${CARD_BORDER}`, borderRadius: 10, padding: "6px 14px", textDecoration: "none", color: INK }}>
+                  <span style={{ minWidth: 36, height: 22, borderRadius: 11, background: chapter ? ORANGE : NAVY, color: "#fff", fontSize: 10, fontWeight: 700, display: "grid", placeItems: "center", padding: "0 6px" }}>{no}</span>
+                  <span style={{ fontSize: 12.5, fontWeight: 600, flex: 1 }}>{label}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: MUTED }}>{pg}</span>
                 </a>
               ))}
+            </div>
+          </Shell>
+        );
+      case "glossary":
+        return (
+          <Shell key={i} pageNo={n} total={total} id="istilah">
+            <Eyebrow>DAFTAR ISTILAH DAN SINGKATAN</Eyebrow>
+            <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 16px" }}>Daftar Istilah dan Singkatan</h1>
+            <div style={{ border: `1px solid ${CARD_BORDER}`, borderRadius: 10, overflow: "hidden", background: "#fff" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
+                <thead><tr style={{ background: "#f2e9d9" }}><th style={{ textAlign: "left", padding: "8px 10px", fontSize: 9.5, color: "#5c5346", width: 170 }}>ISTILAH</th><th style={{ textAlign: "left", padding: "8px 10px", fontSize: 9.5, color: "#5c5346" }}>PENGERTIAN DALAM LAPORAN INI</th></tr></thead>
+                <tbody>{GLOSSARY.map(([term, meaning]) => <tr key={term} style={{ borderTop: `1px solid ${CARD_BORDER}` }}><td style={{ padding: "8px 10px", verticalAlign: "top" }}><b>{term}</b></td><td style={{ padding: "8px 10px", lineHeight: 1.5 }}>{meaning}</td></tr>)}</tbody>
+              </table>
             </div>
           </Shell>
         );
@@ -223,88 +277,170 @@ export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
         return (
           <Shell key={i} pageNo={n} total={total} id="ringkasan">
             <Eyebrow>RINGKASAN EKSEKUTIF</Eyebrow>
-            <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 12px" }}>Ringkasan Eksekutif</h1>
-            <p style={{ fontSize: 13, lineHeight: 1.6, color: MUTED, maxWidth: 680, margin: 0 }}>{conclusionSections(ds, report)[0].paragraphs[0]}</p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginTop: 22 }}>
+            {h1("Ringkasan Eksekutif")}
+            {lead(ex.lead)}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginTop: 6 }}>
               <Tile label="API-U" value={k.companies} sub={`${k.applications} permohonan`} />
               <Tile label="LHVIU" value={k.lhviu} sub="telah diterbitkan" />
-              <Tile label="POS TARIF/HS" value={k.hs} sub={`${k.lines} product line`} />
+              <Tile label="POS TARIF/HS" value={k.hs} sub="dalam rencana impor" />
               <Tile label="MEREK" value={k.brands} sub={`${k.countries} negara asal`} />
-              <Tile label="TEMUAN" value={k.findings} sub="seluruh sumber" />
-              <Tile label="ISU MATERIAL" value={k.material} sub="ditetapkan Project Manager" />
-              <Tile label="SERTIFIKAT UJI MUTU" value={ds.technical.length} sub={`${ds.technical.filter((t) => t.status.tone === "ok").length} lengkap`} />
-              <Tile label="GUDANG" value={ds.warehouses.length} sub={`${ds.warehouses.filter((w) => w.capacity !== null).length} dengan data kapasitas`} />
+              <Tile label="PRODUCT LINE" value={k.lines} sub={`${nf(k.relations)} relasi negara`} />
+              <Tile label="NILAI RENCANA" value={value.total ? `${sym(value.currency)} ${compact(value.total)}` : "—"} sub={value.otherCurrencies.length ? `+ ${value.otherCurrencies.join(", ")}` : "kuantitas × harga satuan"} />
+              <Tile label="BUKTI MEREK" value={`${brandsActive}/${ds.brands.length}`} sub="sertifikat/tanda pendaftaran" />
+              <Tile label="UJI MUTU LENGKAP" value={`${ds.technical.filter((t) => t.status.tone === "ok").length}/${ds.technical.length}`} sub="sertifikat hasil uji mutu" />
             </div>
-            <div style={{ background: ORANGE, color: "#fff", padding: "18px 22px", marginTop: 22, borderRadius: 14 }}>
+            {([["TEMUAN UTAMA", ex.findings], ["REKOMENDASI", ex.recs]] as const).map(([title, items]) =>
+              items.length ? (
+                <div key={title}>
+                  <Eyebrow><span style={{ display: "block", marginTop: 14 }}>{title}</span></Eyebrow>
+                  <ol style={{ margin: "4px 0 0", paddingLeft: 20, fontSize: 11.5, lineHeight: 1.55 }}>{items.map((t) => <li key={t} style={{ margin: "2px 0" }}>{t}</li>)}</ol>
+                </div>
+              ) : null,
+            )}
+            <div style={{ background: ORANGE, color: "#fff", padding: "14px 18px", marginTop: 14, borderRadius: 14 }}>
               <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", opacity: 0.85 }}>KESIMPULAN</div>
-              <div style={{ fontSize: 13.5, lineHeight: 1.55, marginTop: 6 }}>{conclusionSections(ds, report).find((s) => s.title.startsWith("6."))?.paragraphs[0]}</div>
+              <div style={{ fontSize: 12.5, lineHeight: 1.5, marginTop: 4 }}>{ex.concl}</div>
             </div>
-            <Eyebrow><span style={{ display: "block", marginTop: 22 }}>CATATAN KUALITAS DATA</span></Eyebrow>
-            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, lineHeight: 1.6, color: MUTED }}>{dataQualityAlerts(ds).map((a) => <li key={a.text}>{a.text}</li>)}</ul>
           </Shell>
         );
-      case "narrative": {
-        const idx = sections.filter((s) => s.no !== "8.14").findIndex((s) => s.no === p.section.no);
+      case "divider": {
+        const chapter = CHAPTERS[p.ch];
+        const d = chapterDivider(chapter.no, ds, report);
         return (
-          <Shell key={i} pageNo={n} total={total} id={`bab-${p.section.no}`}>
-            <Eyebrow>BAB {idx + 1} · BAGIAN {p.section.no}</Eyebrow>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 10px" }}>{p.section.title}</h1>
-            <p style={{ fontSize: 12, lineHeight: 1.6, color: MUTED, margin: "0 0 14px" }}>{SECTION_INTRO[p.section.no]}</p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
-              <Tile label="API-U" value={k.companies} sub={`${k.applications} permohonan`} />
-              <Tile label="LHVIU TERBIT" value={k.lhviu} sub={`dari ${k.applications} permohonan`} />
-              <Tile label="KANTOR" value={ds.applications.filter((a) => a.kantor).length} sub={`${new Set(ds.applications.map((a) => a.kantor?.province).filter(Boolean)).size} provinsi`} />
-              <Tile label="GUDANG" value={ds.warehouses.length} sub={`${new Set(ds.warehouses.map((w) => w.place.city).filter(Boolean)).size} kota`} />
-            </div>
-            {p.section.narrative?.map((text) => (
-              <p key={text} style={{ fontSize: 12, lineHeight: 1.65, color: INK, margin: "0 0 10px", textAlign: "justify" }}>{text}</p>
-            ))}
+          <Shell key={i} pageNo={n} total={total} dark id={`bab-${p.ch + 1}`} label={`Bab ${p.ch + 1} — ${chapter.title}`}>
+            <DividerBody n={p.ch + 1} title={chapter.title} lead={d.lead} scope={d.scope} stats={d.stats} />
+          </Shell>
+        );
+      }
+      case "bab1":
+        if (p.part === 1) {
+          return (
+            <Shell key={i} pageNo={n} total={total}>
+              <Eyebrow>BAB 1</Eyebrow>
+              {h1(CHAPTERS[0].title)}
+              {lead(SECTION_INTRO["8.2"])}
+              <Ikhtisar items={b1.highlights} />
+              <SubHead num="1.1" title="Profil dan Periode Penerbitan LHVIU" />
+              {b1.sub11.map((t) => <Para key={t}>{t}</Para>)}
+              <Figure num="1.1" title="Jumlah LHVIU per Bulan Terbit" source={`${SOURCE}. Bulan terbit menurut Tanggal Terbit LHVIU yang dicatat Project Manager.`}>
+                <ColumnChart items={b1.months.map((m) => ({ label: m.label, value: m.companies.length }))} />
+              </Figure>
+            </Shell>
+          );
+        }
+        if (p.part === 2) {
+          const issued = b1.months.filter((m) => m.companies.length);
+          return (
+            <Shell key={i} pageNo={n} total={total}>
+              <Eyebrow>BAB 1 · LANJUTAN</Eyebrow>
+              <TableCaption num="1.1" title="Jumlah LHVIU per Bulan Terbit" />
+              <DataTable
+                table={{ headers: ["Bulan Terbit", "Jumlah LHVIU", "Perusahaan"], rows: issued.map((m) => [m.label, m.companies.length, m.companies.join("; ")]) }}
+                rows={issued.map((m) => [m.label, m.companies.length, m.companies.join("; ")])}
+              />
+              <div style={{ fontSize: 10, color: MUTED_2, margin: "6px 0 4px" }}>Sumber: {SOURCE} · {issued.length} baris</div>
+              <SubHead num="1.2" title="Kesesuaian KBLI terhadap Persyaratan" />
+              {b1.sub12.map((t) => <Para key={t}>{t}</Para>)}
+            </Shell>
+          );
+        }
+        return (
+          <Shell key={i} pageNo={n} total={total}>
+            <Eyebrow>BAB 1 · LANJUTAN</Eyebrow>
+            <Figure num="1.2" title="Kesesuaian KBLI terhadap Persyaratan Pasal 37" source={`${SOURCE}. KBLI Utama pada profil perusahaan.`}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", color: ORANGE_TEXT, margin: "0 0 6px" }}>PERUSAHAAN PER KBLI YANG DIPERSYARATKAN</div>
+              <HBarList rows={b1.kbli.required.map((r) => ({ key: r.code, desc: r.description || "Tidak dimiliki", value: r.companies.length, muted: !r.companies.length }))} total={b1.kbli.companies.length} />
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", color: ORANGE_TEXT, margin: "14px 0 6px" }}>KOMPOSISI SELURUH KBLI YANG DIMILIKI</div>
+              <Donut
+                size={112}
+                center={String(b1.kbli.pairs)}
+                sub="KBLI tercatat"
+                segs={[
+                  { label: "Termasuk KBLI yang dipersyaratkan", value: b1.kbli.requiredPairs, color: C.own },
+                  { label: "Kegiatan usaha lain", value: b1.kbli.pairs - b1.kbli.requiredPairs, color: C.na },
+                ]}
+              />
+            </Figure>
+            <SubHead num="1.3" title="Daftar Perusahaan API-U dan Status LHVIU" />
+            {b1.sub13.map((t) => <Para key={t}>{t}</Para>)}
+            <p style={{ fontSize: 12, fontStyle: "italic", color: MUTED, margin: "2px 0 0" }}>→ Tabel 1.2 disajikan pada halaman berikut (orientasi landscape).</p>
+            <Limits items={b1.limits} />
+          </Shell>
+        );
+      case "bab1list":
+        return (
+          <Shell key={i} pageNo={n} total={total} landscape>
+            <Eyebrow>BAB 1 · LANJUTAN SUBBAGIAN 1.3</Eyebrow>
+            <TableCaption num="1.2" title={`Daftar Perusahaan API-U dan Status LHVIU per ${fdLong(ds.generatedAt.slice(0, 10))}${p.parts > 1 ? ` (${p.part}/${p.parts})` : ""}`} />
+            <DataTable
+              table={{ headers: ["Perusahaan", "Nomor LHVIU", "Status LHVIU", "Tanggal Terbit", "Berlaku s.d.", "Sisa Masa Berlaku", "NIB", "Jumlah KBLI", "Product Line", "Merek"], rows: b1.companyRows }}
+              rows={p.rows}
+            />
+            {p.part === p.parts && <div style={{ fontSize: 10, color: MUTED_2, marginTop: 8 }}>Sumber: {SOURCE} · {b1.companyRows.length} baris</div>}
+          </Shell>
+        );
+      case "facility": {
+        const paras = companyChapterNarrative(ds).filter((t) => /kantor|gudang/i.test(t) && !t.startsWith("Bab ini") && !t.startsWith("Status Laporan"));
+        return (
+          <Shell key={i} pageNo={n} total={total}>
+            <Eyebrow>BAB {CHAPTERS.findIndex((c) => c.no === "8.12f") + 1}</Eyebrow>
+            {h1(CHAPTERS.find((c) => c.no === "8.12f")!.title)}
+            {lead(SECTION_INTRO["8.12f"])}
+            {paras.map((t) => <Para key={t}>{t}</Para>)}
           </Shell>
         );
       }
       case "table": {
-        const idx = sections.filter((s) => s.no !== "8.14").findIndex((s) => s.no === p.section.no);
+        const chapter = CHAPTERS[p.ch];
         return (
-          <Shell key={i} pageNo={n} total={total} landscape={p.landscape} id={p.first && !p.section.narrative ? `bab-${p.section.no}` : undefined}>
-            <Eyebrow>BAB {idx + 1} · BAGIAN {p.section.no}</Eyebrow>
-            <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 8px" }}>{p.section.title}{p.parts > 1 || p.tableIndex > 0 ? <span style={{ fontSize: 13, color: MUTED_2, fontWeight: 600 }}> {p.table.title ? `· ${p.table.title}` : ""}{p.parts > 1 ? ` (${p.part}/${p.parts})` : ""}</span> : null}</h1>
-            {p.first && !p.section.narrative && <p style={{ fontSize: 12, lineHeight: 1.6, color: MUTED, margin: "0 0 14px", maxWidth: 820 }}>{SECTION_INTRO[p.section.no]}</p>}
-            {p.table.title && p.tableIndex === 0 && p.part === 1 && <div style={{ fontSize: 11, fontWeight: 700, color: ORANGE_TEXT, marginBottom: 6 }}>{p.table.title}</div>}
+          <Shell key={i} pageNo={n} total={total} landscape={p.landscape}>
+            <Eyebrow>BAB {p.ch + 1}{p.first ? "" : " · LANJUTAN"}</Eyebrow>
+            {p.first && h1(chapter.title)}
+            {p.first && lead(SECTION_INTRO[chapter.no] ?? "")}
+            <TableCaption num={p.tableNo} title={`${p.table.title ?? chapter.title}${p.parts > 1 ? ` (${p.part}/${p.parts})` : ""}`} />
             <DataTable table={p.table} rows={p.rows} />
-            {p.part === p.parts && <div style={{ fontSize: 10, color: MUTED_2, marginTop: 8 }}>{p.table.rows.length} baris · sumber: data sistem per {new Date(ds.generatedAt).toLocaleString("id-ID")}</div>}
+            {p.part === p.parts && <div style={{ fontSize: 10, color: MUTED_2, marginTop: 8 }}>Sumber: {SOURCE} · {p.table.rows.length} baris</div>}
           </Shell>
         );
       }
-      case "conclusion":
+      case "conclusion": {
+        const blocks: [string, string[]][] = [
+          ["1. Ringkasan Pelaksanaan", [ex.lead]],
+          ["2. Temuan Utama", ex.findings],
+          ["3. Rekomendasi", ex.recs],
+          ["4. Keterbatasan Data", ex.limits],
+          ["5. Kesimpulan", [ex.concl]],
+        ];
         return (
           <Shell key={i} pageNo={n} total={total} id="kesimpulan">
-            <Eyebrow>BAGIAN 8.14</Eyebrow>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 12px" }}>Kesimpulan Pelaksanaan VIU</h1>
-            {conclusionSections(ds, report).map((s) => (
-              <div key={s.title} style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 4 }}>{s.title}</div>
-                {s.paragraphs.length > 1 ? <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, lineHeight: 1.55, color: MUTED }}>{s.paragraphs.map((t) => <li key={t}>{t}</li>)}</ul> : <p style={{ margin: 0, fontSize: 12, lineHeight: 1.55, color: MUTED }}>{s.paragraphs[0]}</p>}
+            <Eyebrow>KESIMPULAN DAN REKOMENDASI</Eyebrow>
+            {h1("Kesimpulan dan Rekomendasi")}
+            {blocks.filter(([, items]) => items.length).map(([title, items]) => (
+              <div key={title} style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 3 }}>{title}</div>
+                {items.length > 1 ? <ul style={{ margin: 0, paddingLeft: 18, fontSize: 11.5, lineHeight: 1.55 }}>{items.map((t) => <li key={t}>{t}</li>)}</ul> : <p style={{ margin: 0, fontSize: 11.5, lineHeight: 1.55, color: MUTED }}>{items[0]}</p>}
               </div>
             ))}
-            <div style={{ background: "#fff", border: `1px solid ${CARD_BORDER}`, borderRadius: 12, padding: "14px 16px", marginTop: 6 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 4 }}>7. Catatan Project Manager</div>
-              <p style={{ margin: 0, fontSize: 12, lineHeight: 1.55, color: report.pmNote ? INK : MUTED_2, whiteSpace: "pre-wrap" }}>{report.pmNote || "Belum ada catatan Project Manager."}</p>
+            <div style={{ background: "#fff", border: `1px solid ${CARD_BORDER}`, borderRadius: 12, padding: "12px 16px", marginTop: 4 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 4 }}>6. Catatan Project Manager</div>
+              <p style={{ margin: 0, fontSize: 11.5, lineHeight: 1.55, color: report.pmNote ? INK : MUTED_2, whiteSpace: "pre-wrap" }}>{report.pmNote || "Belum ada catatan Project Manager."}</p>
             </div>
           </Shell>
         );
+      }
       case "appendix":
         return (
           <Shell key={i} pageNo={n} total={total} id="lampiran">
             <Eyebrow>LAMPIRAN</Eyebrow>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 12px" }}>Sumber Data & Keterbatasan</h1>
-            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, lineHeight: 1.7, color: MUTED }}>
+            {h1("Sumber Data dan Keterbatasan")}
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, lineHeight: 1.75, color: MUTED }}>
               <li>Permohonan dihitung bila Tanggal Pengajuan berada dalam periode laporan; draf dan permohonan yang ditarik tidak dihitung.</li>
               <li>Data perusahaan, KBLI, dan lokasi diambil dari profil perusahaan; product line, merek, HS, negara asal, kuantitas, dan nilai dari Product Information permohonan.</li>
+              <li>Nomor dan Tanggal Terbit LHVIU dicatat Project Manager pada tab LHVIU; masa berlaku dihitung 1 (satu) tahun sejak tanggal terbit (Pasal 39 ayat (6)).</li>
               <li>Bukti merek dari Merek Management; sertifikat uji mutu dan label dari dokumen permohonan beserta status verifikasinya.</li>
               <li>Kapasitas gudang, kurs, dan keputusan modal kerja dari Analisis Teknis.</li>
               <li>Temuan berasal dari survei lapangan, verifikasi dokumen, verifikasi produk, dan analisis teknis. Severity non-survei dipetakan dari keputusan reviewer; materialitas ditetapkan Project Manager.</li>
               <li>Kuantitas tidak dijumlahkan lintas satuan dan nilai tidak dijumlahkan lintas mata uang.</li>
-              <li>Nomor dan masa berlaku LHVIU belum tercatat di sistem; status LHVIU berdasarkan file yang diunggah.</li>
               <li>Data realisasi impor aktual dan distribusi hilir belum tersedia pada sistem.</li>
             </ul>
           </Shell>
