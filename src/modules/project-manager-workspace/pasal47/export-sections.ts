@@ -1,13 +1,15 @@
+import { companyChapterNarrative, kbliRows, locationRows } from "./company-chapter";
 import { brandCertificateStatus, concentration, countryRows, currenciesOf, hsRows, lhviuStatus, trend, unitsOf, valueByHs, type Dimension } from "./derive";
 import { fd, monthLabel, nf, sym } from "./format";
 import { businessFlow, conclusionSections, MATERIALITY_LABEL, materialityOf } from "./summary";
 import type { P47Dataset, P47Report } from "./types";
 
 export type ExportTable = { title?: string; headers: string[]; rows: (string | number)[][] };
-export type ExportSection = { no: string; title: string; tables: ExportTable[] };
+/** `narrative` (when set) is printed as prose on its own page before the tables. */
+export type ExportSection = { no: string; title: string; narrative?: string[]; tables: ExportTable[] };
 
 export const EXPORT_PARTS: [string, string][] = [
-  ["8.2", "API-U, KBLI & LHVIU"], ["8.3", "Komoditas & Pos Tarif/HS"], ["8.4", "Negara Asal"], ["8.5", "Merek & Importir"],
+  ["8.2", "Data Perusahaan API-U"], ["8.3", "Komoditas & Pos Tarif/HS"], ["8.4", "Negara Asal"], ["8.5", "Merek & Importir"],
   ["8.6", "Pemilik Merek & Perwakilan Resmi"], ["8.7", "Persyaratan Teknis"], ["8.8", "Persediaan & Gudang"], ["8.9", "Nilai Impor & Modal Kerja"],
   ["8.10", "Konsentrasi Kebutuhan"], ["8.11", "Tren Rencana Kebutuhan Impor"], ["8.12", "Bisnis Proses"], ["8.13", "Temuan & Isu Material"], ["8.14", "Kesimpulan Pelaksanaan VIU"],
 ];
@@ -17,8 +19,12 @@ const DIMS: [Dimension, string][] = [["hs", "HS"], ["merek", "Merek"], ["negara"
 /** Every report section as plain tables — the one model behind both the Excel file and the print view. */
 export function buildExportSections(ds: P47Dataset, report: P47Report, parts: string[]): ExportSection[] {
   const build: Record<string, () => ExportTable[]> = {
-    "8.2": () => [{ headers: ["Perusahaan", "NIB", "KBLI Utama", "Nomor Permohonan", "Tanggal Pengajuan", "Kota Kantor", "Kepemilikan Kantor", "Kota Gudang", "LHVIU"],
-      rows: ds.applications.map((a) => [a.company, a.nib, a.kbli.map((k) => k.code).join(", "), a.applicationNumber, fd(a.submittedAt), a.kantor?.city ?? "", a.kantor?.ownership ?? "", a.gudang.map((g) => g.city).join(", "), lhviuStatus(a).label]) }],
+    "8.2": () => [
+      { title: "Sebaran KBLI Utama", headers: ["KBLI", "Uraian", "Jumlah API-U", "Perusahaan"], rows: kbliRows(ds.applications).map((r) => [r.code, r.description, r.companies.length, r.companies.join("; ")]) },
+      { title: "Sebaran lokasi kantor dan gudang", headers: ["Provinsi", "Kota/Kabupaten", "Kantor", "Gudang", "Perusahaan"], rows: locationRows(ds.applications).map((r) => [r.province, r.city, r.kantor, r.gudang, r.companies.join("; ")]) },
+      { title: "Daftar Perusahaan API-U", headers: ["Perusahaan", "NIB", "KBLI Utama", "Nomor Permohonan", "Tanggal Pengajuan", "Kota Kantor", "Kepemilikan Kantor", "Kota Gudang", "LHVIU"],
+        rows: ds.applications.map((a) => [a.company, a.nib, a.kbli.map((k) => k.code).join(", "), a.applicationNumber, fd(a.submittedAt), a.kantor?.city ?? "", a.kantor?.ownership ?? "", a.gudang.map((g) => g.city).join(", "), lhviuStatus(a).label]) },
+    ],
     "8.3": () => [{ headers: ["HS", "Uraian Barang", "Sub Kelompok", "Komoditas", "Jumlah API-U", "Product Line", "Rencana Kebutuhan", "Satuan"],
       rows: hsRows(ds.lines).map((r) => [r.hs, r.description, r.subKelompok, r.komoditas, r.companies, r.lines, Number.isNaN(r.quantity) ? "Satuan berbeda" : r.quantity, r.unit || r.units.join(" / ")]) }],
     "8.4": () => [{ headers: ["Negara", "Jumlah API-U", "Jumlah HS", "Jumlah Merek", "Relasi Product Line"], rows: countryRows(ds.lines).map((r) => [r.country, r.companies, r.hs, r.brands, r.lines]) }],
@@ -39,5 +45,5 @@ export function buildExportSections(ds: P47Dataset, report: P47Report, parts: st
     "8.13": () => [{ headers: ["API-U", "Sumber", "Area", "Temuan", "Severity", "Reporting Materiality", "Status", "PIC"], rows: ds.findings.map((f) => [f.company, f.source, f.area, f.text, f.severity, MATERIALITY_LABEL[materialityOf(report, f.key)], f.status.label, f.pic]) }],
     "8.14": () => [{ headers: ["Bagian", "Isi"], rows: [...conclusionSections(ds, report).flatMap((s) => s.paragraphs.map((p) => [s.title, p])), ["7. Catatan Project Manager", report.pmNote || "—"], ["Status laporan", report.status]] }],
   };
-  return EXPORT_PARTS.filter(([no]) => parts.includes(no)).map(([no, title]) => ({ no, title, tables: build[no]() }));
+  return EXPORT_PARTS.filter(([no]) => parts.includes(no)).map(([no, title]) => ({ no, title, ...(no === "8.2" ? { narrative: companyChapterNarrative(ds) } : {}), tables: build[no]() }));
 }

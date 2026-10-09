@@ -20,6 +20,30 @@ export function defaultPeriod(today: Date): ReportingPeriod {
   return reportingPeriods(today)[0];
 }
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+const isRealDate = (d: string) => ISO_DATE.test(d) && new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d;
+const dateLabel = (d: string) => `${d.slice(8, 10)} ${MONTHS_ID[Number(d.slice(5, 7)) - 1]} ${d.slice(0, 4)}`;
+
+/** A period picked on the calendar (awal & akhir periode). Its key — `YYYY-MM-DD_YYYY-MM-DD` — rides the
+ * same `?periode=` URL param as the reporting years, so every existing link keeps the chosen period. */
+export function customPeriod(from: string, to: string): ReportingPeriod | null {
+  if (!isRealDate(from) || !isRealDate(to) || from > to) return null;
+  return { key: `${from}_${to}`, label: `${dateLabel(from)} – ${dateLabel(to)}`, from, to };
+}
+
+/** `?periode=` → a reporting year (`2025-2026`) or a calendar range (`2025-10-01_2026-03-31`); else the default. */
+export function resolvePeriod(key: string | null, today: Date): ReportingPeriod {
+  const preset = reportingPeriods(today).find((p) => p.key === key);
+  if (preset) return preset;
+  if (key?.includes("_")) {
+    const [from, to] = key.split("_");
+    const custom = customPeriod(from, to);
+    if (custom) return custom;
+  }
+  return defaultPeriod(today);
+}
+
 /* ------------------------------------------------------------------ statuses */
 
 const daysBetween = (a: string, b: string) => (Date.parse(b) - Date.parse(a)) / 864e5;

@@ -53,3 +53,29 @@ export function countBy<T>(items: T[], key: (item: T) => string): Map<string, nu
 export function topN(map: Map<string, number>, n: number): [string, number][] {
   return [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, n);
 }
+
+const SATUAN = ["", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan", "sepuluh", "sebelas"];
+
+/** Bilangan dalam kata (Bahasa Indonesia), untuk penulisan "20 (dua puluh)" pada narasi laporan. */
+export function terbilang(n: number): string {
+  const x = Math.floor(Math.abs(n));
+  if (x === 0) return "nol";
+  if (x < 12) return SATUAN[x];
+  if (x < 20) return `${terbilang(x - 10)} belas`;
+  if (x < 100) return `${terbilang(Math.floor(x / 10))} puluh${x % 10 ? ` ${terbilang(x % 10)}` : ""}`;
+  if (x < 200) return `seratus${x - 100 ? ` ${terbilang(x - 100)}` : ""}`;
+  if (x < 1000) return `${terbilang(Math.floor(x / 100))} ratus${x % 100 ? ` ${terbilang(x % 100)}` : ""}`;
+  if (x < 2000) return `seribu${x - 1000 ? ` ${terbilang(x - 1000)}` : ""}`;
+  if (x < 1_000_000) return `${terbilang(Math.floor(x / 1000))} ribu${x % 1000 ? ` ${terbilang(x % 1000)}` : ""}`;
+  return x.toLocaleString("id-ID");
+}
+
+/** "20 (dua puluh)". */
+export const withWords = (n: number) => `${n} (${terbilang(n)})`;
+
+/** "a, b dan c" — or "a; b; serta c" when an item already contains a comma (e.g. "Tekstil, Karpet, dan …"). */
+export function joinId(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  if (items.some((item) => item.includes(","))) return `${items.slice(0, -1).join("; ")}; serta ${items[items.length - 1]}`;
+  return `${items.slice(0, -1).join(", ")} dan ${items[items.length - 1]}`;
+}

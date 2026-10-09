@@ -8,10 +8,10 @@ import { MaterialIcon } from "../../components/material-icon";
 import {
   Badge, CARD_BORDER, CREAM, Eyebrow, GREEN, INK, MUTED, MUTED_2, NAVY, ORANGE, ORANGE_LIGHT, ORANGE_TEXT, PageHead,
 } from "@/modules/verifikator-workspace/components/report/document-verification-report";
-import { defaultPeriod, reportingPeriods, type ReportingPeriod } from "../derive";
+import { resolvePeriod, type ReportingPeriod } from "../derive";
 import { buildExportSections, EXPORT_PARTS, type ExportSection, type ExportTable } from "../export-sections";
 import { fdLong, nf } from "../format";
-import { conclusionSections, dataQualityAlerts, kpis } from "../summary";
+import { conclusionSections, dataQualityAlerts, introductionParagraphs, kpis } from "../summary";
 import type { P47Dataset, P47Report } from "../types";
 import "@/modules/surveyor-workspace/components/report/office-report-preview.css";
 
@@ -38,7 +38,9 @@ const SECTION_INTRO: Record<string, string> = {
 type Plan =
   | { kind: "approval" }
   | { kind: "toc" }
+  | { kind: "intro"; part: 1 | 2 }
   | { kind: "summary" }
+  | { kind: "narrative"; section: ExportSection }
   | { kind: "table"; section: ExportSection; table: ExportTable; tableIndex: number; rows: (string | number)[][]; part: number; parts: number; first: boolean; landscape: boolean }
   | { kind: "conclusion" }
   | { kind: "appendix" };
@@ -50,8 +52,10 @@ const rowsPerPage = (t: ExportTable, landscape: boolean) => {
 
 /** Page plan: approval, contents, summary, one or more pages per section table, conclusion, appendix. */
 function planPages(sections: ExportSection[]): Plan[] {
-  const plan: Plan[] = [{ kind: "approval" }, { kind: "toc" }, { kind: "summary" }];
+  // Pendahuluan runs ~500 words, so it gets two pages rather than overflowing one A4 sheet.
+  const plan: Plan[] = [{ kind: "approval" }, { kind: "toc" }, { kind: "intro", part: 1 }, { kind: "intro", part: 2 }, { kind: "summary" }];
   for (const section of sections.filter((s) => s.no !== "8.14")) {
+    if (section.narrative?.length) plan.push({ kind: "narrative", section });
     section.tables.forEach((table, tableIndex) => {
       const landscape = table.headers.length > 6;
       const size = rowsPerPage(table, landscape);
@@ -111,8 +115,7 @@ function Tile({ label, value, sub }: { label: string; value: ReactNode; sub?: st
 }
 
 export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
-  const periods = reportingPeriods(new Date());
-  const period: ReportingPeriod = periods.find((p) => p.key === periodKey) ?? defaultPeriod(new Date());
+  const period: ReportingPeriod = resolvePeriod(periodKey, new Date());
   const { data, isLoading, isError } = useQuery({
     queryKey: ["project-manager-workspace", "pasal47", period.from, period.to],
     queryFn: async () => {
@@ -130,9 +133,13 @@ export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
   const sections = buildExportSections(ds, report, EXPORT_PARTS.map(([no]) => no));
   const plan = planPages(sections);
   const total = plan.length;
-  const startPage = (no: string) => plan.findIndex((p) => p.kind === "table" && p.section.no === no && p.first) + 1;
+  const startPage = (no: string) => plan.findIndex((p) => (p.kind === "narrative" && p.section.no === no) || (p.kind === "table" && p.section.no === no && p.first)) + 1;
   const conclusionPage = plan.findIndex((p) => p.kind === "conclusion") + 1;
   const appendixPage = plan.findIndex((p) => p.kind === "appendix") + 1;
+  const introPage = plan.findIndex((p) => p.kind === "intro") + 1;
+  const summaryPage = plan.findIndex((p) => p.kind === "summary") + 1;
+  const intro = introductionParagraphs(ds, report);
+  const INTRO_SPLIT = 4;
   const k = kpis(ds, report);
   const preparedOn = report.updatedAt ?? ds.generatedAt;
   const isApproved = report.status === "APPROVED";
@@ -182,7 +189,7 @@ export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
             <Eyebrow>DAFTAR ISI</Eyebrow>
             <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 20px" }}>Daftar Isi</h1>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {[["1", "Halaman Persetujuan", 1, "persetujuan", NAVY], ["2", "Daftar Isi", 2, "daftar-isi", NAVY], ["3", "Ringkasan Eksekutif", 3, "ringkasan", NAVY],
+              {[["1", "Halaman Persetujuan", 1, "persetujuan", NAVY], ["2", "Daftar Isi", 2, "daftar-isi", NAVY], ["3", "Pendahuluan", introPage, "pendahuluan", NAVY], ["4", "Ringkasan Eksekutif", summaryPage, "ringkasan", NAVY],
                 ...sections.filter((s) => s.no !== "8.14").map((s) => [s.no, s.title, startPage(s.no), `bab-${s.no}`, ORANGE]),
                 ["8.14", "Kesimpulan Pelaksanaan VIU", conclusionPage, "kesimpulan", ORANGE], ["A", "Lampiran: Sumber Data & Keterbatasan", appendixPage, "lampiran", NAVY],
               ].map(([no, label, pg, anchor, color]) => (
@@ -195,6 +202,23 @@ export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
             </div>
           </Shell>
         );
+      case "intro": {
+        const paragraphs = p.part === 1 ? intro.slice(0, INTRO_SPLIT) : intro.slice(INTRO_SPLIT);
+        return (
+          <Shell key={i} pageNo={n} total={total} id={p.part === 1 ? "pendahuluan" : undefined}>
+            <Eyebrow>{p.part === 1 ? "PENDAHULUAN" : "PENDAHULUAN (LANJUTAN)"}</Eyebrow>
+            {p.part === 1 && (
+              <h1 style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.2, margin: "0 0 16px" }}>
+                Pendahuluan Laporan Pelaksanaan VIU
+                <span style={{ display: "block", fontSize: 16, fontWeight: 600, color: MUTED, marginTop: 4 }}>Produk Tekstil sebagai Barang Konsumsi</span>
+              </h1>
+            )}
+            {paragraphs.map((text) => (
+              <p key={text} style={{ fontSize: 12.5, lineHeight: 1.7, color: INK, margin: "0 0 12px", textAlign: "justify" }}>{text}</p>
+            ))}
+          </Shell>
+        );
+      }
       case "summary":
         return (
           <Shell key={i} pageNo={n} total={total} id="ringkasan">
@@ -219,13 +243,32 @@ export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, lineHeight: 1.6, color: MUTED }}>{dataQualityAlerts(ds).map((a) => <li key={a.text}>{a.text}</li>)}</ul>
           </Shell>
         );
+      case "narrative": {
+        const idx = sections.filter((s) => s.no !== "8.14").findIndex((s) => s.no === p.section.no);
+        return (
+          <Shell key={i} pageNo={n} total={total} id={`bab-${p.section.no}`}>
+            <Eyebrow>BAB {idx + 1} · BAGIAN {p.section.no}</Eyebrow>
+            <h1 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 10px" }}>{p.section.title}</h1>
+            <p style={{ fontSize: 12, lineHeight: 1.6, color: MUTED, margin: "0 0 14px" }}>{SECTION_INTRO[p.section.no]}</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+              <Tile label="API-U" value={k.companies} sub={`${k.applications} permohonan`} />
+              <Tile label="LHVIU TERBIT" value={k.lhviu} sub={`dari ${k.applications} permohonan`} />
+              <Tile label="KANTOR" value={ds.applications.filter((a) => a.kantor).length} sub={`${new Set(ds.applications.map((a) => a.kantor?.province).filter(Boolean)).size} provinsi`} />
+              <Tile label="GUDANG" value={ds.warehouses.length} sub={`${new Set(ds.warehouses.map((w) => w.place.city).filter(Boolean)).size} kota`} />
+            </div>
+            {p.section.narrative?.map((text) => (
+              <p key={text} style={{ fontSize: 12, lineHeight: 1.65, color: INK, margin: "0 0 10px", textAlign: "justify" }}>{text}</p>
+            ))}
+          </Shell>
+        );
+      }
       case "table": {
         const idx = sections.filter((s) => s.no !== "8.14").findIndex((s) => s.no === p.section.no);
         return (
-          <Shell key={i} pageNo={n} total={total} landscape={p.landscape} id={p.first ? `bab-${p.section.no}` : undefined}>
+          <Shell key={i} pageNo={n} total={total} landscape={p.landscape} id={p.first && !p.section.narrative ? `bab-${p.section.no}` : undefined}>
             <Eyebrow>BAB {idx + 1} · BAGIAN {p.section.no}</Eyebrow>
             <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 8px" }}>{p.section.title}{p.parts > 1 || p.tableIndex > 0 ? <span style={{ fontSize: 13, color: MUTED_2, fontWeight: 600 }}> {p.table.title ? `· ${p.table.title}` : ""}{p.parts > 1 ? ` (${p.part}/${p.parts})` : ""}</span> : null}</h1>
-            {p.first && <p style={{ fontSize: 12, lineHeight: 1.6, color: MUTED, margin: "0 0 14px", maxWidth: 820 }}>{SECTION_INTRO[p.section.no]}</p>}
+            {p.first && !p.section.narrative && <p style={{ fontSize: 12, lineHeight: 1.6, color: MUTED, margin: "0 0 14px", maxWidth: 820 }}>{SECTION_INTRO[p.section.no]}</p>}
             {p.table.title && p.tableIndex === 0 && p.part === 1 && <div style={{ fontSize: 11, fontWeight: 700, color: ORANGE_TEXT, marginBottom: 6 }}>{p.table.title}</div>}
             <DataTable table={p.table} rows={p.rows} />
             {p.part === p.parts && <div style={{ fontSize: 10, color: MUTED_2, marginTop: 8 }}>{p.table.rows.length} baris · sumber: data sistem per {new Date(ds.generatedAt).toLocaleString("id-ID")}</div>}

@@ -1,5 +1,5 @@
 import { brandCertificateStatus, currenciesOf, hsRows, lhviuStatus, valueByHs } from "./derive";
-import { countBy, fdLong, money, status, sum, topN, uniq } from "./format";
+import { countBy, fdLong, joinId, money, status, sum, topN, uniq, withWords } from "./format";
 import type { Materiality, P47Brand, P47Dataset, P47Report, Status } from "./types";
 
 export const MATERIALITY_LABEL: Record<Materiality, string> = { MATERIAL: "Material", NON_MATERIAL: "Non-Material", NEEDS_REVIEW: "Needs Review" };
@@ -80,4 +80,70 @@ export function conclusionSections(ds: P47Dataset, report: P47Report): { title: 
     { title: "5. Catatan Keterbatasan Data", paragraphs: dataQualityAlerts(ds).map((a) => a.text) },
     { title: "6. Kesimpulan", paragraphs: [k.material ? `Pelaksanaan VIU periode ini memiliki ${k.material} isu material yang perlu ditindaklanjuti sebelum laporan disampaikan kepada Kementerian Perindustrian.` : "Belum ada temuan yang ditetapkan material; Project Manager perlu menelaah materialitas temuan sebelum laporan disetujui."] },
   ];
+}
+
+const LEGAL_PREFIX = /^(PT|CV|UD|FA|PD|KOPERASI)\.?\s+/i;
+const lowerFirst = (t: string) => t.trim().toLowerCase();
+
+/**
+ * Pendahuluan of the Laporan Pelaksanaan VIU. The regulatory paragraphs are fixed text; every figure
+ * (perusahaan, permohonan, LHVIU, KBLI, kelompok komoditas, the example company) is counted from the
+ * period's data, so the narrative stays true for whichever period is printed. The system holds no LHVIU
+ * number or issuance date, so those are not stated.
+ */
+export function introductionParagraphs(ds: P47Dataset, report: P47Report): string[] {
+  const k = kpis(ds, report);
+  const period = `${fdLong(ds.period.from)} sampai dengan ${fdLong(ds.period.to)}`;
+  const withLhviu = ds.applications.filter((a) => a.lhviu);
+
+  // KBLI held by the most companies first; descriptions name the kind of trade.
+  const kbliByCompany = new Map<string, { description: string; companies: Set<string> }>();
+  for (const app of ds.applications) {
+    for (const entry of app.kbli) {
+      if (!entry.code) continue;
+      const row = kbliByCompany.get(entry.code) ?? { description: entry.description, companies: new Set<string>() };
+      row.companies.add(app.company);
+      kbliByCompany.set(entry.code, row);
+    }
+  }
+  const kbliRanked = [...kbliByCompany.entries()].sort((a, b) => b[1].companies.size - a[1].companies.size || a[0].localeCompare(b[0]));
+  const kbliCodes = kbliRanked.slice(0, 6).map(([code]) => code);
+  const activities = uniq(kbliRanked.map(([, row]) => row.description).filter(Boolean).map(lowerFirst)).slice(0, 3);
+  const groups = uniq(ds.lines.map((l) => l.kelompok).filter(Boolean));
+
+  // Example: the first company (by name, ignoring "PT"/"CV") whose LHVIU is uploaded.
+  const example = [...withLhviu].sort((a, b) => a.company.replace(LEGAL_PREFIX, "").localeCompare(b.company.replace(LEGAL_PREFIX, ""), "id"))[0];
+  const exampleKbli = example ? uniq(example.kbli.map((e) => e.code).filter(Boolean)) : [];
+  const exampleGroups = example ? uniq(ds.lines.filter((l) => l.applicationId === example.id).map((l) => l.kelompok).filter(Boolean)) : [];
+
+  const paragraphs = [
+    "Dalam rangka pelaksanaan fungsi sebagai Lembaga Pelaksana Verifikasi, PT Tribhakti Inspektama telah melaksanakan Verifikasi Importir Umum (VIU) untuk Produk Tekstil sebagai Barang Konsumsi terhadap perusahaan pemegang Angka Pengenal Importir Umum (API-U), sesuai dengan ketentuan Peraturan Menteri Perindustrian Nomor 27 Tahun 2025 tentang Tata Cara Penerbitan Pertimbangan Teknis Impor Tekstil dan Produk Tekstil.",
+    "VIU dilaksanakan sebagai proses pemeriksaan atas kelengkapan dan kesesuaian data, legalitas, serta kemampuan Perusahaan API-U dalam melakukan impor Tekstil dan/atau Produk Tekstil. Untuk kegiatan impor sebagai barang konsumsi, ruang lingkup VIU diterapkan terhadap Perusahaan API-U yang akan melakukan impor Produk Tekstil sebagai barang konsumsi.",
+    "Pelaksanaan verifikasi dilakukan melalui dua tahapan utama, yaitu verifikasi data dan dokumen serta verifikasi kondisi di lapangan. Pemeriksaan data dan dokumen meliputi penilaian atas kelengkapan dan kesesuaian dokumen persyaratan serta kesesuaian KBLI Perusahaan API-U dengan pos tarif/Harmonized System (HS) Produk Tekstil yang akan diimpor. Verifikasi lapangan dilakukan untuk memastikan kesesuaian antara informasi yang disampaikan oleh perusahaan dengan kondisi aktual pada lokasi yang diverifikasi.",
+  ];
+
+  if (k.applications === 0) {
+    paragraphs.push(`Selama periode pelaporan ${period}, belum terdapat permohonan VIU Produk Tekstil sebagai Barang Konsumsi yang diajukan kepada PT Tribhakti Inspektama.`);
+  } else {
+    paragraphs.push(
+      `Selama periode pelaporan ${period}, PT Tribhakti Inspektama telah melaksanakan VIU terhadap ${withWords(k.companies)} Perusahaan API-U atas ${withWords(k.applications)} permohonan, dan menerbitkan ${withWords(k.lhviu)} Laporan Hasil Verifikasi Importir Umum (LHVIU).`,
+    );
+    const traits = [
+      `Perusahaan yang diverifikasi memiliki karakteristik usaha yang beragam dalam sektor perdagangan Produk Tekstil${activities.length ? `, dengan kegiatan usaha antara lain ${joinId(activities)}` : ""}.`,
+      kbliCodes.length ? `Berdasarkan data profil perusahaan, KBLI yang tercakup antara lain ${joinId(kbliCodes)}.` : "",
+      groups.length ? `Ruang lingkup komoditas yang diverifikasi mencakup antara lain ${joinId(groups)}, dengan variasi merek, negara asal, dan rencana jumlah impor sesuai dengan profil masing-masing perusahaan.` : "",
+    ].filter(Boolean);
+    paragraphs.push(traits.join(" "));
+    if (example) {
+      paragraphs.push(
+        `Sebagai salah satu contoh, LHVIU ${example.company} mencatat kegiatan usaha${exampleKbli.length ? ` pada KBLI ${joinId(exampleKbli)}` : ""}${exampleGroups.length ? `, dengan rencana impor pada kelompok ${joinId(exampleGroups)}` : ""}. Dokumen tersebut juga memuat informasi mengenai merek, pemilik merek, negara asal, bukti pemenuhan, satuan, dan jumlah rencana impor sebagai bagian dari hasil verifikasi.`,
+      );
+    }
+  }
+
+  paragraphs.push(
+    "Sesuai mekanisme yang ditetapkan, LHVIU diterbitkan setelah data dan dokumen dinyatakan lengkap dan sesuai serta telah memenuhi kesesuaian dengan kondisi di lapangan. LHVIU selanjutnya disampaikan kepada Perusahaan API-U dan ditembuskan kepada Direktur Jenderal melalui Sistem Informasi Industri Nasional (SIINas).",
+    "Secara keseluruhan, pelaksanaan VIU selama periode pelaporan menghasilkan basis data terverifikasi mengenai profil Perusahaan API-U, KBLI, kelompok komoditas, pos tarif/HS, merek, negara asal, rencana kebutuhan impor, serta informasi pendukung lainnya yang relevan dengan kegiatan impor Produk Tekstil sebagai barang konsumsi. Informasi tersebut selanjutnya digunakan sebagai dasar penyusunan rekapitulasi, analisis tren impor, dan analisis proses bisnis sebagaimana dipersyaratkan dalam pelaporan Lembaga Pelaksana Verifikasi kepada Kementerian Perindustrian.",
+  );
+  return paragraphs;
 }

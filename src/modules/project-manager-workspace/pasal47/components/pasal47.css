@@ -14,7 +14,7 @@
 .p47 .num, .p47 td.num { font-variant-numeric: tabular-nums; }
 .p47 .mono { font-family: ui-monospace, "IBM Plex Mono", Consolas, monospace; font-size: 12px; }
 .p47 button { cursor: pointer; font: inherit; color: inherit; }
-.p47 select, .p47 input[type="search"], .p47 textarea { background: var(--surface); border: 1px solid var(--line-strong); border-radius: 6px; padding: 6px 9px; min-height: 32px; font: inherit; color: inherit; min-width: 0; }
+.p47 select, .p47 input[type="search"], .p47 input[type="date"], .p47 textarea { background: var(--surface); border: 1px solid var(--line-strong); border-radius: 6px; padding: 6px 9px; min-height: 32px; font: inherit; color: inherit; min-width: 0; }
 .p47 textarea { width: 100%; resize: vertical; }
 
 .p47-layout { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 20px; align-items: start; }

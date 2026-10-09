@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { applyFilters, defaultPeriod, FILTER_LABELS, filterOptions, reportingPeriods, type P47Filters } from "../derive";
+import { applyFilters, customPeriod, FILTER_LABELS, filterOptions, reportingPeriods, resolvePeriod, type P47Filters } from "../derive";
 import type { P47Dataset, P47Report } from "../types";
 import { Pasal47Provider, type DrawerSpec, type Pasal47Ctx } from "./context";
 import { Mini } from "./drawers";
@@ -50,7 +50,26 @@ export function Pasal47Module() {
   const params = useSearchParams();
   const queryClient = useQueryClient();
   const periods = useMemo(() => reportingPeriods(new Date()), []);
-  const period = periods.find((p) => p.key === params.get("periode")) ?? defaultPeriod(new Date());
+  const period = resolvePeriod(params.get("periode"), new Date());
+  const isPreset = periods.some((p) => p.key === period.key);
+  // Awal/akhir periode as typed on the calendar — applied to the URL only once both are valid.
+  const [rangeFrom, setRangeFrom] = useState(period.from);
+  const [rangeTo, setRangeTo] = useState(period.to);
+  // Re-sync the inputs when the period changes from elsewhere (Tahun laporan, back/forward).
+  const [syncedKey, setSyncedKey] = useState(period.key);
+  if (syncedKey !== period.key) {
+    setSyncedKey(period.key);
+    setRangeFrom(period.from);
+    setRangeTo(period.to);
+  }
+  const rangeInvalid = Boolean(rangeFrom && rangeTo && rangeFrom > rangeTo);
+  function applyRange(from: string, to: string) {
+    const next = customPeriod(from, to);
+    if (!next || next.key === period.key) return;
+    // A range that is exactly a reporting year keeps the year's own key (and its label).
+    const preset = periods.find((p) => p.from === next.from && p.to === next.to);
+    setParams({ periode: preset ? preset.key : next.key });
+  }
   const page = PAGES[params.get("halaman") ?? ""] ? params.get("halaman")! : "ringkasan";
   const [openGroup, setOpenGroup] = useState<string | null>(groupOf(page)?.g ?? "perusahaan");
   const [draft, setDraft] = useState<P47Filters>({});
@@ -112,11 +131,23 @@ export function Pasal47Module() {
           <h1>Laporan Pelaksanaan VIU – Produk Tekstil sebagai Barang Konsumsi</h1>
           <div className="sub">Pelaporan Pasal 47 Permenperin No. 27 Tahun 2025</div>
         </div>
-        <div className="fld">
-          <label htmlFor="p47-period">Periode laporan</label>
-          <select id="p47-period" value={period.key} onChange={(e) => setParams({ periode: e.target.value })}>
-            {periods.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
-          </select>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-start" }}>
+          <div className="fld">
+            <label htmlFor="p47-period">Tahun laporan</label>
+            <select id="p47-period" value={isPreset ? period.key : "custom"} onChange={(e) => { if (e.target.value !== "custom") setParams({ periode: e.target.value }); }}>
+              {periods.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+              {!isPreset && <option value="custom">Periode kustom</option>}
+            </select>
+          </div>
+          <div className="fld">
+            <label htmlFor="p47-from">Awal periode</label>
+            <input id="p47-from" type="date" value={rangeFrom} max={rangeTo || undefined} onChange={(e) => { setRangeFrom(e.target.value); applyRange(e.target.value, rangeTo); }} />
+          </div>
+          <div className="fld">
+            <label htmlFor="p47-to">Akhir periode</label>
+            <input id="p47-to" type="date" value={rangeTo} min={rangeFrom || undefined} onChange={(e) => { setRangeTo(e.target.value); applyRange(rangeFrom, e.target.value); }} />
+            {rangeInvalid && <span style={{ fontSize: 11, color: "#c1361f" }}>Akhir periode harus setelah awal periode.</span>}
+          </div>
         </div>
       </div>
       <div className="actions">
