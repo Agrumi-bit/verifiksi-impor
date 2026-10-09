@@ -89,7 +89,7 @@ export async function buildPasal47Dataset(period: { from: string; to: string }):
         })
       : Promise.resolve([]),
   ]);
-  const lhviuById = new Map(lhviuRows.map((r) => [r.id, r.lhviuDocument as { path?: string; fileName?: string; uploadedAt?: string } | null]));
+  const lhviuById = new Map(lhviuRows.map((r) => [r.id, r.lhviuDocument as { path?: string; fileName?: string; uploadedAt?: string; number?: string; issuedAt?: string } | null]));
   const latestDoc = new Map<string, (typeof docVersions)[number]>();
   for (const v of docVersions) if (!latestDoc.has(`${v.applicationId}|${v.fieldKey}`)) latestDoc.set(`${v.applicationId}|${v.fieldKey}`, v);
   const docOf = (appId: string, key: string) => latestDoc.get(`${appId}|${key}`);
@@ -122,7 +122,15 @@ export async function buildPasal47Dataset(period: { from: string; to: string }):
       kbli: splitKbliEntries(kbliEntries).utama.map((k) => ({ code: k.code, description: k.description })),
       submittedAt: assignmentDateKey(effectiveSubmissionDate(a).value),
       status: a.status,
-      lhviu: lhviu?.path ? { path: lhviu.path, fileName: lhviu.fileName ?? "LHVIU.pdf", uploadedAt: lhviu.uploadedAt ?? "" } : null,
+      lhviu: lhviu?.path
+        ? {
+            path: lhviu.path,
+            fileName: lhviu.fileName ?? "LHVIU.pdf",
+            uploadedAt: lhviu.uploadedAt ?? "",
+            number: typeof lhviu.number === "string" && lhviu.number.trim() ? lhviu.number.trim() : null,
+            issuedAt: typeof lhviu.issuedAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(lhviu.issuedAt) ? lhviu.issuedAt : null,
+          }
+        : null,
       kantor: locs.find((l) => l.locationType === "KANTOR") ? place(locs.find((l) => l.locationType === "KANTOR")) : null,
       gudang: locs.filter((l) => l.locationType === "GUDANG").map(place),
     });

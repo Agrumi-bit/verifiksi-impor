@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { MaterialIcon } from "../material-icon";
-import { formatAssignmentDate } from "@/lib/assignment-date";
+import { assignmentDateKey, formatAssignmentDate } from "@/lib/assignment-date";
 import type { PmApplicationDetail } from "../detail/types";
 import { encodeLhviuItem, lhviuReportHref, type LhviuDocumentInfo, type LhviuItem, type LhviuOrder } from "./lhviu";
 import { PdfViewer } from "@/components/pdf-viewer";
@@ -281,6 +281,16 @@ export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicati
             )}
           </div>
 
+          {lhviu && (
+            <LhviuMetaForm
+              key={`${lhviu.path}|${lhviu.number ?? ""}|${lhviu.issuedAt ?? ""}`}
+              endpoint={`/api/project-manager-workspace/applications/${jenis}/${applicationNumber}/lhviu`}
+              initialNumber={lhviu.number ?? ""}
+              initialIssuedAt={lhviu.issuedAt ?? ""}
+              onSaved={() => queryClient.invalidateQueries({ queryKey: lhviuKey })}
+            />
+          )}
+
           {lhviu ? (
             <div className="rounded-lg bg-[#f1e9df] p-4">
               <PdfViewer url={`/api/files?path=${encodeURIComponent(lhviu.path)}`} title="Laporan Hasil VIU" className="max-h-[75vh] overflow-y-auto" />
@@ -292,6 +302,85 @@ export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicati
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Nomor and Tanggal Terbit as printed on the signed LHVIU. The Laporan Pelaksanaan VIU (Pasal 47) counts
+ * LHVIU per bulan terbit and their 1-year validity (Pasal 39 ayat (6)) from these — not from the upload date.
+ */
+function LhviuMetaForm({
+  endpoint,
+  initialNumber,
+  initialIssuedAt,
+  onSaved,
+}: {
+  endpoint: string;
+  initialNumber: string;
+  initialIssuedAt: string;
+  onSaved: () => void;
+}) {
+  const [number, setNumber] = useState(initialNumber);
+  const [issuedAt, setIssuedAt] = useState(initialIssuedAt);
+  const [saving, setSaving] = useState(false);
+  const dirty = number.trim() !== initialNumber || issuedAt !== initialIssuedAt;
+  const today = assignmentDateKey(new Date());
+
+  async function save() {
+    setSaving(true);
+    try {
+      const response = await fetch(endpoint, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ number: number.trim() || null, issuedAt: issuedAt || null }),
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error ?? "Gagal menyimpan data LHVIU");
+      toast.success("Nomor dan tanggal terbit LHVIU disimpan.");
+      onSaved();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal menyimpan data LHVIU");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="mb-4 rounded-lg border border-[#f0ded0] bg-[#fdf9f5] p-3.5">
+      <div className="mb-2.5 text-[12px] text-[#6b5b4c]">
+        Isi sesuai yang tercetak pada LHVIU. Dipakai Laporan Pelaksanaan VIU (Pasal 47) untuk jumlah LHVIU per bulan terbit dan masa berlaku 1 tahun.
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="text-[11.5px] font-bold text-[#20180f]">
+          Nomor LHVIU
+          <input
+            type="text"
+            value={number}
+            onChange={(e) => setNumber(e.target.value)}
+            placeholder="mis. 3/LHVIU/TBI/III/2026"
+            className="mt-1 block w-64 rounded-lg border border-input bg-white px-3 py-2 text-[13px] font-normal outline-none"
+          />
+        </label>
+        <label className="text-[11.5px] font-bold text-[#20180f]">
+          Tanggal Terbit
+          <input
+            type="date"
+            value={issuedAt}
+            max={today}
+            onChange={(e) => setIssuedAt(e.target.value)}
+            className="mt-1 block rounded-lg border border-input bg-white px-3 py-2 text-[13px] font-normal outline-none"
+          />
+        </label>
+        <button
+          type="button"
+          disabled={!dirty || saving}
+          onClick={save}
+          className="rounded-lg bg-[#2b2420] px-4 py-2 text-[12.5px] font-bold text-white disabled:opacity-40"
+        >
+          {saving ? "Menyimpan..." : "Simpan"}
+        </button>
+      </div>
     </div>
   );
 }

@@ -38,4 +38,11 @@ export function lhviuReportHref(
   return `/project-manager-workspace/applications/${type}/${applicationNumber}/lhviu/${mode}?${params.toString()}`;
 }
 
-export type LhviuDocumentInfo = { path: string; fileName: string; uploadedAt: string; uploadedByName: string | null } | null;
+export type LhviuDocumentInfo = {
+  path: string;
+  fileName: string;
+  uploadedAt: string;
+  uploadedByName: string | null;
+  number: string | null;
+  issuedAt: string | null;
+} | null;

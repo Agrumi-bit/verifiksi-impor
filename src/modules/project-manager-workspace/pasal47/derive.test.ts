@@ -14,7 +14,7 @@ const line = (id: string, applicationId: string, hs: string, unit: string, quant
 });
 const ds: P47Dataset = {
   period: { from: "2025-10-01", to: "2026-09-30" }, generatedAt: "",
-  applications: [app("A", "PT A", "Jakarta Utara", "2025-11-05"), app("B", "PT B", "Bandung", "2026-01-20", { lhviu: { fileName: "x.pdf", uploadedAt: "", path: "" } })],
+  applications: [app("A", "PT A", "Jakarta Utara", "2025-11-05"), app("B", "PT B", "Bandung", "2026-01-20", { lhviu: { fileName: "x.pdf", uploadedAt: "", path: "", number: null, issuedAt: null } })],
   lines: [
     line("1", "A", "5209.42.00", "METER", 100, 1000, "USD", ["Italia", "Turki"], "Verona"),
     line("2", "A", "6109.10.00", "PCS", 50, 500, "USD", ["Vietnam"], "Kasai"),

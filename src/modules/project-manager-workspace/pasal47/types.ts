@@ -27,7 +27,7 @@ export type P47Application = {
   submittedAt: string;
   status: string;
   /** Laporan Hasil VIU PDF uploaded by the Project Manager; the system holds no LHVIU number or validity. */
-  lhviu: { fileName: string; uploadedAt: string; path: string } | null;
+  lhviu: { fileName: string; uploadedAt: string; path: string; number: string | null; issuedAt: string | null } | null;
   kantor: P47Place | null;
   gudang: P47Place[];
 };
