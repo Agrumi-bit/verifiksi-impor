@@ -1,8 +1,8 @@
 /**
  * Technical Analyst's review of the verifikator's Laporan Verifikasi Dokumen — the same desk-review
  * pattern the verifikator applies to the surveyor's field report (checklist + Verified/Revisi/Reject),
- * one level up. It is a record, not a workflow switch: Revisi/Reject never reopens the dokumen
- * assignment. A VERIFIED review is required before the analyst can Approve the technical assignment.
+ * one level up. Revisi/Reject reopens the verifikator's dokumen
+ * assignment (back to SUBMITTED) so the report can be corrected and re-submitted. A VERIFIED review is required before the analyst can Approve the technical assignment.
  *
  * Pure module (no db) — shared by the API routes and the client components.
  */

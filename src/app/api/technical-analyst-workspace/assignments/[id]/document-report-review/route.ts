@@ -18,7 +18,7 @@ async function loadContext(assignmentNumber: string, technicalAnalystId: string)
   // completed one is the real report.
   const dokumen = await db.assignment.findFirst({
     where: { applicationId: assignment.applicationId, verifikatorId: { not: null }, status: "COMPLETED" },
-    select: { assignmentNumber: true },
+    select: { id: true, assignmentNumber: true },
   });
   return { assignment, dokumen };
 }
@@ -93,5 +93,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     decidedAt: new Date().toISOString(),
   };
   await writeDocumentReportReview(ctx.assignment.id, review);
+
+  // Revisi/Reject sends the report back: reopen the verifikator's dokumen assignment (SUBMITTED =
+  // editable again) with the analyst's note, and clear any PM decision on the old report. The
+  // verifikator fixes the documents and re-submits; the analyst then reviews again.
+  if (body.decision !== "VERIFIED") {
+    await db.assignment.update({
+      where: { id: ctx.dokumen.id },
+      data: {
+        status: "SUBMITTED",
+        validationNotes: body.note ?? null,
+        validatedAt: null,
+        pmReviewStatus: null,
+        pmReviewNote: null,
+        pmReviewedAt: null,
+      },
+    });
+  }
   return NextResponse.json({ data: review });
 }
