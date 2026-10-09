@@ -9,6 +9,7 @@ import { CheckCircle2, ClipboardList, Hourglass, XCircle, type LucideIcon } from
 import { STATUS_LABELS, ACTIVE_STATUSES, type ApplicationStatusValue } from "@/modules/company-workspace/status";
 import { APPLICATION_STATUS_STYLE } from "../status-style";
 import { ReturnForRevisionDialog } from "./return-for-revision-dialog";
+import { DeleteApplicationDialog } from "./delete-application-dialog";
 import type { VerificationType } from "../schema";
 import { formatSubmissionDate } from "@/modules/applications/submission-date";
 
@@ -218,13 +219,21 @@ export function ApplicationTable() {
             </div>
             <div>
               {application.status === "DRAFT" ? (
-                <button
-                  type="button"
-                  onClick={() => router.push(`/applications/new?draftId=${application.id}`)}
-                  className="text-[12.5px] font-semibold text-[#c14a1f]"
-                >
-                  Lanjutkan
-                </button>
+                <div className="flex flex-col items-start gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/applications/new?draftId=${application.id}`)}
+                    className="text-[12.5px] font-semibold text-[#c14a1f]"
+                  >
+                    Lanjutkan
+                  </button>
+                  <DeleteApplicationDialog
+                    applicationId={application.id}
+                    applicationNumber={application.applicationNumber}
+                    companyName={application.companyName}
+                    onDeleted={() => queryClient.invalidateQueries({ queryKey: ["applications"] })}
+                  />
+                </div>
               ) : (
                 <div className="flex flex-col items-start gap-0.5">
                   <Link href={`/applications/${application.id}`} className="text-[12.5px] font-semibold text-[#c14a1f]">
@@ -244,6 +253,12 @@ export function ApplicationTable() {
                     verificationType={application.verificationType}
                     importTypes={application.importTypes}
                     onReturned={() => queryClient.invalidateQueries({ queryKey: ["applications"] })}
+                  />
+                  <DeleteApplicationDialog
+                    applicationId={application.id}
+                    applicationNumber={application.applicationNumber}
+                    companyName={application.companyName}
+                    onDeleted={() => queryClient.invalidateQueries({ queryKey: ["applications"] })}
                   />
                 </div>
               )}
