@@ -41,8 +41,18 @@ export async function GET(
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
   }
 
-  const payloadLocations =
-    ((assignment.application.payload as { locations?: PayloadLocation[] } | null)?.locations) ?? [];
+  // The company's current locations win over the application's frozen snapshot, so an edited
+  // address/city (e.g. a changed Gudang) shows here instead of the stale submitted one.
+  const company = assignment.application.companyId
+    ? await db.company.findUnique({ where: { id: assignment.application.companyId }, select: { locations: true } })
+    : null;
+  const liveLocations = (company?.locations as PayloadLocation[] | null) ?? [];
+  const payloadLocations = (
+    ((assignment.application.payload as { locations?: PayloadLocation[] } | null)?.locations) ?? []
+  ).map((loc) => {
+    const live = liveLocations.find((l) => l.id === (loc.companyLocationId || loc.id));
+    return live ? { ...loc, address: live.address, addressDesa: live.addressDesa, addressKecamatan: live.addressKecamatan, city: live.city ?? loc.city } : loc;
+  });
 
   // A survey result belongs to the application's location, not to this assignment: take the
   // location's active visit from EVERY assignment of the application. The tab lists ALL of the
@@ -99,8 +109,8 @@ export async function GET(
       locationKey: key,
       id: visit?.id ?? null,
       locationType: loc.locationType,
-      address: visit?.address ?? composeLocationAddress(loc),
-      city: visit?.city ?? loc.city ?? null,
+      address: composeLocationAddress(loc) || visit?.address || "",
+      city: loc.city ?? visit?.city ?? null,
       status: visit?.status ?? "NOT_STARTED",
       progress: computeProgress(visit?.checklist),
       scheduledDate: visit?.scheduledDate ?? null,

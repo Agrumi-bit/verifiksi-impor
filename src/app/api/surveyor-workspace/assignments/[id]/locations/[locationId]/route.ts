@@ -7,6 +7,7 @@ import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { composeLocationAddress, type LocationValues } from "@/modules/shared/schema";
 import { getDocumentMeta, type DocumentMetaEntry } from "@/modules/company/document-versions";
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
+import { matchVisitLocation } from "@/modules/shared/survey-visit-scope";
 import { loadAssignmentVisit } from "@/modules/surveyor-workspace/server/load-assignment-visit";
 
 async function loadScopedLocation(
@@ -42,12 +43,20 @@ export async function GET(
   // a surveyor visiting on-site afterward should see the current document, not what was on file at
   // submission time.
   const company = application.companyId ? await db.company.findUnique({ where: { id: application.companyId } }) : null;
-  const payloadLocationSnapshot = (payload.locations ?? []).find(
-    (loc) => loc.locationType === visit.locationType && composeLocationAddress(loc) === visit.address,
-  );
+  // Resolve by the visit's location link first (the address string is frozen at visit creation and
+  // stops matching once the location's address is edited), then by type + address.
   const liveLocations = (company?.locations as LocationValues[] | null) ?? null;
-  const liveLocation = liveLocations?.find((loc) => loc.id === payloadLocationSnapshot?.id) ?? null;
-  const payloadLocation = liveLocation ?? payloadLocationSnapshot;
+  const payloadLocationSnapshot =
+    matchVisitLocation(visit as never, (payload.locations ?? []) as never) ??
+    (visit.companyLocationId ? liveLocations?.find((loc) => loc.id === visit.companyLocationId) : undefined) ??
+    liveLocations?.find((loc) => loc.locationType === visit.locationType && composeLocationAddress(loc) === visit.address);
+  const snapshotLinkIds = [
+    (payloadLocationSnapshot as { companyLocationId?: string } | undefined)?.companyLocationId,
+    payloadLocationSnapshot?.id,
+    visit.companyLocationId,
+  ].filter(Boolean);
+  const liveLocation = liveLocations?.find((loc) => snapshotLinkIds.includes(loc.id)) ?? null;
+  const payloadLocation = (liveLocation ?? payloadLocationSnapshot) as LocationValues | undefined;
 
   // Document Information (version/uploader/upload date) for the same "Dokumen yang diperiksa"
   // rows Section1Documents shows — reuses the exact tracking verifikator's own checklist reads:
@@ -84,6 +93,8 @@ export async function GET(
   return NextResponse.json({
     data: {
       ...visit,
+      address: payloadLocation ? composeLocationAddress(payloadLocation) || visit.address : visit.address,
+      city: payloadLocation?.city ?? visit.city,
       checklist: visit.checklist ?? [],
       photos: visit.photos ?? [],
       interviews: visit.interviews ?? [],

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireProjectManagerSession } from "@/lib/require-project-manager-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import { matchVisitLocation } from "@/modules/shared/survey-visit-scope";
 import { composeLocationAddress } from "@/modules/shared/schema";
 
 /**
@@ -32,9 +33,9 @@ export async function GET(
   }
 
   const payload = visit.assignment.application.payload as ApplicationWizardValues;
-  const payloadLocation = (payload.locations ?? []).find(
-    (loc) => loc.locationType === visit.locationType && composeLocationAddress(loc) === visit.address,
-  );
+  const payloadLocation =
+    matchVisitLocation(visit as never, (payload.locations ?? []) as never) ??
+    (payload.locations ?? []).find((loc) => loc.locationType === visit.locationType && composeLocationAddress(loc) === visit.address);
 
   return NextResponse.json({
     data: {
