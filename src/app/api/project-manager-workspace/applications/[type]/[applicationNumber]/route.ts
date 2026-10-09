@@ -101,7 +101,7 @@ export async function GET(
       ? [{ scheduleType: "survey", status: survey.status, dueDate: survey.dueDate?.toISOString() ?? null, locationVisits: locationStatuses }]
       : []),
   ];
-  const stageResult = computeApplicationStage(siblingsForStage);
+  const stageResult = computeApplicationStage(siblingsForStage, application.status);
 
   const documentChecklistBase = await buildApplicationDocumentChecklist(payload, toChecklistCompanyContext(application.company));
   const companyKeys = documentChecklistBase.filter((item) => item.key in COMPANY_MAPPED_DOCUMENT_KEYS).map((item) => item.key);

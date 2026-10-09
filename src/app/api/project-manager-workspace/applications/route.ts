@@ -79,7 +79,7 @@ export async function GET(request: Request) {
         status: groups.find((group) => group.key === locationKey(loc))?.active?.status ?? "NOT_STARTED",
       })),
     }));
-    const { stage, status, slaLabel, slaDetail, slaColor } = computeApplicationStage(siblings);
+    const { stage, status, slaLabel, slaDetail, slaColor } = computeApplicationStage(siblings, app.status);
 
     const kantor = payload.locations?.find((loc) => loc.locationType === "KANTOR") ?? payload.locations?.[0];
     const kbli = Array.isArray(app.company?.kbliEntries) ? (app.company.kbliEntries as { code?: string; description?: string }[])[0] : null;

@@ -34,7 +34,13 @@ export type ApplicationStageResult = {
  * in any order), not a strict enforced pipeline — "furthest behind sibling wins" is the
  * simplest defensible rule, not a claim about the real business process.
  */
-export function computeApplicationStage(siblings: SiblingForStage[]): ApplicationStageResult {
+export function computeApplicationStage(
+  siblings: SiblingForStage[],
+  /** `Application.status` — a CR/Admin "Kembalikan untuk Revisi" sets it to RETURNED without
+   * touching any assignment, so the sibling statuses alone can't see that return. Resubmission
+   * sets it back to SUBMITTED, so this clears itself. */
+  applicationStatus?: string | null,
+): ApplicationStageResult {
   const dokumen = siblings.find((s) => s.scheduleType === "dokumen") ?? null;
   const survey = siblings.find((s) => s.scheduleType === "survey") ?? null;
   const technical = siblings.find((s) => s.scheduleType === "technical") ?? null;
@@ -96,9 +102,11 @@ export function computeApplicationStage(siblings: SiblingForStage[]): Applicatio
     }
   }
 
+  const isReturned = applicationStatus === "RETURNED" || anyReturned;
+
   let status: ApplicationOverallStatus;
-  if (stage === "Completed") status = "Completed";
-  else if (anyReturned) status = "Revision Required";
+  if (isReturned) status = "Revision Required";
+  else if (stage === "Completed") status = "Completed";
   else if (nearestDueDate && new Date(nearestDueDate).getTime() < Date.now()) status = "Overdue";
   else if (relevant.length === 0) status = "Submitted";
   else status = "In Progress";
