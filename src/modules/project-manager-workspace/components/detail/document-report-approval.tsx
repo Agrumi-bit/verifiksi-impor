@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { MaterialIcon } from "../material-icon";
 import { Button } from "@/components/ui/button";
-import { PmApprovalDialog } from "./pm-approval-dialog";
+import { PmDocumentReportReviewModal } from "./pm-document-report-review-modal";
 import { formatAssignmentDate } from "@/lib/assignment-date";
 import {
   DOCUMENT_REPORT_REVIEW_DECISION_BADGE,
@@ -23,7 +23,8 @@ export function DocumentReportApproval({ data, applicationNumber }: { data: PmAp
   const queryClient = useQueryClient();
   const dokumen = data.assignments.dokumen;
   const taReview = data.assignments.technical?.documentReportReview ?? null;
-  const [dialog, setDialog] = useState<"APPROVED" | "REJECTED" | null>(null);
+  // null = closed; "VIEW" = open with no decision preselected (already decided / just reviewing).
+  const [dialog, setDialog] = useState<"APPROVED" | "REJECTED" | "VIEW" | null>(null);
 
   if (!dokumen) return null;
   const ready = dokumen.status === "COMPLETED";
@@ -97,6 +98,15 @@ export function DocumentReportApproval({ data, applicationNumber }: { data: PmAp
           </div>
         )}
 
+        {pmStatus && (
+          <div className="mt-4">
+            <Button type="button" variant="outline" onClick={() => setDialog("VIEW")} className="border-[#e1bfb3]">
+              <MaterialIcon name="visibility" className="text-[16px]" />
+              Lihat Review
+            </Button>
+          </div>
+        )}
+
         {!pmStatus && (
           <div className="mt-4 flex flex-wrap gap-2.5">
             <Button
@@ -122,15 +132,14 @@ export function DocumentReportApproval({ data, applicationNumber }: { data: PmAp
         )}
       </div>
 
-      <PmApprovalDialog
-        assignmentId={dokumen.id}
-        category="laporanVerifikasi"
-        decision={dialog}
-        reportLabel="Laporan Verifikasi Dokumen"
-        approveHint="Laporan akan berstatus disetujui Project Manager; sampul laporan berganti menjadi TANGGAL TERBIT dengan tanggal hari ini."
-        onClose={() => setDialog(null)}
-        onDone={refresh}
-      />
+      {dialog && (
+        <PmDocumentReportReviewModal
+          data={data}
+          initialDecision={dialog === "VIEW" ? null : dialog}
+          onClose={() => setDialog(null)}
+          onDone={refresh}
+        />
+      )}
     </div>
   );
 }
