@@ -1,3 +1,4 @@
+import { writePmReviewedByName } from "@/modules/verifikator-workspace/report-signoff";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -38,7 +39,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ assignmentId: string }> },
 ) {
-  const { error } = await requireProjectManagerSession();
+  const { session, error } = await requireProjectManagerSession();
   if (error) return error;
 
   const { assignmentId } = await params;
@@ -115,6 +116,8 @@ export async function PATCH(
     where: { id: assignmentId },
     data: { pmReviewStatus: decision, pmReviewNote: note ?? null, pmReviewedAt: reviewedAtDate },
   });
+
+  await writePmReviewedByName(assignmentId, session.user.name ?? null);
 
   return NextResponse.json({ data: { pmReviewStatus: updated.pmReviewStatus, pmReviewNote: updated.pmReviewNote } });
 }

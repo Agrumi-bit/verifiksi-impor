@@ -1,3 +1,4 @@
+import { loadDocumentReportSignoff } from "@/modules/verifikator-workspace/report-signoff";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireProjectManagerSession } from "@/lib/require-project-manager-session";
@@ -144,6 +145,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       businessAddress,
       verifikatorName: assignment.verifikator?.name ?? null,
       technicalReviewerName: assignment.technicalReviewer?.name ?? null,
+      signoff: await loadDocumentReportSignoff(assignment),
       documents,
       machines,
       products,

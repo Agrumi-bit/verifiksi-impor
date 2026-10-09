@@ -72,6 +72,11 @@ export type ReportData = {
   businessAddress: string | null;
   verifikatorName: string | null;
   technicalReviewerName: string | null;
+  /** Who checked (Technical Analyst) and approved (Project Manager) — Halaman Persetujuan. */
+  signoff?: {
+    technicalReview: { decision: "VERIFIED" | "REVISION" | "REJECTED"; verifiedAt: string | null; verifiedByName: string | null } | null;
+    pmReviewedByName: string | null;
+  };
   documents: DocumentRow[];
   machines: MachineRow[];
   products: ProductRow[];
@@ -1391,17 +1396,37 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
             </div>
             <div style={{ background: "#fff", border: `1px solid ${CARD_BORDER}`, padding: 20, borderRadius: 12 }}>
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", color: ORANGE_TEXT, marginBottom: 10 }}>DIPERIKSA OLEH</div>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>{data.technicalReviewerName ?? "Menunggu penunjukan"}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>
+                {data.signoff?.technicalReview?.verifiedByName ?? data.technicalReviewerName ?? "Menunggu penunjukan"}
+              </div>
               <div style={{ fontSize: 12, color: "#7a7166", marginBottom: 22 }}>Technical Reviewer</div>
               <div style={{ borderTop: "1px dashed #d8cdb8", paddingTop: 10, fontSize: 11, color: MUTED_2, marginBottom: 8 }}>Tanda tangan</div>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, color: MUTED_2 }}>● Menunggu</div>
+              {data.signoff?.technicalReview?.decision === "VERIFIED" ? (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, color: GREEN }}>
+                  ● Terverifikasi{data.signoff.technicalReview.verifiedAt ? ` — ${fmtDate(data.signoff.technicalReview.verifiedAt)}` : ""}
+                </div>
+              ) : data.signoff?.technicalReview ? (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, color: ORANGE_TEXT }}>
+                  ● {data.signoff.technicalReview.decision === "REVISION" ? "Perlu Revisi" : "Ditolak"}
+                </div>
+              ) : (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, color: MUTED_2 }}>● Menunggu</div>
+              )}
             </div>
             <div style={{ background: "#fff", border: `1px solid ${CARD_BORDER}`, padding: 20, borderRadius: 12 }}>
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", color: ORANGE_TEXT, marginBottom: 10 }}>DISETUJUI OLEH</div>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>Menunggu penunjukan</div>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>
+                {isPmApproved ? (data.signoff?.pmReviewedByName ?? "Project Manager") : "Menunggu penunjukan"}
+              </div>
               <div style={{ fontSize: 12, color: "#7a7166", marginBottom: 22 }}>Project Manager</div>
               <div style={{ borderTop: "1px dashed #d8cdb8", paddingTop: 10, fontSize: 11, color: MUTED_2, marginBottom: 8 }}>Tanda tangan</div>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, color: MUTED_2 }}>● Menunggu</div>
+              {isPmApproved ? (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, color: GREEN }}>
+                  ● Disetujui{data.pmReviewedAt ? ` — ${fmtDate(data.pmReviewedAt)}` : ""}
+                </div>
+              ) : (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, color: MUTED_2 }}>● Menunggu</div>
+              )}
             </div>
           </div>
           <div style={{ marginTop: 40 }}>

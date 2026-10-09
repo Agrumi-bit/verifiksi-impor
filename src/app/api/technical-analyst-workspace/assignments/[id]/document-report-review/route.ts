@@ -1,3 +1,4 @@
+import { writePmReviewedByName } from "@/modules/verifikator-workspace/report-signoff";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -109,6 +110,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         pmReviewedAt: null,
       },
     });
+    await writePmReviewedByName(ctx.dokumen.id, null);
   }
   return NextResponse.json({ data: review });
 }

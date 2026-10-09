@@ -1151,6 +1151,8 @@ model Assignment {
   pmReviewStatus PmReviewStatus?
   pmReviewNote   String?
   pmReviewedAt   DateTime?
+  // Name of the PM who made the review decision (migration 39; read/written with SQL).
+  pmReviewedByName String?
 
   // Surat Tugas rejection reason — letterStatus itself has no REJECTED value
   // (DRAFT/PENDING/APPROVED); a PM reject reverts letterStatus to DRAFT
