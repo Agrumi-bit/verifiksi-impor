@@ -36,7 +36,12 @@ export async function getPdfPageCount(pdfBuffer: Buffer): Promise<number> {
 }
 
 /** Rasterizes one page (1-based) of a PDF to PNG — used to place an uploaded PDF inside a printable report. */
-export async function renderPdfPageToPng(pdfBuffer: Buffer, pageNumber: number, targetWidth = 480): Promise<Buffer> {
+export async function renderPdfPageToPng(
+  pdfBuffer: Buffer,
+  pageNumber: number,
+  targetWidth = 480,
+  format: "png" | "jpeg" = "png",
+): Promise<Buffer> {
   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer), ...PDFJS_RESOURCES }).promise;
   const page = await pdf.getPage(Math.min(Math.max(1, Math.floor(pageNumber)), pdf.numPages));
@@ -53,5 +58,6 @@ export async function renderPdfPageToPng(pdfBuffer: Buffer, pageNumber: number, 
     canvas: canvas as unknown as HTMLCanvasElement,
   }).promise;
 
-  return canvas.toBuffer("image/png");
+  // JPEG is ~5x smaller than PNG for document pages — matters on slow links.
+  return format === "jpeg" ? canvas.toBuffer("image/jpeg", 82) : canvas.toBuffer("image/png");
 }

@@ -25,7 +25,7 @@ export function LhviuPdfPages({ path, width = 1240 }: { path: string; width?: nu
         <div key={page} className="lhviu-pdf-sheet">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`/api/files/thumbnail?path=${encodeURIComponent(path)}&page=${page}&width=${width}`}
+            src={`/api/files/thumbnail?path=${encodeURIComponent(path)}&page=${page}&width=${width}&format=jpeg`}
             alt={`Halaman ${page} dari ${data}`}
           />
         </div>

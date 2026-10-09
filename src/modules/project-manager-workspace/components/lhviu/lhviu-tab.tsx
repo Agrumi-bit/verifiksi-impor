@@ -8,7 +8,7 @@ import { MaterialIcon } from "../material-icon";
 import { formatAssignmentDate } from "@/lib/assignment-date";
 import type { PmApplicationDetail } from "../detail/types";
 import { encodeLhviuItem, lhviuReportHref, type LhviuDocumentInfo, type LhviuItem, type LhviuOrder } from "./lhviu";
-import { LhviuPdfPages } from "./lhviu-pdf-pages";
+import { PdfViewer } from "@/components/pdf-viewer";
 
 const SUB_TABS = ["verifikasi", "hasil", "lengkap"] as const;
 type SubTab = (typeof SUB_TABS)[number];
@@ -282,8 +282,8 @@ export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicati
           </div>
 
           {lhviu ? (
-            <div className="lhviu-combined max-h-[75vh] overflow-y-auto rounded-lg bg-[#f1e9df] p-4">
-              <LhviuPdfPages path={lhviu.path} width={900} />
+            <div className="rounded-lg bg-[#f1e9df] p-4">
+              <PdfViewer url={`/api/files?path=${encodeURIComponent(lhviu.path)}`} title="Laporan Hasil VIU" className="max-h-[75vh] overflow-y-auto" />
             </div>
           ) : (
             <div className="rounded-lg border border-dashed border-[#e1bfb3] p-8 text-center text-[13px] text-[#a68f80]">
