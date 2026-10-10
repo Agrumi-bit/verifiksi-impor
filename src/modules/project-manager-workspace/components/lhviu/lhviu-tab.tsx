@@ -48,6 +48,11 @@ export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicati
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const lhviuKey = ["project-manager-workspace", "lhviu", applicationNumber];
+  // Recording the LHVIU nomor + tanggal terbit completes the application, so its status/stage refetch too.
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: lhviuKey });
+    queryClient.invalidateQueries({ queryKey: ["project-manager-workspace", "applications"] });
+  };
 
   const { data: lhviu } = useQuery({
     queryKey: lhviuKey,
@@ -124,8 +129,8 @@ export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicati
       });
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error ?? "Gagal menyimpan Laporan Hasil VIU");
-      toast.success("Laporan Hasil VIU diunggah.");
-      queryClient.invalidateQueries({ queryKey: lhviuKey });
+      toast.success(body?.data?.completed ? "Laporan Hasil VIU diunggah; permohonan selesai (Completed)." : "Laporan Hasil VIU diunggah.");
+      refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal mengunggah file");
     } finally {
@@ -287,7 +292,7 @@ export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicati
               endpoint={`/api/project-manager-workspace/applications/${jenis}/${applicationNumber}/lhviu`}
               initialNumber={lhviu.number ?? ""}
               initialIssuedAt={lhviu.issuedAt ?? ""}
-              onSaved={() => queryClient.invalidateQueries({ queryKey: lhviuKey })}
+              onSaved={refresh}
             />
           )}
 
@@ -337,7 +342,7 @@ function LhviuMetaForm({
       });
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error ?? "Gagal menyimpan data LHVIU");
-      toast.success("Nomor dan tanggal terbit LHVIU disimpan.");
+      toast.success(body?.data?.completed ? "Nomor dan tanggal terbit LHVIU disimpan; permohonan selesai (Completed)." : "Nomor dan tanggal terbit LHVIU disimpan.");
       onSaved();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal menyimpan data LHVIU");

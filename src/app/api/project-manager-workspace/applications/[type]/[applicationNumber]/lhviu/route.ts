@@ -5,20 +5,27 @@ import { db } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import { assignmentDateKey } from "@/lib/assignment-date";
 import { requireProjectManagerSession } from "@/lib/require-project-manager-session";
+import { completeApplicationOnLhviu } from "@/modules/project-manager-workspace/lhviu-completion";
 import { readLhviuDocument, writeLhviuDocument } from "@/modules/project-manager-workspace/lhviu-store";
 
 async function findApplication(applicationNumber: string) {
   return db.application.findUnique({ where: { applicationNumber }, select: { id: true, verificationType: true } });
 }
 
-/** LHVIU tab — the uploaded Laporan Hasil VIU PDF (null until the PM uploads one). */
+/**
+ * LHVIU tab — the uploaded Laporan Hasil VIU PDF (null until the PM uploads one). Also brings
+ * Application.status up to date for an LHVIU whose nomor and tanggal terbit were recorded before
+ * completion was tied to them (idempotent: an already-completed application is left as is).
+ */
 export async function GET(_request: Request, { params }: { params: Promise<{ type: string; applicationNumber: string }> }) {
-  const { error } = await requireProjectManagerSession();
+  const { session, error } = await requireProjectManagerSession();
   if (error) return error;
   const { applicationNumber } = await params;
   const application = await findApplication(applicationNumber);
   if (!application) return NextResponse.json({ error: "Aplikasi tidak ditemukan" }, { status: 404 });
-  return NextResponse.json({ data: { document: await readLhviuDocument(application.id) } });
+  const document = await readLhviuDocument(application.id);
+  const completed = await completeApplicationOnLhviu(application.id, document, session.user);
+  return NextResponse.json({ data: { document, completed } });
 }
 
 /** Nomor & tanggal terbit as printed on the LHVIU — optional; the report falls back to "belum dicatat". */
@@ -70,14 +77,18 @@ export async function PUT(request: Request, { params }: { params: Promise<{ type
     issuedAt: parsed.data.issuedAt || previous?.issuedAt || null,
   };
   await writeLhviuDocument(application.id, document);
-  return NextResponse.json({ data: { document } });
+  const completed = await completeApplicationOnLhviu(application.id, document, session.user);
+  return NextResponse.json({ data: { document, completed } });
 }
 
 const patchSchema = z.object(lhviuMetaSchema);
 
-/** Records the Nomor and Tanggal Terbit of the uploaded LHVIU without replacing the PDF. */
+/**
+ * Records the Nomor and Tanggal Terbit of the uploaded LHVIU without replacing the PDF. Once both are
+ * recorded the application is completed (lhviu-completion.ts).
+ */
 export async function PATCH(request: Request, { params }: { params: Promise<{ type: string; applicationNumber: string }> }) {
-  const { error } = await requireProjectManagerSession();
+  const { session, error } = await requireProjectManagerSession();
   if (error) return error;
   const { applicationNumber } = await params;
   const application = await findApplication(applicationNumber);
@@ -95,5 +106,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ty
 
   const document = { ...current, number: parsed.data.number?.trim() || null, issuedAt: parsed.data.issuedAt || null };
   await writeLhviuDocument(application.id, document);
-  return NextResponse.json({ data: { document } });
+  const completed = await completeApplicationOnLhviu(application.id, document, session.user);
+  return NextResponse.json({ data: { document, completed } });
 }

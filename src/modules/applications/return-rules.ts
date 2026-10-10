@@ -30,9 +30,9 @@ const NOT_RETURNABLE_REASON: Record<string, string> = {
 };
 
 /**
- * Whether CR/Admin may return the application. Application.status alone isn't enough: nothing
- * writes COMPLETED today, so an application whose every assignment is COMPLETED still reads
- * SUBMITTED — that counts as finished too.
+ * Whether CR/Admin may return the application. Application.status alone isn't enough: COMPLETED is
+ * only written once the Project Manager records the LHVIU nomor and tanggal terbit, so an
+ * application whose every assignment is COMPLETED may still read SUBMITTED — that counts as finished too.
  */
 export function getReturnEligibility(
   status: string,

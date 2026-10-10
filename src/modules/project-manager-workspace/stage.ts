@@ -78,6 +78,9 @@ export function computeApplicationStage(
     stage = "Verification Review";
   }
 
+  // The Laporan Hasil VIU is issued (nomor + tanggal terbit recorded): finished, whatever the siblings say.
+  if (applicationStatus === "COMPLETED") stage = "Completed";
+
   const nearestDueDate = relevant
     .map((s) => s.dueDate)
     .filter((d): d is string => d !== null)
@@ -111,7 +114,7 @@ export function computeApplicationStage(
     }
   }
 
-  const isReturned = applicationStatus === "RETURNED" || anyReturned;
+  const isReturned = applicationStatus !== "COMPLETED" && (applicationStatus === "RETURNED" || anyReturned);
 
   let status: ApplicationOverallStatus;
   if (isReturned) status = "Revision Required";
