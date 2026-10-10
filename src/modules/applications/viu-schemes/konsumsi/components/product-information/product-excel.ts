@@ -3,10 +3,10 @@ import * as XLSX from "xlsx";
 export const PRODUCT_EXCEL_COLUMNS = [
   { key: "productName" as const, header: "Nama Produk", example: "Men's Cotton T-Shirt" },
   { key: "hsCode" as const, header: "HS Code", example: "61091000" },
-  // Multiple countries separated by ";" — name or ISO code, freely mixed (e.g. "Tiongkok; VN").
+  // Multiple countries separated by ";" — name or ISO code, freely mixed (e.g. "REP. RAKYAT CINA; VN").
   // Splitting/resolving happens in the caller (BrandProductSection), same convention as HS
   // Code/Country below — this module only does spreadsheet-shape parsing.
-  { key: "countryOfOrigin" as const, header: "Asal Negara", example: "Tiongkok; Vietnam" },
+  { key: "countryOfOrigin" as const, header: "Asal Negara", example: "REP. RAKYAT CINA; Vietnam" },
   { key: "quantity" as const, header: "Jumlah Permohonan", example: "10000" },
   // Optional — not in the required-columns check below (see parseProductExcelFile), same "0"
   // default as the manual Add Product form when left blank.

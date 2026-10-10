@@ -27,7 +27,7 @@ export function CountryMasterData() {
         { key: "code", label: "Kode Negara" },
       ]}
       fields={[
-        { key: "name", label: "Nama Negara", type: "text", required: true, placeholder: "e.g. Republik Rakyat Tiongkok" },
+        { key: "name", label: "Nama Negara", type: "text", required: true, placeholder: "e.g. REP. RAKYAT CINA" },
         { key: "code", label: "Kode Negara (ISO)", type: "text", required: true, placeholder: "e.g. CN" },
       ]}
       addButtonLabel="Tambah Negara"

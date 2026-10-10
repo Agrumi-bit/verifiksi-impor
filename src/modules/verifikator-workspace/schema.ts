@@ -623,7 +623,11 @@ export function buildProductChecklist(payload: ApplicationWizardValues): Product
     // Snapshot is written at submit; drafts/legacy rows lack it — callers with DB access fill it
     // from Merek Management (see the products route and the document report).
     brandName: product.productSnapshot?.brandName ?? "",
-    originCountryNames: product.originCountryNames ?? product.productSnapshot?.countryOfOriginNames ?? [],
+    // Rows saved before the multi-country field carry a single legacy `countryOfOrigin` name.
+    originCountryNames:
+      product.originCountryNames ??
+      product.productSnapshot?.countryOfOriginNames ??
+      ((product as { countryOfOrigin?: string }).countryOfOrigin ? [(product as { countryOfOrigin?: string }).countryOfOrigin!] : []),
     averageUnitPrice: product.averageUnitPrice ?? "",
     currency: product.currency ?? "",
     kelompokKomoditas: product.industryName ?? "",

@@ -59,7 +59,7 @@ export function StokKonsumsiModule({
         <div className="mb-4 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
           <TextInput label="HS Code yang Diperiksa" value={inputs.hsCode ?? ""} onChange={(v) => onInputChange("hsCode", v)} disabled={!canEdit} placeholder="Contoh: 6110.30.00" />
           <TextInput label="Merek" value={inputs.merek ?? ""} onChange={(v) => onInputChange("merek", v)} disabled={!canEdit} placeholder="Nama merek" />
-          <TextInput label="Negara Asal" value={inputs.negaraAsal ?? ""} onChange={(v) => onInputChange("negaraAsal", v)} disabled={!canEdit} placeholder="Contoh: Tiongkok" />
+          <TextInput label="Negara Asal" value={inputs.negaraAsal ?? ""} onChange={(v) => onInputChange("negaraAsal", v)} disabled={!canEdit} placeholder="Contoh: REP. RAKYAT CINA" />
         </div>
         <div className="mb-4 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
           <TextInput label="Stok Terkini menurut Permohonan (unit)" value={inputs.stokDeklarasi ?? ""} onChange={(v) => onInputChange("stokDeklarasi", v)} disabled={!canEdit} placeholder="0" numeric />

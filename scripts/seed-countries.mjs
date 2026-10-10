@@ -239,7 +239,7 @@ const COUNTRIES = [
   { name: "Teritori Samudra Hindia Britania", code: "IO" },
   { name: "Thailand", code: "TH" },
   { name: "Timor Leste", code: "TL" },
-  { name: "Tiongkok", code: "CN" },
+  { name: "REP. RAKYAT CINA", code: "CN" },
   { name: "Togo", code: "TG" },
   { name: "Tokelau", code: "TK" },
   { name: "Tonga", code: "TO" },
