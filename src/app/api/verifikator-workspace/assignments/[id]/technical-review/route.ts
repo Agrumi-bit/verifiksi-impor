@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import { readDocumentReportReview } from "@/modules/technical-analyst-workspace/document-report-review-store";
+import { readPmReviewedByName } from "@/modules/verifikator-workspace/report-signoff";
 
 /**
  * The Technical Analyst's review of this verifikator's Laporan Verifikasi Dokumen (read-only for the
@@ -16,7 +17,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 
   const { id } = await params;
-  const assignment = await db.assignment.findUnique({ where: { assignmentNumber: id }, select: { applicationId: true, verifikatorId: true } });
+  const assignment = await db.assignment.findUnique({
+    where: { assignmentNumber: id },
+    select: { id: true, applicationId: true, verifikatorId: true, status: true, pmReviewStatus: true, pmReviewNote: true, pmReviewedAt: true },
+  });
   if (!assignment || assignment.verifikatorId !== verifikatorId) {
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
   }
@@ -26,9 +30,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     orderBy: { createdAt: "desc" },
     select: { id: true, technicalReviewer: { select: { name: true } } },
   });
-  if (!technical) return NextResponse.json({ data: null });
+  // A PM "Kembalikan untuk Revisi" leaves its note on this assignment with no pmReviewStatus.
+  const pmRevision = !assignment.pmReviewStatus && assignment.pmReviewNote
+    ? { note: assignment.pmReviewNote, requestedAt: assignment.pmReviewedAt, byName: await readPmReviewedByName(assignment.id) }
+    : null;
 
   return NextResponse.json({
-    data: { review: await readDocumentReportReview(technical.id), technicalReviewerName: technical.technicalReviewer?.name ?? null },
+    data: {
+      review: technical ? await readDocumentReportReview(technical.id) : null,
+      technicalReviewerName: technical?.technicalReviewer?.name ?? null,
+      pmRevision,
+    },
   });
 }

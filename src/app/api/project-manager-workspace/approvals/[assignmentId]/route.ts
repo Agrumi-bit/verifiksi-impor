@@ -10,7 +10,8 @@ import { collectApplicationVisits, isAssignmentSurveyComplete, type SurveyPayloa
 
 const patchSchema = z.object({
   category: z.enum(APPROVAL_CATEGORIES),
-  decision: z.enum(["APPROVED", "REJECTED"]),
+  /** REVISION (Laporan Verifikasi Dokumen only): send the report back to the verifikator. */
+  decision: z.enum(["APPROVED", "REJECTED", "REVISION"]),
   note: z.string().trim().optional(),
   /** "Tanggal Review" (YYYY-MM-DD) chosen by the PM — prints as the report's TANGGAL TERBIT.
    * Defaults to today; never in the future. */
@@ -50,10 +51,16 @@ export async function PATCH(
   if (parsed.data.decision === "REJECTED" && !parsed.data.note?.trim()) {
     return NextResponse.json({ error: "Catatan penolakan wajib diisi" }, { status: 400 });
   }
+  if (parsed.data.decision === "REVISION" && !parsed.data.note?.trim()) {
+    return NextResponse.json({ error: "Catatan revisi wajib diisi" }, { status: 400 });
+  }
+  if (parsed.data.decision === "REVISION" && parsed.data.category !== "laporanVerifikasi") {
+    return NextResponse.json({ error: "Revisi hanya tersedia untuk Laporan Verifikasi Dokumen." }, { status: 400 });
+  }
 
   const assignment = await db.assignment.findUnique({
     where: { id: assignmentId },
-    include: { application: { select: { payload: true } } },
+    include: { application: { select: { payload: true, status: true } } },
   });
   if (!assignment) {
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
@@ -82,6 +89,37 @@ export async function PATCH(
   const expectedScheduleType = CATEGORY_SCHEDULE_TYPE[category];
   if (assignment.scheduleType !== expectedScheduleType) {
     return NextResponse.json({ error: "Kategori tidak sesuai dengan jenis penugasan ini." }, { status: 400 });
+  }
+
+  // "Kembalikan untuk Revisi": reopen the verifikator's dokumen assignment (SUBMITTED = editable
+  // again) and clear any earlier PM decision. The request is kept as pmReviewNote/pmReviewedAt with
+  // no pmReviewStatus, which the verifikator sees above the Draft Report; after the verifikator
+  // re-submits, the report is pending PM review again.
+  if (decision === "REVISION") {
+    if (assignment.application.status === "COMPLETED") {
+      return NextResponse.json({ error: "Permohonan sudah selesai (LHVIU telah dicatat); laporan tidak dapat dikembalikan." }, { status: 400 });
+    }
+    if (assignment.status !== "COMPLETED") {
+      return NextResponse.json({ error: "Laporan belum disubmit verifikator atau sedang direvisi." }, { status: 400 });
+    }
+    await db.$transaction([
+      db.assignment.update({
+        where: { id: assignmentId },
+        data: { status: "SUBMITTED", validatedAt: null, pmReviewStatus: null, pmReviewNote: note!.trim(), pmReviewedAt: new Date() },
+      }),
+      db.applicationAuditLog.create({
+        data: {
+          applicationId: assignment.applicationId,
+          action: "PM_REVISION",
+          actorId: session.user.id,
+          actorName: session.user.name ?? null,
+          actorRole: session.user.role ?? "PROJECT_MANAGER",
+          reason: `Laporan Verifikasi Dokumen ${assignment.assignmentNumber} dikembalikan ke verifikator: ${note!.trim()}`,
+        },
+      }),
+    ]);
+    await writePmReviewedByName(assignmentId, session.user.name ?? null);
+    return NextResponse.json({ data: { pmReviewStatus: null, pmReviewNote: note!.trim(), status: "SUBMITTED" } });
   }
   if (assignment.pmReviewStatus) {
     return NextResponse.json({ error: "Laporan ini sudah direview." }, { status: 400 });

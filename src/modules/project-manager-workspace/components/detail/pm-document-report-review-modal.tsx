@@ -16,12 +16,19 @@ import {
 } from "@/modules/technical-analyst-workspace/document-report-review";
 import type { PmApplicationDetail } from "./types";
 
-type Decision = "APPROVED" | "REJECTED";
+type Decision = "APPROVED" | "REJECTED" | "REVISION";
+
+const DECISION_UI: Record<Decision, { label: string; icon: string; on: string; done: string }> = {
+  APPROVED: { label: "Approve", icon: "task_alt", on: "border-[#1a9850] bg-[#e2f7ea] text-[#1a9850]", done: "disetujui" },
+  REVISION: { label: "Revisi", icon: "undo", on: "border-[#c98a1f] bg-[#fdf4de] text-[#a6791f]", done: "dikembalikan ke verifikator untuk revisi" },
+  REJECTED: { label: "Tolak", icon: "cancel", on: "border-[#c1361f] bg-[#fbe4de] text-[#c1361f]", done: "ditolak" },
+};
 
 /**
  * PM "Review & Approve Laporan Verifikasi Dokumen" — same layout as the survey review modal: on the
  * left the verifikator's document results (counts + every document that isn't Valid), the Technical
- * Analyst's review, and the PM's own Approve/Tolak; on the right the full report. The report page
+ * Analyst's review, and the PM's own Approve/Revisi/Tolak (Revisi reopens the verifikator's dokumen
+ * assignment, also after an earlier decision); on the right the full report. The report page
  * is print-styled (A4 pages, its own CSS), so it's embedded through its standalone PM route in an
  * iframe rather than mounted inline. Decision → `/approvals/[assignmentId]` (Approval Center's call).
  */
@@ -39,7 +46,11 @@ export function PmDocumentReportReviewModal({
   const dokumen = data.assignments.dokumen!;
   const taReview = data.assignments.technical?.documentReportReview ?? null;
   const ready = dokumen.status === "COMPLETED";
-  const pmStatus = dokumen.pmReviewStatus as Decision | null;
+  const pmStatus = dokumen.pmReviewStatus as "APPROVED" | "REJECTED" | null;
+  // A revision request leaves its note with no PM status while the verifikator works on it.
+  const revisionRequested = !pmStatus && !ready && Boolean(dokumen.pmReviewNote);
+  // "Kembalikan untuk Revisi" after an earlier Approve/Tolak re-opens the form with Revisi only.
+  const [reopen, setReopen] = useState(initialDecision === "REVISION" && Boolean(pmStatus));
   const [decision, setDecision] = useState<Decision | null>(initialDecision ?? null);
   const [note, setNote] = useState("");
   const [confirmed, setConfirmed] = useState(false);
@@ -53,11 +64,11 @@ export function PmDocumentReportReviewModal({
 
   async function submit() {
     if (!decision) {
-      toast.error("Pilih keputusan (Approve/Tolak) terlebih dahulu.");
+      toast.error("Pilih keputusan (Approve/Revisi/Tolak) terlebih dahulu.");
       return;
     }
-    if (decision === "REJECTED" && !note.trim()) {
-      toast.error("Catatan penolakan wajib diisi.");
+    if (decision !== "APPROVED" && !note.trim()) {
+      toast.error(decision === "REVISION" ? "Catatan revisi wajib diisi." : "Catatan penolakan wajib diisi.");
       return;
     }
     if (!reviewedAt) {
@@ -80,7 +91,7 @@ export function PmDocumentReportReviewModal({
       toast.error(body?.error ?? "Gagal menyimpan keputusan.");
       return;
     }
-    toast.success(`Laporan Verifikasi Dokumen ${decision === "APPROVED" ? "disetujui" : "ditolak"}.`);
+    toast.success(`Laporan Verifikasi Dokumen ${DECISION_UI[decision].done}.`);
     onDone();
   }
 
@@ -193,7 +204,7 @@ export function PmDocumentReportReviewModal({
             {/* PM decision */}
             <div className="rounded-lg border border-[#efe2d4] p-3.5">
               <div className="mb-2 text-[13px] font-extrabold text-[#20180f]">Keputusan Project Manager</div>
-              {pmStatus ? (
+              {pmStatus && !reopen ? (
                 <div>
                   <span
                     className={`rounded-full px-2.5 py-0.75 text-[11px] font-bold ${
@@ -203,12 +214,28 @@ export function PmDocumentReportReviewModal({
                     {pmStatus === "APPROVED" ? "Disetujui" : "Ditolak"} · {formatAssignmentDate(dokumen.pmReviewedAt)}
                   </span>
                   {dokumen.pmReviewNote && <div className="mt-2 text-[12px] text-[#6b5b4c]">Catatan: {dokumen.pmReviewNote}</div>}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReopen(true);
+                      setDecision("REVISION");
+                    }}
+                    className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#c98a1f] bg-[#fdf4de] px-3 py-2 text-[12.5px] font-bold text-[#a6791f]"
+                  >
+                    <MaterialIcon name="undo" className="text-[15px]" />
+                    Kembalikan ke Verifikator untuk Revisi
+                  </button>
+                </div>
+              ) : revisionRequested ? (
+                <div className="rounded-lg bg-[#fdf4de] px-3 py-2 text-[12px] text-[#a6791f]">
+                  Revisi diminta {formatAssignmentDate(dokumen.pmReviewedAt)} — menunggu verifikator memperbaiki dan mensubmit ulang laporan.
+                  <div className="mt-1 text-[#6b5b4c]">Catatan: {dokumen.pmReviewNote}</div>
                 </div>
               ) : !ready ? (
                 <div className="rounded-lg bg-[#faf1de] px-3 py-2 text-[12px] text-[#a6791f]">Menunggu verifikator mensubmit laporan.</div>
               ) : (
                 <>
-                  {taReview?.decision !== "VERIFIED" && (
+                  {!reopen && taReview?.decision !== "VERIFIED" && (
                     <div className="mb-2.5 flex items-start gap-2 rounded-lg bg-[#faf1de] px-3 py-2 text-[11.5px] text-[#a6791f]">
                       <MaterialIcon name="info" className="mt-0.5 text-[15px]" />
                       {taReview?.decision
@@ -216,8 +243,8 @@ export function PmDocumentReportReviewModal({
                         : "Technical Analyst belum mereview laporan ini."}
                     </div>
                   )}
-                  <div className="grid grid-cols-2 gap-2">
-                    {(["APPROVED", "REJECTED"] as Decision[]).map((d) => (
+                  <div className={`grid gap-2 ${reopen ? "grid-cols-1" : "grid-cols-3"}`}>
+                    {(reopen ? (["REVISION"] as Decision[]) : (["APPROVED", "REVISION", "REJECTED"] as Decision[])).map((d) => (
                       <button
                         key={d}
                         type="button"
@@ -225,15 +252,11 @@ export function PmDocumentReportReviewModal({
                         onClick={() => setDecision(d)}
                         className={
                           "flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-[12.5px] font-bold disabled:opacity-50 " +
-                          (decision === d
-                            ? d === "APPROVED"
-                              ? "border-[#1a9850] bg-[#e2f7ea] text-[#1a9850]"
-                              : "border-[#c1361f] bg-[#fbe4de] text-[#c1361f]"
-                            : "border-[#f0ded0] bg-white text-[#4a4038] hover:bg-[#f7f2ec]")
+                          (decision === d ? DECISION_UI[d].on : "border-[#f0ded0] bg-white text-[#4a4038] hover:bg-[#f7f2ec]")
                         }
                       >
-                        <MaterialIcon name={d === "APPROVED" ? "task_alt" : "cancel"} className="text-[15px]" />
-                        {d === "APPROVED" ? "Approve" : "Tolak"}
+                        <MaterialIcon name={DECISION_UI[d].icon} className="text-[15px]" />
+                        {DECISION_UI[d].label}
                       </button>
                     ))}
                   </div>
@@ -241,11 +264,18 @@ export function PmDocumentReportReviewModal({
                     value={note}
                     onChange={(event) => setNote(event.target.value)}
                     rows={3}
-                    placeholder={decision === "REJECTED" ? "Alasan penolakan (wajib)..." : "Catatan (opsional)..."}
+                    placeholder={
+                      decision === "REJECTED" ? "Alasan penolakan (wajib)..." : decision === "REVISION" ? "Catatan revisi untuk verifikator (wajib)..." : "Catatan (opsional)..."
+                    }
                     disabled={saving}
                     className="mt-3 w-full resize-none rounded-lg border border-[#e8dccd] bg-[#faf7f4] p-2.5 text-[12.5px] text-[#20180f] outline-none disabled:bg-[#f2ece5]"
                   />
-                  <div className="mt-3">
+                  {decision === "REVISION" && (
+                    <p className="mt-2 text-[11px] text-[#8a7565]">
+                      Laporan dibuka kembali untuk verifikator dokumen; setelah diperbaiki dan disubmit ulang, laporan kembali menunggu review Anda.
+                    </p>
+                  )}
+                  <div className={decision === "REVISION" ? "hidden" : "mt-3"}>
                     <label className="mb-1.5 block text-[11.5px] font-bold text-[#20180f]" htmlFor="pm-review-date">
                       Tanggal Review
                     </label>
@@ -272,7 +302,7 @@ export function PmDocumentReportReviewModal({
                   </label>
                   <button
                     type="button"
-                    disabled={saving || !decision || !confirmed || !reviewedAt || (decision === "REJECTED" && !note.trim())}
+                    disabled={saving || !decision || !confirmed || !reviewedAt || (decision !== "APPROVED" && !note.trim())}
                     onClick={submit}
                     className="mt-3 w-full rounded-lg bg-[#16a34a] py-2.5 text-[12.5px] font-bold text-white disabled:opacity-50"
                   >

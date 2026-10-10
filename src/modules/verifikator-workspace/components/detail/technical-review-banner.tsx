@@ -11,21 +11,30 @@ import {
   type DocumentReportReview,
 } from "@/modules/technical-analyst-workspace/document-report-review";
 
-/** Technical Analyst's review of this Laporan Verifikasi Dokumen — read-only, shown above the Draft Report. */
+type PmRevision = { note: string; requestedAt: string | null; byName: string | null };
+
+/**
+ * Technical Analyst's review of this Laporan Verifikasi Dokumen and any Project Manager revision
+ * request — read-only, shown above the Draft Report.
+ */
 export function TechnicalReviewBanner({ assignmentId }: { assignmentId: string }) {
   const { data } = useQuery({
     queryKey: ["verifikator-workspace", "assignments", assignmentId, "technical-review"],
     queryFn: async () => {
       const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/technical-review`);
       if (!response.ok) return null;
-      return ((await response.json()) as { data: { review: DocumentReportReview; technicalReviewerName: string | null } | null }).data;
+      return ((await response.json()) as { data: { review: DocumentReportReview | null; technicalReviewerName: string | null; pmRevision?: PmRevision | null } | null }).data;
     },
   });
   const review = data?.review;
-  if (!review?.decision) return null;
+  const pmRevision = data?.pmRevision ?? null;
+  if (!review?.decision && !pmRevision) return null;
+  if (!review?.decision) return <PmRevisionBanner revision={pmRevision!} />;
 
   const failed = DOCUMENT_REPORT_REVIEW_ITEMS.filter((item) => review.items[item.key]?.result === "FAIL");
   return (
+    <>
+    {pmRevision && <PmRevisionBanner revision={pmRevision} />}
     <div className="mb-4 rounded-[10px] border border-[#f0ded0] bg-[#f7f2ec] p-4 text-[12.5px] text-[#4a4038]">
       <div className="flex flex-wrap items-center gap-2">
         <MaterialIcon name="fact_check" className="text-[17px] text-[#2f6fe0]" />
@@ -47,6 +56,22 @@ export function TechnicalReviewBanner({ assignmentId }: { assignmentId: string }
           ))}
         </ul>
       )}
+    </div>
+    </>
+  );
+}
+
+function PmRevisionBanner({ revision }: { revision: PmRevision }) {
+  return (
+    <div className="mb-4 rounded-[10px] border border-[#f3d9a8] bg-[#fdf4de] p-4 text-[12.5px] text-[#4a4038]">
+      <div className="flex flex-wrap items-center gap-2">
+        <MaterialIcon name="undo" className="text-[17px] text-[#c98a1f]" />
+        <span className="font-bold text-[#20180f]">Revisi diminta Project Manager</span>
+        {revision.requestedAt && <span>· {formatAssignmentDate(revision.requestedAt)}</span>}
+        {revision.byName && <span>· oleh {revision.byName}</span>}
+      </div>
+      <div className="mt-1.5 whitespace-pre-line pl-6">Catatan: {revision.note}</div>
+      <div className="mt-1 pl-6 text-[11.5px] text-[#8a7565]">Perbaiki verifikasi dokumen sesuai catatan, lalu submit ulang laporan.</div>
     </div>
   );
 }

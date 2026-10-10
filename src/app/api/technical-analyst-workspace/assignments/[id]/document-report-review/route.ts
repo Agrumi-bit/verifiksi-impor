@@ -103,7 +103,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       where: { id: ctx.dokumen.id },
       data: {
         status: "SUBMITTED",
-        validationNotes: body.note ?? null,
         validatedAt: null,
         pmReviewStatus: null,
         pmReviewNote: null,

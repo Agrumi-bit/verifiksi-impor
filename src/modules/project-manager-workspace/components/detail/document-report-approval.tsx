@@ -24,11 +24,13 @@ export function DocumentReportApproval({ data, applicationNumber }: { data: PmAp
   const dokumen = data.assignments.dokumen;
   const taReview = data.assignments.technical?.documentReportReview ?? null;
   // null = closed; "VIEW" = open with no decision preselected (already decided / just reviewing).
-  const [dialog, setDialog] = useState<"APPROVED" | "REJECTED" | "VIEW" | null>(null);
+  const [dialog, setDialog] = useState<"APPROVED" | "REJECTED" | "REVISION" | "VIEW" | null>(null);
 
   if (!dokumen) return null;
   const ready = dokumen.status === "COMPLETED";
   const pmStatus = dokumen.pmReviewStatus as "APPROVED" | "REJECTED" | null;
+  // PM "Kembalikan untuk Revisi": note kept, no status, while the verifikator reworks the report.
+  const revisionRequested = !pmStatus && !ready && Boolean(dokumen.pmReviewNote);
 
   function refresh() {
     setDialog(null);
@@ -83,6 +85,12 @@ export function DocumentReportApproval({ data, applicationNumber }: { data: PmAp
                 <span>{formatAssignmentDate(dokumen.pmReviewedAt)}</span>
                 {dokumen.pmReviewNote && <span className="w-full text-[#6b5b4c]">Catatan: {dokumen.pmReviewNote}</span>}
               </span>
+            ) : revisionRequested ? (
+              <span className="flex flex-wrap items-center gap-1.5">
+                <span className="rounded-full bg-[#fdf4de] px-2.5 py-0.5 text-[11px] font-bold text-[#a6791f]">Revisi diminta</span>
+                <span>{formatAssignmentDate(dokumen.pmReviewedAt)} · menunggu verifikator submit ulang</span>
+                <span className="w-full text-[#6b5b4c]">Catatan: {dokumen.pmReviewNote}</span>
+              </span>
             ) : (
               <span className="text-[#a68f80]">Belum diputuskan</span>
             )}
@@ -99,10 +107,14 @@ export function DocumentReportApproval({ data, applicationNumber }: { data: PmAp
         )}
 
         {pmStatus && (
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-2.5">
             <Button type="button" variant="outline" onClick={() => setDialog("VIEW")} className="border-[#e1bfb3]">
               <MaterialIcon name="visibility" className="text-[16px]" />
               Lihat Review
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setDialog("REVISION")} className="border-[#c98a1f] text-[#a6791f]">
+              <MaterialIcon name="undo" className="text-[16px]" />
+              Kembalikan untuk Revisi
             </Button>
           </div>
         )}
@@ -127,6 +139,16 @@ export function DocumentReportApproval({ data, applicationNumber }: { data: PmAp
             >
               <MaterialIcon name="cancel" className="text-[16px]" />
               Tolak
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!ready}
+              onClick={() => setDialog("REVISION")}
+              className="border-[#c98a1f] text-[#a6791f]"
+            >
+              <MaterialIcon name="undo" className="text-[16px]" />
+              Revisi
             </Button>
           </div>
         )}
