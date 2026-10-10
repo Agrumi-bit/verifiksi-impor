@@ -56,6 +56,8 @@ type LocationReportDetail = {
   surveyorName: string | null;
   pmReviewStatus: "APPROVED" | "REJECTED" | null;
   pmReviewedAt: string | null;
+  /** PM who approved the Laporan Survey ("Disetujui Oleh"); null before migration 39. */
+  pmReviewedByName?: string | null;
   company: {
     companyName: string;
     nibNumber: string | null;
@@ -459,17 +461,26 @@ export function OfficeReportPreview({
               )}
             </div>
             <div className="rd-card-lg" style={{ background: "#fff", padding: 20 }}>
-              <span className="rd-approval-badge" style={{ color: "var(--ink-faint)", background: "var(--stripe)" }}>
+              <span
+                className="rd-approval-badge"
+                style={isPmApproved ? { color: "var(--ok-fg)", background: "var(--ok-bg)" } : { color: "var(--ink-faint)", background: "var(--stripe)" }}
+              >
                 DISETUJUI OLEH
               </span>
-              <div className="rd-approval-name" style={{ color: "var(--ink-faint)" }}>
-                Menunggu penunjukan
+              <div className="rd-approval-name" style={isPmApproved ? undefined : { color: "var(--ink-faint)" }}>
+                {isPmApproved ? (data.pmReviewedByName ?? "Project Manager") : "Menunggu penunjukan"}
               </div>
               <div className="rd-approval-role">Project Manager</div>
               <div className="rd-approval-sign">Tanda tangan</div>
-              <div className="rd-approval-status" style={{ color: "var(--gold-soft-ink)" }}>
-                ◐ Menunggu
-              </div>
+              {isPmApproved ? (
+                <div className="rd-approval-status" style={{ color: "var(--ok-fg)" }}>
+                  ✓ Disetujui{data.pmReviewedAt ? ` — ${fmtDate(data.pmReviewedAt)}` : ""}
+                </div>
+              ) : (
+                <div className="rd-approval-status" style={{ color: "var(--gold-soft-ink)" }}>
+                  ◐ Menunggu
+                </div>
+              )}
             </div>
           </div>
           <div className="rd-eyebrow" style={{ marginBottom: 10 }}>

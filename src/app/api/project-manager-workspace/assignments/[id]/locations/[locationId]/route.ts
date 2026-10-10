@@ -5,6 +5,7 @@ import { requireProjectManagerSession } from "@/lib/require-project-manager-sess
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { matchVisitLocation } from "@/modules/shared/survey-visit-scope";
 import { composeLocationAddress } from "@/modules/shared/schema";
+import { surveyPmSignoff } from "@/modules/shared/survey-pm-signoff";
 
 /**
  * PM-facing mirror of `verifikator-workspace/assignments/[id]/locations/[locationId]/route.ts`
@@ -52,8 +53,7 @@ export async function GET(
       verificationType: visit.assignment.application.verificationType,
       importTypes: (visit.assignment.application.payload as { importTypes?: string[] } | null)?.importTypes ?? [],
       surveyorName: visit.assignment.surveyor?.name ?? null,
-      pmReviewStatus: visit.assignment.pmReviewStatus,
-      pmReviewedAt: visit.assignment.pmReviewedAt,
+      ...(await surveyPmSignoff(visit.assignment, id)),
       company: {
         companyName: payload.companyName ?? "—",
         nibNumber: payload.nibNumber ?? null,

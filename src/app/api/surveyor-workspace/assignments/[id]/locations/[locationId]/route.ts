@@ -9,6 +9,7 @@ import { getDocumentMeta, type DocumentMetaEntry } from "@/modules/company/docum
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
 import { matchVisitLocation } from "@/modules/shared/survey-visit-scope";
 import { loadAssignmentVisit } from "@/modules/surveyor-workspace/server/load-assignment-visit";
+import { surveyPmSignoff } from "@/modules/shared/survey-pm-signoff";
 
 async function loadScopedLocation(
   assignmentNumber: string,
@@ -110,8 +111,7 @@ export async function GET(
       // Report cover's "TANGGAL TERBIT" only applies once Project Manager has approved this
       // survey assignment's report (PM Approval Center, category "laporanSurvey") — before that,
       // the cover shows "TANGGAL PENYUSUNAN" instead, dated to the date the surveyor chose before Submit.
-      pmReviewStatus: visit.assignment.pmReviewStatus,
-      pmReviewedAt: visit.assignment.pmReviewedAt,
+      ...(await surveyPmSignoff(visit.assignment, id)),
       // CR's actual assigned date, regardless of Surat Tugas letterStatus (DRAFT/PENDING/APPROVED)
       // — Section 0's "Tanggal Ditugaskan" pre-fills from this so it never drifts from what CR set.
       scheduledDate: visit.assignment.scheduledDate,

@@ -5,6 +5,7 @@ import { getServerSession } from "@/lib/get-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { matchVisitLocation } from "@/modules/shared/survey-visit-scope";
 import { composeLocationAddress } from "@/modules/shared/schema";
+import { surveyPmSignoff } from "@/modules/shared/survey-pm-signoff";
 
 export async function GET(
   _request: Request,
@@ -55,8 +56,7 @@ export async function GET(
       verificationType: visit.assignment.application.verificationType,
       importTypes: (visit.assignment.application.payload as { importTypes?: string[] } | null)?.importTypes ?? [],
       surveyorName: visit.assignment.surveyor?.name ?? null,
-      pmReviewStatus: visit.assignment.pmReviewStatus,
-      pmReviewedAt: visit.assignment.pmReviewedAt,
+      ...(await surveyPmSignoff(visit.assignment, id)),
       company: {
         companyName: payload.companyName ?? "—",
         nibNumber: payload.nibNumber ?? null,
