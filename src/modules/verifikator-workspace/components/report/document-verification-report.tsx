@@ -76,6 +76,7 @@ export type ReportData = {
   signoff?: {
     technicalReview: { decision: "VERIFIED" | "REVISION" | "REJECTED"; verifiedAt: string | null; verifiedByName: string | null } | null;
     pmReviewedByName: string | null;
+    technicalReviewerName?: string | null;
   };
   documents: DocumentRow[];
   machines: MachineRow[];
@@ -1168,6 +1169,8 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   // Cover date: "TANGGAL TERBIT" only once the Project Manager has approved this report (dated to that
   // approval). Before that it is "TANGGAL PENYUSUNAN" — still "—" while the report is a draft.
   const isPmApproved = data.pmReviewStatus === "APPROVED";
+  // The dokumen assignment carries no technical reviewer; the TA comes from the technical assignment.
+  const technicalReviewer = data.signoff?.technicalReview?.verifiedByName ?? data.signoff?.technicalReviewerName ?? data.technicalReviewerName ?? null;
   const coverDateLabel = isPmApproved ? "TANGGAL TERBIT" : "TANGGAL PENYUSUNAN";
   const coverDateValue = isPmApproved ? (data.pmReviewedAt ?? null) : preparedDate;
 
@@ -1397,7 +1400,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
             <div style={{ background: "#fff", border: `1px solid ${CARD_BORDER}`, padding: 20, borderRadius: 12 }}>
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", color: ORANGE_TEXT, marginBottom: 10 }}>DIPERIKSA OLEH</div>
               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>
-                {data.signoff?.technicalReview?.verifiedByName ?? data.technicalReviewerName ?? "Menunggu penunjukan"}
+                {technicalReviewer ?? "Menunggu penunjukan"}
               </div>
               <div style={{ fontSize: 12, color: "#7a7166", marginBottom: 22 }}>Technical Reviewer</div>
               <div style={{ borderTop: "1px dashed #d8cdb8", paddingTop: 10, fontSize: 11, color: MUTED_2, marginBottom: 8 }}>Tanda tangan</div>
@@ -1666,7 +1669,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
               ["Jenis Verifikasi", schemeReport?.label ?? data.verificationType, "#1a3a6b"],
               ["Jumlah Kategori Dokumen", String(categories.length), INK],
               ["Verifikator Dokumen", data.verifikatorName ?? "—", "#1a3a6b"],
-              ["Technical Reviewer", data.technicalReviewerName ?? "—", INK],
+              ["Technical Reviewer", technicalReviewer ?? "—", INK],
               ["Tanggal Laporan Diterbitkan", isPmApproved ? fmtDate(data.pmReviewedAt) : "—", INK],
               ["Klasifikasi Dokumen", "Internal — Terbatas", "#1a3a6b"],
             ].map(([label, value, color], i, arr) => (

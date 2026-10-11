@@ -23,6 +23,9 @@ export type DocumentReportSignoff = {
   technicalReview: { decision: DocumentReportReviewDecision; verifiedAt: string | null; verifiedByName: string | null } | null;
   /** Project Manager who approved the report ("Disetujui Oleh"). */
   pmReviewedByName: string | null;
+  /** Technical Analyst assigned to the application's technical assignment (the dokumen
+   * assignment itself has no technical reviewer), shown before and after the review. */
+  technicalReviewerName?: string | null;
 };
 
 /** Who checked / approved a Laporan Verifikasi Dokumen, for the report's Halaman Persetujuan. */
@@ -43,5 +46,9 @@ export async function loadDocumentReportSignoff(assignment: { id: string; applic
       };
     }
   }
-  return { technicalReview, pmReviewedByName: await readPmReviewedByName(assignment.id) };
+  return {
+    technicalReview,
+    pmReviewedByName: await readPmReviewedByName(assignment.id),
+    technicalReviewerName: technical?.technicalReviewer?.name ?? null,
+  };
 }

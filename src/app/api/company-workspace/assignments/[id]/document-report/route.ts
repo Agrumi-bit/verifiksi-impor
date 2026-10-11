@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
+import { loadDocumentReportSignoff } from "@/modules/verifikator-workspace/report-signoff";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
 import { getDocumentMeta } from "@/modules/company/document-versions";
@@ -160,6 +161,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       businessAddress,
       verifikatorName: assignment.verifikator?.name ?? null,
       technicalReviewerName: assignment.technicalReviewer?.name ?? null,
+      signoff: await loadDocumentReportSignoff(assignment),
       documents,
       machines,
       products,
