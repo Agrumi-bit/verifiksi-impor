@@ -183,6 +183,8 @@ export async function GET(
             sktNumber: application.company.sktNumber,
           }
         : { companyName: payload.companyName, nibNumber: payload.nibNumber, kbliEntries: [], sktNumber: null },
+      /** Application.status itself (e.g. COMPLETED once the LHVIU is recorded). */
+      applicationStatus: application.status,
       stage: stageResult.stage,
       status: stageResult.status,
       slaLabel: stageResult.slaLabel,

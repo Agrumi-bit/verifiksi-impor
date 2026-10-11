@@ -24,7 +24,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ typ
   const application = await findApplication(applicationNumber);
   if (!application) return NextResponse.json({ error: "Aplikasi tidak ditemukan" }, { status: 404 });
   const document = await readLhviuDocument(application.id);
-  const completed = await completeApplicationOnLhviu(application.id, document, session.user);
+  const completed = await completeApplicationOnLhviu(application.id, document, session.user, { respectCancel: true });
   return NextResponse.json({ data: { document, completed } });
 }
 

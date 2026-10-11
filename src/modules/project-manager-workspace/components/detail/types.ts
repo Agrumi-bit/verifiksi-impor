@@ -15,6 +15,7 @@ export type PmApplicationDetail = {
   company: { companyName: string; nibNumber: string; kbliEntries: { code: string; description: string }[]; sktNumber: string | null };
   stage: string;
   status: string;
+  applicationStatus?: string;
   slaLabel: string;
   slaDetail: string;
   slaColor: string;

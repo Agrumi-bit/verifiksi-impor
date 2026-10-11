@@ -286,6 +286,10 @@ export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicati
             )}
           </div>
 
+          {data.applicationStatus === "COMPLETED" && (
+            <CancelCompletion endpoint={`/api/project-manager-workspace/applications/${jenis}/${applicationNumber}/completion`} onDone={refresh} />
+          )}
+
           {lhviu && (
             <LhviuMetaForm
               key={`${lhviu.path}|${lhviu.number ?? ""}|${lhviu.issuedAt ?? ""}`}
@@ -386,6 +390,86 @@ function LhviuMetaForm({
           {saving ? "Menyimpan..." : "Simpan"}
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * "Batalkan Completed": recording the LHVIU nomor + tanggal terbit completes the application; when that
+ * happened before the other reports were approved, the PM reverts it here (with a reason) and finishes
+ * the reviews first. Saving the LHVIU nomor/tanggal or PDF again completes it again.
+ */
+function CancelCompletion({ endpoint, onDone }: { endpoint: string; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function submit() {
+    setSaving(true);
+    try {
+      const response = await fetch(endpoint, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error ?? "Gagal membatalkan status Completed");
+      toast.success("Status Completed dibatalkan; laporan lain dapat direview kembali.");
+      setOpen(false);
+      setReason("");
+      onDone();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal membatalkan status Completed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="mb-4 rounded-lg border border-[#cfe9d8] bg-[#eef8f1] p-3.5 text-[12.5px] text-[#20180f]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 font-semibold text-[#1a7a4c]">
+          <MaterialIcon name="task_alt" className="text-[16px]" />
+          Permohonan berstatus Completed karena Nomor dan Tanggal Terbit LHVIU sudah dicatat.
+        </span>
+        {!open && (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="rounded-lg border border-[#c98a1f] bg-white px-3 py-1.5 text-[12px] font-bold text-[#a6791f]"
+          >
+            Batalkan Completed
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className="mt-3">
+          <div className="mb-1.5 text-[11.5px] text-[#6b5b4c]">
+            Status kembali seperti sebelum Completed agar laporan yang belum disetujui dapat direview. Dokumen, nomor, dan tanggal LHVIU tetap tersimpan; menyimpan ulang nomor/tanggal LHVIU akan menjadikannya Completed lagi.
+          </div>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={2}
+            placeholder="Alasan pembatalan (wajib), mis. laporan survei belum disetujui"
+            disabled={saving}
+            className="w-full resize-none rounded-lg border border-[#e8dccd] bg-white p-2.5 text-[12.5px] outline-none"
+          />
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              disabled={saving || reason.trim().length < 5}
+              onClick={submit}
+              className="rounded-lg bg-[#c98a1f] px-3.5 py-2 text-[12px] font-bold text-white disabled:opacity-50"
+            >
+              {saving ? "Membatalkan…" : "Batalkan Completed"}
+            </button>
+            <button type="button" disabled={saving} onClick={() => setOpen(false)} className="rounded-lg border border-[#e1bfb3] bg-white px-3.5 py-2 text-[12px] font-semibold">
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
