@@ -1,3 +1,4 @@
+import { schemeLabel } from "@/modules/schemes";
 import { MaterialIcon } from "../material-icon";
 import type { AssignmentDetailData } from "../assignment-detail";
 import { LOCATION_TYPE_LABELS } from "../../status";
@@ -127,7 +128,7 @@ export function OverviewTab({ data }: { data: AssignmentDetailData }) {
       <Section title="Verification Program" icon="verified" iconColor="#2f6fe0">
         <div className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Verification Program" value={verificationProgram.type} />
-          <Field label="Verification Scope" value={verificationProgram.importTypes.join(", ")} />
+          <Field label="Verification Scope" value={schemeLabel({ verificationType: verificationProgram.type, importTypes: verificationProgram.importTypes })} />
           <Field
             label="Requested Products"
             value={

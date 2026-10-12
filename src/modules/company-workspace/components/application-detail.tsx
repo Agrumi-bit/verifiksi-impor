@@ -1,5 +1,6 @@
 "use client";
 
+import { schemeLabel } from "@/modules/schemes";
 import { useEffect, useState, type ComponentType } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -911,7 +912,7 @@ export function CompanyApplicationDetail({ id }: Props) {
         <div>
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="text-[26px] font-extrabold tracking-tight text-[#20180f]">{data.applicationNumber}</div>
-            <span className="rounded-full bg-[#e6f0fd] px-3 py-1 text-[11.5px] font-bold text-[#2f6fd6]">{data.verificationType}</span>
+            <span className="rounded-full bg-[#e6f0fd] px-3 py-1 text-[11.5px] font-bold text-[#2f6fd6]">{schemeLabel({ verificationType: data.verificationType, importTypes: payload.importTypes })}</span>
             <span className="inline-flex items-center gap-1.25 rounded-full px-3 py-1 text-[11.5px] font-bold" style={{ background: display.bgSoft, color: display.color }}>
               {display.label}
             </span>
@@ -1034,7 +1035,7 @@ export function CompanyApplicationDetail({ id }: Props) {
 
       {activeTab === "Overview" && (
         <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-          <TabField label="Jenis Verifikasi" value={data.verificationType} />
+          <TabField label="Jenis Verifikasi" value={schemeLabel({ verificationType: data.verificationType, importTypes: payload.importTypes })} />
           <TabField label="Kategori Permohonan" value={data.applicationCategory} />
           <TabField label="Tanggal Pengajuan" value={formatSubmissionDate(data, true)} />
           <TabField label="Surveyor Ditugaskan" value={data.assignedSurveyorName} />

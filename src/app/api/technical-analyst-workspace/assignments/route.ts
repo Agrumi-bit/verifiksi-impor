@@ -1,3 +1,4 @@
+import { schemeLabel } from "@/modules/schemes";
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
@@ -50,6 +51,7 @@ export async function GET(request: Request) {
       applicationNumber: assignment.application.applicationNumber,
       companyName: payload?.companyName ?? "—",
       verificationType: assignment.application.verificationType,
+      scheme: schemeLabel({ verificationType: assignment.application.verificationType, importTypes: (assignment.application.payload as { importTypes?: string[] } | null)?.importTypes }),
       status: assignment.status,
       priority: assignment.priority,
       createdAt: assignment.createdAt,

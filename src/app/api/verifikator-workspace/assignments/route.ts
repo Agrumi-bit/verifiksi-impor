@@ -1,3 +1,4 @@
+import { schemeLabel } from "@/modules/schemes";
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
@@ -61,13 +62,14 @@ export async function GET(request: Request) {
   const paged = filtered.slice(start, start + pageSize);
 
   const data = paged.map((assignment) => {
-    const payload = assignment.application.payload as { companyName?: string } | null;
+    const payload = assignment.application.payload as { companyName?: string; importTypes?: string[] } | null;
     return {
       id: assignment.id,
       assignmentNumber: assignment.assignmentNumber,
       applicationNumber: assignment.application.applicationNumber,
       companyName: payload?.companyName ?? "—",
       verificationType: assignment.application.verificationType,
+      scheme: schemeLabel({ verificationType: assignment.application.verificationType, importTypes: payload?.importTypes }),
       status: assignment.status,
       priority: assignment.priority,
       businessType: assignment.businessType,

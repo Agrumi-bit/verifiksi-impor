@@ -1,3 +1,4 @@
+import { schemeLabel } from "@/modules/schemes";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -59,11 +60,12 @@ export async function GET(request: Request) {
   const paged = filtered.slice(start, start + pageSize);
 
   const data = paged.map((application) => {
-    const payload = application.payload as { companyName?: string } | null;
+    const payload = application.payload as { companyName?: string; importTypes?: string[] } | null;
     return {
       id: application.id,
       applicationNumber: application.applicationNumber,
       verificationType: application.verificationType,
+      scheme: schemeLabel({ verificationType: application.verificationType, importTypes: payload?.importTypes }),
       applicationCategory: application.applicationCategory,
       companyName: payload?.companyName ?? "—",
       status: application.status,

@@ -12,6 +12,8 @@ type ApplicationRow = {
   applicationNumber: string;
   company: string;
   jenis: string;
+  /** VKI, VIU Bahan Baku Industri, VIU Bahan Baku Non Industri or VIU Barang Konsumsi. */
+  scheme?: string;
   submitted: string;
   outcome: string;
 };
@@ -59,7 +61,8 @@ export function ApplicationListView() {
     const q = search.trim().toLowerCase();
     return applications.filter((a) => {
       if (q && !a.company.toLowerCase().includes(q) && !a.applicationNumber.toLowerCase().includes(q)) return false;
-      if (jenisFilter !== "Semua Jenis" && a.jenis !== jenisFilter) return false;
+      // "VKI"/"VIU" match the verification type; a VIU scheme label matches that one scheme.
+      if (jenisFilter !== "Semua Jenis" && (jenisFilter === "VKI" || jenisFilter === "VIU" ? a.jenis !== jenisFilter : a.scheme !== jenisFilter)) return false;
       if (statusFilter !== "Semua Status" && a.outcome !== statusFilter) return false;
       return true;
     });
@@ -130,7 +133,10 @@ export function ApplicationListView() {
               >
                 <option>Semua Jenis</option>
                 <option value="VKI">VKI</option>
-                <option value="VIU">VIU</option>
+                <option value="VIU">VIU (semua)</option>
+                <option value="VIU Bahan Baku Industri">VIU Bahan Baku Industri</option>
+                <option value="VIU Bahan Baku Non Industri">VIU Bahan Baku Non Industri</option>
+                <option value="VIU Barang Konsumsi">VIU Barang Konsumsi</option>
               </select>
             </div>
             <div>
@@ -182,7 +188,7 @@ export function ApplicationListView() {
               <div className="font-bold text-[#20180f]">{a.applicationNumber}</div>
               <div className="font-semibold text-[#c14a1f]">{a.company}</div>
               <div>
-                <span className="rounded-md bg-[#f2ece5] px-2.25 py-0.75 text-[10.5px] font-bold text-[#6b5b4c]">{a.jenis}</span>
+                <span className="rounded-md bg-[#f2ece5] px-2.25 py-0.75 text-[10.5px] font-bold text-[#6b5b4c]">{a.scheme ?? a.jenis}</span>
               </div>
               <div className="text-[#4a4038]">{fmtDate(a.submitted)}</div>
               <div className="relative">

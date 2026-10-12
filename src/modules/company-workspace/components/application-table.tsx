@@ -18,6 +18,8 @@ type ApplicationListItem = {
   id: string;
   applicationNumber: string;
   verificationType: string;
+  /** VKI, VIU Bahan Baku Industri, VIU Bahan Baku Non Industri or VIU Barang Konsumsi. */
+  scheme?: string;
   applicationCategory: string;
   companyName: string;
   status: ApplicationStatusValue;
@@ -160,7 +162,7 @@ export function CompanyApplicationTable() {
               <div className="text-[13.5px] font-semibold text-[#20180f]">{application.applicationNumber}</div>
               <div>
                 <span className="rounded-md bg-[#f2ece5] px-2.5 py-0.75 text-[11px] font-bold text-[#4a4038]">
-                  {application.verificationType}
+                  {application.scheme ?? application.verificationType}
                 </span>
               </div>
               <div className="text-[13px] text-[#594138]">{formatSubmissionDate(application, false)}</div>

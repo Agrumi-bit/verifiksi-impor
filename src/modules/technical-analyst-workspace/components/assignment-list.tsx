@@ -26,6 +26,8 @@ type AssignmentListItem = {
   applicationNumber: string;
   companyName: string;
   verificationType: string;
+  /** VKI, VIU Bahan Baku Industri, VIU Bahan Baku Non Industri or VIU Barang Konsumsi. */
+  scheme?: string;
   status: AssignmentStatusValue;
   priority: AssignmentPriorityValue;
   createdAt: string;
@@ -192,7 +194,7 @@ export function AssignmentList() {
               </div>
               <div className="flex items-center gap-1.5 text-[12.5px] text-[#594138]">
                 <MaterialIcon name="account_balance" className="text-[15px] text-[#a68f80]" />
-                {assignment.verificationType}
+                {assignment.scheme ?? assignment.verificationType}
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-4 border-t border-[#f5ebe1] pt-2.5 text-xs text-[#8a7565]">

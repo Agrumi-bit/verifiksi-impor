@@ -15,6 +15,7 @@ import {
   resolveScheme,
   resolveSchemeDocuments,
   resolveSchemes,
+  schemeLabel,
   type SchemeId,
 } from "./index";
 
@@ -262,3 +263,16 @@ describe("narrative (schemes with narrative written)", () => {
   }
 });
 
+
+describe("schemeLabel", () => {
+  it("names the scheme an application belongs to", () => {
+    assert.equal(schemeLabel({ verificationType: "VKI" }), "VKI");
+    assert.equal(schemeLabel({ verificationType: "VIU", importTypes: ["BAHAN_BAKU_INDUSTRI"] }), "VIU Bahan Baku Industri");
+    assert.equal(schemeLabel({ verificationType: "VIU", importTypes: ["BAHAN_BAKU_NON_INDUSTRI"] }), "VIU Bahan Baku Non Industri");
+    assert.equal(schemeLabel({ verificationType: "VIU", importTypes: ["BARANG_KONSUMSI"] }), "VIU Barang Konsumsi");
+  });
+
+  it("never guesses a scheme for a VIU application without an import type", () => {
+    assert.equal(schemeLabel({ verificationType: "VIU", importTypes: [] }), "VIU (jenis impor belum dipilih)");
+  });
+});

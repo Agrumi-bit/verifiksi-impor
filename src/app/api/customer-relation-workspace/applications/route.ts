@@ -1,3 +1,4 @@
+import { schemeLabel } from "@/modules/schemes";
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
@@ -38,6 +39,7 @@ export async function GET() {
       applicationNumber: application.applicationNumber,
       company: payload.companyName || "—",
       jenis: application.verificationType,
+      scheme: schemeLabel({ verificationType: application.verificationType, importTypes: payload.importTypes }),
       category: application.applicationCategory,
       submitted: submittedOn.value,
       submittedIsSystemDate: submittedOn.isFallback,

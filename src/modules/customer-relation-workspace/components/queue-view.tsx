@@ -10,6 +10,8 @@ type QueueApplication = {
   applicationNumber: string;
   company: string;
   jenis: string;
+  /** VKI, VIU Bahan Baku Industri, VIU Bahan Baku Non Industri or VIU Barang Konsumsi. */
+  scheme?: string;
   submitted: string;
   docsLengkap: number;
   docsTotal: number;
@@ -156,7 +158,7 @@ export function QueueView() {
                   className="rounded-md px-2.25 py-0.75 text-[10.5px] font-bold"
                   style={{ background: JENIS_BADGE[a.jenis]?.bg ?? "#f2ece5", color: JENIS_BADGE[a.jenis]?.color ?? "#6b5b4c" }}
                 >
-                  {a.jenis}
+                  {a.scheme ?? a.jenis}
                 </span>
                 <span
                   className="rounded-md px-2.25 py-0.75 text-[10.5px] font-bold"

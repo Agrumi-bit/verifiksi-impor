@@ -294,3 +294,19 @@ export function findForbiddenTerms(scheme: SchemeId, text: string): string[] {
     new RegExp(`(^|[^\\p{L}\\p{N}])${escapeRegExp(term)}($|[^\\p{L}\\p{N}])`, "iu").test(text),
   );
 }
+
+// ---------------------------------------------------------------------------------------------
+// Display label
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * The scheme an application belongs to, as every list and detail page shows it: "VKI",
+ * "VIU Bahan Baku Industri", "VIU Bahan Baku Non Industri" or "VIU Barang Konsumsi". A VIU
+ * application without an import type reads "VIU (jenis impor belum dipilih)", never a guess.
+ */
+export function schemeLabel(source: SchemeSource): string {
+  const schemes = resolveSchemes(source);
+  if (schemes.length) return schemes.map((id) => getScheme(id).terms.shortLabel).join(" + ");
+  if (source.verificationType === "VIU") return "VIU (jenis impor belum dipilih)";
+  return source.verificationType ?? "—";
+}
