@@ -10,7 +10,7 @@ const META: ChapterWorkspaceMeta = {
   navLabel: "VKI",
   api: "/api/project-manager-workspace/pelaporan-pasal-47/vki",
   pdfScheme: "vki",
-  emptyText: "Belum ada permohonan VKI pada periode ini.",
+  emptyText: "Belum ada permohonan VKI berstatus Completed dengan LHVKI pada periode ini.",
   fileStem: "Pelaporan Pasal 47 VKI",
 };
 

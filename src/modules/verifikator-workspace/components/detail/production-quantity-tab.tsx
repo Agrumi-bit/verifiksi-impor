@@ -1,5 +1,6 @@
 "use client";
 
+import { CountryNamesMultiSelect } from "@/modules/master-data/components/country-names-multi-select";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -516,9 +517,9 @@ function RawMaterialUsageTable({
                   </td>
                   <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
                     {canEdit ? (
-                      <EditableValueInput
+                      <CountryNamesMultiSelect
                         value={r.rencanaKebutuhanNegaraAsal}
-                        onSave={(value) => onSaveValue(r, "rencanaKebutuhanNegaraAsal", value)}
+                        onChange={(value) => onSaveValue(r, "rencanaKebutuhanNegaraAsal", value)}
                       />
                     ) : (
                       r.rencanaKebutuhanNegaraAsal || "—"

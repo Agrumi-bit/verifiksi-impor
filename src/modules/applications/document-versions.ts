@@ -410,7 +410,9 @@ export async function setApplicationDocumentVerificationStatus(
       verifiedById,
       verifiedAt: new Date(),
       verifiedByRole,
-      rejectionNote: status === "VERIFIED" ? null : rejectionNote,
+      // The verifikator's "Catatan Verifikasi" is kept for every decision (also Sesuai); screens that
+      // show it as a revision reason already check the status first.
+      rejectionNote,
     },
   });
 }

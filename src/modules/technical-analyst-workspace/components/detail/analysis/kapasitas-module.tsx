@@ -20,7 +20,12 @@ export function KapasitasModule({
 }: ModuleProps) {
   const machineRows = data.machines.map((m) => ({ ...m, perHari: parseNumeric(m.kapasitasPerHari) }));
   const withCapacity = machineRows.filter((m) => m.perHari !== null && m.perHari > 0);
-  const bottleneck = withCapacity.length > 0 ? withCapacity.reduce((min, m) => (m.perHari! < min.perHari! ? m : min)) : null;
+  // Default: the machine with the lowest daily capacity. The analyst can pick another machine/process
+  // as the bottleneck (stored by name in inputs.mesinBottleneck, so the report prints it as such).
+  const autoBottleneck = withCapacity.length > 0 ? withCapacity.reduce((min, m) => (m.perHari! < min.perHari! ? m : min)) : null;
+  const chosenName = inputs.mesinBottleneck?.trim() ?? "";
+  const chosenBottleneck = chosenName ? (machineRows.find((m) => (m.nama ?? "").trim() === chosenName) ?? null) : null;
+  const bottleneck = chosenBottleneck ?? autoBottleneck;
   const kapasitasLiniHarian = bottleneck?.perHari ?? null;
   const kapasitasLiniBulanan = kapasitasLiniHarian !== null ? kapasitasLiniHarian * 26 : null;
   const kapasitasLiniTahunan = kapasitasLiniBulanan !== null ? kapasitasLiniBulanan * 12 : null;
@@ -90,6 +95,34 @@ export function KapasitasModule({
             "Kapasitas produksi keseluruhan lini ditentukan oleh tahapan proses dengan kapasitas produksi harian terkecil (bottleneck), karena tahapan tersebut membatasi kapasitas produksi lini secara menyeluruh.",
           ]}
         />
+        <div className="mb-3.5 flex flex-col gap-1">
+          <label htmlFor="kapasitas-bottleneck" className="text-[11.5px] font-semibold text-[#4a4038]">
+            Mesin/Proses Bottleneck
+          </label>
+          {canEdit ? (
+            <select
+              id="kapasitas-bottleneck"
+              value={chosenBottleneck ? chosenName : ""}
+              onChange={(event) => onInputChange("mesinBottleneck", event.target.value)}
+              className="w-full max-w-[460px] rounded-lg border border-[#e1bfb3] bg-white px-3 py-2 text-[12.5px] text-[#20180f] outline-none focus:border-[#e0662e]"
+            >
+              <option value="">
+                Otomatis — kapasitas/hari terkecil{autoBottleneck ? ` (${autoBottleneck.nama || "—"})` : ""}
+              </option>
+              {machineRows
+                .filter((m) => (m.nama ?? "").trim())
+                .map((m) => (
+                  <option key={m.id} value={(m.nama ?? "").trim()}>
+                    {m.nama} — {m.perHari !== null ? `${fmtNum(m.perHari, 0)}/hari` : "kapasitas belum diisi"}
+                  </option>
+                ))}
+            </select>
+          ) : (
+            <div className="text-[12.5px] text-[#20180f]">
+              {bottleneck?.nama || "—"} <span className="text-[#8a7565]">({chosenBottleneck ? "dipilih analis" : "otomatis, kapasitas/hari terkecil"})</span>
+            </div>
+          )}
+        </div>
         <StatBoxes
           items={[
             { label: "Mesin/Proses Bottleneck", value: bottleneck?.nama || "—" },

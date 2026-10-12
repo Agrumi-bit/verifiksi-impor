@@ -67,6 +67,7 @@ const INPUT_LABELS: Record<string, string> = {
   volumeIzin: "Volume sesuai Izin",
   estimasiJamOperasi: "Estimasi Jam Operasi",
   tarifId: "Golongan Tarif Listrik",
+  mesinBottleneck: "Mesin/Proses Bottleneck (dipilih analis)",
   catatanB: "Catatan Analis (B)",
   catatanC: "Catatan Analis (C)",
   catatanD: "Catatan Analis (D)",

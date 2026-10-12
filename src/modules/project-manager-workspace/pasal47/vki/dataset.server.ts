@@ -31,14 +31,15 @@ function areaOfKey(key: string): string {
 }
 
 /**
- * Every VKI application of the period (drafts and withdrawn ones excluded), flattened into the report
- * dataset. An application belongs to the period of its LHVKI Tanggal Terbit when the Project Manager
+ * Every VKI application of the period that is COMPLETED and has its LHVKI uploaded (LHVKI tab),
+ * flattened into the report dataset — applications still in process, or completed without an LHVKI,
+ * are not reported to Kemenperin. An application belongs to the period of its LHVKI Tanggal Terbit when the Project Manager
  * recorded one (LHVKI tab), otherwise to the period of its Tanggal Pengajuan — the same rule as the VIU
  * reports. Nothing is invented: a figure the system does not hold stays empty.
  */
 export async function buildVkiDataset(period: { from: string; to: string }): Promise<VkiDataset> {
   const rows = await db.application.findMany({
-    where: { verificationType: "VKI", status: { notIn: ["DRAFT", "WITHDRAWN"] } },
+    where: { verificationType: "VKI", status: "COMPLETED" },
     include: {
       company: true,
       locationVisits: { select: { id: true, locationType: true, address: true, companyLocationId: true, officeVerification: true, warehouseVerification: true, findings: true, reportVerification: true } },
@@ -61,6 +62,7 @@ export async function buildVkiDataset(period: { from: string; to: string }): Pro
     return l?.path && typeof l.issuedAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(l.issuedAt) ? l.issuedAt : null;
   };
   const inScope = rows.filter((a) => {
+    if (!lhvkiById.get(a.id)?.path) return false;
     const day = issuedOf(a.id) ?? assignmentDateKey(effectiveSubmissionDate(a).value);
     return day >= period.from && day <= period.to;
   });

@@ -707,8 +707,9 @@ function ReviewModal({
                 rows={4}
                 placeholder="Catatan verifikasi (opsional)..."
                 disabled={!canEdit}
-                className="mb-3 w-full resize-none rounded-lg border border-[#e8dccd] bg-[#faf7f4] p-2.5 text-[12.5px] text-[#20180f] outline-none disabled:bg-[#f2ece5]"
+                className="mb-1.5 w-full resize-none rounded-lg border border-[#e8dccd] bg-[#faf7f4] p-2.5 text-[12.5px] text-[#20180f] outline-none disabled:bg-[#f2ece5]"
               />
+              {canEdit && <div className="mb-3 text-[10.5px] text-[#8a7565]">Catatan disimpan saat Anda memilih status di bawah.</div>}
               {canEdit && (
                 <div className="flex flex-col gap-2">
                   {DOC_VERIFICATION_STATUSES.filter((s) => s !== "PENDING").map((status) => (

@@ -22,7 +22,7 @@ export const VKI_REPORT_META = (period: ReportingPeriod): ChapterReportMeta => (
   introSub: "Perusahaan API-P/Perusahaan Industri — Tekstil dan Produk Tekstil",
   pdfScheme: "vki",
   appendix: [
-    "Permohonan dimasukkan ke periode laporan menurut Tanggal Terbit LHVKI yang dicatat Project Manager pada tab LHVKI, atau Tanggal Pengajuan bila belum dicatat; draf dan permohonan yang ditarik tidak dihitung.",
+    "Hanya permohonan berstatus selesai (Completed) yang LHVKI-nya telah diunggah Project Manager pada tab LHVKI yang dihitung. Permohonan dimasukkan ke periode laporan menurut Tanggal Terbit LHVKI, atau Tanggal Pengajuan bila tanggal terbit belum dicatat.",
     "Data perusahaan, KBLI dan lokasi diambil dari profil perusahaan; produk, kapasitas terpasang, produksi, bahan baku, rencana impor, mesin, tenaga kerja, listrik dan penjualan dari data permohonan VKI.",
     "Kesimpulan lapangan dari laporan survei; keputusan energi listrik, kapasitas produksi dan kebutuhan bahan baku dari Analisis Teknis.",
     "Temuan berasal dari survei lapangan, verifikasi dokumen, verifikasi produk dan analisis teknis; materialitas ditetapkan Project Manager.",
