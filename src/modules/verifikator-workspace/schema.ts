@@ -425,6 +425,12 @@ export function buildDocumentChecklist(
     const partner = partners?.find((p) => p.partnerId === entry.partnerId);
     const partnerLabel = partner?.companyName ?? "Partner";
     items.push({
+      key: `partner:${entry.partnerId}:contract`,
+      label: `Kontrak Kerja Sama / Jual Beli — ${partnerLabel}`,
+      category: "Dokumen Partner Industri",
+      documentPath: entry.contractDocumentPath || null,
+    });
+    items.push({
       key: `partner:${entry.partnerId}:nib`,
       label: `NIB Partner — ${partnerLabel}`,
       category: "Dokumen Partner Industri",

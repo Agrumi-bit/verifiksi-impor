@@ -97,7 +97,7 @@ export function createComplianceResolver(source: SchemeSource, companyLocations?
     return {
       persyaratan: DOCUMENT_SIFAT_LABELS[req.sifat],
       referensi: [...new Set(references)].join("; "),
-      keterangan: narrative?.keterangan ?? first.def.legalBasis.note ?? "",
+      keterangan: narrative?.keteranganFor?.(key) ?? narrative?.keterangan ?? first.def.legalBasis.note ?? "",
     };
   };
 

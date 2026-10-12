@@ -194,6 +194,17 @@ export function applyChecklistDocumentPath(
     };
   }
 
+  const partnerContractMatch = key.match(/^partner:([^:]+):contract$/);
+  if (partnerContractMatch) {
+    const [, partnerId] = partnerContractMatch;
+    return {
+      ...payload,
+      partnerIndustriEntries: (payload.partnerIndustriEntries ?? []).map((entry) =>
+        entry.partnerId === partnerId ? { ...entry, contractDocumentPath: newPath } : entry,
+      ),
+    };
+  }
+
   throw new Error(`Tidak diketahui cara menyimpan dokumen untuk key: ${key}`);
 }
 

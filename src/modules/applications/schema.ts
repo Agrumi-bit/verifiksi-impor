@@ -139,6 +139,9 @@ export const partnerIndustriEntrySchema = z.object({
   enabled: z.boolean(),
   lhvki: z.string().trim().optional(),
   lhvkiDocumentPath: z.string().trim().optional(),
+  /** Kontrak kerja sama dan/atau jual beli dengan Perusahaan Industri ini — Permenperin 27/2025
+   * Pasal 37 ayat (2) huruf a angka 2 huruf f). Checklist key `partner:{partnerId}:contract`. */
+  contractDocumentPath: z.string().trim().optional(),
 });
 export type PartnerIndustriEntryValues = z.infer<typeof partnerIndustriEntrySchema>;
 
@@ -528,6 +531,18 @@ export function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardSh
       code: "custom",
       path: ["partnerIndustriEntries"],
       message: "Aktifkan minimal satu Partner Industri tujuan",
+    });
+  }
+  // Pasal 37 ayat (2) huruf a angka 2 huruf f): kontrak kerja sama/jual beli wajib untuk setiap
+  // Perusahaan Industri mitra yang diaktifkan.
+  if (
+    data.importTypes.includes("BAHAN_BAKU_INDUSTRI") &&
+    data.partnerIndustriEntries.some((entry) => entry.enabled && !entry.contractDocumentPath?.trim())
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["partnerIndustriEntries"],
+      message: "Unggah kontrak kerja sama/jual beli untuk setiap Partner Industri yang diaktifkan",
     });
   }
   // Generic material/bahan-baku product list — only required for Bahan Baku Industri/Non

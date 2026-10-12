@@ -8,7 +8,7 @@ import type { SchemeId } from "./types";
  *
  *   Tahap 2 → VIU_KONSUMSI · Tahap 3 → VIU_BAHAN_BAKU_NON_INDUSTRI · Tahap 4 → VIU_BAHAN_BAKU_INDUSTRI · Tahap 5 → VKI
  */
-export const ACTIVE_SCHEMES: ReadonlySet<SchemeId> = new Set<SchemeId>(["VIU_KONSUMSI"]);
+export const ACTIVE_SCHEMES: ReadonlySet<SchemeId> = new Set<SchemeId>(["VIU_KONSUMSI", "VIU_BAHAN_BAKU_INDUSTRI", "VIU_BAHAN_BAKU_NON_INDUSTRI", "VKI"]);
 
 export function isSchemeRolloutActive(schemes: readonly SchemeId[]): boolean {
   return schemes.length > 0 && schemes.every((s) => ACTIVE_SCHEMES.has(s));

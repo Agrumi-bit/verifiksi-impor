@@ -11,11 +11,15 @@ import {
 import { createComplianceResolver, type ComplianceResolver } from "./scheme-compliance";
 import { qualityTestReviewValues } from "./konsumsi-quality-test";
 import {
+  buildElectricityDocuments,
   buildLocationDocuments,
+  buildPartnerIndustriDocuments,
   KONSUMSI_MODAL_FINANSIAL_DOCUMENTS,
   LEGALITAS_DOCUMENTS,
   MODAL_FINANSIAL_DOCUMENTS,
   PERPAJAKAN_DOCUMENTS,
+  SURAT_PERNYATAAN_DOCUMENTS,
+  TENAGA_KERJA_DOCUMENTS,
   type DocDetail,
   type DocField,
   type NarrativeContext,
@@ -170,15 +174,31 @@ export function createSchemeReport(source: {
     return undefined;
   };
 
-  const relevantRows = <R extends ReportRow>(rows: R[]): R[] =>
-    rows.filter((row) => {
+  const relevantRows = <R extends ReportRow>(rows: R[]): R[] => {
+    // "Pilih salah satu" groups (e.g. bukti kemampuan finansial): once one member is uploaded, the
+    // members the company did not choose are not missing; with none uploaded, the first one stands
+    // for the whole group so the gap is still reported once.
+    const groupHasDocument = new Set<string>();
+    for (const row of rows) {
+      const found = defFor(row.key);
+      if (found?.def.sifat === "PILIH_SALAH_SATU" && found.def.group && row.documentPath) groupHasDocument.add(found.def.group);
+    }
+    const groupPlaceholder = new Set<string>();
+    return rows.filter((row) => {
       const found = defFor(row.key);
       if (!found) return false;
       // Supporting documents the company never uploaded have no page, row or count in the report;
       // only mandatory ones (Wajib / alternatif / pilih salah satu) are reported as missing.
       const supporting = found.def.sifat === "PENDUKUNG" || found.def.sifat === "PENDUKUNG_JIKA_ADA";
-      return !(supporting && !row.documentPath);
+      if (supporting && !row.documentPath) return false;
+      const group = found.def.sifat === "PILIH_SALAH_SATU" ? found.def.group : undefined;
+      if (group && !row.documentPath) {
+        if (groupHasDocument.has(group) || groupPlaceholder.has(group)) return false;
+        groupPlaceholder.add(group);
+      }
+      return true;
     });
+  };
 
   const sectionOrder = compliance.sections().map((s) => s.category);
   const orderCategories = (categories: string[]) =>
@@ -193,6 +213,10 @@ export function createSchemeReport(source: {
       ...LEGALITAS_DOCUMENTS,
       ...PERPAJAKAN_DOCUMENTS,
       ...buildLocationDocuments(ctx),
+      ...(category === "Tenaga Kerja" ? TENAGA_KERJA_DOCUMENTS : []),
+      ...(category === "Surat Pernyataan" ? SURAT_PERNYATAAN_DOCUMENTS : []),
+      ...(category === "Dokumen Pendukung VKI" ? buildElectricityDocuments(ctx) : []),
+      ...(category === "Dokumen Partner Industri" ? buildPartnerIndustriDocuments(ctx) : []),
       ...(category === "Bukti Kemampuan Finansial — Konsumsi" ? KONSUMSI_MODAL_FINANSIAL_DOCUMENTS : MODAL_FINANSIAL_DOCUMENTS),
     ];
     return rows
@@ -240,6 +264,8 @@ export function createSchemeReport(source: {
   };
 
   const isKonsumsiOnly = schemes.length === 1 && schemes[0] === "VIU_KONSUMSI";
+  const isIndustriOnly = schemes.length === 1 && schemes[0] === "VIU_BAHAN_BAKU_INDUSTRI";
+  const isNonIndustriOnly = schemes.length === 1 && schemes[0] === "VIU_BAHAN_BAKU_NON_INDUSTRI";
   return {
     schemes,
     terms,
@@ -256,6 +282,18 @@ export function createSchemeReport(source: {
           desc: (company) =>
             `Klasifikasi Produk Tekstil yang akan diimpor ${company} sebagai barang konsumsi, beserta merek, deskripsi produk, dan pos tarif/Harmonized System (HS Code) yang berlaku.`,
         }
-      : null,
+      : isIndustriOnly
+        ? {
+            title: "Bahan Baku/Penolong yang Akan Diimpor",
+            desc: (company) =>
+              `Bahan baku dan/atau bahan penolong yang akan diimpor ${company} bagi Perusahaan Industri mitra, beserta jenis material, pos tarif/Harmonized System (HS Code), dan rencana kebutuhannya.`,
+          }
+        : isNonIndustriOnly
+          ? {
+              title: "Bahan Baku/Penolong yang Akan Diimpor",
+              desc: (company) =>
+                `Bahan baku dan/atau bahan penolong yang akan diimpor ${company} bagi Perusahaan Non Industri mitra, beserta jenis material, pos tarif/Harmonized System (HS Code), rencana kebutuhan, dan peruntukannya.`,
+            }
+          : null,
   };
 }

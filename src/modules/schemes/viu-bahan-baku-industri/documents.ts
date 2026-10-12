@@ -14,7 +14,6 @@ export const VIU_INDUSTRI_DOCUMENTS: readonly SchemeDocumentDef[] = [
     section: "mitra-industri",
     sifat: "WAJIB",
     legalBasis: L.kontrakIndustri,
-    planned: true, // upload field added in Tahap 4
   },
   {
     id: "mitra-industri-lhvki",

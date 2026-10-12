@@ -161,6 +161,8 @@ export type DocTextParams = {
 export type DocumentNarrative = {
   /** Short "Keterangan" for the compliance table. */
   keterangan: string;
+  /** Optional per-key Keterangan (e.g. one per bukti kepemilikan type); falls back to `keterangan`. */
+  keteranganFor?: (key: string) => string | undefined;
   intro: (p: DocTextParams) => string[];
   findings: (p: DocTextParams) => string[];
   /** May contain <strong>…</strong>. */

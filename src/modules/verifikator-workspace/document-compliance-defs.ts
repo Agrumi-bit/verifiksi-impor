@@ -225,6 +225,11 @@ export const DOCUMENT_COMPLIANCE_DEFS: Record<string, DocumentComplianceDef> = {
     referensi: "Persyaratan Bukti Kemampuan Finansial — Verifikasi Importir Umum (VIU)",
     keterangan: "Menunjukkan estimasi nilai pembelian barang yang akan dibiayai, apabila tersedia.",
   },
+  "partner:contract": {
+    persyaratan: "Wajib",
+    referensi: "Pasal 37 ayat (2) huruf a angka 2 huruf f) Permenperin Nomor 27 Tahun 2025",
+    keterangan: "Kontrak kerja sama dan/atau kontrak jual beli bahan baku/penolong dengan Perusahaan Industri, masa perjanjian paling singkat 1 (satu) tahun.",
+  },
   "partner:nib": {
     persyaratan: "Wajib",
     referensi: "Persyaratan Mitra Industri — Verifikasi Importir Umum (VIU)",
@@ -271,7 +276,7 @@ export function getComplianceDef(key: string): DocumentComplianceDef | undefined
   if (warehouseMatch) return DOCUMENT_COMPLIANCE_DEFS[`location:${warehouseMatch[1]}`];
   // Partner Industri keys are dynamic per partnerId (`partner:{partnerId}:nib`) — same
   // suffix-match idea as the per-location lookup above.
-  const partnerMatch = key.match(/^partner:[^:]+:(nib|npwp|sk|lhvki)$/);
+  const partnerMatch = key.match(/^partner:[^:]+:(contract|nib|npwp|sk|lhvki)$/);
   if (partnerMatch) return DOCUMENT_COMPLIANCE_DEFS[`partner:${partnerMatch[1]}`];
   // Konsumsi's own Bukti Kemampuan Finansial checklist (`konsumsi-financial:<key>`) is a separate
   // array from Industri/Non-Industri's (`nonindustri-support:<key>`), but the exact same

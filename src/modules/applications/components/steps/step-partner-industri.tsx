@@ -103,7 +103,7 @@ export function StepPartnerIndustri({ form, partnerManagementHref }: Props) {
             function handleToggle(partnerId: string, checked: boolean) {
               const index = entries.findIndex((entry) => entry.partnerId === partnerId);
               if (index === -1) {
-                field.onChange([...entries, { partnerId, enabled: checked, lhvki: "", lhvkiDocumentPath: "" }]);
+                field.onChange([...entries, { partnerId, enabled: checked, lhvki: "", lhvkiDocumentPath: "", contractDocumentPath: "" }]);
                 return;
               }
               field.onChange(entries.map((entry, i) => (i === index ? { ...entry, enabled: checked } : entry)));
@@ -158,6 +158,19 @@ export function StepPartnerIndustri({ form, partnerManagementHref }: Props) {
                               value={entry?.lhvkiDocumentPath}
                               onChange={(path) => updateEntry(option.id, { lhvkiDocumentPath: path ?? "" })}
                               label="Dokumen LHVKI"
+                            />
+                          </FormField>
+                          <FormField
+                            label="Upload Kontrak Kerja Sama / Jual Beli"
+                            required
+                            hint="Kontrak kerja sama dan/atau jual beli bahan baku/penolong dengan perusahaan industri ini, masa perjanjian paling singkat 1 (satu) tahun. Format: PDF, JPG, PNG."
+                            className="flex flex-col gap-1.5 sm:col-span-2"
+                          >
+                            <FileUploadField
+                              namespace="temporary"
+                              value={entry?.contractDocumentPath}
+                              onChange={(path) => updateEntry(option.id, { contractDocumentPath: path ?? "" })}
+                              label="Kontrak Kerja Sama / Jual Beli"
                             />
                           </FormField>
                         </div>

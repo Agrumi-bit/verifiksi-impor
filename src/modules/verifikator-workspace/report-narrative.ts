@@ -1091,6 +1091,32 @@ export function buildPartnerIndustriDocuments(ctx: NarrativeContext): DocDetail[
     });
 
     docs.push({
+      key: `partner:${entry.partnerId}:contract`,
+      no: no++,
+      title: `Kontrak Kerja Sama / Jual Beli — ${partnerLabel}`,
+      documentPath: () => entry.contractDocumentPath,
+      intro: () => [
+        `Verifikasi terhadap kontrak kerja sama dan/atau kontrak jual beli dengan mitra industri ${partnerLabel} dilakukan untuk memastikan bahwa bahan baku dan/atau bahan penolong yang diimpor ditujukan bagi Perusahaan Industri berdasarkan perjanjian yang sah.`,
+      ],
+      fields: () => [
+        { label: "Nama Mitra Industri", value: partnerLabel, ok: Boolean(partner) },
+        { label: "Dokumen Kontrak", value: entry.contractDocumentPath ? "Tersedia" : "Belum Tersedia", ok: Boolean(entry.contractDocumentPath) },
+      ],
+      findings: ({ company }) => [
+        entry.contractDocumentPath
+          ? `Berdasarkan hasil pemeriksaan dokumen, ${company} menyampaikan kontrak kerja sama dan/atau kontrak jual beli dengan mitra industri ${partnerLabel}.`
+          : `Berdasarkan hasil pemeriksaan, kontrak kerja sama dan/atau kontrak jual beli dengan mitra industri ${partnerLabel} belum disampaikan.`,
+      ],
+      kesimpulan: (kctx) => {
+        const memenuhi = Boolean(entry.contractDocumentPath) && isVerified(kctx, `partner:${entry.partnerId}:contract`);
+        return {
+          memenuhi,
+          text: `Kontrak dengan mitra industri ${partnerLabel} ${entry.contractDocumentPath ? "telah disampaikan" : "belum disampaikan"}. Dengan demikian, aspek ini dinyatakan <strong>${memenuhi ? "Memenuhi" : "Belum Memenuhi"}</strong>.`,
+        };
+      },
+    });
+
+    docs.push({
       key: `partner:${entry.partnerId}:lhvki`,
       no: no++,
       title: `LHVKI — ${partnerLabel}`,
