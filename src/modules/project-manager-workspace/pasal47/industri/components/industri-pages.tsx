@@ -7,21 +7,22 @@ import { toast } from "sonner";
 import { lhviuStatus, type ReportingPeriod } from "../../derive";
 import { MaterialIcon } from "../../../components/material-icon";
 import { DataTable } from "../../components/data-table";
-import { PrintView } from "../../components/page-export";
+import { GenerateReportButton } from "./industri-generate-dialog";
+import { PrintView } from "./industri-print-view";
 import { Badge, Banner, Card, COLOR, H2, HBar, Kpi, Na, Seg, StackBar } from "../../components/ui";
 import { fd, fdLong, nf, topN, countBy, uniq } from "../../format";
 import { MATERIALITY_LABEL, materialityOf } from "../../summary";
 import type { Materiality, P47Finding, P47Report, ReportStatus } from "../../types";
 import { buildIndustriSections, industriAlerts, industriConclusion, industriHsRows, industriKpis, INDUSTRI_PARTS } from "../report";
 import type { IndustriDataset } from "../types";
-import { kbliRows } from "../../company-chapter";
+import { kbliRows } from "../company-chapter";
 
 export type IndustriPageProps = {
   ds: IndustriDataset;
   report: P47Report;
   period: ReportingPeriod;
   saving: boolean;
-  saveReport: (patch: { status?: ReportStatus; pmNote?: string; materiality?: Record<string, Materiality> }) => Promise<void>;
+  saveReport: (patch: { status?: ReportStatus; pmNote?: string; materiality?: Record<string, Materiality>; preparedAt?: string | null }) => Promise<void>;
   go: (page: string) => void;
   reportHref: string;
 };
@@ -257,7 +258,7 @@ export function KesimpulanPage({ ds, report, period, saving, saveReport, reportH
   return (
     <>
       <H2 title="Kesimpulan Pelaksanaan VIU" sub="Draf disusun otomatis dari data modul lain. Project Manager menelaah, menambahkan catatan, lalu menyetujui."
-        right={<div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><a className="btn primary" href={reportHref} target="_blank" rel="noopener noreferrer">Generate Laporan</a><div className="steps" role="group" aria-label="Status laporan">{STATUSES.map(([s, l], i) => <button key={s} type="button" className={`s${i}`} aria-pressed={report.status === s} disabled={saving} onClick={() => saveReport({ status: s })}>{l}</button>)}</div></div>} />
+        right={<div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><GenerateReportButton report={report} reportHref={reportHref} saveReport={saveReport} disabled={saving}>Generate Laporan</GenerateReportButton><div className="steps" role="group" aria-label="Status laporan">{STATUSES.map(([s, l], i) => <button key={s} type="button" className={`s${i}`} aria-pressed={report.status === s} disabled={saving} onClick={() => saveReport({ status: s })}>{l}</button>)}</div></div>} />
       <div className="grid g4" style={{ marginBottom: 14 }}>
         <Kpi label="Periode" value={period.label.replace(/^01 /, "").replace(" – 30 ", " – ")} />
         <Kpi label="API-U" value={k.companies} sub={`${k.lhviu} LHVIU`} />

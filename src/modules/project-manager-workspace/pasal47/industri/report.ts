@@ -1,6 +1,6 @@
-import { companyChapterNarrative, kbliRows, locationRows } from "../company-chapter";
+import { companyChapterNarrative, kbliRows, locationRows } from "./company-chapter";
 import { lhviuStatus } from "../derive";
-import type { ExportSection } from "../export-sections";
+import type { ExportSection } from "./sections";
 import { countBy, fd, fdLong, joinId, sum, topN, uniq, withWords } from "../format";
 import { MATERIALITY_LABEL, materialityOf } from "../summary";
 import type { P47Report } from "../types";

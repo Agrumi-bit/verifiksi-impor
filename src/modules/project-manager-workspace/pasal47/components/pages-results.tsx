@@ -6,6 +6,7 @@ import { fdLong, uniq } from "../format";
 import { conclusionSections, kpis, MATERIALITY_LABEL, materialityOf } from "../summary";
 import type { Materiality, P47Finding, ReportStatus } from "../types";
 import { usePasal47 } from "./context";
+import { GenerateReportButton } from "./konsumsi-generate-dialog";
 import { DataTable } from "./data-table";
 import { KV } from "./drawers";
 import { Badge, Banner, H2, Kpi } from "./ui";
@@ -77,7 +78,7 @@ export function KesimpulanPage() {
   return (
     <>
       <H2 title="Kesimpulan Pelaksanaan VIU" sub="Draf disusun otomatis dari data modul lain. Project Manager menelaah, menambahkan catatan, lalu menyetujui."
-        right={<div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><a className="btn primary" href={`/project-manager-workspace/viu/konsumsi/laporan-kemenperin/laporan?periode=${period.key}`} target="_blank" rel="noopener noreferrer">Generate Laporan</a><div className="steps" role="group" aria-label="Status laporan">{STATUSES.map(([s, l], i) => <button key={s} type="button" className={`s${i}`} aria-pressed={report.status === s} disabled={saving} onClick={() => saveReport({ status: s })}>{l}</button>)}</div></div>} />
+        right={<div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><GenerateReportButton report={report} reportHref={`/project-manager-workspace/viu/konsumsi/laporan-kemenperin/laporan?periode=${period.key}`} saveReport={saveReport} disabled={saving}>Generate Laporan</GenerateReportButton><div className="steps" role="group" aria-label="Status laporan">{STATUSES.map(([s, l], i) => <button key={s} type="button" className={`s${i}`} aria-pressed={report.status === s} disabled={saving} onClick={() => saveReport({ status: s })}>{l}</button>)}</div></div>} />
       <div className="grid g4" style={{ marginBottom: 14 }}>
         <Kpi label="Periode" value={period.label.replace(/^01 /, "").replace(" – 30 ", " – ")} />
         <Kpi label="API-U" value={k.companies} sub={`${k.lhviu} LHVIU`} />

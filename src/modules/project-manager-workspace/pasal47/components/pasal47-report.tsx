@@ -309,7 +309,7 @@ export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
   const k = kpis(ds, report);
   const ex = executiveSummary(ds, report);
   const value = planValues(ds);
-  const preparedOn = report.updatedAt ?? ds.generatedAt;
+  const preparedOn = report.preparedAt ?? report.updatedAt ?? ds.generatedAt;
   const isApproved = report.status === "APPROVED";
   const badge = STATUS_BADGE[report.status];
   const SOURCE = `data sistem per ${new Date(ds.generatedAt).toLocaleString("id-ID")}, diolah`;

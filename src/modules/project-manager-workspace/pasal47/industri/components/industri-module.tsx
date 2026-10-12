@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { MaterialIcon } from "../../../components/material-icon";
+import { GenerateReportButton } from "./industri-generate-dialog";
 import { customPeriod, reportingPeriods, resolvePeriod } from "../../derive";
 import type { P47Report } from "../../types";
 import type { IndustriDataset } from "../types";
@@ -114,7 +115,7 @@ export function IndustriModule() {
         </div>
       </div>
       <div className="actions">
-        <a className="btn primary" href={reportHref} target="_blank" rel="noopener noreferrer"><MaterialIcon name="description" className="text-[16px]" />Generate Laporan</a>
+        <GenerateReportButton report={data?.report} reportHref={reportHref} saveReport={saveReport} disabled={saving}><MaterialIcon name="description" className="text-[16px]" />Generate Laporan</GenerateReportButton>
         <button className="btn" type="button" onClick={() => setParams({ halaman: "export" })}><MaterialIcon name="download" className="text-[16px]" />Export</button>
         <button className="btn" type="button" onClick={() => refetch()} disabled={isFetching}><MaterialIcon name="refresh" className="text-[16px]" />{isFetching ? "Memuat…" : "Refresh"}</button>
       </div>

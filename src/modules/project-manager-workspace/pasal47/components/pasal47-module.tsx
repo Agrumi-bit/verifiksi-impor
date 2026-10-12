@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { applyFilters, customPeriod, FILTER_LABELS, filterOptions, reportingPeriods, resolvePeriod, type P47Filters } from "../derive";
 import type { P47Dataset, P47Report } from "../types";
 import { Pasal47Provider, type DrawerSpec, type Pasal47Ctx } from "./context";
+import { GenerateReportButton } from "./konsumsi-generate-dialog";
 import { Mini } from "./drawers";
 import { ApiuPage, HsPage, MerekPage, NegaraPage, RingkasanPage } from "./pages-company";
 import { GudangPage, NilaiPage, PemilikPage, TeknisPage } from "./pages-evidence";
@@ -151,7 +152,7 @@ export function Pasal47Module() {
         </div>
       </div>
       <div className="actions">
-        <a className="btn primary" href={`${pathname}/laporan?periode=${period.key}`} target="_blank" rel="noopener noreferrer"><MaterialIcon name="description" className="text-[16px]" />Generate Laporan</a>
+        <GenerateReportButton report={data?.report} reportHref={`${pathname}/laporan?periode=${period.key}`} saveReport={saveReport} disabled={saving}><MaterialIcon name="description" className="text-[16px]" />Generate Laporan</GenerateReportButton>
         <button className="btn" type="button" onClick={() => go("export")}><MaterialIcon name="download" className="text-[16px]" />Export</button>
         <button className="btn" type="button" onClick={() => { go("export"); toast.info("Pilih bagian laporan, lalu Cetak / Simpan PDF."); }}><MaterialIcon name="print" className="text-[16px]" />Print</button>
         <button className="btn" type="button" onClick={() => refetch()} disabled={isFetching}><MaterialIcon name="refresh" className="text-[16px]" />{isFetching ? "Memuat…" : "Refresh"}</button>

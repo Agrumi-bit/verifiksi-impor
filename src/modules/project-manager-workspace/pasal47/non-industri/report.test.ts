@@ -24,7 +24,7 @@ const ds: NonIndustriDataset = {
   values: [{ applicationId: "A", applicationNumber: "APP-A", company: "PT A", nilaiImpor: 2e9, modalKerja: 1e9, evidence: ["Rekening Koran"], decision: ok }],
   findings: [{ key: "f1", applicationId: "A", applicationNumber: "APP-A", company: "PT A", source: "Survei Lapangan", area: "Survei Gudang", text: "Papan nama tidak ada", severity: "Minor", status: ok, followUp: "—", pic: "—" }],
 };
-const report: P47Report = { status: "DRAFT", pmNote: "", materiality: { f1: "MATERIAL" }, updatedAt: null, updatedByName: null };
+const report: P47Report = { status: "DRAFT", pmNote: "", materiality: { f1: "MATERIAL" }, updatedAt: null, updatedByName: null, preparedAt: null };
 
 describe("Laporan VIU Non Industri", () => {
   it("sums volumes per HS only within one unit", () => {

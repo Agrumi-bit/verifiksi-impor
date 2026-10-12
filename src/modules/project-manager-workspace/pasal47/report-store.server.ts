@@ -11,11 +11,11 @@ import type { Materiality, P47Report, ReportStatus } from "./types";
  * table existed.
  */
 
-const EMPTY: P47Report = { status: "DRAFT", pmNote: "", materiality: {}, updatedAt: null, updatedByName: null };
+const EMPTY: P47Report = { status: "DRAFT", pmNote: "", materiality: {}, updatedAt: null, updatedByName: null, preparedAt: null };
 const STATUSES: ReportStatus[] = ["DRAFT", "REVIEWED", "APPROVED"];
 const MATERIALITY: Materiality[] = ["MATERIAL", "NON_MATERIAL", "NEEDS_REVIEW"];
 
-type Row = { status: string; pmNote: string; materiality: unknown; updatedAt: Date | null; updatedByName: string | null };
+type Row = { status: string; pmNote: string; materiality: unknown; updatedAt: Date | null; updatedByName: string | null; preparedAt: string | null };
 
 function parse(row: Row | undefined): P47Report {
   if (!row) return EMPTY;
@@ -28,17 +28,18 @@ function parse(row: Row | undefined): P47Report {
     materiality,
     updatedAt: row.updatedAt?.toISOString() ?? null,
     updatedByName: row.updatedByName,
+    preparedAt: row.preparedAt && /^\d{4}-\d{2}-\d{2}$/.test(row.preparedAt) ? row.preparedAt : null,
   };
 }
 
 export async function readPasal47Report(scheme: string, from: string, to: string): Promise<P47Report> {
   const rows = await db.$queryRaw<Row[]>`
-    SELECT "status", "pmNote", "materiality", "updatedAt", "updatedByName" FROM "pasal47_report"
+    SELECT "status", "pmNote", "materiality", "updatedAt", "updatedByName", "preparedAt" FROM "pasal47_report"
     WHERE "scheme" = ${scheme} AND "periodFrom" = ${from} AND "periodTo" = ${to}`;
   return parse(rows[0]);
 }
 
-export type Pasal47ReportPatch = { status?: ReportStatus; pmNote?: string; materiality?: Record<string, Materiality> };
+export type Pasal47ReportPatch = { status?: ReportStatus; pmNote?: string; materiality?: Record<string, Materiality>; preparedAt?: string | null };
 
 /** Upserts the PM's review state; `materiality` entries are merged into what is already stored. */
 export async function writePasal47Report(
@@ -49,12 +50,13 @@ export async function writePasal47Report(
     status: patch.status ?? current.status,
     pmNote: patch.pmNote ?? current.pmNote,
     materiality: { ...current.materiality, ...(patch.materiality ?? {}) },
+    preparedAt: patch.preparedAt !== undefined ? patch.preparedAt : current.preparedAt,
   };
   await db.$executeRaw`
-    INSERT INTO "pasal47_report" ("id", "scheme", "periodFrom", "periodTo", "status", "pmNote", "materiality", "updatedById", "updatedByName", "updatedAt")
-    VALUES (${randomUUID()}, ${scheme}, ${from}, ${to}, ${next.status}, ${next.pmNote}, ${JSON.stringify(next.materiality)}::jsonb, ${user.id}, ${user.name}, NOW())
+    INSERT INTO "pasal47_report" ("id", "scheme", "periodFrom", "periodTo", "status", "pmNote", "materiality", "preparedAt", "updatedById", "updatedByName", "updatedAt")
+    VALUES (${randomUUID()}, ${scheme}, ${from}, ${to}, ${next.status}, ${next.pmNote}, ${JSON.stringify(next.materiality)}::jsonb, ${next.preparedAt}, ${user.id}, ${user.name}, NOW())
     ON CONFLICT ("scheme", "periodFrom", "periodTo") DO UPDATE SET
-      "status" = EXCLUDED."status", "pmNote" = EXCLUDED."pmNote", "materiality" = EXCLUDED."materiality",
+      "status" = EXCLUDED."status", "pmNote" = EXCLUDED."pmNote", "materiality" = EXCLUDED."materiality", "preparedAt" = EXCLUDED."preparedAt",
       "updatedById" = EXCLUDED."updatedById", "updatedByName" = EXCLUDED."updatedByName", "updatedAt" = NOW()`;
   return readPasal47Report(scheme, from, to);
 }

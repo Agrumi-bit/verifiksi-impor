@@ -164,6 +164,8 @@ export type P47Report = {
   materiality: Record<string, Materiality>;
   updatedAt: string | null;
   updatedByName: string | null;
+  /** Tanggal penyusunan (YYYY-MM-DD) printed under DISUSUN OLEH, set on "Generate Laporan"; null until set. */
+  preparedAt: string | null;
 };
 
 export type P47Dataset = {

@@ -14,7 +14,7 @@ export type Pasal47Ctx = {
   full: P47Dataset;
   period: ReportingPeriod;
   report: P47Report;
-  saveReport: (patch: { status?: ReportStatus; pmNote?: string; materiality?: Record<string, Materiality> }) => Promise<void>;
+  saveReport: (patch: { status?: ReportStatus; pmNote?: string; materiality?: Record<string, Materiality>; preparedAt?: string | null }) => Promise<void>;
   saving: boolean;
   openDrawer: (spec: DrawerSpec) => void;
   go: (page: string) => void;

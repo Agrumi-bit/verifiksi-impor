@@ -17,7 +17,7 @@ const ds: P47Dataset = {
   brands: [brand], technical: [], warehouses: [], values: [],
   findings: [{ key: "survey:1", applicationId: "A", applicationNumber: "APP-A", company: "PT A", source: "Survei Lapangan", area: "Survei Gudang", text: "Stok berbeda", severity: "Major", status: { label: "Belum Ditinjau", tone: "warn" }, followUp: "—", pic: "S" }],
 };
-const report: P47Report = { status: "DRAFT", pmNote: "", materiality: { "survey:1": "MATERIAL" }, updatedAt: null, updatedByName: null };
+const report: P47Report = { status: "DRAFT", pmNote: "", materiality: { "survey:1": "MATERIAL" }, updatedAt: null, updatedByName: null, preparedAt: null };
 
 describe("export sections", () => {
   it("builds every requested part in report order", () => {

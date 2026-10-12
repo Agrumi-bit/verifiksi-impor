@@ -14,7 +14,7 @@ const line = (id: string, appId: string, over: Partial<IndustriLine> = {}): Indu
   id, applicationId: appId, applicationNumber: `APP-${appId}`, company: `PT ${appId}`, material: "Benang Kapas", hs: "5205.11.00", hsDescription: "Benang kapas",
   quantity: 100, unit: "KG", intendedUse: "Produksi kain", partnerId: "p1", partnerName: "PT Mitra", ...over,
 });
-const report: P47Report = { status: "DRAFT", pmNote: "", materiality: {}, updatedAt: null, updatedByName: null };
+const report: P47Report = { status: "DRAFT", pmNote: "", materiality: {}, updatedAt: null, updatedByName: null, preparedAt: null };
 const dataset = (over: Partial<IndustriDataset> = {}): IndustriDataset => ({
   period: { from: "2026-01-01", to: "2026-12-31" }, generatedAt: "2026-10-09T00:00:00Z", applications: [app("1"), app("2")],
   lines: [line("a", "1"), line("b", "2", { quantity: 50 })], partners: [{ id: "p1", name: "PT Mitra", nib: "N1", type: "INDUSTRI", contractNumber: "K-1", contractEnd: "2027-01-01",

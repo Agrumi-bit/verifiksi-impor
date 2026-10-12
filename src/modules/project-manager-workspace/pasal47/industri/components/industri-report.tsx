@@ -8,7 +8,7 @@ import { MaterialIcon } from "../../../components/material-icon";
 import { PdfDownloadButton } from "../../components/pdf-download-button";
 import { Badge, CARD_BORDER, CREAM, Eyebrow, GREEN, INK, MUTED, MUTED_2, NAVY, ORANGE, ORANGE_LIGHT, ORANGE_TEXT, PageHead } from "@/modules/verifikator-workspace/components/report/document-verification-report";
 import { resolvePeriod, type ReportingPeriod } from "../../derive";
-import type { ExportSection, ExportTable } from "../../export-sections";
+import type { ExportSection, ExportTable } from "../sections";
 import { fdLong, nf } from "../../format";
 import type { P47Report } from "../../types";
 import { buildIndustriSections, industriAlerts, industriConclusion, industriIntroduction, industriKpis, INDUSTRI_PARTS, INDUSTRI_SECTION_INTRO } from "../report";
@@ -119,7 +119,7 @@ export function IndustriReport({ periodKey }: { periodKey: string | null }) {
   const startPage = (no: string) => plan.findIndex((p) => (p.kind === "narrative" && p.section.no === no) || (p.kind === "table" && p.section.no === no && p.first)) + 1;
   const pageOf = (kind: Plan["kind"]) => plan.findIndex((p) => p.kind === kind) + 1;
   const k = industriKpis(ds, report);
-  const preparedOn = report.updatedAt ?? ds.generatedAt;
+  const preparedOn = report.preparedAt ?? report.updatedAt ?? ds.generatedAt;
   const isApproved = report.status === "APPROVED";
   const badge = STATUS_BADGE[report.status];
   const body = sections.filter((s) => s.no !== "8.9");

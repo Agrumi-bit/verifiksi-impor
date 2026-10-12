@@ -1,10 +1,15 @@
 import { VIU_NON_INDUSTRI_KBLI } from "../../../schemes/viu-bahan-baku-non-industri/terms";
 import { lhviuStatus } from "../derive";
-import { compact, countBy, fd, fdLong, joinId, nf, sum, topN, uniq, withWords } from "../format";
+import { compact, fd, fdLong, joinId, nf, sum, uniq, withWords } from "../format";
 import { concentrationOf, type Dimension } from "../report-bab8";
 import { MATERIALITY_LABEL, materialityOf } from "../summary";
-import type { P47Place, P47Report, Status } from "../types";
+import type { P47Place, P47Report } from "../types";
+import { loc, own, phraseCounts, periodOf, ranked, ratio, segsOf, statusCounts, title } from "./engine/helpers";
+import type { Block, Chapter, ChapterReportModel, Seg } from "./engine/model";
 import type { NonIndustriDataset, NonIndustriLine, NonIndustriModuleKey } from "./types";
+
+export type { Block, Chapter, Seg };
+export type NonIndustriReportModel = ChapterReportModel;
 
 /*
  * Laporan Pelaksanaan VIU – Bahan Baku/Penolong Perusahaan Non Industri (Pelaporan Pasal 47 Permenperin
@@ -20,42 +25,8 @@ const BASIS = "Pasal 37 ayat (2) huruf b";
 const KBLI = new Set<string>(VIU_NON_INDUSTRI_KBLI);
 const UNKNOWN = "Tidak diisi";
 
-export type Seg = { label: string; value: number };
-export type Fig =
-  | { k: "kpis"; tiles: [string, string, string][] }
-  | { k: "hbar"; rows: { key: string; desc?: string; value: number }[]; total?: number; keyWidth?: number; unit?: string }
-  | { k: "donuts"; items: { cap: string; center: string; sub: string; segs: Seg[] }[] }
-  | { k: "columns"; items: Seg[] };
-export type Block =
-  | { t: "sub"; num: string; title: string }
-  | { t: "p"; text: string }
-  | { t: "fig"; num: string; title: string; source: string; fig: Fig }
-  | { t: "table"; num: string; title: string; headers: string[]; rows: (string | number)[][]; source: string }
-  | { t: "highlights"; items: string[] }
-  | { t: "limits"; items: string[] };
-export type Chapter = { n: number; title: string; lead: string; scope: string[]; stats: [string, string][]; blocks: Block[] };
-
-export type NonIndustriReportModel = {
-  chapters: Chapter[];
-  intro: string[];
-  summary: { tiles: [string, string, string][]; highlights: string[]; alerts: string[] };
-  conclusion: { title: string; paragraphs: string[] }[];
-};
-
 // Helpers ---------------------------------------------------------------------------------------------
-const periodText = (ds: NonIndustriDataset) => `${fdLong(ds.period.from)} sampai dengan ${fdLong(ds.period.to)}`;
-const ratio = (part: number, whole: number) => (whole > 0 ? `${((part / whole) * 100).toFixed(1).replace(".", ",")}%` : "—");
-const ranked = (items: string[], n = 99) => topN(countBy(items, (x) => x), n);
-const own = (segs: Seg[], label: string) => segs.find((s) => s.label === label)?.value ?? 0;
-const segsOf = (items: string[], order: string[] = []): Seg[] => {
-  const counts = countBy(items, (x) => x);
-  const keys = [...order.filter((o) => counts.has(o)), ...[...counts.keys()].filter((k) => !order.includes(k)).sort()];
-  return keys.map((label) => ({ label, value: counts.get(label) ?? 0 }));
-};
-const title = (s: string) => s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
-const loc = (p: P47Place | null | undefined) => (p ? [title(p.city), title(p.province)].filter(Boolean).join(", ") || "—" : "—");
-const statusCounts = (xs: Status[]) => segsOf(xs.map((s) => s.label), ["Sesuai", "Tidak Sesuai", "Belum Dianalisis"]);
-const phraseCounts = (segs: Seg[], noun: string) => joinId(segs.map((s) => `${s.value} ${noun} ${s.label.toLowerCase()}`));
+const periodText = (ds: NonIndustriDataset) => periodOf(ds.period);
 
 /** The unit most product lines use; volumes are only compared within this unit. */
 export function dominantUnit(lines: NonIndustriLine[]): string {
@@ -447,7 +418,7 @@ export function nonIndustriReport(ds: NonIndustriDataset, report: P47Report): No
         [String(ds.warehouses.length), "GUDANG", "dilaporkan"],
         [String(ds.findings.length), "TEMUAN", `${ds.findings.filter((x) => materialityOf(report, x.key) === "MATERIAL").length} material`],
       ],
-      highlights: chapters.flatMap((c) => c.blocks.filter((b): b is Extract<Block, { t: "highlights" }> => b.t === "highlights").slice(0, 1).flatMap((b) => b.items.slice(0, 1).map((t) => `Bab ${c.n} — ${t}`))),
+      highlights: !apps.length ? [] : chapters.flatMap((c) => c.blocks.filter((b): b is Extract<Block, { t: "highlights" }> => b.t === "highlights").slice(0, 1).flatMap((b) => b.items.slice(0, 1).map((t) => `Bab ${c.n} — ${t}`))),
       alerts,
     },
     conclusion: conclusion(ds, report, chapters),

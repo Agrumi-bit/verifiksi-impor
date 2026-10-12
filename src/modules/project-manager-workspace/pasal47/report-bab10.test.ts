@@ -18,7 +18,7 @@ const ds: P47Dataset = {
   lines: [line("1", "9619.00.13", ["Indonesia"]), line("2", "6109.10.10", ["Vietnam"])],
   brands: [], technical: [], warehouses: [], values: [], findings: [finding("f1", "Minor"), finding("f2", "Major")],
 };
-const report: P47Report = { status: "DRAFT", pmNote: "", materiality: { f2: "MATERIAL" }, updatedAt: null, updatedByName: null };
+const report: P47Report = { status: "DRAFT", pmNote: "", materiality: { f2: "MATERIAL" }, updatedAt: null, updatedByName: null, preparedAt: null };
 
 describe("Bab 10 Temuan & Rekomendasi", () => {
   it("derives analytical findings with priorities, highest first", () => {

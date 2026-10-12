@@ -8,7 +8,7 @@ import { MaterialIcon } from "../../components/material-icon";
  * "Unduh PDF" for the Laporan Pelaksanaan VIU: asks the server to print the report and downloads
  * the file directly (no print dialog). Falls back to the browser's print dialog if that fails.
  */
-export function PdfDownloadButton({ scheme, periodKey }: { scheme: "konsumsi" | "industri" | "non-industri"; periodKey: string }) {
+export function PdfDownloadButton({ scheme, periodKey }: { scheme: "konsumsi" | "industri" | "non-industri" | "vki"; periodKey: string }) {
   const [busy, setBusy] = useState(false);
 
   async function download() {

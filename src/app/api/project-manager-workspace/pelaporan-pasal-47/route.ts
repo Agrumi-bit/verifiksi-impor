@@ -38,6 +38,7 @@ const patchSchema = z.object({
   status: z.enum(["DRAFT", "REVIEWED", "APPROVED"]).optional(),
   pmNote: z.string().max(10000).optional(),
   materiality: z.record(z.string().max(300), z.enum(["MATERIAL", "NON_MATERIAL", "NEEDS_REVIEW"])).optional(),
+  preparedAt: z.string().regex(DATE).nullable().optional(),
 });
 
 /** PATCH — status, PM note and/or materiality of findings for one period. */

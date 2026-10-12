@@ -14,9 +14,10 @@ const VKI_GROUP = {
   label: "VKI",
   icon: "factory",
   children: [
-    { label: "Dashboard", href: "/project-manager-workspace/vki", icon: "space_dashboard" },
+    { label: "Dashboard", href: "/project-manager-workspace/vki", icon: "space_dashboard", exact: true },
     { label: "Application List", href: "/project-manager-workspace/applications/VKI", icon: "assignment" },
     { label: "Report", href: "/project-manager-workspace/reports/VKI", icon: "summarize" },
+    { label: "Laporan Kemenperin", href: "/project-manager-workspace/vki/laporan-kemenperin", icon: "account_balance" },
   ],
 };
 

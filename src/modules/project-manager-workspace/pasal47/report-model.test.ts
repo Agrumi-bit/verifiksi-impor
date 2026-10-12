@@ -13,7 +13,7 @@ const ds: P47Dataset = {
   applications: [app("A", "PT A", ["46412", "46900"], "2026-03-07", "1/LHVIU/TBI/III/2026"), app("B", "PT B", ["46412"], "2026-03-20"), app("C", "PT C", ["45101"], "2026-08-01"), app("D", "PT D", ["46411"], null)],
   lines: [], brands: [], technical: [], warehouses: [], values: [], findings: [],
 };
-const report: P47Report = { status: "DRAFT", pmNote: "", materiality: {}, updatedAt: null, updatedByName: null };
+const report: P47Report = { status: "DRAFT", pmNote: "", materiality: {}, updatedAt: null, updatedByName: null, preparedAt: null };
 
 describe("LHVIU per bulan terbit and validity", () => {
   it("counts LHVIU in the month of their recorded Tanggal Terbit; undated ones are set apart", () => {
