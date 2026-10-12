@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { applyDocumentDataToPayload, companyDocumentDataUpdate, documentDataFieldValues, parseDocumentData } from "@/modules/applications/document-data-fields";
 
 import { syncLocationDocumentToCompany } from "@/modules/applications/server/sync-location-document";
 import { z } from "zod";
@@ -12,7 +13,7 @@ import {
 } from "@/modules/applications/document-versions";
 import { getVersionHistory, recordDocumentVersion } from "@/modules/company/document-versions";
 import { buildDocumentChecklist, COMPANY_MAPPED_DOCUMENT_KEYS } from "@/modules/verifikator-workspace/schema";
-import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
+import { toChecklistCompanyContext, toCompanyLegalContext } from "@/modules/verifikator-workspace/company-context";
 import { resolvePartnerContexts } from "@/modules/verifikator-workspace/partner-context";
 import { resolveKonsumsiChecklistContext } from "@/modules/verifikator-workspace/konsumsi-brand-context";
 import {
@@ -49,21 +50,26 @@ export async function GET(
   if (!item) {
     return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
   }
+  const fields = documentDataFieldValues(key, payload, toCompanyLegalContext(company));
 
   if (key in COMPANY_MAPPED_DOCUMENT_KEYS) {
     if (!company) {
-      return NextResponse.json({ data: [] });
+      return NextResponse.json({ data: [], fields });
     }
     const fieldKey = COMPANY_MAPPED_DOCUMENT_KEYS[key];
     const history = await getVersionHistory(company.id, fieldKey, company[fieldKey] ?? item.documentPath, company.createdAt);
-    return NextResponse.json({ data: history });
+    return NextResponse.json({ data: history, fields });
   }
 
   const history = await getApplicationDocumentVersionHistory(application.id, key, item.documentPath, application.createdAt);
-  return NextResponse.json({ data: history });
+  return NextResponse.json({ data: history, fields });
 }
 
-const patchSchema = z.object({ path: z.string().trim().min(1, "Path dokumen wajib diisi") });
+const patchSchema = z.object({
+  path: z.string().trim().min(1, "Path dokumen wajib diisi"),
+  /** Data printed on the new document (Nomor/Tanggal/…), see document-data-fields.ts. */
+  data: z.record(z.string(), z.unknown()).optional(),
+});
 
 export async function PATCH(
   request: Request,
@@ -125,8 +131,12 @@ export async function PATCH(
   if (item.documentPath === path) {
     return NextResponse.json({ error: "Dokumen tidak berubah" }, { status: 400 });
   }
+  const documentData = parsed.data.data ? parseDocumentData(key, parsed.data.data) : ({ ok: true, values: {} } as const);
+  if (!documentData.ok) {
+    return NextResponse.json({ error: documentData.error }, { status: 400 });
+  }
 
-  const updatedPayload = applyChecklistDocumentPath(payload, key, path);
+  const updatedPayload = applyChecklistDocumentPath(applyDocumentDataToPayload(payload, documentData.values), key, path);
   await db.application.update({ where: { id: application.id }, data: { payload: updatedPayload } });
   await syncLocationDocumentToCompany(application.companyId, key, path);
 
@@ -136,7 +146,7 @@ export async function PATCH(
     }
     const fieldKey = COMPANY_MAPPED_DOCUMENT_KEYS[key];
     const previousPath = company[fieldKey];
-    await db.company.update({ where: { id: company.id }, data: { [fieldKey]: path } });
+    await db.company.update({ where: { id: company.id }, data: { [fieldKey]: path, ...companyDocumentDataUpdate(key, documentData.values) } });
     await recordDocumentVersion(
       company.id,
       fieldKey,

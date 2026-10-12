@@ -1,5 +1,7 @@
 "use client";
 
+import { NewDocumentDataForm, useNewDocumentUpload } from "@/modules/applications/components/new-document-upload";
+import type { DocumentDataFieldValue } from "@/modules/applications/document-data-fields";
 import { schemeLabel } from "@/modules/schemes";
 import { useEffect, useState, type ComponentType } from "react";
 import Link from "next/link";
@@ -373,47 +375,23 @@ function VersionHistoryModal({
     queryFn: async () => {
       const response = await fetch(`/api/company-workspace/applications/${applicationId}/documents/${encodeURIComponent(docKey)}/history`);
       if (!response.ok) throw new Error("Gagal memuat riwayat dokumen");
-      const json = (await response.json()) as { data: VersionEntry[] };
-      return json.data;
+      return (await response.json()) as { data: VersionEntry[]; fields?: DocumentDataFieldValue[] };
     },
   });
 
-  const [isUploading, setIsUploading] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
 
-  const versions = data ?? [];
+  const versions = data?.data ?? [];
 
-  async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("namespace", "temporary");
-      const uploadRes = await fetch("/api/uploads", { method: "POST", body: formData });
-      if (!uploadRes.ok) throw new Error("Gagal mengunggah file");
-      const { path } = (await uploadRes.json()) as { path: string };
-
-      const saveRes = await fetch(`/api/company-workspace/applications/${applicationId}/documents/${encodeURIComponent(docKey)}/history`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path }),
-      });
-      if (!saveRes.ok) {
-        const body = await saveRes.json().catch(() => null);
-        throw new Error(body?.error ?? "Gagal menyimpan dokumen baru");
-      }
-      toast.success("Dokumen baru berhasil diunggah.");
+  const upload = useNewDocumentUpload({
+    endpoint: `/api/company-workspace/applications/${applicationId}/documents/${encodeURIComponent(docKey)}/history`,
+    fields: data?.fields ?? [],
+    onSaved: async () => {
       await refetch();
       onUploaded();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Gagal mengunggah dokumen baru");
-    } finally {
-      setIsUploading(false);
-    }
-  }
+    },
+  });
+  const { isUploading, handleUpload } = upload;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(20,12,8,.55)] p-5" onClick={onClose}>
@@ -421,6 +399,15 @@ function VersionHistoryModal({
         className="flex max-h-[88vh] w-[480px] max-w-[92vw] flex-col overflow-hidden rounded-xl bg-white"
         onClick={(event) => event.stopPropagation()}
       >
+        {upload.pending && (
+          <NewDocumentDataForm
+            fields={data?.fields ?? []}
+            fileName={upload.pending.fileName}
+            saving={isUploading}
+            onCancel={upload.cancel}
+            onSubmit={upload.submit}
+          />
+        )}
         <div className="flex items-start justify-between px-5.5 pb-3 pt-5">
           <div>
             <div className="text-[18px] font-extrabold text-[#20180f]">Version History</div>
