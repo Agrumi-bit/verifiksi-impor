@@ -456,22 +456,23 @@ export function ProfileCards({ cards }: { cards: { rank: number; title: string; 
             <span style={{ width: 26, height: 26, borderRadius: 13, background: "#b4561a", color: "#fff", display: "grid", placeItems: "center", fontWeight: 800, fontSize: 12 }}>{c.rank}</span>
             <span><b style={{ fontSize: 14, display: "block" }}>{c.title}</b><span style={{ fontSize: 10.5, color: MUTED }}>{c.sub}</span></span>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${c.kpis.length}, 1fr)`, gap: 6, marginTop: 8 }}>
+          {/* minmax(0, …) + minWidth 0: long HS descriptions must ellipsize, not widen the card past the page. */}
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${c.kpis.length}, minmax(0, 1fr))`, gap: 6, marginTop: 8 }}>
             {c.kpis.map(([v, l]) => (
-              <div key={l} style={{ border: `1px solid ${CARD_BORDER}`, borderRadius: 8, padding: "5px 8px" }}>
+              <div key={l} style={{ border: `1px solid ${CARD_BORDER}`, borderRadius: 8, padding: "5px 8px", minWidth: 0 }}>
                 <b style={{ fontSize: 13, display: "block", fontVariantNumeric: "tabular-nums" }}>{v}</b>
                 <span style={{ fontSize: 9.5, color: MUTED }}>{l}</span>
               </div>
             ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 14, marginTop: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)", gap: 14, marginTop: 8 }}>
             {[c.listA, c.listB].map((list) => (
-              <div key={list.title}>
+              <div key={list.title} style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: ORANGE_TEXT, marginBottom: 3 }}>{list.title.toUpperCase()}</div>
                 {list.rows.map(([k, v]) => (
                   <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 10.5, padding: "2px 0", borderTop: `1px solid ${CARD_BORDER}` }}>
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{k}</span>
-                    <b style={{ whiteSpace: "nowrap" }}>{v}</b>
+                    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{k}</span>
+                    <b style={{ whiteSpace: "nowrap", flex: "none" }}>{v}</b>
                   </div>
                 ))}
               </div>

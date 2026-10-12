@@ -140,7 +140,7 @@ export function bab3(ds: P47Dataset): Bab3 {
 
   const profiles = countries.slice(0, 3).map((c) => ({
     c, shareValue: totalValue ? c.value / totalValue : 0, shareQty: totalQty ? c.qty / totalQty : 0,
-    topHs: Object.entries(c.hsValue).sort((a, b) => b[1].value - a[1].value).slice(0, 5).map(([hs, x]) => ({ hs, label: x.label, value: x.value })),
+    topHs: Object.entries(c.hsValue).sort((a, b) => b[1].value - a[1].value).slice(0, 4).map(([hs, x]) => ({ hs, label: x.label, value: x.value })),
     topImporters: Object.entries(c.importers).sort((a, b) => b[1] - a[1]).slice(0, 3) as [string, number][],
   }));
 
