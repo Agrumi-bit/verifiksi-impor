@@ -14,6 +14,8 @@ type ReportListItem = {
   applicationNumber: string;
   companyName: string;
   verificationType: string;
+  /** VKI, VIU Bahan Baku Industri, VIU Bahan Baku Non Industri or VIU Barang Konsumsi. */
+  scheme?: string;
   locationType: string;
   address: string;
   city: string | null;
@@ -112,7 +114,7 @@ function ReportCoverThumbnail({ report, surveyorName }: { report: ReportListItem
           <MetaField label="NOMOR APLIKASI" value={report.applicationNumber} mono />
           <MetaField label="TANGGAL TERBIT" value={fmtDate(report.submittedAt)} />
           <MetaField label="DISUSUN OLEH" value={surveyorName} />
-          <MetaField label="JENIS VERIFIKASI" value={report.verificationType} />
+          <MetaField label="JENIS VERIFIKASI" value={report.scheme ?? report.verificationType} />
         </div>
       </div>
     </div>
@@ -269,7 +271,7 @@ export function ReportsGrid() {
         {filtered.map((report) => {
           const label = SHORT_LOCATION_LABEL[report.locationType] ?? report.locationType;
           const docCode = `${DOC_PREFIX[report.locationType] ?? "LV"}/${report.assignmentNumber}`;
-          const verificationLabel = VERIFICATION_TYPE_LABELS[report.verificationType] ?? report.verificationType;
+          const verificationLabel = report.scheme ?? VERIFICATION_TYPE_LABELS[report.verificationType] ?? report.verificationType;
 
           return (
             <Link

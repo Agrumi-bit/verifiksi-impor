@@ -1,3 +1,4 @@
+import { schemeLabel } from "@/modules/schemes";
 import { MaterialIcon } from "../material-icon";
 import type { AssignmentDetailData } from "../assignment-detail";
 import { formatAssignmentDate } from "@/lib/assignment-date";
@@ -24,7 +25,7 @@ export function OverviewTab({ data }: Props) {
         <h3 className="mb-5 font-sv-headline-lg text-lg font-bold">Ringkasan Penugasan</h3>
         <div className="grid grid-cols-2 gap-5">
           <Row icon="apartment" label="Perusahaan" value={payload.companyName} />
-          <Row icon="category" label="Tipe Verifikasi" value={data.application.verificationType} />
+          <Row icon="category" label="Tipe Verifikasi" value={schemeLabel({ verificationType: data.application.verificationType, importTypes: payload.importTypes })} />
           <Row
             icon="event_available"
             label="Tanggal Penugasan"

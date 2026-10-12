@@ -1,3 +1,4 @@
+import { schemeLabel } from "@/modules/schemes";
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
@@ -19,7 +20,7 @@ export async function GET() {
   });
 
   const data = visits.map((visit) => {
-    const payload = visit.assignment.application.payload as { companyName?: string } | null;
+    const payload = visit.assignment.application.payload as { companyName?: string; importTypes?: string[] } | null;
     const fieldKind: FieldKind | null =
       visit.locationType === "GUDANG" ? "GUDANG" : visit.locationType === "PABRIK" ? "PABRIK" : null;
     const officeVerification = visit.officeVerification as OfficeVerificationValues | null;
@@ -40,6 +41,7 @@ export async function GET() {
       applicationNumber: visit.assignment.application.applicationNumber,
       companyName: payload?.companyName ?? "—",
       verificationType: visit.assignment.application.verificationType,
+      scheme: schemeLabel({ verificationType: visit.assignment.application.verificationType, importTypes: payload?.importTypes }),
       locationType: visit.locationType,
       address: visit.address,
       city: visit.city,

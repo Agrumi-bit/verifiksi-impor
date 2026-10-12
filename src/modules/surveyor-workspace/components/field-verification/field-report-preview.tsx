@@ -1,5 +1,6 @@
 "use client";
 
+import { schemeLabel } from "@/modules/schemes";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -430,7 +431,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
               </div>
               <div>
                 <div className="rd-cover-meta-label">JENIS VERIFIKASI</div>
-                <div className="rd-cover-meta-value">{data.verificationType}</div>
+                <div className="rd-cover-meta-value">{schemeLabel(data)}</div>
               </div>
             </div>
           </div>
@@ -718,7 +719,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
                 <tr><td style={{ width: "44%", color: "var(--ink-faint)" }}>Nama Perusahaan</td><td style={{ fontWeight: 600 }}>{company}</td></tr>
                 <tr><td style={{ color: "var(--ink-faint)" }}>Nomor Penugasan</td><td style={{ fontWeight: 600 }} className="rd-mono">{data.assignmentNumber}</td></tr>
                 <tr><td style={{ color: "var(--ink-faint)" }}>Nomor Aplikasi</td><td style={{ fontWeight: 600 }} className="rd-mono">{data.applicationNumber}</td></tr>
-                <tr><td style={{ color: "var(--ink-faint)" }}>Jenis Verifikasi</td><td style={{ fontWeight: 600 }}>{data.verificationType}</td></tr>
+                <tr><td style={{ color: "var(--ink-faint)" }}>Jenis Verifikasi</td><td style={{ fontWeight: 600 }}>{schemeLabel(data)}</td></tr>
                 <tr><td style={{ color: "var(--ink-faint)" }}>Lokasi yang Diverifikasi</td><td style={{ fontWeight: 600 }}>{label}</td></tr>
                 <tr>
                   <td style={{ color: "var(--ink-faint)" }}>Alamat</td>

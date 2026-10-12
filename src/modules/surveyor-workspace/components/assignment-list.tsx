@@ -1,5 +1,6 @@
 "use client";
 
+import { schemeLabel } from "@/modules/schemes";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -77,17 +78,8 @@ const LOCATION_STATUS_CLASS: Record<LocationVisitStatusValue, string> = {
   COMPLETED: "bg-[#e2f7ea] text-[#027a48]",
 };
 
-function humanize(value: string): string {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
 function verificationLabel(card: ApplicationCard): string {
-  const kinds = card.importTypes.map(humanize).join(", ");
-  return kinds ? `${card.verificationType} · ${kinds}` : card.verificationType;
+  return schemeLabel({ verificationType: card.verificationType, importTypes: card.importTypes });
 }
 
 function locationSummaryLabel(summary: { total: number; completed: number }): string {

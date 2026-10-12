@@ -1,5 +1,6 @@
 "use client";
 
+import { schemeLabel } from "@/modules/schemes";
 import { ApplicationEditedNotice } from "@/modules/applications/components/application-edited-notice";
 import type { ApplicationEditedNotice as ApplicationEditedNoticeData } from "@/modules/applications/server/edited-after";
 import { useState } from "react";
@@ -177,7 +178,7 @@ export function AssignmentDetail({ id }: Props) {
           <div className="border-l border-[#f0ded0] px-5">
             <div className="mb-1 text-[10.5px] uppercase tracking-wide text-[#a68f80]">Jenis Penugasan</div>
             <div className="text-sm font-bold">
-              Verifikasi Lapangan {data.application.verificationType}
+              Verifikasi Lapangan {schemeLabel({ verificationType: data.application.verificationType, importTypes: data.application.payload.importTypes })}
             </div>
           </div>
           <div className="border-l border-[#f0ded0] px-5">
