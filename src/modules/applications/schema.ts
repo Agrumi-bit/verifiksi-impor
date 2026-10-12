@@ -512,6 +512,17 @@ export function applyViuOnlySubmitRules(data: z.infer<typeof applicationWizardSh
       message: "Anda harus menyetujui pernyataan ini sebelum submit",
     });
   }
+  // One VIU application = one scheme (Industri, Non Industri or Konsumsi). Mixed applications are
+  // not allowed: every workspace (PM menus, Laporan Kemenperin, TA modules) handles one scheme.
+  if (data.importTypes.length === 0) {
+    ctx.addIssue({ code: "custom", path: ["importTypes"], message: "Pilih Jenis Impor" });
+  } else if (data.importTypes.length > 1) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["importTypes"],
+      message: "Pilih satu Jenis Impor saja — satu permohonan VIU hanya untuk satu jenis impor. Ajukan permohonan terpisah untuk jenis impor lainnya.",
+    });
+  }
   // Permenperin 27/2025 Pasal 26 & 37: each VIU type needs one of its listed KBLI on an API-U
   // company. Checked here against the payload's company snapshot; POST /api/applications
   // re-checks against the Company row itself.

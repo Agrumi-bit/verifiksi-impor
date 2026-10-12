@@ -32,6 +32,11 @@ function runSubmitRules(data) {
   applyViuOnlySubmitRules(
     {
       declarationAccepted: true,
+      // Scheme-independent requirements added since this script was written (Tanggal Pengajuan,
+      // Kantor + Gudang locations). companyApiType is left unset so the KBLI rule doesn't apply.
+      submissionDate: "2026-01-05",
+      locations: [{ locationType: "KANTOR" }, { locationType: "GUDANG" }],
+      kbliEntries: [],
       importTypes: [],
       partnerIndustriEntries: [],
       nonIndustriDocuments: [],
@@ -54,7 +59,7 @@ function runSubmitRules(data) {
 
 const validIndustri = {
   importTypes: ["BAHAN_BAKU_INDUSTRI"],
-  partnerIndustriEntries: [{ partnerId: "p1", enabled: true }],
+  partnerIndustriEntries: [{ partnerId: "p1", enabled: true, contractDocumentPath: "kontrak.pdf" }],
   nonIndustriDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, documentPath: "modal.pdf", amount: "500000000" }],
   products: [{ id: "prod1", materialType: "Benang Katun", hsCode: "52053100" }],
 };
@@ -71,6 +76,9 @@ const validKonsumsi = {
   konsumsiDocuments: [{ id: "1", label: "Dokumen Impor Konsumsi", documentPath: "x.pdf" }],
   applicationBrands: [{ brandId: "b1", applicantRole: "OWNER", relationshipDocuments: {} }],
   brandQualityTests: [{ brandId: "b1" }],
+  labelStatementDocument: { filePath: "label-pernyataan.pdf", fileName: "label-pernyataan.pdf" },
+  labelDocumentationDocument: { filePath: "label-dokumentasi.pdf", fileName: "label-dokumentasi.pdf" },
+  productGroupCertificates: [{ brandId: "b1", commodityGroupId: "cg1", certificateNumber: "HUM-1", laboratoryName: "Lab", issueDate: "2025-12-01", fileName: "c.pdf", filePath: "c.pdf" }],
   konsumsiProducts: [
     {
       id: "p1",
@@ -78,7 +86,7 @@ const validKonsumsi = {
       commodityGroupId: "cg1",
       productName: "Men's Cotton T-Shirt",
       hsCode: "61091000",
-      countryOfOrigin: "Vietnam",
+      originCountries: ["VN"],
       quantity: "1000",
       averageUnitPrice: "3.5",
       currency: "USD",
@@ -108,65 +116,33 @@ assert(!runSubmitRules(validIndustri).some((i) => i.startsWith("applicationBrand
 assert(!runSubmitRules(validIndustri).some((i) => i.startsWith("konsumsiProducts")), "No Konsumsi Product issue for Industri-only");
 assert(!runSubmitRules(validIndustri).some((i) => i.startsWith("konsumsiFinancialDocuments")), "No Konsumsi financial-doc issue for Industri-only");
 
-console.log("--- TEST D: Industri + Konsumsi ---");
-assert(
-  runSubmitRules({
-    importTypes: ["BAHAN_BAKU_INDUSTRI", "BARANG_KONSUMSI"],
-    partnerIndustriEntries: validIndustri.partnerIndustriEntries,
-    nonIndustriDocuments: validIndustri.nonIndustriDocuments,
-    products: validIndustri.products,
-    konsumsiFinancialDocuments: validKonsumsi.konsumsiFinancialDocuments,
-    konsumsiDocuments: validKonsumsi.konsumsiDocuments,
-    applicationBrands: validKonsumsi.applicationBrands,
-    brandQualityTests: validKonsumsi.brandQualityTests,
-    konsumsiProducts: validKonsumsi.konsumsiProducts,
-  }).length === 0,
-  "Industri + Konsumsi, both schemes' requirements satisfied -> clean",
-);
-
-console.log("--- TEST E: Non Industri + Konsumsi ---");
-assert(
-  runSubmitRules({
-    importTypes: ["BAHAN_BAKU_NON_INDUSTRI", "BARANG_KONSUMSI"],
-    nonIndustriDocuments: validNonIndustri.nonIndustriDocuments,
-    products: validNonIndustri.products,
-    konsumsiFinancialDocuments: validKonsumsi.konsumsiFinancialDocuments,
-    konsumsiDocuments: validKonsumsi.konsumsiDocuments,
-    applicationBrands: validKonsumsi.applicationBrands,
-    brandQualityTests: validKonsumsi.brandQualityTests,
-    konsumsiProducts: validKonsumsi.konsumsiProducts,
-  }).length === 0,
-  "Non Industri + Konsumsi, both schemes' requirements satisfied -> clean",
-);
-assert(
-  !runSubmitRules({
-    importTypes: ["BAHAN_BAKU_NON_INDUSTRI", "BARANG_KONSUMSI"],
-    nonIndustriDocuments: validNonIndustri.nonIndustriDocuments,
-    products: validNonIndustri.products,
-    konsumsiFinancialDocuments: validKonsumsi.konsumsiFinancialDocuments,
-    konsumsiDocuments: validKonsumsi.konsumsiDocuments,
-    applicationBrands: validKonsumsi.applicationBrands,
-    brandQualityTests: validKonsumsi.brandQualityTests,
-    konsumsiProducts: validKonsumsi.konsumsiProducts,
-  }).some((i) => i.startsWith("partnerIndustriEntries")),
-  "Non Industri + Konsumsi never requires Partner Industri (Industri not selected)",
-);
-
-console.log("--- TEST F: All three schemes ---");
-assert(
-  runSubmitRules({
-    importTypes: ["BAHAN_BAKU_INDUSTRI", "BAHAN_BAKU_NON_INDUSTRI", "BARANG_KONSUMSI"],
-    partnerIndustriEntries: validIndustri.partnerIndustriEntries,
-    nonIndustriDocuments: validIndustri.nonIndustriDocuments,
-    products: validIndustri.products,
-    konsumsiFinancialDocuments: validKonsumsi.konsumsiFinancialDocuments,
-    konsumsiDocuments: validKonsumsi.konsumsiDocuments,
-    applicationBrands: validKonsumsi.applicationBrands,
-    brandQualityTests: validKonsumsi.brandQualityTests,
-    konsumsiProducts: validKonsumsi.konsumsiProducts,
-  }).length === 0,
-  "All three schemes, every requirement satisfied -> clean",
-);
+// TEST D-F used to accept mixed applications. Since one VIU application may carry only ONE import
+// type (applyViuOnlySubmitRules), every mixed combination is refused, and refused for that reason
+// alone: each scheme's own requirements, all satisfied here, add no issue of their own.
+const ONE_TYPE_ONLY = "importTypes: Pilih satu Jenis Impor saja";
+const mixedFields = {
+  partnerIndustriEntries: validIndustri.partnerIndustriEntries,
+  nonIndustriDocuments: validIndustri.nonIndustriDocuments,
+  products: validIndustri.products,
+  konsumsiFinancialDocuments: validKonsumsi.konsumsiFinancialDocuments,
+  konsumsiDocuments: validKonsumsi.konsumsiDocuments,
+  applicationBrands: validKonsumsi.applicationBrands,
+  brandQualityTests: validKonsumsi.brandQualityTests,
+  labelStatementDocument: validKonsumsi.labelStatementDocument,
+  labelDocumentationDocument: validKonsumsi.labelDocumentationDocument,
+  productGroupCertificates: validKonsumsi.productGroupCertificates,
+  konsumsiProducts: validKonsumsi.konsumsiProducts,
+};
+for (const [label, importTypes] of [
+  ["TEST D: Industri + Konsumsi", ["BAHAN_BAKU_INDUSTRI", "BARANG_KONSUMSI"]],
+  ["TEST E: Non Industri + Konsumsi", ["BAHAN_BAKU_NON_INDUSTRI", "BARANG_KONSUMSI"]],
+  ["TEST F: All three schemes", ["BAHAN_BAKU_INDUSTRI", "BAHAN_BAKU_NON_INDUSTRI", "BARANG_KONSUMSI"]],
+]) {
+  console.log(`--- ${label} ---`);
+  const issues = runSubmitRules({ importTypes, ...mixedFields });
+  assert(issues.length === 1 && issues[0].startsWith(ONE_TYPE_ONLY), `${label} -> refused only because a VIU application takes one import type`);
+}
+assert(runSubmitRules({ importTypes: [] }).some((i) => i === "importTypes: Pilih Jenis Impor"), "VIU without an import type -> 'Pilih Jenis Impor'");
 
 console.log("--- BUG REPRODUCTION: Konsumsi-only + nonIndustriDocuments empty/undefined must NOT block submit ---");
 assert(

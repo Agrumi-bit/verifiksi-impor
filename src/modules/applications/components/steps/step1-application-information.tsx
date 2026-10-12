@@ -228,14 +228,14 @@ export function Step1ApplicationInformation({ form }: Step1Props) {
       {verificationType === "VIU" && (
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Jenis Impor (Multi-select)
+            Jenis Impor
           </h2>
           <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
             Berdasarkan Pasal 26 dan Pasal 37 Permenperin No. 27 Tahun 2025, terdapat 3 jenis
             permohonan VIU untuk Perusahaan API-U, masing-masing mensyaratkan KBLI tertentu.
             Jenis permohonan hanya dapat dipilih bila KBLI Utama perusahaan termasuk salah satu KBLI
             yang dipersyaratkan. Dokumen pendukung akan disesuaikan otomatis berdasarkan pilihan ini.
-            Multi-pilih diperbolehkan.
+            Satu permohonan hanya untuk satu jenis impor; ajukan permohonan terpisah untuk jenis impor lainnya.
           </p>
           <Controller
             control={control}
@@ -254,11 +254,8 @@ export function Step1ApplicationInformation({ form }: Step1Props) {
                         selected={isSelected}
                         disabled={!isAllowed}
                         onSelect={() => {
-                          const current = field.value ?? [];
-                          const next = isSelected
-                            ? current.filter((value) => value !== type)
-                            : [...current, type];
-                          field.onChange(next);
+                          // Single choice: one application = one VIU scheme.
+                          field.onChange(isSelected ? [] : [type]);
                         }}
                       >
                         <div className="flex items-start gap-3">
