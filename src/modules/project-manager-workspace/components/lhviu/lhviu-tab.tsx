@@ -296,6 +296,7 @@ export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicati
               endpoint={`/api/project-manager-workspace/applications/${jenis}/${applicationNumber}/lhviu`}
               initialNumber={lhviu.number ?? ""}
               initialIssuedAt={lhviu.issuedAt ?? ""}
+              completed={data.applicationStatus === "COMPLETED"}
               onSaved={refresh}
             />
           )}
@@ -323,17 +324,24 @@ function LhviuMetaForm({
   endpoint,
   initialNumber,
   initialIssuedAt,
+  completed,
   onSaved,
 }: {
   endpoint: string;
   initialNumber: string;
   initialIssuedAt: string;
+  /** Application.status is COMPLETED. When it is not (e.g. after "Batalkan Completed"), saving the
+   * nomor + tanggal completes the application again. */
+  completed: boolean;
   onSaved: () => void;
 }) {
   const [number, setNumber] = useState(initialNumber);
   const [issuedAt, setIssuedAt] = useState(initialIssuedAt);
   const [saving, setSaving] = useState(false);
   const dirty = number.trim() !== initialNumber || issuedAt !== initialIssuedAt;
+  // Saving is allowed whenever both fields are filled, even unchanged (re-save to complete again).
+  const filled = Boolean(number.trim()) && Boolean(issuedAt);
+  const canComplete = !completed && filled;
   const today = assignmentDateKey(new Date());
 
   async function save() {
@@ -383,11 +391,11 @@ function LhviuMetaForm({
         </label>
         <button
           type="button"
-          disabled={!dirty || saving}
+          disabled={(!dirty && !filled) || saving}
           onClick={save}
           className="rounded-lg bg-[#2b2420] px-4 py-2 text-[12.5px] font-bold text-white disabled:opacity-40"
         >
-          {saving ? "Menyimpan..." : "Simpan"}
+          {saving ? "Menyimpan..." : canComplete ? "Simpan & Selesaikan" : "Simpan"}
         </button>
       </div>
     </div>
