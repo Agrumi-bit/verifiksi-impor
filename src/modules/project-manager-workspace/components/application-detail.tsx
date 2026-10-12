@@ -126,14 +126,14 @@ export function ApplicationDetail({ applicationNumber, jenis, scheme }: { applic
       </div>
 
       <div className="mb-4 flex flex-wrap gap-1 overflow-x-auto border-b border-[#f0ded0]">
-        {TAB_NAMES.filter((name) => name !== "LHVIU" || data.verificationType === "VIU").map((name) => (
+        {TAB_NAMES.map((name) => (
           <button
             key={name}
             type="button"
             onClick={() => setTab(name)}
             className={`whitespace-nowrap px-3.5 py-2.5 text-[12.5px] font-bold ${tab === name ? "border-b-2 border-[#c14a1f] text-[#c14a1f]" : "text-[#8a7565]"}`}
           >
-            {name}
+            {name === "LHVIU" && data.verificationType === "VKI" ? "LHVKI" : name}
           </button>
         ))}
       </div>
@@ -151,7 +151,7 @@ export function ApplicationDetail({ applicationNumber, jenis, scheme }: { applic
       {tab === "Survey" && <SurveyTab data={data} applicationNumber={applicationNumber} />}
       {tab === "Verification" && <VerificationTab data={data} />}
       {tab === "Analisis" && <AnalisisTab data={data} />}
-      {tab === "LHVIU" && data.verificationType === "VIU" && <LhviuTab data={data} applicationNumber={applicationNumber} jenis={jenis} />}
+      {tab === "LHVIU" && <LhviuTab data={data} applicationNumber={applicationNumber} jenis={jenis} />}
       {tab === "Communication" && (
         messageThreadAssignmentNumber ? (
           <CommunicationTab assignmentId={messageThreadAssignmentNumber} basePath="/api/project-manager-workspace" />

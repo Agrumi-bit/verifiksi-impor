@@ -23,6 +23,24 @@ export function decodeLhviuItems(value: string | null | undefined): LhviuItem[] 
     });
 }
 
+/**
+ * The final report differs per verification type: VIU ends with the Laporan Hasil VIU (LHVIU, berlaku 1
+ * tahun — Pasal 39 ayat (6)), VKI with the Laporan Hasil VKI (LHVKI, berlaku 3 tahun — Pasal 32 ayat (4)).
+ * Both are stored the same way (Application.lhviuDocument); only the wording differs.
+ */
+export type FinalReportLabels = { abbr: string; hasil: string; full: string; divider: string; placeholder: string; usage: string };
+export function finalReportLabels(verificationType: string | null | undefined): FinalReportLabels {
+  return String(verificationType).toUpperCase() === "VKI"
+    ? {
+        abbr: "LHVKI", hasil: "Laporan Hasil VKI", full: "Laporan Hasil Verifikasi Kemampuan Industri (LHVKI)", divider: "LAPORAN HASIL VERIFIKASI KEMAMPUAN INDUSTRI",
+        placeholder: "mis. 3/LHVKI/TBI/III/2026", usage: "Dipakai Laporan Pelaksanaan VKI (Pasal 47) untuk periode laporan menurut tanggal terbit dan masa berlaku 3 tahun (Pasal 32 ayat (4)).",
+      }
+    : {
+        abbr: "LHVIU", hasil: "Laporan Hasil VIU", full: "Laporan Hasil Verifikasi Importir Umum (LHVIU)", divider: "LAPORAN HASIL VERIFIKASI IMPORTIR UMUM",
+        placeholder: "mis. 3/LHVIU/TBI/III/2026", usage: "Dipakai Laporan Pelaksanaan VIU (Pasal 47) untuk jumlah LHVIU per bulan terbit dan masa berlaku 1 tahun.",
+      };
+}
+
 export type LhviuMode = "laporan-verifikasi" | "laporan-lengkap";
 export type LhviuOrder = "lhviu-first" | "verifikasi-first";
 

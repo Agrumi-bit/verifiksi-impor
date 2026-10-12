@@ -8,12 +8,15 @@ import { requireProjectManagerSession } from "@/lib/require-project-manager-sess
 import { completeApplicationOnLhviu } from "@/modules/project-manager-workspace/lhviu-completion";
 import { readLhviuDocument, writeLhviuDocument } from "@/modules/project-manager-workspace/lhviu-store";
 
+/** LHVIU for VIU, LHVKI for VKI — same storage, different name. */
+const abbr = (verificationType: string) => (verificationType === "VKI" ? "LHVKI" : "LHVIU");
+
 async function findApplication(applicationNumber: string) {
   return db.application.findUnique({ where: { applicationNumber }, select: { id: true, verificationType: true } });
 }
 
 /**
- * LHVIU tab — the uploaded Laporan Hasil VIU PDF (null until the PM uploads one). Also brings
+ * LHVIU/LHVKI tab — the uploaded Laporan Hasil VIU/VKI PDF (null until the PM uploads one). Also brings
  * Application.status up to date for an LHVIU whose nomor and tanggal terbit were recorded before
  * completion was tied to them (idempotent: an already-completed application is left as is).
  */
@@ -24,7 +27,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ typ
   const application = await findApplication(applicationNumber);
   if (!application) return NextResponse.json({ error: "Aplikasi tidak ditemukan" }, { status: 404 });
   const document = await readLhviuDocument(application.id);
-  const completed = await completeApplicationOnLhviu(application.id, document, session.user, { respectCancel: true });
+  const completed = await completeApplicationOnLhviu(application.id, document, session.user, { respectCancel: true, verificationType: application.verificationType });
   return NextResponse.json({ data: { document, completed } });
 }
 
@@ -43,17 +46,13 @@ const putSchema = z.object({
 
 const futureDate = (issuedAt: string | null | undefined) => Boolean(issuedAt && issuedAt > assignmentDateKey(new Date()));
 
-/** Sets (or replaces) the Laporan Hasil VIU PDF — VIU applications only. */
+/** Sets (or replaces) the Laporan Hasil VIU (VIU) or Laporan Hasil VKI (VKI) PDF. */
 export async function PUT(request: Request, { params }: { params: Promise<{ type: string; applicationNumber: string }> }) {
   const { session, error } = await requireProjectManagerSession();
   if (error) return error;
   const { applicationNumber } = await params;
   const application = await findApplication(applicationNumber);
   if (!application) return NextResponse.json({ error: "Aplikasi tidak ditemukan" }, { status: 404 });
-  if (application.verificationType !== "VIU") {
-    return NextResponse.json({ error: "Laporan Hasil VIU hanya untuk permohonan VIU." }, { status: 400 });
-  }
-
   const parsed = putSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Data tidak valid" }, { status: 400 });
@@ -63,7 +62,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ type
   }
 
   if (futureDate(parsed.data.issuedAt)) {
-    return NextResponse.json({ error: "Tanggal terbit LHVIU tidak boleh melebihi hari ini." }, { status: 400 });
+    return NextResponse.json({ error: `Tanggal terbit ${abbr(application.verificationType)} tidak boleh melebihi hari ini.` }, { status: 400 });
   }
 
   // Replacing the PDF keeps the nomor/tanggal already recorded unless new ones are sent.
@@ -77,7 +76,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ type
     issuedAt: parsed.data.issuedAt || previous?.issuedAt || null,
   };
   await writeLhviuDocument(application.id, document);
-  const completed = await completeApplicationOnLhviu(application.id, document, session.user);
+  const completed = await completeApplicationOnLhviu(application.id, document, session.user, { verificationType: application.verificationType });
   return NextResponse.json({ data: { document, completed } });
 }
 
@@ -99,13 +98,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ty
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Data tidak valid" }, { status: 400 });
   }
   if (futureDate(parsed.data.issuedAt)) {
-    return NextResponse.json({ error: "Tanggal terbit LHVIU tidak boleh melebihi hari ini." }, { status: 400 });
+    return NextResponse.json({ error: `Tanggal terbit ${abbr(application.verificationType)} tidak boleh melebihi hari ini.` }, { status: 400 });
   }
   const current = await readLhviuDocument(application.id);
-  if (!current) return NextResponse.json({ error: "Unggah dokumen LHVIU terlebih dahulu." }, { status: 400 });
+  if (!current) return NextResponse.json({ error: `Unggah dokumen ${abbr(application.verificationType)} terlebih dahulu.` }, { status: 400 });
 
   const document = { ...current, number: parsed.data.number?.trim() || null, issuedAt: parsed.data.issuedAt || null };
   await writeLhviuDocument(application.id, document);
-  const completed = await completeApplicationOnLhviu(application.id, document, session.user);
+  const completed = await completeApplicationOnLhviu(application.id, document, session.user, { verificationType: application.verificationType });
   return NextResponse.json({ data: { document, completed } });
 }

@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { MaterialIcon } from "../material-icon";
 import { assignmentDateKey, formatAssignmentDate } from "@/lib/assignment-date";
 import type { PmApplicationDetail } from "../detail/types";
-import { encodeLhviuItem, lhviuReportHref, type LhviuDocumentInfo, type LhviuItem, type LhviuOrder } from "./lhviu";
+import { encodeLhviuItem, finalReportLabels, lhviuReportHref, type FinalReportLabels, type LhviuDocumentInfo, type LhviuItem, type LhviuOrder } from "./lhviu";
 import { PdfViewer } from "@/components/pdf-viewer";
 
 const SUB_TABS = ["verifikasi", "hasil", "lengkap"] as const;
@@ -37,11 +37,12 @@ function approvalBadge(status: string | null) {
 }
 
 /**
- * LHVIU (VIU only): 1) Laporan Verifikasi — tick the survey / document / technical reports and merge
- * them into one printable report; 2) Laporan Hasil VIU — upload and view the signed PDF; 3) Laporan
- * Lengkap — the merged verification report together with the Laporan Hasil VIU.
+ * LHVIU (VIU) / LHVKI (VKI): 1) Laporan Verifikasi — tick the survey / document / technical reports and
+ * merge them into one printable report; 2) Laporan Hasil VIU/VKI — upload and view the signed PDF;
+ * 3) Laporan Lengkap — the merged verification report together with the Laporan Hasil.
  */
 export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicationDetail; applicationNumber: string; jenis: string }) {
+  const L = finalReportLabels(data.verificationType);
   const [sub, setSub] = useState<SubTab>("verifikasi");
   const [order, setOrder] = useState<LhviuOrder>("lhviu-first");
   const queryClient = useQueryClient();
@@ -58,7 +59,7 @@ export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicati
     queryKey: lhviuKey,
     queryFn: async () => {
       const response = await fetch(`/api/project-manager-workspace/applications/${jenis}/${applicationNumber}/lhviu`);
-      if (!response.ok) throw new Error("Gagal memuat LHVIU");
+      if (!response.ok) throw new Error(`Gagal memuat ${L.abbr}`);
       return ((await response.json()) as { data: { document: LhviuDocumentInfo } }).data.document;
     },
   });
@@ -128,8 +129,8 @@ export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicati
         body: JSON.stringify({ documentPath: uploaded.path, fileName: file.name }),
       });
       const body = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(body?.error ?? "Gagal menyimpan Laporan Hasil VIU");
-      toast.success(body?.data?.completed ? "Laporan Hasil VIU diunggah; permohonan selesai (Completed)." : "Laporan Hasil VIU diunggah.");
+      if (!response.ok) throw new Error(body?.error ?? `Gagal menyimpan ${L.hasil}`);
+      toast.success(body?.data?.completed ? `${L.hasil} diunggah; permohonan selesai (Completed).` : `${L.hasil} diunggah.`);
       refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal mengunggah file");
@@ -151,7 +152,7 @@ export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicati
             onClick={() => setSub(t)}
             className={`rounded-md px-3.5 py-1.75 text-[12.5px] font-bold ${sub === t ? "bg-white text-[#c14a1f]" : "text-[#8a7565]"}`}
           >
-            {SUB_TAB_LABELS[t]}
+            {t === "hasil" ? L.hasil : SUB_TAB_LABELS[t]}
           </button>
         ))}
       </div>
@@ -192,20 +193,20 @@ export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicati
 
           {sub === "lengkap" && (
             <div className="mt-4 rounded-lg bg-[#f7f2ec] p-3.5">
-              <div className="mb-2 text-[12.5px] font-bold text-[#20180f]">Laporan Hasil VIU</div>
+              <div className="mb-2 text-[12.5px] font-bold text-[#20180f]">{L.hasil}</div>
               {lhviu ? (
                 <div className="mb-2.5 text-[12px] text-[#4a4038]">
                   {lhviu.fileName} · diunggah {formatAssignmentDate(lhviu.uploadedAt)}
                 </div>
               ) : (
-                <div className="mb-2.5 text-[12px] font-semibold text-[#c1361f]">Belum diunggah — unggah di sub tab Laporan Hasil VIU.</div>
+                <div className="mb-2.5 text-[12px] font-semibold text-[#c1361f]">Belum diunggah — unggah di sub tab {L.hasil}.</div>
               )}
               <div className="flex flex-wrap gap-4 text-[12px] text-[#4a4038]">
                 <span className="font-semibold">Urutan:</span>
                 {(
                   [
-                    ["lhviu-first", "Laporan Hasil VIU, lalu Laporan Verifikasi"],
-                    ["verifikasi-first", "Laporan Verifikasi, lalu Laporan Hasil VIU"],
+                    ["lhviu-first", `${L.hasil}, lalu Laporan Verifikasi`],
+                    ["verifikasi-first", `Laporan Verifikasi, lalu ${L.hasil}`],
                   ] as const
                 ).map(([value, label]) => (
                   <label key={value} className="flex items-center gap-1.5">
@@ -244,8 +245,8 @@ export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicati
 
       {sub === "hasil" && (
         <div className="rounded-[10px] border border-[#f0ded0] bg-white p-5">
-          <div className="mb-1 text-[14px] font-extrabold text-[#20180f]">Laporan Hasil Verifikasi Importir Umum (LHVIU)</div>
-          <div className="mb-3.5 text-[12px] text-[#8a7565]">Unggah LHVIU yang telah ditandatangani dalam format PDF (maks. 10MB).</div>
+          <div className="mb-1 text-[14px] font-extrabold text-[#20180f]">{L.full}</div>
+          <div className="mb-3.5 text-[12px] text-[#8a7565]">Unggah {L.abbr} yang telah ditandatangani dalam format PDF (maks. 10MB).</div>
 
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <input
@@ -287,7 +288,7 @@ export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicati
           </div>
 
           {data.applicationStatus === "COMPLETED" && (
-            <CancelCompletion endpoint={`/api/project-manager-workspace/applications/${jenis}/${applicationNumber}/completion`} onDone={refresh} />
+            <CancelCompletion endpoint={`/api/project-manager-workspace/applications/${jenis}/${applicationNumber}/completion`} labels={L} onDone={refresh} />
           )}
 
           {lhviu && (
@@ -297,17 +298,18 @@ export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicati
               initialNumber={lhviu.number ?? ""}
               initialIssuedAt={lhviu.issuedAt ?? ""}
               completed={data.applicationStatus === "COMPLETED"}
+              labels={L}
               onSaved={refresh}
             />
           )}
 
           {lhviu ? (
             <div className="rounded-lg bg-[#f1e9df] p-4">
-              <PdfViewer url={`/api/files?path=${encodeURIComponent(lhviu.path)}`} title="Laporan Hasil VIU" className="max-h-[75vh] overflow-y-auto" />
+              <PdfViewer url={`/api/files?path=${encodeURIComponent(lhviu.path)}`} title={L.hasil} className="max-h-[75vh] overflow-y-auto" />
             </div>
           ) : (
             <div className="rounded-lg border border-dashed border-[#e1bfb3] p-8 text-center text-[13px] text-[#a68f80]">
-              Belum ada Laporan Hasil VIU yang diunggah.
+              Belum ada {L.hasil} yang diunggah.
             </div>
           )}
         </div>
@@ -325,6 +327,7 @@ function LhviuMetaForm({
   initialNumber,
   initialIssuedAt,
   completed,
+  labels: L,
   onSaved,
 }: {
   endpoint: string;
@@ -333,6 +336,7 @@ function LhviuMetaForm({
   /** Application.status is COMPLETED. When it is not (e.g. after "Batalkan Completed"), saving the
    * nomor + tanggal completes the application again. */
   completed: boolean;
+  labels: FinalReportLabels;
   onSaved: () => void;
 }) {
   const [number, setNumber] = useState(initialNumber);
@@ -353,11 +357,11 @@ function LhviuMetaForm({
         body: JSON.stringify({ number: number.trim() || null, issuedAt: issuedAt || null }),
       });
       const body = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(body?.error ?? "Gagal menyimpan data LHVIU");
-      toast.success(body?.data?.completed ? "Nomor dan tanggal terbit LHVIU disimpan; permohonan selesai (Completed)." : "Nomor dan tanggal terbit LHVIU disimpan.");
+      if (!response.ok) throw new Error(body?.error ?? `Gagal menyimpan data ${L.abbr}`);
+      toast.success(body?.data?.completed ? `Nomor dan tanggal terbit ${L.abbr} disimpan; permohonan selesai (Completed).` : `Nomor dan tanggal terbit ${L.abbr} disimpan.`);
       onSaved();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Gagal menyimpan data LHVIU");
+      toast.error(error instanceof Error ? error.message : `Gagal menyimpan data ${L.abbr}`);
     } finally {
       setSaving(false);
     }
@@ -366,16 +370,16 @@ function LhviuMetaForm({
   return (
     <div className="mb-4 rounded-lg border border-[#f0ded0] bg-[#fdf9f5] p-3.5">
       <div className="mb-2.5 text-[12px] text-[#6b5b4c]">
-        Isi sesuai yang tercetak pada LHVIU. Dipakai Laporan Pelaksanaan VIU (Pasal 47) untuk jumlah LHVIU per bulan terbit dan masa berlaku 1 tahun.
+        Isi sesuai yang tercetak pada {L.abbr}. {L.usage}
       </div>
       <div className="flex flex-wrap items-end gap-3">
         <label className="text-[11.5px] font-bold text-[#20180f]">
-          Nomor LHVIU
+          Nomor {L.abbr}
           <input
             type="text"
             value={number}
             onChange={(e) => setNumber(e.target.value)}
-            placeholder="mis. 3/LHVIU/TBI/III/2026"
+            placeholder={L.placeholder}
             className="mt-1 block w-64 rounded-lg border border-input bg-white px-3 py-2 text-[13px] font-normal outline-none"
           />
         </label>
@@ -407,7 +411,7 @@ function LhviuMetaForm({
  * happened before the other reports were approved, the PM reverts it here (with a reason) and finishes
  * the reviews first. Saving the LHVIU nomor/tanggal or PDF again completes it again.
  */
-function CancelCompletion({ endpoint, onDone }: { endpoint: string; onDone: () => void }) {
+function CancelCompletion({ endpoint, labels: L, onDone }: { endpoint: string; labels: FinalReportLabels; onDone: () => void }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
@@ -438,7 +442,7 @@ function CancelCompletion({ endpoint, onDone }: { endpoint: string; onDone: () =
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 font-semibold text-[#1a7a4c]">
           <MaterialIcon name="task_alt" className="text-[16px]" />
-          Permohonan berstatus Completed karena Nomor dan Tanggal Terbit LHVIU sudah dicatat.
+          Permohonan berstatus Completed karena Nomor dan Tanggal Terbit {L.abbr} sudah dicatat.
         </span>
         {!open && (
           <button
@@ -453,7 +457,7 @@ function CancelCompletion({ endpoint, onDone }: { endpoint: string; onDone: () =
       {open && (
         <div className="mt-3">
           <div className="mb-1.5 text-[11.5px] text-[#6b5b4c]">
-            Status kembali seperti sebelum Completed agar laporan yang belum disetujui dapat direview. Dokumen, nomor, dan tanggal LHVIU tetap tersimpan; menyimpan ulang nomor/tanggal LHVIU akan menjadikannya Completed lagi.
+            Status kembali seperti sebelum Completed agar laporan yang belum disetujui dapat direview. Dokumen, nomor, dan tanggal {L.abbr} tetap tersimpan; menyimpan ulang nomor/tanggal {L.abbr} akan menjadikannya Completed lagi.
           </div>
           <textarea
             value={reason}

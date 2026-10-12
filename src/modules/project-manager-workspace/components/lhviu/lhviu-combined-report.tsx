@@ -8,7 +8,7 @@ import "./lhviu-combined.css";
 import { ReportRouter } from "@/modules/surveyor-workspace/components/report/report-router";
 import { DocumentVerificationReport } from "@/modules/verifikator-workspace/components/report/document-verification-report";
 import { TechnicalAnalysisReport } from "@/modules/technical-analyst-workspace/components/report/technical-analysis-report";
-import { decodeLhviuItems, type LhviuDocumentInfo, type LhviuItem, type LhviuMode, type LhviuOrder } from "./lhviu";
+import { decodeLhviuItems, finalReportLabels, type LhviuDocumentInfo, type LhviuItem, type LhviuMode, type LhviuOrder } from "./lhviu";
 import { LhviuPdfPages } from "./lhviu-pdf-pages";
 
 const BASE = "/api/project-manager-workspace" as const;
@@ -42,29 +42,30 @@ export function LhviuCombinedReport({
   order?: LhviuOrder;
 }) {
   const items = decodeLhviuItems(itemsParam);
+  const L = finalReportLabels(type);
   const { data: lhviu, isLoading } = useQuery({
     queryKey: ["project-manager-workspace", "lhviu", applicationNumber],
     enabled: mode === "laporan-lengkap",
     queryFn: async () => {
       const response = await fetch(`${BASE}/applications/${type}/${applicationNumber}/lhviu`);
-      if (!response.ok) throw new Error("Gagal memuat LHVIU");
+      if (!response.ok) throw new Error(`Gagal memuat ${L.abbr}`);
       return ((await response.json()) as { data: { document: LhviuDocumentInfo } }).data.document;
     },
   });
 
-  const title = mode === "laporan-lengkap" ? "Laporan Lengkap LHVIU" : "Laporan Verifikasi";
+  const title = mode === "laporan-lengkap" ? `Laporan Lengkap ${L.abbr}` : "Laporan Verifikasi";
   const verifikasi = items.map((item, i) => <Part key={`${item.kind}-${i}`} item={item} />);
   const hasilViu =
     mode === "laporan-lengkap" ? (
       isLoading ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">Memuat Laporan Hasil VIU...</p>
+        <p className="py-6 text-center text-sm text-muted-foreground">Memuat {L.hasil}...</p>
       ) : lhviu ? (
         <div className="lhviu-part">
-          <div className="lhviu-divider">LAPORAN HASIL VERIFIKASI IMPORTIR UMUM</div>
+          <div className="lhviu-divider">{L.divider}</div>
           <LhviuPdfPages path={lhviu.path} />
         </div>
       ) : (
-        <p className="py-6 text-center text-sm text-destructive">Laporan Hasil VIU belum diunggah.</p>
+        <p className="py-6 text-center text-sm text-destructive">{L.hasil} belum diunggah.</p>
       )
     ) : null;
 

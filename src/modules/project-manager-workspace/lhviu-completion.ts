@@ -33,7 +33,7 @@ export async function completeApplicationOnLhviu(
   document: { number?: string | null; issuedAt?: string | null } | null | undefined,
   actor: Actor,
   /** Set for the automatic sync on opening the LHVIU tab: a cancelled completion stays cancelled. */
-  options: { respectCancel?: boolean } = {},
+  options: { respectCancel?: boolean; verificationType?: string } = {},
 ): Promise<boolean> {
   if (!lhviuIsIssued(document)) return false;
   const application = await db.application.findUnique({ where: { id: applicationId }, select: { status: true } });
@@ -42,6 +42,7 @@ export async function completeApplicationOnLhviu(
 
   const number = document!.number!.trim();
   const issuedAt = document!.issuedAt!;
+  const vki = options.verificationType === "VKI";
   await db.$transaction([
     db.application.update({ where: { id: applicationId }, data: { status: "COMPLETED" } }),
     db.applicationAuditLog.create({
@@ -51,7 +52,7 @@ export async function completeApplicationOnLhviu(
         actorId: actor.id,
         actorName: actor.name ?? null,
         actorRole: actor.role ?? "PROJECT_MANAGER",
-        reason: `LHVIU Nomor ${number}, tanggal terbit ${issuedAt}`,
+        reason: `${vki ? "LHVKI" : "LHVIU"} Nomor ${number}, tanggal terbit ${issuedAt}`,
         // The status before completion, so a cancellation can restore it.
         changedFields: [{ path: "status", before: application.status, after: "COMPLETED" }],
       },
@@ -60,7 +61,7 @@ export async function completeApplicationOnLhviu(
       data: {
         applicationId,
         direction: "SYSTEM",
-        text: `Permohonan selesai — Laporan Hasil VIU Nomor ${number} tanggal terbit ${issuedAt} telah dicatat oleh Project Manager.`,
+        text: `Permohonan selesai — ${vki ? "Laporan Hasil VKI" : "Laporan Hasil VIU"} Nomor ${number} tanggal terbit ${issuedAt} telah dicatat oleh Project Manager.`,
       },
     }),
   ]);
