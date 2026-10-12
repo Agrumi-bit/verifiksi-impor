@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { MaterialIcon } from "@/modules/project-manager-workspace/components/material-icon";
 import { viuSchemeFromSlug } from "@/modules/project-manager-workspace/viu-schemes";
 import { Pasal47Module } from "@/modules/project-manager-workspace/pasal47/components/pasal47-module";
+import { IndustriModule } from "@/modules/project-manager-workspace/pasal47/industri/components/industri-module";
 
 type Params = { params: Promise<{ scheme: string }> };
 
@@ -15,11 +16,18 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function ProjectManagerViuSchemeKemenperinPage({ params }: Params) {
   const scheme = viuSchemeFromSlug((await params).scheme);
   if (!scheme) notFound();
-  // Pelaporan Pasal 47 covers VIU Produk Tekstil sebagai Barang Konsumsi; the other schemes keep the placeholder.
+  // Pelaporan Pasal 47 is built for VIU Barang Konsumsi and VIU Bahan Baku Industri; Non Industri keeps the placeholder.
   if (scheme.slug === "konsumsi") {
     return (
       <div className="p-8">
         <Pasal47Module />
+      </div>
+    );
+  }
+  if (scheme.slug === "industri") {
+    return (
+      <div className="p-8">
+        <IndustriModule />
       </div>
     );
   }

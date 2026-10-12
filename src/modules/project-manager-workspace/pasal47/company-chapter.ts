@@ -1,3 +1,4 @@
+import { VIU_INDUSTRI_KBLI } from "../../schemes/viu-bahan-baku-industri/terms";
 import { VIU_KONSUMSI_KBLI } from "../../schemes/viu-konsumsi/terms";
 
 import { lhviuStatus } from "./derive";
@@ -15,15 +16,20 @@ export type KbliRow = { code: string; description: string; companies: string[]; 
 export type LocationRow = { province: string; city: string; kantor: number; gudang: number; companies: string[] };
 
 const UNKNOWN = "Tidak diisi";
-const allowedKbli = new Set<string>(VIU_KONSUMSI_KBLI);
+/** What differs between the VIU schemes in the chapter: the subject, its legal basis and the KBLI Utama it requires. */
+const SCHEMES = {
+  konsumsi: { subject: "Produk Tekstil sebagai Barang Konsumsi", basis: "Pasal 37 ayat (2) huruf c angka 2 huruf b", kbli: new Set<string>(VIU_KONSUMSI_KBLI) },
+  industri: { subject: "Bahan Baku/Penolong Perusahaan Industri", basis: "Pasal 37 ayat (2) huruf a", kbli: new Set<string>(VIU_INDUSTRI_KBLI) },
+} as const;
+export type ChapterScheme = keyof typeof SCHEMES;
 
 /** KBLI Utama held by the companies, most-held first. */
-export function kbliRows(apps: P47Application[]): KbliRow[] {
+export function kbliRows(apps: P47Application[], scheme: ChapterScheme = "konsumsi"): KbliRow[] {
   const map = new Map<string, KbliRow>();
   for (const app of apps) {
     for (const entry of app.kbli) {
       if (!entry.code) continue;
-      const row = map.get(entry.code) ?? { code: entry.code, description: entry.description, companies: [], allowed: allowedKbli.has(entry.code) };
+      const row = map.get(entry.code) ?? { code: entry.code, description: entry.description, companies: [], allowed: SCHEMES[scheme].kbli.has(entry.code) };
       if (!row.companies.includes(app.company)) row.companies.push(app.company);
       map.set(entry.code, row);
     }
@@ -72,11 +78,12 @@ const ranked = (items: string[], limit: number) => {
 };
 
 /** The chapter's narrative, one string per paragraph. */
-export function companyChapterNarrative(ds: P47Dataset): string[] {
+export function companyChapterNarrative(ds: Pick<P47Dataset, "applications" | "period">, scheme: ChapterScheme = "konsumsi"): string[] {
+  const { subject, basis, kbli: allowed } = SCHEMES[scheme];
   const apps = ds.applications;
   const period = `${fdLong(ds.period.from)} sampai dengan ${fdLong(ds.period.to)}`;
   if (apps.length === 0) {
-    return [`Pada periode ${period} belum terdapat Perusahaan API-U yang mengajukan VIU Produk Tekstil sebagai Barang Konsumsi, sehingga bab ini tidak memuat data perusahaan.`];
+    return [`Pada periode ${period} belum terdapat Perusahaan API-U yang mengajukan VIU ${subject}, sehingga bab ini tidak memuat data perusahaan.`];
   }
 
   const companies = uniq(apps.map((a) => a.companyId ?? a.company));
@@ -84,17 +91,17 @@ export function companyChapterNarrative(ds: P47Dataset): string[] {
   const paragraphs: string[] = [];
 
   paragraphs.push(
-    `Bab ini menyajikan profil Perusahaan API-U yang mengajukan VIU Produk Tekstil sebagai Barang Konsumsi pada periode ${period}. Pada periode tersebut tercatat ${withWords(companies.length)} Perusahaan API-U dengan ${withWords(apps.length)} permohonan; satu permohonan hanya mewakili satu jenis impor. Permohonan diajukan sejak ${fdLong(dates[0])}${dates.length > 1 && dates[dates.length - 1] !== dates[0] ? ` hingga ${fdLong(dates[dates.length - 1])}` : ""}. Data bersumber dari profil perusahaan dan data permohonan yang disampaikan melalui sistem.`,
+    `Bab ini menyajikan profil Perusahaan API-U yang mengajukan VIU ${subject} pada periode ${period}. Pada periode tersebut tercatat ${withWords(companies.length)} Perusahaan API-U dengan ${withWords(apps.length)} permohonan; satu permohonan hanya mewakili satu jenis impor. Permohonan diajukan sejak ${fdLong(dates[0])}${dates.length > 1 && dates[dates.length - 1] !== dates[0] ? ` hingga ${fdLong(dates[dates.length - 1])}` : ""}. Data bersumber dari profil perusahaan dan data permohonan yang disampaikan melalui sistem.`,
   );
 
-  const kbli = kbliRows(apps);
-  const matching = apps.filter((a) => a.kbli.some((k) => allowedKbli.has(k.code))).length;
+  const kbli = kbliRows(apps, scheme);
+  const matching = apps.filter((a) => a.kbli.some((k) => allowed.has(k.code))).length;
   if (kbli.length === 0) {
     paragraphs.push("Belum ada KBLI Utama yang tercatat pada profil perusahaan yang diverifikasi.");
   } else {
     const top = kbli.slice(0, 4).map((r) => `${r.code} (${r.description.toLowerCase()}) pada ${r.companies.length} perusahaan`);
     paragraphs.push(
-      `Dari sisi kegiatan usaha, KBLI Utama yang tercatat adalah ${joinId(top)}. Sesuai Pasal 37 ayat (2) huruf c angka 2 huruf b Peraturan Menteri Perindustrian Nomor 27 Tahun 2025, Perusahaan API-U yang mengimpor Produk Tekstil sebagai barang konsumsi harus memiliki KBLI Utama di bidang perdagangan besar; ${matching} dari ${apps.length} perusahaan memiliki KBLI Utama yang termasuk dalam daftar tersebut${matching === apps.length ? "." : `, sedangkan ${apps.length - matching} perusahaan lainnya perlu dikonfirmasi kesesuaiannya.`}`,
+      `Dari sisi kegiatan usaha, KBLI Utama yang tercatat adalah ${joinId(top)}. Sesuai ${basis} Peraturan Menteri Perindustrian Nomor 27 Tahun 2025, Perusahaan API-U yang mengimpor ${subject.toLowerCase()} harus memiliki KBLI Utama di bidang perdagangan besar; ${matching} dari ${apps.length} perusahaan memiliki KBLI Utama yang termasuk dalam daftar tersebut${matching === apps.length ? "." : `, sedangkan ${apps.length - matching} perusahaan lainnya perlu dikonfirmasi kesesuaiannya.`}`,
     );
   }
 
@@ -112,7 +119,7 @@ export function companyChapterNarrative(ds: P47Dataset): string[] {
   const gudangCities = ranked(gudang.map((p) => p.city || UNKNOWN), 5);
   paragraphs.push(
     gudang.length
-      ? `Perusahaan API-U melaporkan ${withWords(gudang.length)} gudang yang digunakan untuk menyimpan Produk Tekstil, berada di ${joinId(gudangCities.map(([c, n]) => `${c} (${n})`))}; ${withGudang} dari ${apps.length} perusahaan memiliki sedikitnya satu gudang. ${ownershipSentence("gudang", ownershipSplit(gudang), gudang.length)} Kapasitas dan stok setiap gudang dibahas pada Bab Persediaan dan Gudang.`
+      ? `Perusahaan API-U melaporkan ${withWords(gudang.length)} gudang yang digunakan untuk menyimpan barang impor, berada di ${joinId(gudangCities.map(([c, n]) => `${c} (${n})`))}; ${withGudang} dari ${apps.length} perusahaan memiliki sedikitnya satu gudang. ${ownershipSentence("gudang", ownershipSplit(gudang), gudang.length)} Kapasitas dan stok setiap gudang dibahas pada Bab Persediaan dan Gudang.`
       : "Belum ada lokasi gudang yang tercatat pada permohonan.",
   );
 

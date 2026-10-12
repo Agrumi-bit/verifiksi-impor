@@ -30,7 +30,7 @@ const REGISTRATION_LABEL: Record<string, string> = { TANDA_DAFTAR_GUDANG: "TDG",
 
 type VisitLike = { companyLocationId: string | null; locationType: string; address: string; officeVerification: unknown; warehouseVerification: unknown };
 
-function place(loc: Partial<LocationValues> | undefined, visits: VisitLike[] = []): P47Place {
+export function place(loc: Partial<LocationValues> | undefined, visits: VisitLike[] = []): P47Place {
   // The surveyor's visit for this location: by its Company.locations id, else by type + street.
   const visit = visits.find((v) => v.companyLocationId && (v.companyLocationId === loc?.id || v.companyLocationId === loc?.companyLocationId))
     ?? visits.find((v) => v.locationType === loc?.locationType && !!loc?.address && v.address.startsWith(loc.address));
@@ -56,7 +56,7 @@ function place(loc: Partial<LocationValues> | undefined, visits: VisitLike[] = [
 }
 
 /** Where a review left a document: the latest version's verification status per field key. */
-function docStatusLabel(s: string | undefined): Status {
+export function docStatusLabel(s: string | undefined): Status {
   if (s === "VERIFIED") return status("Terverifikasi", "ok");
   if (s === "REJECTED") return status("Ditolak", "bad");
   if (s === "NEED_REVISION") return status("Perlu Revisi", "warn");
