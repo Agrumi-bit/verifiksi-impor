@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { VkiModule } from "@/modules/project-manager-workspace/pasal47/vki/components/vki-module";
 
@@ -10,7 +11,10 @@ export const metadata: Metadata = {
 export default function ProjectManagerVkiKemenperinPage() {
   return (
     <div className="p-8">
-      <VkiModule />
+      {/* VkiModule reads the period from the URL (useSearchParams), which a statically prerendered page must wrap in Suspense. */}
+      <Suspense>
+        <VkiModule />
+      </Suspense>
     </div>
   );
 }
