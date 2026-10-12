@@ -992,3 +992,32 @@
     padding-right: 20px;
   }
 }
+
+/* Laporan Pelaksanaan VIU (Pasal 47): its sheets carry their own 40px/48px padding on top of the
+   A4 width/min-height (content-box), so on screen a sheet is 890x1203 px (portrait) or 1219x874 px
+   (landscape). Printed as is, the sheet overflows the A4 page: wide sheets are clipped left and
+   right and the footer spills onto an extra page. Scale each sheet down to exactly one A4 page,
+   keeping the on-screen layout (and pagination) unchanged. */
+@media print {
+  /* Chrome lays the print out at the portrait page width; centring would push the wider landscape
+     sheets off the left edge. */
+  .report-doc .rd-main:has(> .rd-p47) {
+    align-items: flex-start;
+  }
+  .report-doc .rd-sheet.rd-p47 {
+    zoom: 0.892;
+    width: 210mm;
+    max-width: none;
+    min-height: 0;
+    height: calc(297mm / 0.892 - 80px);
+  }
+  .report-doc .rd-sheet.rd-p47.rd-sheet-landscape {
+    zoom: 0.908;
+    width: calc(297mm / 0.908 - 96px);
+    height: calc(210mm / 0.908 - 80px);
+  }
+  .report-doc .rd-sheet.rd-p47.rd-p47-cover {
+    zoom: 0.876;
+    height: calc(297mm / 0.876 - 96px);
+  }
+}

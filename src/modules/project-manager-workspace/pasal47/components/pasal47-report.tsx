@@ -203,7 +203,7 @@ function planPages(sections: ExportSection[], companyRows: (string | number)[][]
 function Shell({ pageNo, total, landscape, dark, label, id, children }: { pageNo: number; total: number; landscape?: boolean; dark?: boolean; label?: string; id?: string; children: ReactNode }) {
   return (
     <section
-      className={landscape ? "rd-sheet rd-sheet-landscape" : "rd-sheet"}
+      className={landscape ? "rd-sheet rd-sheet-landscape rd-p47" : "rd-sheet rd-p47"}
       id={id}
       style={{ background: dark ? NAVY : CREAM, color: dark ? "#fff" : INK, padding: "40px 48px", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}
     >
@@ -1594,7 +1594,7 @@ export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
         </div>
       </div>
       <main className="rd-main">
-        <section className="rd-sheet" style={{ background: NAVY, color: "#fff", position: "relative", padding: "48px 56px", display: "flex", flexDirection: "column" }}>
+        <section className="rd-sheet rd-p47 rd-p47-cover" style={{ background: NAVY, color: "#fff", position: "relative", padding: "48px 56px", display: "flex", flexDirection: "column" }}>
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 6, background: ORANGE_LIGHT }} />
           <PageHead dark />
           <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 18 }}>
