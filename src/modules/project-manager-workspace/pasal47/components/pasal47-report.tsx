@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
 import { MaterialIcon } from "../../components/material-icon";
+import { PdfDownloadButton } from "./pdf-download-button";
 import {
   Badge, CARD_BORDER, CREAM, Eyebrow, GREEN, INK, MUTED, MUTED_2, NAVY, ORANGE, ORANGE_LIGHT, ORANGE_TEXT, PageHead,
 } from "@/modules/verifikator-workspace/components/report/document-verification-report";
@@ -1607,7 +1608,7 @@ export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
         </div>
         <div className="rd-topbar-actions">
           <button type="button" className="rd-btn" onClick={() => window.print()}><MaterialIcon name="print" className="text-[16px]" />Cetak</button>
-          <button type="button" className="rd-btn rd-btn-primary" onClick={() => window.print()}><MaterialIcon name="download" className="text-[16px]" />Unduh PDF</button>
+          <PdfDownloadButton scheme="konsumsi" periodKey={period.key} />
         </div>
       </div>
       <main className="rd-main">

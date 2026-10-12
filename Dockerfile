@@ -28,9 +28,11 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 # Ghostscript builds the compressed viewing copies of large scanned PDFs (src/lib/pdf-preview.ts).
+# Chromium prints the Laporan Pelaksanaan VIU to PDF for "Unduh PDF" (src/lib/html-to-pdf.server.ts).
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ghostscript \
+  && apt-get install -y --no-install-recommends ghostscript chromium fonts-liberation \
   && rm -rf /var/lib/apt/lists/*
+ENV CHROMIUM_PATH=/usr/bin/chromium
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
