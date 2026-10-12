@@ -86,6 +86,23 @@ const rowsPerPage = (t: ExportTable, landscape: boolean) => {
 };
 
 const chunk = <T,>(rows: T[], size: number): T[][] => (rows.length ? Array.from({ length: Math.ceil(rows.length / size) }, (_, i) => rows.slice(i * size, (i + 1) * size)) : [[]]);
+/** Splits rows into pages by estimated row height (px) so long, wrapping text does not overflow the sheet. */
+const chunkByHeight = <T,>(rows: T[], budget: number, height: (row: T) => number): T[][] => {
+  const pages: T[][] = [];
+  let page: T[] = [];
+  let used = 0;
+  for (const r of rows) {
+    const h = height(r);
+    if (page.length && used + h > budget) { pages.push(page); page = []; used = 0; }
+    page.push(r);
+    used += h;
+  }
+  if (page.length || !pages.length) pages.push(page);
+  return pages;
+};
+const textLen = (v: string | number | undefined) => String(v ?? "").length;
+/** Tabel 2.2 (landscape): ~15 px per text line plus cell padding; Uraian Barang wraps at ~120 characters, Kelompok Komoditas at ~22. */
+const hsRowHeight = (r: (string | number)[]) => 11 + 15 * Math.max(1, Math.ceil(textLen(r[1]) / 120), Math.ceil(textLen(r[2]) / 22));
 
 /** The tables a chapter still prints from the export model (chapters without their own figures yet). */
 function chapterTables(no: string, sections: ExportSection[]): ExportTable[] {
@@ -112,7 +129,7 @@ function planPages(sections: ExportSection[], companyRows: (string | number)[][]
     }
     if (chapter.no === "8.3") {
       plan.push({ kind: "bab2", part: 1 }, { kind: "bab2", part: 2 }, { kind: "bab2", part: 3 });
-      const hs = chunk(b2.hsTable, 16);
+      const hs = chunkByHeight(b2.hsTable, 560, hsRowHeight);
       hs.forEach((rows, i) => plan.push({ kind: "bab2hs", rows, part: i + 1, parts: hs.length }));
       plan.push({ kind: "bab2", part: 4 }, { kind: "bab2", part: 5 });
       const co = chunk(b2.companyTable, 16);
@@ -134,7 +151,7 @@ function planPages(sections: ExportSection[], companyRows: (string | number)[][]
         parts.forEach((r, i) => plan.push({ kind: "bab4tbl", table, rows: r, part: i + 1, parts: parts.length }));
       };
       plan.push({ kind: "bab4", part: 1 }, { kind: "bab4", part: 2 }, { kind: "bab4", part: 3 }, { kind: "bab4", part: 4 }, { kind: "bab4", part: 5 });
-      push("pairs", b4.pairTable, 12);
+      push("pairs", b4.pairTable, 10);
       plan.push({ kind: "bab4", part: 6 });
       push("brands", b4.brandTable, 12);
       plan.push({ kind: "bab4", part: 7 });
@@ -1421,7 +1438,7 @@ export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
                     ].map((d) => (
                       <div key={d.cap} style={{ display: "grid", gap: 6 }}>
                         <div style={{ fontSize: 11, fontWeight: 700 }}>{d.cap}</div>
-                        <Donut size={84} center={String(d.center)} sub={d.sub} segs={segs(d.rows)} />
+                        <Donut size={72} center={String(d.center)} sub={d.sub} segs={segs(d.rows)} />
                       </div>
                     ))}
                   </div>
@@ -1429,11 +1446,11 @@ export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
                 <SubHead num="9.4" title="Luas Gudang dan Keterkaitan dengan Rencana Impor" />
                 {b9.sub94.map((t) => <Para key={t}>{t}</Para>)}
                 <Figure num="9.7" title="Distribusi Luas Gudang" source={`${SOURCE}. Luas total terukur pada verifikasi lapangan.`}>
-                  <ColumnChart items={b9.areaBuckets} height={120} />
+                  <ColumnChart items={b9.areaBuckets} height={96} />
                 </Figure>
                 {dense.length > 0 && (
                   <Figure num="9.8" title={`Rencana Volume Impor per m² Luas Gudang (${b9.unit}/m²)`} source={`${SOURCE}. Rencana volume dalam ${b9.unit} dibagi luas gudang terukur; keterangan: luas dan rencana volume.`}>
-                    <HBarList keyWidth={200} rows={dense.slice(0, 8).map((r) => ({ key: r.company, desc: `${nf(Math.round(r.area ?? 0))} m² · ${nf(Math.round(r.plan))} ${b9.unit}`, value: Math.round(r.perArea ?? 0) }))} />
+                    <HBarList keyWidth={200} rows={dense.slice(0, 7).map((r) => ({ key: r.company, desc: `${nf(Math.round(r.area ?? 0))} m² · ${nf(Math.round(r.plan))} ${b9.unit}`, value: Math.round(r.perArea ?? 0) }))} />
                   </Figure>
                 )}
               </Shell>

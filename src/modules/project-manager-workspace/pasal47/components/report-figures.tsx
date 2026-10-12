@@ -210,9 +210,9 @@ export function RankColumns({ cols }: { cols: { title: string; color: string; fo
               <div style={{ fontSize: 12, color: MUTED_2, padding: "6px 0" }}>Tidak ada data.</div>
             )}
             {rest.map((r, i) => (
-              <div key={r.key} style={{ display: "flex", gap: 8, padding: "5px 0", borderTop: `1px solid ${CARD_BORDER}` }}>
+              <div key={r.key} style={{ display: "flex", gap: 8, padding: "3px 0", borderTop: `1px solid ${CARD_BORDER}` }}>
                 <span style={{ width: 18, flex: "none", fontSize: 10.5, fontWeight: 800, color: MUTED_2 }}>{i + 2}</span>
-                <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
                   <span style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 11.5 }}>
                     <b>{r.key}</b>
                     <em style={{ fontStyle: "normal", fontWeight: 700, whiteSpace: "nowrap" }}>{c.format(r.value)}</em>
@@ -449,15 +449,15 @@ export function StackBars({ rows, segments, format }: { rows: { label: string; p
 /** Profile cards (one per country): headline figures, top pos tarif and top importers. */
 export function ProfileCards({ cards }: { cards: { rank: number; title: string; sub: string; kpis: [string, string][]; listA: { title: string; rows: [string, string][] }; listB: { title: string; rows: [string, string][] } }[] }) {
   return (
-    <div style={{ display: "grid", gap: 10 }}>
+    <div style={{ display: "grid", gap: 8 }}>
       {cards.map((c) => (
-        <div key={c.title} style={{ border: `1px solid ${CARD_BORDER}`, borderRadius: 12, padding: "10px 14px", breakInside: "avoid" }}>
+        <div key={c.title} style={{ border: `1px solid ${CARD_BORDER}`, borderRadius: 12, padding: "8px 14px", breakInside: "avoid" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ width: 26, height: 26, borderRadius: 13, background: "#b4561a", color: "#fff", display: "grid", placeItems: "center", fontWeight: 800, fontSize: 12 }}>{c.rank}</span>
             <span><b style={{ fontSize: 14, display: "block" }}>{c.title}</b><span style={{ fontSize: 10.5, color: MUTED }}>{c.sub}</span></span>
           </div>
           {/* minmax(0, …) + minWidth 0: long HS descriptions must ellipsize, not widen the card past the page. */}
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${c.kpis.length}, minmax(0, 1fr))`, gap: 6, marginTop: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${c.kpis.length}, minmax(0, 1fr))`, gap: 6, marginTop: 6 }}>
             {c.kpis.map(([v, l]) => (
               <div key={l} style={{ border: `1px solid ${CARD_BORDER}`, borderRadius: 8, padding: "5px 8px", minWidth: 0 }}>
                 <b style={{ fontSize: 13, display: "block", fontVariantNumeric: "tabular-nums" }}>{v}</b>
@@ -465,7 +465,7 @@ export function ProfileCards({ cards }: { cards: { rank: number; title: string; 
               </div>
             ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)", gap: 14, marginTop: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)", gap: 14, marginTop: 6 }}>
             {[c.listA, c.listB].map((list) => (
               <div key={list.title} style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: ORANGE_TEXT, marginBottom: 3 }}>{list.title.toUpperCase()}</div>

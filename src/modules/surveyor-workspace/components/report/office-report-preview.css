@@ -997,7 +997,12 @@
    A4 width/min-height (content-box), so on screen a sheet is 890x1203 px (portrait) or 1219x874 px
    (landscape). Printed as is, the sheet overflows the A4 page: wide sheets are clipped left and
    right and the footer spills onto an extra page. Scale each sheet down to exactly one A4 page,
-   keeping the on-screen layout (and pagination) unchanged. */
+   keeping the on-screen layout (and pagination) unchanged. The page layout is designed for
+   content-box sizing; the app's global border-box reset would otherwise take the padding out of
+   the A4 area. */
+.report-doc .rd-sheet.rd-p47 {
+  box-sizing: content-box;
+}
 @media print {
   /* Chrome lays the print out at the portrait page width; centring would push the wider landscape
      sheets off the left edge. */
