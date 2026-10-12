@@ -19,6 +19,8 @@ export type P47Place = {
   leaseEnd?: string;
   /** Luas total (m²) measured by the surveyor during verifikasi lapangan; null when not measured. */
   area?: number | null;
+  /** Kapasitas efektif (m³) from the surveyor's gudang report: luas digunakan × tinggi efektif × utilisasi aman. */
+  capacity?: number | null;
   /** Kesimpulan verifikasi lapangan by the surveyor: "Sesuai" | "Tidak Sesuai" | "" when not concluded. */
   fieldConclusion?: string;
 };

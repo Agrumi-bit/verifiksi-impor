@@ -241,7 +241,7 @@ export function bab1(ds: P47Dataset): Bab1 {
     "KBLI yang dinilai adalah KBLI Utama pada profil perusahaan di sistem; KBLI pada dokumen perizinan yang tidak dicatat di profil tidak ikut dihitung.",
     "Bulan terbit dan masa berlaku LHVIU dihitung dari Nomor dan Tanggal Terbit yang dicatat Project Manager pada tab LHVIU, bukan dari tanggal unggah file.",
     "Masa berlaku dihitung 1 (satu) tahun sejak tanggal terbit tanpa memperhitungkan LHVIU yang dinyatakan tidak berlaku karena terbitnya LHVIU baru.",
-    "Permohonan dihitung bila Tanggal Pengajuan berada dalam periode laporan; draf dan permohonan yang ditarik tidak dihitung.",
+    "Permohonan dihitung bila Tanggal Terbit LHVIU berada dalam periode laporan, atau Tanggal Pengajuan bila tanggal terbit belum dicatat; draf dan permohonan yang ditarik tidak dihitung.",
   ];
 
   return { highlights, sub11, sub12, sub13, limits, months, kbli, companyRows };
@@ -300,7 +300,7 @@ export function chapterDivider(no: string, ds: P47Dataset, report: P47Report): D
     case "8.8": {
       const b = bab6(ds);
       return {
-        lead: `Persediaan Produk Tekstil yang dilaporkan ${b.companies.length} Perusahaan API-U per product line dan perbandingannya dengan rencana impor, serta analisis kapasitas gudang oleh Technical Analyst.`,
+        lead: `Persediaan Produk Tekstil yang dilaporkan ${b.companies.length} Perusahaan API-U per product line dan perbandingannya dengan rencana impor, serta luas dan kapasitas gudang menurut laporan survei gudang.`,
         scope: ["Ringkasan persediaan", "Persediaan per perusahaan", "Persediaan menurut kelompok komoditas", "Kapasitas gudang", "Rincian per perusahaan"],
         stats: [[nf(ds.lines.length), "PRODUCT LINE"], [ds.lines.length ? pct1(b.zero.length, ds.lines.length) : "—", "LINE STOK NOL"], [nf(Math.round(b.stockByUnit[0] ?? 0)), `PERSEDIAAN ${b.unit.toUpperCase()}`], [n(b.companies.filter((c) => c.stocked === 0).length), "API-U TANPA STOK"]],
       };

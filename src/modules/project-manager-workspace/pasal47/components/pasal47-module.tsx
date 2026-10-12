@@ -155,7 +155,7 @@ export function Pasal47Module() {
         <button className="btn" type="button" onClick={() => go("export")}><MaterialIcon name="download" className="text-[16px]" />Export</button>
         <button className="btn" type="button" onClick={() => { go("export"); toast.info("Pilih bagian laporan, lalu Cetak / Simpan PDF."); }}><MaterialIcon name="print" className="text-[16px]" />Print</button>
         <button className="btn" type="button" onClick={() => refetch()} disabled={isFetching}><MaterialIcon name="refresh" className="text-[16px]" />{isFetching ? "Memuat…" : "Refresh"}</button>
-        <button className="btn" type="button" onClick={() => setDrawer({ title: "Data Sumber", sub: "Asal data pada modul ini", body: <><Mini head={["Bagian", "Sumber"]} rows={SOURCES} /><p style={{ color: "var(--ink-2)" }}>Permohonan dihitung bila Tanggal Pengajuan berada dalam periode; draf dan permohonan yang ditarik tidak dihitung. Diperbarui {data ? new Date(data.dataset.generatedAt).toLocaleString("id-ID") : "—"}.</p></> })}>Lihat Data Sumber</button>
+        <button className="btn" type="button" onClick={() => setDrawer({ title: "Data Sumber", sub: "Asal data pada modul ini", body: <><Mini head={["Bagian", "Sumber"]} rows={SOURCES} /><p style={{ color: "var(--ink-2)" }}>Permohonan dihitung bila Tanggal Terbit LHVIU berada dalam periode, atau Tanggal Pengajuan bila tanggal terbit belum dicatat; draf dan permohonan yang ditarik tidak dihitung. Diperbarui {data ? new Date(data.dataset.generatedAt).toLocaleString("id-ID") : "—"}.</p></> })}>Lihat Data Sumber</button>
       </div>
 
       <div className="filterbar">

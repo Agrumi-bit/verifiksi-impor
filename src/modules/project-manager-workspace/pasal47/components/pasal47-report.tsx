@@ -39,7 +39,7 @@ const SECTION_INTRO: Record<string, string> = {
   "8.5": "Bab ini menganalisis struktur merek dalam rencana impor dengan alur: merek apa yang diajukan, siapa pemiliknya, apakah merek lokal atau luar negeri, status pendaftarannya, siapa pemohon VIU, apa hubungan pemohon dengan pemilik merek beserta dokumen dasarnya, kelas merek, serta besaran rencana volume dan nilai yang terkait. Hubungan antara pemohon VIU dan pemilik merek menjadi fokus utama analisis.",
   "8.6": "Pemilik merek, perwakilan resmi, dan bukti merek (sertifikat atau tanda pendaftaran) beserta masa berlakunya pada akhir periode.",
   "8.7": "Bab ini menilai bukti pemenuhan persyaratan teknis yang dilampirkan Perusahaan API-U, yaitu Sertifikat Hasil Uji Mutu per merek dan sub kelompok komoditas serta Surat Pernyataan Pemenuhan Ketentuan Label Berbahasa Indonesia: cakupannya terhadap product line rencana impor, status hasil verifikasi, laboratorium penguji, masa berlaku, dan batas pengajuan 6 bulan sejak terbit.",
-  "8.8": "Bab ini menyajikan persediaan (stok) Produk Tekstil yang dilaporkan Perusahaan API-U per product line pada saat pengajuan, perbandingannya dengan rencana impor, serta kecukupan kapasitas gudang sebagaimana dinilai Technical Analyst.",
+  "8.8": "Bab ini menyajikan persediaan (stok) Produk Tekstil yang dilaporkan Perusahaan API-U per product line pada saat pengajuan, perbandingannya dengan rencana impor, serta luas dan kapasitas gudang menurut laporan survei gudang.",
   "8.9": "Bab ini membandingkan modal operasi Pemohon VIU, yaitu Jumlah Modal Kerja yang dinyatakan perusahaan, dengan rencana nilai impor yang diajukan, beserta rasio rencana impor terhadap modal operasi dan penilaian modal oleh Technical Analyst.",
   "8.10": "Bab ini mengukur tingkat konsentrasi rencana nilai impor menurut Pemohon VIU, pemilik merek, merek, pos tarif/HS, negara asal, dan kelompok komoditas menggunakan rasio konsentrasi (CR) dan Herfindahl-Hirschman Index (HHI).",
   "8.11": "Rencana kebutuhan impor per bulan menurut tanggal pengajuan permohonan, per satuan. Data realisasi impor belum tersedia pada sistem.",
@@ -96,7 +96,7 @@ function chapterTables(no: string, sections: ExportSection[]): ExportTable[] {
 /** Page plan, following the reference report: front matter, ten chapters each opened by a divider, closing pages. */
 const SHARED_INLINE = 8;
 const STORAGE_INLINE = 12;
-const STORAGE_HEADERS = ["Perusahaan", "Kota Gudang", "Kapasitas (m³)", "Stok Terkini (m³)", "Volume Pengajuan (m³)", "Kapasitas Terpakai", "Keputusan Analis"];
+const STORAGE_HEADERS = ["Perusahaan", "Kota Gudang", "Luas Gudang (m²)", "Kapasitas Gudang (m³)"];
 const SHARED_HEADERS = ["Merek", "Pemilik Merek", "Perusahaan API-U", "Nomor LHVIU", "Product Line", "Rencana Nilai (Rp)"];
 
 function planPages(sections: ExportSection[], companyRows: (string | number)[][], b2: { hsTable: (string | number)[][]; companyTable: (string | number)[][] }, b3: { countryTable: (string | number)[][]; companyTable: (string | number)[][] }, b4: { pairTable: (string | number)[][]; brandTable: (string | number)[][]; shared: (string | number)[][]; validityRows: (string | number)[][] }, b5: { companyTable: (string | number)[][]; certTable: (string | number)[][] }, b6: { storageTable: (string | number)[][]; companyTable: (string | number)[][] }, b7: { table: (string | number)[][]; withModal: unknown[] }, b9: { table: (string | number)[][] }, b10: { analyticTable: (string | number)[][]; recordedTable: (string | number)[][] }): Plan[] {
@@ -1134,20 +1134,20 @@ export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
               </Shell>
             );
           default: {
-            const analysed = b6.storage.filter((s) => s.used !== null);
+            const withCapacity = b6.storage.filter((s) => s.capacity !== null);
             return (
               <Shell key={i} pageNo={n} total={total}>
                 {cont}
                 <SubHead num="6.4" title="Kapasitas Gudang" />
                 {b6.sub64.map((t) => <Para key={t}>{t}</Para>)}
-                {analysed.length > 0 && (
-                  <Figure num="6.4" title="Kapasitas Gudang Terpakai per Permohonan" source={`${SOURCE}. (Stok terkini + volume pengajuan impor) ÷ kapasitas gudang, dari analisis Technical Analyst. Angka di kanan: kapasitas terpakai (%).`}>
-                    <HBarList keyWidth={200} rows={analysed.slice(0, 12).map((s) => ({ key: s.company, desc: `${(s.used ?? 0) > 1 ? "Melebihi kapasitas · " : ""}${nf(Math.round(((s.stock ?? 0) + (s.plan ?? 0)) * 100) / 100)} dari ${nf(s.capacity ?? 0)} m³ · ${s.decision}`, value: Math.round((s.used ?? 0) * 100) }))} />
+                {withCapacity.length > 0 && (
+                  <Figure num="6.4" title="Kapasitas Gudang per Permohonan (m³)" source={`${SOURCE}. Kapasitas efektif dari laporan survei gudang; keterangan: luas gudang dan kota.`}>
+                    <HBarList keyWidth={200} rows={withCapacity.slice(0, 12).map((s) => ({ key: s.company, desc: `${s.area !== null ? `${nf(Math.round(s.area))} m²` : "luas belum dicatat"} · ${s.city}`, value: Math.round(s.capacity ?? 0) }))} />
                   </Figure>
                 )}
                 {b6.storageTable.length <= STORAGE_INLINE && (
                   <>
-                    <TableCaption num="6.1" title="Kapasitas Gudang menurut Analisis Technical Analyst" />
+                    <TableCaption num="6.1" title="Luas dan Kapasitas Gudang menurut Laporan Survei Gudang" />
                     <DataTable table={{ headers: STORAGE_HEADERS, rows: b6.storageTable }} rows={b6.storageTable} />
                     <div style={{ fontSize: 10, color: MUTED_2, marginTop: 6 }}>Sumber: {SOURCE} · {b6.storageTable.length} baris</div>
                   </>
@@ -1159,7 +1159,7 @@ export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
       }
       case "bab6tbl": {
         const spec = {
-          storage: { num: "6.1", sub: "6.4", title: "Kapasitas Gudang menurut Analisis Technical Analyst", headers: STORAGE_HEADERS, all: b6.storageTable, landscape: false },
+          storage: { num: "6.1", sub: "6.4", title: "Luas dan Kapasitas Gudang menurut Laporan Survei Gudang", headers: STORAGE_HEADERS, all: b6.storageTable, landscape: false },
           company: { num: "6.2", sub: "6.5", title: "Persediaan dan Rencana Impor per Perusahaan API-U", headers: b6.companyHeaders, all: b6.companyTable, landscape: true },
         }[p.table];
         return (
@@ -1412,10 +1412,18 @@ export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
             return (
               <Shell key={i} pageNo={n} total={total}>
                 {cont}
-                <Figure num="9.6" title="Legalitas Gudang dan Kesimpulan Verifikasi Lapangan" source={`${SOURCE}. Tanda daftar gudang per gudang; kesimpulan surveyor per lokasi kantor dan gudang.`}>
+                <Figure num="9.6" title="Legalitas Gudang dan Kesimpulan Verifikasi Lapangan" source={`${SOURCE}. Tanda daftar per gudang; kesimpulan surveyor dihitung terpisah untuk lokasi gudang dan lokasi kantor.`}>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                    <Donut size={96} center={String(b9.gudang.length)} sub="gudang" segs={segs(b9.registrations)} />
-                    <Donut size={96} center={String(b9.kantor.length + b9.gudang.length)} sub="lokasi" segs={segs(b9.conclusions)} />
+                    {[
+                      { cap: "Legalitas gudang", center: b9.gudang.length, sub: "gudang", rows: b9.registrations },
+                      { cap: "Kesimpulan verifikasi lapangan gudang", center: b9.gudang.length, sub: "gudang", rows: b9.conclusions.gudang },
+                      { cap: "Kesimpulan verifikasi lapangan kantor", center: b9.kantor.length, sub: "kantor", rows: b9.conclusions.kantor },
+                    ].map((d) => (
+                      <div key={d.cap} style={{ display: "grid", gap: 6 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700 }}>{d.cap}</div>
+                        <Donut size={84} center={String(d.center)} sub={d.sub} segs={segs(d.rows)} />
+                      </div>
+                    ))}
                   </div>
                 </Figure>
                 <SubHead num="9.4" title="Luas Gudang dan Keterkaitan dengan Rencana Impor" />

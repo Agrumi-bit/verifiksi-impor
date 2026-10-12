@@ -31,16 +31,25 @@ describe("Bab 6 Persediaan", () => {
     assert.equal(b.companies[0].ratio, 0.05);
     assert.equal(b.companies[0].warehouses, 2);
   });
-  it("reads the Technical Analyst's kapasitas gudang (stok + rencana ÷ kapasitas)", () => {
-    const b = bab6(ds);
+  it("reads luas and kapasitas gudang from the surveyor's gudang report", () => {
+    const withGudang: P47Dataset = {
+      ...ds,
+      applications: [
+        { id: "A", applicationNumber: "APP-A", companyId: "A", company: "PT A", nib: "", kbli: [], submittedAt: "2026-01-01", status: "SUBMITTED", lhviu: null, kantor: null,
+          gudang: [{ address: "", city: "BEKASI", province: "", ownership: "", area: 500, capacity: 1200 }, { address: "", city: "BEKASI", province: "", ownership: "", area: 300, capacity: null }] },
+        { id: "B", applicationNumber: "APP-B", companyId: "B", company: "PT B", nib: "", kbli: [], submittedAt: "2026-01-01", status: "SUBMITTED", lhviu: null, kantor: null, gudang: [] },
+      ],
+    };
+    const b = bab6(withGudang);
     assert.equal(b.storage[0].company, "PT A");
-    assert.equal(b.storage[0].used, 1.2);
-    assert.equal(b.storage[1].used, null);
-    assert.equal(b.storageTable[0][5], "120%");
+    assert.equal(b.storage[0].area, 800);
+    assert.equal(b.storage[0].capacity, 1200);
+    assert.equal(b.storage[1].capacity, null);
+    assert.deepEqual(b.storageTable[0], ["PT A", "BEKASI", "800", "1.200"]);
   });
   it("keeps table widths in step with the headers", () => {
     const b = bab6(ds);
     for (const r of b.companyTable) assert.equal(r.length, b.companyHeaders.length);
-    for (const r of b.storageTable) assert.equal(r.length, 7);
+    for (const r of b.storageTable) assert.equal(r.length, 4);
   });
 });

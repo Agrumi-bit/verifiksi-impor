@@ -32,7 +32,7 @@ describe("Bab 9 Fasilitas & Lokasi", () => {
     assert.equal(b.gudang.length, 2);
     assert.deepEqual(b.ownership.gudang, [{ label: "Milik Sendiri", value: 1 }, { label: "Sewa", value: 1 }]);
     assert.deepEqual(b.registrations, [{ label: "TDG", value: 1 }, { label: "Tidak diisi", value: 1 }]);
-    assert.equal(b.conclusions.find((c) => c.label === "Tidak Sesuai")?.value, 1);
+    assert.equal([...b.conclusions.kantor, ...b.conclusions.gudang].find((c) => c.label === "Tidak Sesuai")?.value, 1);
     assert.equal(b.kantorProvinces[0].province, "DKI Jakarta");
     assert.deepEqual(b.leaseEnding.map((l) => l.leaseEnd), ["2026-12-31"]);
   });

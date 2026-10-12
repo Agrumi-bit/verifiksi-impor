@@ -12,7 +12,8 @@ import type { P47Dataset, P47Line } from "./types";
 const pct1 = (part: number, total: number) => (total > 0 ? (part > 0 && (part / total) * 100 < 0.05 ? "<0,1%" : `${((part / total) * 100).toFixed(1).replace(".", ",")}%`) : "0%");
 const qtyIn = (ls: P47Line[], unit: string, f: (l: P47Line) => number) => sum(ls.filter((l) => l.unit === unit).map(f));
 
-export type StorageRow = { company: string; city: string; capacity: number | null; stock: number | null; plan: number | null; used: number | null; decision: string };
+/** Gudang of one permohonan as measured in the surveyor's gudang report (luas m², kapasitas efektif m³). */
+export type StorageRow = { company: string; city: string; gudang: number; area: number | null; capacity: number | null };
 
 export type Bab6 = {
   units: string[];
@@ -59,32 +60,36 @@ export function bab6(ds: P47Dataset): Bab6 {
     return { kelompok, lines: ls.length, stocked: ls.filter((l) => l.stock > 0).length, stock: qtyIn(ls, unit, (l) => l.stock), other };
   }).sort((a, b) => b.stock - a.stock || b.lines - a.lines);
 
-  // Kapasitas Gudang analysis: the Technical Analyst's figures sit on the application's first gudang.
+  // Luas and kapasitas gudang from the surveyor's gudang report (verifikasi lapangan), summed per permohonan.
   const appsWithLines = uniq(lines.map((l) => l.applicationId));
+  const appById = new Map(ds.applications.map((a) => [a.id, a]));
+  const sumOrNull = (vals: (number | null | undefined)[]) => {
+    const xs = vals.filter((v): v is number => typeof v === "number" && v > 0);
+    return xs.length ? sum(xs) : null;
+  };
   const storage: StorageRow[] = appsWithLines.map((appId) => {
-    const ws = ds.warehouses.filter((w) => w.applicationId === appId);
-    const w = ws.find((x) => x.capacity !== null || x.analystStock !== null || x.analystPlan !== null) ?? ws[0];
-    const capacity = w?.capacity ?? null;
-    const stock = w?.analystStock ?? null;
-    const plan = w?.analystPlan ?? null;
+    const gudang = appById.get(appId)?.gudang ?? [];
     return {
-      company: lines.find((l) => l.applicationId === appId)?.company ?? "—", city: uniq(ws.map((x) => x.place.city).filter(Boolean)).join(", ") || "—",
-      capacity, stock, plan, used: capacity ? ((stock ?? 0) + (plan ?? 0)) / capacity : null, decision: w?.analystDecision ?? "Belum Dianalisis",
+      company: lines.find((l) => l.applicationId === appId)?.company ?? "—",
+      city: uniq(gudang.map((g) => g.city.trim()).filter(Boolean)).join(", ") || "—",
+      gudang: gudang.length,
+      area: sumOrNull(gudang.map((g) => g.area)),
+      capacity: sumOrNull(gudang.map((g) => g.capacity)),
     };
-  }).sort((a, b) => (b.used ?? -1) - (a.used ?? -1));
+  }).sort((a, b) => (b.capacity ?? -1) - (a.capacity ?? -1) || (b.area ?? -1) - (a.area ?? -1));
 
   const unitCols = (vals: number[]) => units.map((_, i) => Math.round(vals[i] ?? 0));
   const companyHeaders = ["Perusahaan", "Product Line", "Line Berstok", ...units.map((u) => `Persediaan (${u})`), `Rencana Impor (${unit})`, "Persediaan ÷ Rencana", "Gudang"];
   const companyTable = companies.map((c) => [c.company, c.lines, c.stocked, ...unitCols(c.stock), Math.round(c.plan[0] ?? 0), c.ratio === null ? "—" : pct1(c.stock[0], c.plan[0]), c.warehouses]);
-  const fmtM3 = (v: number | null) => (v === null ? "—" : nf(Math.round(v * 100) / 100));
-  const storageTable = storage.map((s) => [s.company, s.city, fmtM3(s.capacity), fmtM3(s.stock), fmtM3(s.plan), s.used === null ? "—" : `${Math.round(s.used * 100)}%`, s.decision]);
+  const fmtNum = (v: number | null) => (v === null ? "—" : nf(Math.round(v)));
+  const storageTable = storage.map((s) => [s.company, s.city, fmtNum(s.area), fmtNum(s.capacity)]);
 
   // Narrative -------------------------------------------------------------------------------
   const period = `${fdLong(ds.period.from)} sampai dengan ${fdLong(ds.period.to)}`;
   const limits = [
     "Persediaan merupakan data yang dilaporkan perusahaan per product line pada saat pengajuan dan verifikasi, dan tidak diperbarui setelah LHVIU terbit.",
-    "Kapasitas gudang, stok terkini, dan volume pengajuan impor dalam satuan m³ diisi Technical Analyst pada analisis Kapasitas Gudang; satuannya berbeda dengan persediaan per product line sehingga tidak dibandingkan langsung.",
-    "Kapasitas terpakai dihitung sebagai (stok terkini + volume pengajuan impor) ÷ kapasitas gudang, mengikuti analisis Technical Analyst.",
+    "Luas gudang (m²) dan kapasitas gudang (m³) berasal dari laporan survei verifikasi lapangan gudang; gudang yang belum disurvei atau belum diukur tidak memiliki luas dan kapasitas.",
+    "Kapasitas gudang adalah kapasitas efektif: luas digunakan × tinggi efektif × utilisasi aman, sebagaimana dihitung pada laporan survei gudang; satuannya berbeda dengan persediaan per product line sehingga tidak dibandingkan langsung.",
     "Kuantitas tidak dijumlahkan lintas satuan.",
   ];
   const empty = { units, unit, stockByUnit, planByUnit, stocked, zero, companies, groups, storage, companyHeaders, companyTable, storageTable };
@@ -96,10 +101,11 @@ export function bab6(ds: P47Dataset): Bab6 {
   const noStock = companies.filter((c) => c.stocked === 0);
   const top = withStock[0];
   const unitText = units.map((u, i) => `${nf(Math.round(stockByUnit[i]))} ${u}`);
-  const analysed = storage.filter((s) => s.capacity !== null);
-  const over = analysed.filter((s) => (s.used ?? 0) > 1);
-  const notAnalysed = storage.filter((s) => s.capacity === null);
-  const tidakSesuai = storage.filter((s) => s.decision === "Tidak Sesuai");
+  const measured = storage.filter((s) => s.capacity !== null || s.area !== null);
+  const withCapacity = storage.filter((s) => s.capacity !== null);
+  const notMeasured = storage.filter((s) => s.capacity === null && s.area === null);
+  const totalArea = sum(storage.map((s) => s.area ?? 0));
+  const totalCapacity = sum(storage.map((s) => s.capacity ?? 0));
   const topGroup = groups.find((g) => g.stock > 0);
 
   const sub61 = [
@@ -117,10 +123,10 @@ export function bab6(ds: P47Dataset): Bab6 {
       : "",
   ].filter(Boolean);
   const sub64 = [
-    "Technical Analyst menilai kecukupan gudang dengan membandingkan stok terkini dan volume pengajuan impor terhadap kapasitas gudang API-U dalam satuan m³; pengajuan dinilai rasional bila kapasitas terpakai tidak melebihi 100%.",
-    analysed.length
-      ? `Analisis kapasitas gudang tersedia untuk ${analysed.length} dari ${storage.length} permohonan. ${over.length ? `${withWords(over.length)} permohonan memiliki kapasitas terpakai di atas 100%, yaitu ${joinId(over.map((s) => `${s.company} (${Math.round((s.used ?? 0) * 100)}%)`))}` : "Seluruh permohonan yang dianalisis memiliki kapasitas terpakai tidak lebih dari 100%"}${tidakSesuai.length ? `; ${tidakSesuai.length} permohonan dinyatakan tidak sesuai oleh analis` : ""}${notAnalysed.length ? `. Kapasitas gudang ${notAnalysed.length} permohonan belum dianalisis` : ""} (Gambar 6.4 dan Tabel 6.1).`
-      : "Analisis kapasitas gudang oleh Technical Analyst belum tersedia untuk permohonan pada periode ini.",
+    "Luas dan kapasitas gudang diambil dari laporan survei verifikasi lapangan gudang. Luas gudang adalah luas total yang diukur surveyor, sedangkan kapasitas gudang adalah kapasitas efektif dalam m³, yaitu luas digunakan dikalikan tinggi efektif dan utilisasi aman.",
+    measured.length
+      ? `Luas atau kapasitas gudang tercatat pada ${measured.length} dari ${storage.length} permohonan, dengan total luas ${nf(Math.round(totalArea))} m² dan total kapasitas ${nf(Math.round(totalCapacity))} m³.${withCapacity[0] ? ` Kapasitas terbesar dimiliki ${withCapacity[0].company} (${nf(Math.round(withCapacity[0].capacity ?? 0))} m³)${withCapacity[1] ? `, diikuti ${withCapacity.slice(1, 3).map((s) => `${s.company} (${nf(Math.round(s.capacity ?? 0))} m³)`).join(" dan ")}` : ""}.` : ""}${notMeasured.length ? ` Luas dan kapasitas gudang ${notMeasured.length} permohonan belum tercatat pada laporan survei.` : ""} (Gambar 6.4 dan Tabel 6.1).`
+      : "Luas dan kapasitas gudang belum tercatat pada laporan survei gudang untuk permohonan periode ini.",
   ];
   const sub65 = [
     `Tabel 6.2 menyajikan persediaan setiap Perusahaan API-U: jumlah product line, product line berstok, persediaan per satuan, rencana impor, rasio persediaan terhadap rencana impor, dan jumlah gudang. Data lokasi dan kepemilikan gudang dianalisis pada Bab 9.`,
@@ -131,7 +137,7 @@ export function bab6(ds: P47Dataset): Bab6 {
     `${noStock.length} dari ${companies.length} perusahaan (${pct1(noStock.length, companies.length)}) tidak memiliki persediaan pada saat pengajuan.`,
     `Total persediaan yang dilaporkan adalah ${joinId(unitText)}, setara ${pct1(stockByUnit[0], planByUnit[0])} dari total rencana impor dalam satuan ${unit}.`,
     top ? `Persediaan terbesar dilaporkan oleh ${top.company} sebesar ${nf(Math.round(top.stock[0]))} ${unit} (${pct1(top.stock[0], stockByUnit[0])} dari total persediaan ${unit}).` : "",
-    analysed.length ? `Kapasitas terpakai gudang ${over.length} dari ${analysed.length} permohonan yang dianalisis melebihi 100%.` : "",
+    measured.length ? `Laporan survei gudang mencatat total luas ${nf(Math.round(totalArea))} m² dan kapasitas ${nf(Math.round(totalCapacity))} m³ pada ${measured.length} dari ${storage.length} permohonan.` : "",
   ].filter(Boolean);
 
   return { ...empty, highlights, sub61, sub62, sub63, sub64, sub65, limits };

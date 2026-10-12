@@ -40,7 +40,7 @@ export type Bab9 = {
   kantorProvinces: { province: string; cities: string[]; count: number }[];
   gudangProvinces: { province: string; cities: string[]; count: number }[];
   registrations: { label: string; value: number }[];
-  conclusions: { label: string; value: number }[];
+  conclusions: { kantor: { label: string; value: number }[]; gudang: { label: string; value: number }[] };
   leaseEnding: { company: string; city: string; leaseEnd: string }[];
   areaBuckets: { label: string; value: number }[];
   table: (string | number)[][];
@@ -82,7 +82,8 @@ export function bab9(ds: P47Dataset): Bab9 {
     gudang: countBy(gudang, ownershipOf, ["Milik Sendiri", "Sewa", "Tidak diisi"]),
   };
   const registrations = countBy(gudang, registrationKind, ["TDG", "Gudang Berikat", "TPS", "Tidak diisi"]);
-  const conclusions = countBy([...kantor, ...gudang], conclusionOf, ["Sesuai", "Tidak Sesuai", "Belum disimpulkan"]);
+  const CONCL = ["Sesuai", "Tidak Sesuai", "Belum disimpulkan"];
+  const conclusions = { kantor: countBy(kantor, conclusionOf, CONCL), gudang: countBy(gudang, conclusionOf, CONCL) };
   const end = ds.period.to.slice(0, 10);
   const horizon = new Date(`${end}T00:00:00Z`);
   horizon.setUTCMonth(horizon.getUTCMonth() + 6);
@@ -122,10 +123,11 @@ export function bab9(ds: P47Dataset): Bab9 {
   }
 
   const own = (xs: { label: string; value: number }[], l: string) => xs.find((x) => x.label === l)?.value ?? 0;
+  const conclText = (xs: { label: string; value: number }[], n: number, what: string) =>
+    [`${own(xs, "Sesuai")} dari ${n} lokasi ${what} sesuai`, own(xs, "Tidak Sesuai") ? `${own(xs, "Tidak Sesuai")} tidak sesuai` : "", own(xs, "Belum disimpulkan") ? `${own(xs, "Belum disimpulkan")} belum disimpulkan` : ""].filter(Boolean).join(", ");
   const kp = base.kantorProvinces;
   const gp = base.gudangProvinces;
   const withReg = gudang.filter((g) => g.registration).length;
-  const notOk = [...kantor, ...gudang].filter((p) => p.fieldConclusion === "Tidak Sesuai").length;
   const avgArea = areas.length ? sum(areas) / areas.length : null;
   const dense = rows.filter((r) => r.perArea !== null).sort((a, b) => (b.perArea ?? 0) - (a.perArea ?? 0));
   const noGudang = rows.filter((r) => !r.gudang.length);
@@ -144,7 +146,7 @@ export function bab9(ds: P47Dataset): Bab9 {
       ? `Sebanyak ${own(ownership.gudang, "Milik Sendiri")} gudang berstatus milik sendiri dan ${own(ownership.gudang, "Sewa")} gudang berstatus sewa (Gambar 9.4). Gudang terbanyak berada di Provinsi ${gp[0].province} (${gp[0].count} gudang${gp[0].cities.length ? `, terutama ${andList(gp[0].cities.slice(0, 3))}` : ""})${gp[1] ? `, diikuti ${andList(gp.slice(1, 3).map((p) => `${p.province} (${p.count})`))}` : ""} (Gambar 9.5).`
       : "Data gudang belum dicantumkan pada permohonan periode ini.",
     gudang.length
-      ? `Dari sisi legalitas, ${registrations.filter((r) => r.label !== "Tidak diisi").map((r) => `${r.value} gudang memiliki ${r.label === "TDG" ? "Tanda Daftar Gudang (TDG)" : r.label === "TPS" ? "penetapan Tempat Penimbunan Sementara" : "penetapan Gudang Berikat"}`).join(", ") || "belum ada gudang yang mencantumkan tanda daftar"}${own(registrations, "Tidak diisi") ? `, dan ${own(registrations, "Tidak diisi")} gudang belum mencantumkan tanda daftar` : ""}. Verifikasi lapangan menyimpulkan ${own(conclusions, "Sesuai")} lokasi sesuai${notOk ? ` dan ${notOk} lokasi tidak sesuai` : ""}${own(conclusions, "Belum disimpulkan") ? `; ${own(conclusions, "Belum disimpulkan")} lokasi belum disimpulkan` : ""}${leaseEnding.length ? `. Masa sewa ${leaseEnding.length} lokasi berakhir paling lambat 6 bulan setelah akhir periode, paling awal ${fdLong(leaseEnding[0].leaseEnd)} (${leaseEnding[0].company})` : ""} (Gambar 9.6).`
+      ? `Dari sisi legalitas, ${registrations.filter((r) => r.label !== "Tidak diisi").map((r) => `${r.value} gudang memiliki ${r.label === "TDG" ? "Tanda Daftar Gudang (TDG)" : r.label === "TPS" ? "penetapan Tempat Penimbunan Sementara" : "penetapan Gudang Berikat"}`).join(", ") || "belum ada gudang yang mencantumkan tanda daftar"}${own(registrations, "Tidak diisi") ? `, dan ${own(registrations, "Tidak diisi")} gudang belum mencantumkan tanda daftar` : ""}. Verifikasi lapangan menyimpulkan ${conclText(conclusions.gudang, gudang.length, "gudang")}, sedangkan untuk kantor ${conclText(conclusions.kantor, kantor.length, "kantor")}${leaseEnding.length ? `. Masa sewa ${leaseEnding.length} lokasi berakhir paling lambat 6 bulan setelah akhir periode, paling awal ${fdLong(leaseEnding[0].leaseEnd)} (${leaseEnding[0].company})` : ""} (Gambar 9.6).`
       : "",
   ].filter(Boolean);
   const sub94 = [
@@ -156,7 +158,7 @@ export function bab9(ds: P47Dataset): Bab9 {
   const highlights = [
     `${withWords(rows.length)} Pemohon VIU mencatat ${kantor.length} kantor dan ${gudang.length} gudang; ${pct1(own(ownership.gudang, "Milik Sendiri"), gudang.length)} gudang berstatus milik sendiri.`,
     kp[0] ? `Kantor terbanyak berada di Provinsi ${kp[0].province} (${kp[0].count}), gudang terbanyak di Provinsi ${gp[0]?.province ?? "—"} (${gp[0]?.count ?? 0}).` : "",
-    `${withReg} dari ${gudang.length} gudang mencantumkan tanda daftar gudang; verifikasi lapangan menyimpulkan ${notOk} lokasi tidak sesuai.`,
+    `${withReg} dari ${gudang.length} gudang mencantumkan tanda daftar gudang; verifikasi lapangan menyimpulkan ${conclText(conclusions.gudang, gudang.length, "gudang")} serta ${conclText(conclusions.kantor, kantor.length, "kantor")}.`,
     avgArea !== null ? `Luas gudang terukur pada ${areas.length} gudang dengan rata-rata ${nf(Math.round(avgArea))} m².` : "Luas gudang belum diukur pada verifikasi lapangan periode ini.",
   ].filter(Boolean);
 

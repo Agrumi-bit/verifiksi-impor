@@ -93,8 +93,8 @@ export function bab10(ds: P47Dataset, report: P47Report, kbliNonCompliant: strin
   if (labelBad.length) add({ area: "Label Bahasa Indonesia", text: `Surat Pernyataan Label Berbahasa Indonesia ${sum(labelBad.map((l) => l.apps))} permohonan belum terverifikasi (${andList(labelBad.map((l) => l.label.toLowerCase()))}).`, ref: "Bab 5", priority: "Sedang", rec: "Menyelesaikan verifikasi surat pernyataan label pada permohonan terkait.", value: 0 });
 
   // Bab 6 — warehouse capacity.
-  const overCap = b6.storage.filter((s) => (s.used ?? 0) > 1);
-  if (overCap.length) add({ area: "Kapasitas gudang", text: `Kapasitas gudang terpakai (stok + volume pengajuan) melebihi 100% pada ${overCap.length} permohonan: ${some(overCap.map((s) => `${s.company} (${Math.round((s.used ?? 0) * 100)}%)`))}.`, ref: "Bab 6", priority: "Sedang", rec: "Meminta penjelasan rencana penyimpanan atau gudang tambahan sebelum realisasi impor.", value: 0 });
+  const noCap = b6.storage.filter((s) => s.capacity === null && s.area === null);
+  if (noCap.length && b6.storage.length) add({ area: "Kapasitas gudang", text: `Luas dan kapasitas gudang ${noCap.length} dari ${b6.storage.length} permohonan belum tercatat pada laporan survei gudang.`, ref: "Bab 6", priority: "Rendah", rec: "Surveyor melengkapi bagian Kapasitas Gudang pada laporan survei gudang.", value: 0 });
 
   // Bab 7 — capital.
   const overModal = b7.withModal.filter((r) => (r.ratio ?? 0) > 1);
@@ -142,7 +142,7 @@ export function bab10(ds: P47Dataset, report: P47Report, kbliNonCompliant: strin
     { data: "Nomor dan Tanggal Terbit LHVIU", use: "Bulan terbit dan masa berlaku LHVIU", ref: "Bab 1, Bab 4, Bab 7", have: apps.filter((a) => a.lhviu?.issuedAt).length, of: apps.filter((a) => a.lhviu).length },
     { data: "Kurs mata uang asing (analisis Modal)", use: "Konversi rencana nilai ke Rupiah", ref: "Bab 2–8", have: foreignLines.length - unconverted, of: foreignLines.length },
     { data: "Jumlah Modal Kerja", use: "Rasio rencana nilai impor terhadap modal operasi", ref: "Bab 7", have: b7.withModal.length, of: b7.rows.length },
-    { data: "Kapasitas gudang, stok, dan volume pengajuan (m³)", use: "Kapasitas gudang terpakai", ref: "Bab 6", have: b6.storage.filter((s) => s.capacity !== null).length, of: b6.storage.length },
+    { data: "Luas dan kapasitas gudang (laporan survei gudang)", use: "Luas dan kapasitas gudang per permohonan", ref: "Bab 6", have: b6.storage.filter((s) => s.capacity !== null || s.area !== null).length, of: b6.storage.length },
     { data: "Sertifikat Hasil Uji Mutu per merek × sub kelompok", use: "Cakupan persyaratan teknis", ref: "Bab 5", have: b5.covered.length, of: ds.lines.length },
     { data: "Nomor pendaftaran merek", use: "Keberlakuan bukti merek", ref: "Bab 4", have: b4.brands.filter((b) => b.certificate !== "Tidak Lengkap").length, of: b4.brands.length },
     { data: "Tanda daftar gudang", use: "Legalitas gudang", ref: "Bab 9", have: b9.gudang.length - noReg.length, of: b9.gudang.length },

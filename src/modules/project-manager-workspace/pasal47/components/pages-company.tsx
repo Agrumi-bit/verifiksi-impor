@@ -28,7 +28,7 @@ export function RingkasanPage() {
   return (
     <>
       <div className="grid g4" style={{ marginTop: 14 }}>
-        <Kpi label="Jumlah API-U" value={k.companies} sub={`${k.applications} permohonan`} tip="Perusahaan API-U dengan permohonan VIU Barang Konsumsi yang tanggal pengajuannya di dalam periode." />
+        <Kpi label="Jumlah API-U" value={k.companies} sub={`${k.applications} permohonan`} tip="Perusahaan API-U dengan permohonan VIU Barang Konsumsi yang Tanggal Terbit LHVIU-nya (atau tanggal pengajuan bila belum dicatat) di dalam periode." />
         <Kpi label="Jumlah LHVIU" value={k.lhviu} sub={`dari ${k.applications} permohonan`} tip="Permohonan yang LHVIU-nya sudah diunggah Project Manager." />
         <Kpi label="Jumlah Pos Tarif/HS" value={k.hs} sub={`${uniq(ds.lines.map((l) => l.komoditas || l.subKelompok)).length} komoditas`} />
         <Kpi label="Jumlah Merek" value={k.brands} sub={`${uniq(ds.brands.flatMap((b) => b.uses.map((u) => u.company))).length} importir`} />

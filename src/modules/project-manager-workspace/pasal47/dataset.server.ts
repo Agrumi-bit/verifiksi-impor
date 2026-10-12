@@ -8,6 +8,7 @@ import { statementAmount } from "@/modules/applications/viu-import-plan";
 import { konsumsiProductTotal } from "@/modules/applications/viu-schemes/konsumsi/schema";
 import { APPLICANT_BRAND_ROLE_LABELS, IMPORT_APPOINTMENT_SOURCE_LABELS } from "@/modules/applications/viu-schemes/konsumsi/business-rules";
 import { qualityTestSubmissionWindow } from "@/modules/applications/viu-schemes/konsumsi/quality-test-window";
+import { isSameCertificate } from "@/modules/applications/viu-schemes/konsumsi/shared-certificates";
 import { MERK_EVIDENCE_TYPE_LABELS, type MerkEvidenceType } from "@/modules/merk/schema";
 import { composeLocationAddress, splitKbliEntries, type LocationValues } from "@/modules/shared/schema";
 import { technicalAnalysisDataSchema } from "@/modules/technical-analyst-workspace/schema";
@@ -33,7 +34,13 @@ function place(loc: Partial<LocationValues> | undefined, visits: VisitLike[] = [
   // The surveyor's visit for this location: by its Company.locations id, else by type + street.
   const visit = visits.find((v) => v.companyLocationId && (v.companyLocationId === loc?.id || v.companyLocationId === loc?.companyLocationId))
     ?? visits.find((v) => v.locationType === loc?.locationType && !!loc?.address && v.address.startsWith(loc.address));
-  const form = (loc?.locationType === "KANTOR" ? visit?.officeVerification : visit?.warehouseVerification) as { capacity?: { luasTotal?: number | null }; conclusionStatus?: string | null } | null | undefined;
+  const form = (loc?.locationType === "KANTOR" ? visit?.officeVerification : visit?.warehouseVerification) as
+    | { capacity?: { luasTotal?: number | null; luasDigunakan?: number | null; tinggiEfektif?: number | null; utilisasiAman?: number | null }; conclusionStatus?: string | null }
+    | null
+    | undefined;
+  // Same formula as the surveyor's Kapasitas Gudang section (computeCapacityEfektif).
+  const cap = form?.capacity;
+  const capacity = cap ? Math.round((cap.luasDigunakan ?? 0) * (cap.tinggiEfektif ?? 0) * ((cap.utilisasiAman ?? 0) / 100)) : 0;
   const regType = loc?.warehouseRegistrationType ? REGISTRATION_LABEL[loc.warehouseRegistrationType] ?? loc.warehouseRegistrationType : "";
   return {
     address: composeLocationAddress({ address: loc?.address, addressDesa: loc?.addressDesa, addressKecamatan: loc?.addressKecamatan }),
@@ -43,6 +50,7 @@ function place(loc: Partial<LocationValues> | undefined, visits: VisitLike[] = [
     registration: loc?.locationType === "GUDANG" ? [regType, loc?.warehouseRegistrationNumber?.trim()].filter(Boolean).join(" ") : "",
     leaseEnd: loc?.buildingStatus === "SEWA" ? (loc?.leaseEndDate ?? "").slice(0, 10) : "",
     area: typeof form?.capacity?.luasTotal === "number" && form.capacity.luasTotal > 0 ? form.capacity.luasTotal : null,
+    capacity: loc?.locationType === "GUDANG" && capacity > 0 ? capacity : null,
     fieldConclusion: form?.conclusionStatus ?? "",
   };
 }
@@ -66,8 +74,10 @@ function areaOfKey(key: string): string {
 }
 
 /**
- * Every VIU Barang Konsumsi application whose Tanggal Pengajuan falls inside the period (drafts and
- * withdrawn ones excluded), flattened into the report dataset. Nothing is invented: a figure the
+ * Every VIU Barang Konsumsi application of the period (drafts and withdrawn ones excluded), flattened
+ * into the report dataset. An application belongs to the period of its LHVIU Tanggal Terbit when the
+ * Project Manager recorded one, otherwise to the period of its Tanggal Pengajuan — an application can be
+ * entered in the system after its LHVIU was issued. Nothing is invented: a figure the
  * system does not hold stays empty and the UI says so.
  */
 export async function buildPasal47Dataset(period: { from: string; to: string }): Promise<P47Dataset> {
@@ -84,16 +94,21 @@ export async function buildPasal47Dataset(period: { from: string; to: string }):
       },
     },
   });
-  const inScope = rows.filter((a) => {
-    const payload = a.payload as ApplicationWizardValues;
-    if (payload.importTypes?.[0] !== "BARANG_KONSUMSI") return false;
-    const day = assignmentDateKey(effectiveSubmissionDate(a).value);
+  const konsumsi = rows.filter((a) => (a.payload as ApplicationWizardValues).importTypes?.[0] === "BARANG_KONSUMSI");
+  const konsumsiIds = konsumsi.map((a) => a.id);
+  const lhviuRows = konsumsiIds.length
+    ? await db.$queryRaw<{ id: string; lhviuDocument: unknown }[]>`SELECT "id", "lhviuDocument" FROM "application" WHERE "id" = ANY(${konsumsiIds})`
+    : [];
+  const lhviuById = new Map(lhviuRows.map((r) => [r.id, r.lhviuDocument as { path?: string; fileName?: string; uploadedAt?: string; number?: string; issuedAt?: string } | null]));
+  const inScope = konsumsi.filter((a) => {
+    const lhviu = lhviuById.get(a.id);
+    const issuedAt = lhviu?.path && typeof lhviu.issuedAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(lhviu.issuedAt) ? lhviu.issuedAt : null;
+    const day = issuedAt ?? assignmentDateKey(effectiveSubmissionDate(a).value);
     return day >= period.from && day <= period.to;
   });
   const ids = inScope.map((a) => a.id);
 
-  const [lhviuRows, docVersions] = await Promise.all([
-    ids.length ? db.$queryRaw<{ id: string; lhviuDocument: unknown }[]>`SELECT "id", "lhviuDocument" FROM "application" WHERE "id" = ANY(${ids})` : Promise.resolve([]),
+  const [docVersions] = await Promise.all([
     ids.length
       ? db.applicationDocumentVersion.findMany({
           where: { applicationId: { in: ids } },
@@ -102,7 +117,6 @@ export async function buildPasal47Dataset(period: { from: string; to: string }):
         })
       : Promise.resolve([]),
   ]);
-  const lhviuById = new Map(lhviuRows.map((r) => [r.id, r.lhviuDocument as { path?: string; fileName?: string; uploadedAt?: string; number?: string; issuedAt?: string } | null]));
   const latestDoc = new Map<string, (typeof docVersions)[number]>();
   for (const v of docVersions) if (!latestDoc.has(`${v.applicationId}|${v.fieldKey}`)) latestDoc.set(`${v.applicationId}|${v.fieldKey}`, v);
   const docOf = (appId: string, key: string) => latestDoc.get(`${appId}|${key}`);
@@ -192,8 +206,19 @@ export async function buildPasal47Dataset(period: { from: string; to: string }):
 
     // Persyaratan teknis: Sertifikat Hasil Uji Mutu per Merek x Sub Kelompok + label statement --------
     const labelDoc = payload.labelStatementDocument?.filePath ? docStatusLabel(docOf(a.id, "konsumsi-label:statement")?.verificationStatus) : status("Belum Ada", "bad");
-    for (const c of payload.productGroupCertificates ?? []) {
-      const ver = docOf(a.id, `konsumsi-qt:${c.brandId}:${c.commodityGroupId}`)?.verificationStatus;
+    const certificates = payload.productGroupCertificates ?? [];
+    for (const c of certificates) {
+      // A certificate shared by several Sub Kelompok of one brand is listed — and verified — once, under
+      // the key of one of its groups; the other groups take that verification.
+      const ver = (
+        docOf(a.id, `konsumsi-qt:${c.brandId}:${c.commodityGroupId}`) ??
+        (c.filePath
+          ? certificates
+              .filter((o) => o.filePath && isSameCertificate(o, c))
+              .map((o) => docOf(a.id, `konsumsi-qt:${o.brandId}:${o.commodityGroupId}`))
+              .find(Boolean)
+          : undefined)
+      )?.verificationStatus;
       const window = qualityTestSubmissionWindow(c.issueDate, payload.submissionDate);
       const st = !c.filePath ? status("Tidak Lengkap", "bad")
         : c.validUntil && c.validUntil.slice(0, 10) < period.to ? status("Kedaluwarsa", "bad")
