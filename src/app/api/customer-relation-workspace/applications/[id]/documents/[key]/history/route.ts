@@ -136,7 +136,7 @@ export async function PATCH(
     return NextResponse.json({ error: documentData.error }, { status: 400 });
   }
 
-  const updatedPayload = applyChecklistDocumentPath(applyDocumentDataToPayload(payload, documentData.values), key, path);
+  const updatedPayload = applyChecklistDocumentPath(applyDocumentDataToPayload(payload, documentData.values, key), key, path);
   await db.application.update({ where: { id: application.id }, data: { payload: updatedPayload } });
   await syncLocationDocumentToCompany(application.companyId, key, path);
 

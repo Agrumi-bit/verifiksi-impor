@@ -6,8 +6,10 @@ import type { ApplicationWizardValues } from "./schema";
  * Nomor/Tanggal/Instansi the verifikator compares it with ("Uraian yang Diperiksa") and the report
  * prints would still describe the previous document.
  *
- * Field `name` is the same on the application payload and on the Company row (all of these keys are
- * COMPANY_MAPPED_DOCUMENT_KEYS), so one value updates both. Client-safe: no DB access.
+ * Company documents: field `name` is the same on the application payload and on the Company row (all
+ * of these keys are COMPANY_MAPPED_DOCUMENT_KEYS), so one value updates both. VKI surat pernyataan
+ * (`vki-support:{defKey}`): the fields live on that entry of `payload.vkiSupportDocs` only.
+ * Client-safe: no DB access.
  */
 export type DocumentDataField = {
   name: DocumentDataFieldName;
@@ -30,7 +32,24 @@ export type DocumentDataFieldName =
   | "npwpNumber"
   | "sktNumber"
   | "sktIssuer"
-  | "sktDate";
+  | "sktDate"
+  | "nomorSurat"
+  | "tanggal"
+  | "penandatangan";
+
+/** The four VKI surat pernyataan uploaded with Nomor/Tanggal/Penandatangan (vkiSupportDocEntrySchema). */
+const SURAT_PERNYATAAN_KEYS = ["tidak-diperjualbelikan", "memiliki-menguasai", "kebenaran-data", "alur-proses"] as const;
+const SURAT_PERNYATAAN_FIELDS: readonly DocumentDataField[] = [
+  { name: "nomorSurat", label: "Nomor Surat Pernyataan", type: "text", required: true },
+  { name: "tanggal", label: "Tanggal Surat Pernyataan", type: "date", required: true },
+  { name: "penandatangan", label: "Nama Penandatangan", type: "text", required: true },
+];
+
+/** `vki-support:memiliki-menguasai` → "memiliki-menguasai"; null for any other key. */
+function suratPernyataanKey(key: string): string | null {
+  const defKey = key.match(/^vki-support:([^:]+)$/)?.[1];
+  return defKey && (SURAT_PERNYATAAN_KEYS as readonly string[]).includes(defKey) ? defKey : null;
+}
 
 export const DOCUMENT_DATA_FIELDS: Readonly<Record<string, readonly DocumentDataField[]>> = {
   nib: [
@@ -57,6 +76,7 @@ export const DOCUMENT_DATA_FIELDS: Readonly<Record<string, readonly DocumentData
     { name: "sktIssuer", label: "KPP Terdaftar", type: "text", required: true },
     { name: "sktDate", label: "Tanggal Terdaftar", type: "date", required: true },
   ],
+  ...Object.fromEntries(SURAT_PERNYATAAN_KEYS.map((defKey) => [`vki-support:${defKey}`, SURAT_PERNYATAAN_FIELDS])),
 };
 
 export type DocumentDataFieldValue = DocumentDataField & { value: string };
@@ -76,8 +96,12 @@ export function documentDataFieldValues(
   payload: ApplicationWizardValues,
   companyLegal?: Partial<Record<DocumentDataFieldName, string | null>> | null,
 ): DocumentDataFieldValue[] {
+  const spKey = suratPernyataanKey(key);
+  const source: Record<string, unknown> = spKey
+    ? ((payload.vkiSupportDocs ?? []).find((entry) => entry.key === spKey) ?? {})
+    : (payload as Record<string, unknown>);
   return (DOCUMENT_DATA_FIELDS[key] ?? []).map((field) => {
-    const raw = companyLegal?.[field.name] || (payload as Record<string, unknown>)[field.name];
+    const raw = (spKey ? null : companyLegal?.[field.name]) || source[field.name];
     const text = typeof raw === "string" ? raw : "";
     return { ...field, value: field.type === "date" ? toDateInput(text) : text };
   });
@@ -106,13 +130,24 @@ export function parseDocumentData(key: string, raw: Record<string, unknown> | nu
 export function applyDocumentDataToPayload(
   payload: ApplicationWizardValues,
   values: Partial<Record<DocumentDataFieldName, string>>,
+  key: string,
 ): ApplicationWizardValues {
-  return { ...payload, ...values };
+  const spKey = suratPernyataanKey(key);
+  if (!spKey) return { ...payload, ...values };
+  const entries = payload.vkiSupportDocs ?? [];
+  const found = entries.some((entry) => entry.key === spKey);
+  return {
+    ...payload,
+    vkiSupportDocs: found
+      ? entries.map((entry) => (entry.key === spKey ? { ...entry, ...values } : entry))
+      : [...entries, { key: spKey, ...values }],
+  };
 }
 
 /** The same values for the Company row (date columns as Date). */
 export function companyDocumentDataUpdate(key: string, values: Partial<Record<DocumentDataFieldName, string>>): Record<string, string | Date> {
   const update: Record<string, string | Date> = {};
+  if (suratPernyataanKey(key)) return update; // application-only document
   for (const field of DOCUMENT_DATA_FIELDS[key] ?? []) {
     const value = values[field.name];
     if (!value) continue;

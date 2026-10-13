@@ -169,7 +169,7 @@ export async function PATCH(
     );
   }
 
-  const updatedPayload = applyChecklistDocumentPath(applyDocumentDataToPayload(payload, documentData.values), key, path);
+  const updatedPayload = applyChecklistDocumentPath(applyDocumentDataToPayload(payload, documentData.values, key), key, path);
   await db.application.update({ where: { id: assignment.application.id }, data: { payload: updatedPayload } });
   await syncLocationDocumentToCompany(assignment.application.companyId, key, path);
 
