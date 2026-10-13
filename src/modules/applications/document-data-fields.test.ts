@@ -7,7 +7,7 @@ const payload = { sktNumber: "S-OLD", sktIssuer: "KPP Lama", sktDate: "2020-01-0
 
 describe("document data re-entered with a new document version", () => {
   it("prefills from the live company value, then the payload", () => {
-    const fields = documentDataFieldValues("skt", payload, { sktNumber: "S-LIVE", sktDate: "2021-05-06T00:00:00.000Z" });
+    const fields = documentDataFieldValues("skt", payload, { companyLegal: { sktNumber: "S-LIVE", sktDate: "2021-05-06T00:00:00.000Z" } });
     assert.deepEqual(fields.map((f) => [f.name, f.value]), [["sktNumber", "S-LIVE"], ["sktIssuer", "KPP Lama"], ["sktDate", "2021-05-06"]]);
     assert.deepEqual(documentDataFieldValues("tax-support:ppn", payload), []);
   });
@@ -32,7 +32,7 @@ describe("document data re-entered with a new document version", () => {
   it("VKI surat pernyataan: fields live on its vkiSupportDocs entry only", () => {
     const sp = { vkiSupportDocs: [{ key: "memiliki-menguasai", nomorSurat: "SP-1", tanggal: "2026-01-02", penandatangan: "Budi", documentPath: "a.pdf" }, { key: "kebenaran-data", nomorSurat: "SP-9" }] } as unknown as ApplicationWizardValues;
     const key = "vki-support:memiliki-menguasai";
-    assert.deepEqual(documentDataFieldValues(key, sp, { sktNumber: "x" }).map((f) => f.value), ["SP-1", "2026-01-02", "Budi"]);
+    assert.deepEqual(documentDataFieldValues(key, sp, { companyLegal: { sktNumber: "x" } }).map((f) => f.value), ["SP-1", "2026-01-02", "Budi"]);
     assert.deepEqual(documentDataFieldValues("vki-support:tenaga-kerja", sp), []);
     const parsed = parseDocumentData(key, { nomorSurat: "SP-2", tanggal: "2026-10-05", penandatangan: "Sari" });
     assert.ok(parsed.ok);
@@ -41,5 +41,31 @@ describe("document data re-entered with a new document version", () => {
     assert.equal(next.vkiSupportDocs?.[1].nomorSurat, "SP-9");
     assert.equal((next as Record<string, unknown>).nomorSurat, undefined);
     assert.deepEqual(companyDocumentDataUpdate(key, parsed.values), {});
+  });
+
+  it("location, listrik, LHVKI mitra and modal kerja keep their data on their own entry", () => {
+    const p = {
+      locations: [{ id: "L1", leaseOriginalOwnerName: "Lama", leaseStartDate: "2024-01-01", leaseEndDate: "2025-01-01" }],
+      electricityMonths: [{ id: "m1", bulan: "2026-07", nominal: "100", kwh: "5" }],
+      partnerIndustriEntries: [{ partnerId: "P1", enabled: true, lhvki: "OLD" }],
+      nonIndustriDocuments: [{ key: "surat-pernyataan-modal-kerja", enabled: true, amount: "1000" }],
+    } as unknown as ApplicationWizardValues;
+    const lease = "location:L1:lease:SEWA_MENYEWA";
+    assert.deepEqual(documentDataFieldValues(lease, p, { companyLocations: [{ id: "L1", leaseOriginalOwnerName: "Live" }] })[0].value, "Live");
+    const leaseData = parseDocumentData(lease, { leaseOriginalOwnerName: "Baru", leaseStartDate: "2026-01-01", leaseEndDate: "2028-01-01" });
+    assert.ok(leaseData.ok);
+    assert.equal(applyDocumentDataToPayload(p, leaseData.values, lease).locations?.[0].leaseEndDate, "2028-01-01");
+    assert.deepEqual(companyDocumentDataUpdate(lease, leaseData.values), {});
+    assert.deepEqual(parseDocumentData("location:L1:warehouseRegistration", { warehouseRegistrationType: "X", warehouseRegistrationNumber: "1", warehouseRegistrationIssueDate: "2026-01-01", warehouseRegistrationIssuingAuthority: "Dinas" }), { ok: false, error: "Jenis Tanda Daftar tidak valid" });
+    const bill = parseDocumentData("vki-support:listrik:m1", { bulan: "2026-08", nominal: "Rp 1.250.000", kwh: "900" });
+    assert.ok(bill.ok);
+    assert.equal(applyDocumentDataToPayload(p, bill.values, "vki-support:listrik:m1").electricityMonths?.[0].nominal, "1250000");
+    const lhvki = parseDocumentData("partner:P1:lhvki", { lhvki: "NEW-1" });
+    assert.ok(lhvki.ok);
+    assert.equal(applyDocumentDataToPayload(p, lhvki.values, "partner:P1:lhvki").partnerIndustriEntries?.[0].lhvki, "NEW-1");
+    const modal = parseDocumentData("nonindustri-support:surat-pernyataan-modal-kerja", { amount: "2.000.000" });
+    assert.ok(modal.ok);
+    assert.equal(applyDocumentDataToPayload(p, modal.values, "nonindustri-support:surat-pernyataan-modal-kerja").nonIndustriDocuments?.[0].amount, "2000000");
+    for (const k of ["tax-support:ppn", "location:L1:ownership:SHM", "nonindustri-support:rekening-koran", "partner:P1:contract"]) assert.deepEqual(documentDataFieldValues(k, p), [], k);
   });
 });

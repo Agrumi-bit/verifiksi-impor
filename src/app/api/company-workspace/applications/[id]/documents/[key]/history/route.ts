@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { syncLocationDocumentToCompany } from "@/modules/applications/server/sync-location-document";
 import { applyDocumentDataToPayload, companyDocumentDataUpdate, documentDataFieldValues, parseDocumentData } from "@/modules/applications/document-data-fields";
 import { toCompanyLegalContext } from "@/modules/verifikator-workspace/company-context";
 import { z } from "zod";
@@ -45,7 +46,8 @@ export async function GET(
   if (!item) {
     return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
   }
-  const fields = documentDataFieldValues(key, payload, toCompanyLegalContext(await db.company.findUnique({ where: { id: companyId } })));
+  const fieldsCompany = await db.company.findUnique({ where: { id: companyId } });
+  const fields = documentDataFieldValues(key, payload, { companyLegal: toCompanyLegalContext(fieldsCompany), companyLocations: fieldsCompany?.locations });
 
   if (key in COMPANY_MAPPED_DOCUMENT_KEYS) {
     const company = await db.company.findUnique({ where: { id: companyId } });
@@ -104,6 +106,7 @@ export async function PATCH(
 
   const updatedPayload = applyChecklistDocumentPath(applyDocumentDataToPayload(payload, documentData.values, key), key, path);
   await db.application.update({ where: { id: application.id }, data: { payload: updatedPayload } });
+  await syncLocationDocumentToCompany(companyId, key, path, documentData.values);
 
   if (key in COMPANY_MAPPED_DOCUMENT_KEYS) {
     const company = await db.company.findUnique({ where: { id: companyId } });

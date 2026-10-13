@@ -1,6 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { fmtNum, parseRekapBahanBaku } from "../detail/analysis-types";
+import { capacitySummary, materialNeeds, materialTotals } from "../../lhvki-summary";
+import type { CapacityRow, RawMaterialConversionRow } from "@/modules/verifikator-workspace/schema";
 import Link from "next/link";
 import DOMPurify from "dompurify";
 import { useQuery } from "@tanstack/react-query";
@@ -42,6 +45,9 @@ type TechnicalReportData = {
   documentReportReview: DocumentReportReview;
   konsumsiImportPlan: KonsumsiImportPlan | null;
   modalKerjaFromApplication: { bahanBaku: number | null; konsumsi: number | null } | null;
+  /** VKI — Kapasitas (Perizinan Berusaha) and konversi bahan baku, for the LHVKI figures (Pasal 32 ayat (3) c–f). */
+  capacity?: CapacityRow[];
+  rawMaterialConversion?: RawMaterialConversionRow[];
 };
 
 const IMPORT_TYPE_LABELS: Record<string, string> = {
@@ -68,6 +74,7 @@ const INPUT_LABELS: Record<string, string> = {
   estimasiJamOperasi: "Estimasi Jam Operasi",
   tarifId: "Golongan Tarif Listrik",
   mesinBottleneck: "Mesin/Proses Bottleneck (dipilih analis)",
+  catatanKapasitasIzin: "Catatan Analis — Kapasitas Perizinan Berusaha dan Hasil VKI",
   catatanB: "Catatan Analis (B)",
   catatanC: "Catatan Analis (C)",
   catatanD: "Catatan Analis (D)",
@@ -96,6 +103,74 @@ function Html({ html }: { html: string }) {
 
 function looksLikeHtml(value: string): boolean {
   return /<[a-z][\s\S]*>/i.test(value);
+}
+
+/** Pasal 32 ayat (3) huruf c–f — the figures the LHVKI takes from this analysis. */
+function LhvkiFigures({ data }: { data: TechnicalReportData }) {
+  const n = (v: number | null) => (v === null ? "—" : fmtNum(v, 2));
+  const technicalAnalysisData = data.technicalAnalysisData as Parameters<typeof materialNeeds>[2];
+  const capacity = capacitySummary(data.capacity ?? [], technicalAnalysisData.kapasitas?.inputs);
+  const totals = materialTotals(materialNeeds(data.rawMaterialConversion ?? [], data.capacity ?? [], technicalAnalysisData));
+  return (
+    <>
+      <h3 className="rd-serif" style={{ fontSize: 15, margin: "18px 0 6px" }}>Kapasitas Produksi per Tahun (Pasal 32 ayat (3) huruf c dan d)</h3>
+      <table className="rd-table">
+        <thead>
+          <tr>
+            <th>Jenis Produk</th>
+            <th>Sesuai Perizinan Berusaha</th>
+            <th>Sesuai Hasil VKI</th>
+            <th>Satuan</th>
+          </tr>
+        </thead>
+        <tbody>
+          {capacity.length === 0 && (
+            <tr>
+              <td colSpan={4}>Belum ada data kapasitas perizinan.</td>
+            </tr>
+          )}
+          {capacity.map((r) => (
+            <tr key={r.id}>
+              <td>{r.jenisProduk || "—"}</td>
+              <td>{n(r.izin)}</td>
+              <td>{n(r.vki)}</td>
+              <td>{r.satuan || "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <h3 className="rd-serif" style={{ fontSize: 15, margin: "18px 0 6px" }}>
+        Kebutuhan Bahan Baku dan/atau Bahan Penolong 1 Tahun (Pasal 32 ayat (3) huruf e dan f)
+      </h3>
+      <table className="rd-table">
+        <thead>
+          <tr>
+            <th>Bahan Baku dan/atau Bahan Penolong</th>
+            <th>HS Code</th>
+            <th>Sesuai Kapasitas Produksi</th>
+            <th>Sesuai Hasil VKI</th>
+            <th>Satuan</th>
+          </tr>
+        </thead>
+        <tbody>
+          {totals.length === 0 && (
+            <tr>
+              <td colSpan={5}>Belum ada data konversi bahan baku.</td>
+            </tr>
+          )}
+          {totals.map((r) => (
+            <tr key={`${r.hsCode}-${r.bahanBaku}-${r.satuan}`}>
+              <td>{r.bahanBaku || "—"}</td>
+              <td>{r.hsCode || "—"}</td>
+              <td>{n(r.izin)}</td>
+              <td>{n(r.vki)}</td>
+              <td>{r.satuan || "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
 }
 
 function statusPill(status: TechnicalModuleStatusValue | undefined) {
@@ -251,6 +326,8 @@ export function TechnicalAnalysisReport({
             </tbody>
           </table>
 
+          {data.verificationType === "VKI" && <LhvkiFigures data={data} />}
+
           <div className="rd-card" style={{ marginTop: 18 }}>
             <div className="rd-card-label">REVIEW LAPORAN VERIFIKASI DOKUMEN</div>
             <div className="rd-card-value" style={{ fontSize: 14 }}>
@@ -277,7 +354,8 @@ export function TechnicalAnalysisReport({
         {moduleKeys.map((key, i) => {
           const mod = data.technicalAnalysisData[key] ?? {};
           const inputs = Object.entries(mod.inputs ?? {}).filter(([, v]) => v && v.trim() && v.trim() !== "<p></p>");
-          const plainInputs = inputs.filter(([, v]) => !looksLikeHtml(v));
+          const plainInputs = inputs.filter(([k, v]) => k !== "rekapBahanBaku" && k !== "kapasitasVki" && !looksLikeHtml(v));
+          const rekapBahanBaku = Object.values(parseRekapBahanBaku(mod.inputs?.rekapBahanBaku));
           const noteInputs = inputs.filter(([, v]) => looksLikeHtml(v));
           return (
             <PageShell key={key} pageNo={i + 2} total={total} companyName={company}>
@@ -308,6 +386,41 @@ export function TechnicalAnalysisReport({
                         <td>{fmtMoney(data.modalKerjaFromApplication.konsumsi)}</td>
                       </tr>
                     )}
+                  </tbody>
+                </table>
+              )}
+
+              {key === "bahanbaku" && rekapBahanBaku.length > 0 && (
+                <table className="rd-table" style={{ marginBottom: 14 }}>
+                  <thead>
+                    <tr>
+                      <th rowSpan={2} style={{ width: 32 }}>No</th>
+                      <th rowSpan={2}>Jenis Produksi</th>
+                      <th rowSpan={2}>Bahan Baku dan/atau Bahan Penolong</th>
+                      <th colSpan={3} style={{ textAlign: "center" }}>Volume Bahan Baku</th>
+                      <th rowSpan={2}>Satuan</th>
+                    </tr>
+                    <tr>
+                      <th>Berdasarkan Izin</th>
+                      <th>Berdasarkan VKI</th>
+                      <th>Berdasarkan Permohonan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rekapBahanBaku.map((r, n) => (
+                      <tr key={n}>
+                        <td>{n + 1}</td>
+                        <td>{r.produk || "—"}</td>
+                        <td>
+                          {r.bahanBaku || "—"}
+                          {r.hsCode ? ` (HS ${r.hsCode})` : ""}
+                        </td>
+                        <td>{r.izin || "—"}</td>
+                        <td>{r.vki || "—"}</td>
+                        <td>{r.permohonan || "—"}</td>
+                        <td>{r.satuan || "—"}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               )}

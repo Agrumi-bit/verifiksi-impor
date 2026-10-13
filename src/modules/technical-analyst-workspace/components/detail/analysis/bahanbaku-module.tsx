@@ -1,6 +1,7 @@
 "use client";
 
-import { fmtNum, parseNumeric, type ModuleProps } from "../analysis-types";
+import { materialNeeds } from "../../../lhvki-summary";
+import { fmtNum, parseRekapBahanBaku, type ModuleProps, type RekapBahanBakuEntry } from "../analysis-types";
 import { AnalystNote, ConclusionCard, Formula, Paragraphs, Section, Table, Td } from "./shared";
 
 export function BahanBakuModule({
@@ -18,14 +19,35 @@ export function BahanBakuModule({
   canEdit,
   submitting,
 }: ModuleProps) {
-  const rekapMap = new Map<string, { hsCode: string; uraian: string; satuan: string; total: number }>();
-  for (const row of data.rawMaterialConversion) {
-    const key = `${row.hsCode}|${row.jenis}`;
-    const existing = rekapMap.get(key) ?? { hsCode: row.hsCode, uraian: row.jenis, satuan: row.volumeKebutuhanSatuan, total: 0 };
-    existing.total += parseNumeric(row.volumeKebutuhanJumlah) ?? 0;
-    rekapMap.set(key, existing);
+  // Rekapitulasi: one row per produk × bahan baku. Berdasarkan Permohonan comes from the application;
+  // Berdasarkan Izin and Berdasarkan VKI are typed by the analyst. Stored as one JSON input
+  // (rekapBahanBaku) that also carries the row names, so the report can print the same table.
+  const rekap = parseRekapBahanBaku(inputs.rekapBahanBaku);
+  // Pasal 32 ayat (3) huruf e dan f: kebutuhan = kapasitas (Perizinan Berusaha / hasil VKI, modul Kapasitas
+  // Produksi) × rasio konversi. The analyst may overwrite either figure; an empty cell uses the calculation.
+  const needs = materialNeeds(data.rawMaterialConversion, data.capacity, {
+    ...data.technicalAnalysisData,
+    bahanbaku: { ...data.technicalAnalysisData.bahanbaku, status: data.technicalAnalysisData.bahanbaku?.status ?? "PENDING", inputs },
+  });
+  const needOf = (id: string) => needs.find((n) => n.id === id);
+  const auto = (n: number | null | undefined) => (n === null || n === undefined ? "" : fmtNum(n, 2));
+  const rows = data.rawMaterialConversion;
+  function setVolume(row: (typeof rows)[number], field: "izin" | "vki", value: string) {
+    const current = rekap[row.id];
+    const entry: RekapBahanBakuEntry = {
+      produk: row.productName,
+      bahanBaku: row.jenis,
+      hsCode: row.hsCode,
+      permohonan: row.volumeKebutuhanJumlah,
+      satuan: row.volumeKebutuhanSatuan,
+      izin: current?.izin ?? "",
+      vki: current?.vki ?? "",
+      [field]: value,
+    };
+    onInputChange("rekapBahanBaku", JSON.stringify({ ...rekap, [row.id]: entry }));
   }
-  const rekapRows = [...rekapMap.values()];
+  const th = "border border-[#c14a1f] px-3 py-2 text-left text-[11px] font-bold text-white";
+  const cellInput = "w-full min-w-[110px] rounded-md border border-[#e8dccd] bg-white px-2 py-1 text-[12px] text-[#20180f] outline-none focus:border-[#e0662e] disabled:bg-[#f7f2ec]";
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -70,50 +92,72 @@ export function BahanBakuModule({
       <Section letter="B" title="Rekapitulasi Total Kebutuhan Bahan Baku">
         <Paragraphs
           items={[
-            "Satu HS Code dapat muncul pada beberapa jenis produk dengan kebutuhan bahan baku yang berbeda. Rekapitulasi ini menjumlahkan kebutuhan dari setiap produk yang menggunakan HS Code dan jenis bahan baku yang sama, sebagai konsolidasi akhir kebutuhan bahan baku perusahaan secara agregat.",
+            "Rekapitulasi membandingkan volume kebutuhan bahan baku dan/atau bahan penolong untuk setiap jenis produksi berdasarkan izin, berdasarkan hasil Verifikasi Kemampuan Industri (VKI), dan berdasarkan permohonan.",
+            "Kebutuhan berdasarkan izin dan berdasarkan VKI dihitung otomatis dari kapasitas produksi per tahun sesuai Perizinan Berusaha dan sesuai hasil VKI (modul Kapasitas Produksi) dikalikan rasio konversi bahan baku (Pasal 32 ayat (3) huruf e dan f). Analis dapat mengisi angka sendiri bila perhitungan tidak sesuai kondisi; kolom yang dikosongkan kembali memakai hasil perhitungan.",
           ]}
         />
-        <Table headers={["HS Code", "Uraian Barang", "Total Kebutuhan (Permohonan)", "Satuan"]}>
-          {rekapRows.map((row) => (
-            <tr key={`${row.hsCode}-${row.uraian}`}>
-              <Td strong>{row.hsCode || "—"}</Td>
-              <Td>{row.uraian || "—"}</Td>
-              <Td strong>{fmtNum(row.total, 2)}</Td>
-              <Td>{row.satuan || "—"}</Td>
-            </tr>
-          ))}
-          {rekapRows.length === 0 && (
-            <tr>
-              <Td>—</Td>
-              <Td>—</Td>
-              <Td>—</Td>
-              <Td>—</Td>
-            </tr>
-          )}
-        </Table>
+        <div className="overflow-x-auto rounded-[9px] border border-[#efe2d4]">
+          <table className="w-full border-collapse text-[12px]" style={{ minWidth: 820 }}>
+            <thead>
+              <tr className="bg-[#e0662e]">
+                <th rowSpan={2} className={th} style={{ width: 44 }}>No</th>
+                <th rowSpan={2} className={th}>Jenis Produksi</th>
+                <th rowSpan={2} className={th}>Bahan Baku dan/atau Bahan Penolong</th>
+                <th colSpan={3} className={`${th} text-center`}>Volume Bahan Baku</th>
+                <th rowSpan={2} className={th}>Satuan</th>
+              </tr>
+              <tr className="bg-[#e0662e]">
+                <th className={th}>Berdasarkan Izin</th>
+                <th className={th}>Berdasarkan VKI</th>
+                <th className={th}>Berdasarkan Permohonan</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr key={row.id}>
+                  <Td>{index + 1}</Td>
+                  <Td strong>{row.productName || "—"}</Td>
+                  <Td>
+                    {row.jenis || "—"}
+                    {row.hsCode && <span className="block text-[10.5px] text-[#a68f80]">HS {row.hsCode}</span>}
+                  </Td>
+                  <Td>
+                    {canEdit ? (
+                      <>
+                        <input value={rekap[row.id]?.izin ?? ""} onChange={(e) => setVolume(row, "izin", e.target.value)} placeholder={auto(needOf(row.id)?.izinOtomatis) || "Volume"} className={cellInput} />
+                        {!rekap[row.id]?.izin && needOf(row.id)?.izinOtomatis != null && <span className="mt-0.5 block text-[10.5px] text-[#a68f80]">otomatis</span>}
+                      </>
+                    ) : (
+                      rekap[row.id]?.izin || auto(needOf(row.id)?.izinOtomatis) || "—"
+                    )}
+                  </Td>
+                  <Td>
+                    {canEdit ? (
+                      <>
+                        <input value={rekap[row.id]?.vki ?? ""} onChange={(e) => setVolume(row, "vki", e.target.value)} placeholder={auto(needOf(row.id)?.vkiOtomatis) || "Volume"} className={cellInput} />
+                        {!rekap[row.id]?.vki && needOf(row.id)?.vkiOtomatis != null && <span className="mt-0.5 block text-[10.5px] text-[#a68f80]">otomatis</span>}
+                      </>
+                    ) : (
+                      rekap[row.id]?.vki || auto(needOf(row.id)?.vkiOtomatis) || "—"
+                    )}
+                  </Td>
+                  <Td strong>{row.volumeKebutuhanJumlah || "—"}</Td>
+                  <Td>{row.volumeKebutuhanSatuan || "—"}</Td>
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="border border-[#efe2d4] px-3 py-2 text-[#8a7565]">Belum ada data konversi bahan baku.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
         <AnalystNote
           value={inputs.catatanB ?? ""}
           onChange={(v) => onInputChange("catatanB", v)}
           canEdit={canEdit}
           placeholder="Catatan analis untuk rekapitulasi total kebutuhan bahan baku..."
-        />
-      </Section>
-
-      <Section letter="C" title="Volume Perizinan">
-        <Paragraphs items={["Dicatat oleh analis dari dokumen fisik izin yang diverifikasi, sebagai pembanding terhadap volume kebutuhan berdasarkan permohonan di atas."]} />
-        <textarea
-          rows={3}
-          value={inputs.volumeIzin ?? ""}
-          disabled={!canEdit}
-          onChange={(e) => onInputChange("volumeIzin", e.target.value)}
-          placeholder="Catat volume perizinan per bahan baku/HS Code untuk dibandingkan dengan volume permohonan..."
-          className="w-full resize-y rounded-lg bg-[#f7f2ec] px-3 py-2.5 text-[13px] text-[#20180f] outline-none disabled:opacity-60"
-        />
-        <AnalystNote
-          value={inputs.catatanC ?? ""}
-          onChange={(v) => onInputChange("catatanC", v)}
-          canEdit={canEdit}
-          placeholder="Catatan analis untuk volume perizinan..."
         />
       </Section>
 

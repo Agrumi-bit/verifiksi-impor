@@ -1,5 +1,6 @@
 "use client";
 
+import { capacitySummary, parseKapasitasVki } from "../../../lhvki-summary";
 import { fmtNum, parseNumeric, type ModuleProps } from "../analysis-types";
 import { AnalystNote, ConclusionCard, Paragraphs, ResultBanner, Section, StatBoxes, Table, Td, StatusPill } from "./shared";
 
@@ -29,6 +30,14 @@ export function KapasitasModule({
   const kapasitasLiniHarian = bottleneck?.perHari ?? null;
   const kapasitasLiniBulanan = kapasitasLiniHarian !== null ? kapasitasLiniHarian * 26 : null;
   const kapasitasLiniTahunan = kapasitasLiniBulanan !== null ? kapasitasLiniBulanan * 12 : null;
+
+  // Pasal 32 ayat (3) huruf c dan d: kapasitas per tahun sesuai Perizinan Berusaha (Kapasitas data on the
+  // application) vs sesuai hasil VKI (typed by the analyst per row, stored as JSON in inputs.kapasitasVki).
+  const capRows = capacitySummary(data.capacity, inputs);
+  const kapasitasVki = parseKapasitasVki(inputs.kapasitasVki);
+  function setKapasitasVki(id: string, value: string) {
+    onInputChange("kapasitasVki", JSON.stringify({ ...kapasitasVki, [id]: value }));
+  }
 
   const byProduct = new Map<string, { jenisProduk: string; deskripsi: string; hsCode: string; satuan: string; sebelumnya: string; rencana: string }>();
   for (const item of data.productionQty) {
@@ -144,7 +153,64 @@ export function KapasitasModule({
         />
       </Section>
 
-      <Section letter="C" title="Perbandingan Kapasitas dengan Rencana Produksi">
+      <Section letter="C" title="Kapasitas Produksi per Tahun: Perizinan Berusaha dan Hasil VKI">
+        <Paragraphs
+          items={[
+            "Sesuai Pasal 32 ayat (3) huruf c dan d Peraturan Menteri Perindustrian Nomor 27 Tahun 2025, LHVKI memuat kapasitas produksi per tahun sesuai Perizinan Berusaha dan kapasitas produksi per tahun sesuai hasil VKI. Kapasitas sesuai Perizinan Berusaha diambil dari data kapasitas permohonan; kapasitas hasil VKI ditetapkan analis berdasarkan perhitungan bottleneck dan hasil verifikasi lapangan.",
+          ]}
+        />
+        <Table headers={["No", "Jenis Produk", "KBLI", "Sesuai Perizinan Berusaha", "Kapasitas Terpasang", "Sesuai Hasil VKI", "Satuan", "Selisih"]} minWidth={980}>
+          {capRows.map((row, i) => (
+            <tr key={row.id}>
+              <Td>{i + 1}</Td>
+              <Td strong>{row.jenisProduk || "—"}</Td>
+              <Td>{row.kbli || "—"}</Td>
+              <Td>{row.izin !== null ? fmtNum(row.izin, 2) : "—"}</Td>
+              <Td>{row.terpasang !== null ? fmtNum(row.terpasang, 2) : "—"}</Td>
+              <td className="border border-[#efe2d4] px-3 py-2">
+                {canEdit ? (
+                  <div className="flex flex-col gap-1">
+                    <input
+                      value={kapasitasVki[row.id] ?? ""}
+                      onChange={(e) => setKapasitasVki(row.id, e.target.value)}
+                      placeholder="Kapasitas per tahun"
+                      className="w-full min-w-[130px] rounded-md border border-[#e8dccd] bg-white px-2 py-1 text-[12px] text-[#20180f] outline-none focus:border-[#e0662e]"
+                    />
+                    {kapasitasLiniTahunan !== null && (
+                      <button
+                        type="button"
+                        onClick={() => setKapasitasVki(row.id, String(Math.round(kapasitasLiniTahunan)))}
+                        className="self-start text-[10.5px] font-semibold text-[#2f6fe0] hover:underline"
+                      >
+                        Pakai hasil bottleneck ({fmtNum(kapasitasLiniTahunan, 0)})
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <span className="font-bold text-[#20180f]">{row.vki !== null ? fmtNum(row.vki, 2) : "—"}</span>
+                )}
+              </td>
+              <Td>{row.satuan || "—"}</Td>
+              <Td>{row.selisihPct === null ? "—" : `${row.selisihPct >= 0 ? "+" : ""}${fmtNum(row.selisihPct, 1)}%`}</Td>
+            </tr>
+          ))}
+          {capRows.length === 0 && (
+            <tr>
+              <td colSpan={8} className="border border-[#efe2d4] px-3 py-2 text-[#8a7565]">
+                Belum ada data kapasitas perizinan (diisi pada data Kapasitas permohonan / Verifikasi Jumlah Produksi).
+              </td>
+            </tr>
+          )}
+        </Table>
+        <AnalystNote
+          value={inputs.catatanKapasitasIzin ?? ""}
+          onChange={(v) => onInputChange("catatanKapasitasIzin", v)}
+          canEdit={canEdit}
+          placeholder="Catatan analis untuk kapasitas sesuai Perizinan Berusaha dan hasil VKI..."
+        />
+      </Section>
+
+      <Section letter="D" title="Perbandingan Kapasitas dengan Rencana Produksi">
         <Paragraphs
           items={[
             "Volume rencana produksi yang diajukan pada permohonan dibandingkan dengan kapasitas produksi tahunan hasil perhitungan bottleneck di atas, untuk menilai kewajaran rencana produksi terhadap kapasitas fasilitas yang telah diverifikasi.",
@@ -190,7 +256,7 @@ export function KapasitasModule({
         />
       </Section>
 
-      <Section letter="D" title="Kesimpulan">
+      <Section letter="E" title="Kesimpulan">
         <ResultBanner
           bg={anyTidakSesuai ? "#fbe4de" : "#e2f7ea"}
           color={anyTidakSesuai ? "#c1361f" : "#1a9850"}

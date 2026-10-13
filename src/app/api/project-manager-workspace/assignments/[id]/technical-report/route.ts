@@ -5,6 +5,7 @@ import { requireProjectManagerSession } from "@/lib/require-project-manager-sess
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { buildKonsumsiImportPlan, buildModalKerjaFromApplication } from "@/modules/applications/viu-import-plan";
 import { technicalAnalysisDataSchema } from "@/modules/technical-analyst-workspace/schema";
+import { buildCapacityRows, buildRawMaterialConversionRows } from "@/modules/verifikator-workspace/schema";
 import { readDocumentReportReview } from "@/modules/technical-analyst-workspace/document-report-review-store";
 
 /** Read-only data for the printable Laporan Analisis Teknis (PM — LHVIU tab and its own page). */
@@ -43,6 +44,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       documentReportReview: await readDocumentReportReview(assignment.id),
       konsumsiImportPlan: buildKonsumsiImportPlan(payload),
       modalKerjaFromApplication: buildModalKerjaFromApplication(payload),
+      capacity: buildCapacityRows(payload),
+      rawMaterialConversion: buildRawMaterialConversionRows(payload),
     },
   });
 }

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { fmtNum, parseNumeric, type ModuleProps } from "../analysis-types";
+import { fmtNum, parseNumeric, powerInKw, type ModuleProps } from "../analysis-types";
 import { AnalystNote, ConclusionCard, EditableStatBox, Formula, Paragraphs, ResultBanner, Section, HeroStat, Table, Td, StatusPill, ToggleSwitch } from "./shared";
 
 type ElectricityTariffRow = {
@@ -61,7 +61,8 @@ export function ListrikModule({
   submitting,
 }: ModuleProps) {
   const machineRows = data.machines.map((m) => {
-    const power = parseNumeric(m.power);
+    // Same values the verifikator saved on Verifikasi Mesin (payload.machines), converted to kW.
+    const power = powerInKw(m.power, m.powerSatuan);
     const jumlah = parseNumeric(m.quantity);
     const waktu = parseNumeric(m.waktuBeroperasi);
     const totalDaya = power !== null && jumlah !== null ? power * jumlah : null;
@@ -120,7 +121,14 @@ export function ListrikModule({
             <tr key={m.id}>
               <Td strong>{m.nama || "—"}</Td>
               <Td>{m.jumlah ?? "—"} pcs</Td>
-              <Td>{m.power ?? "—"} kW</Td>
+              <Td>
+                {m.power !== null ? `${fmtNum(m.power, 2)} kW` : "—"}
+                {m.powerSatuan && !/^kw/i.test(m.powerSatuan.trim()) && (
+                  <span className="block text-[10.5px] text-[#a68f80]">
+                    data: {data.machines.find((x) => x.id === m.id)?.power} {m.powerSatuan}
+                  </span>
+                )}
+              </Td>
               <Td>{fmtNum(m.totalDaya, 2)}</Td>
               <Td>{m.waktu ?? "—"} jam</Td>
               <Td strong>{fmtNum(m.dayaPerHari, 2)}</Td>

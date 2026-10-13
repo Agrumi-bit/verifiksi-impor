@@ -116,12 +116,30 @@ export function NewDocumentDataForm({
               {field.label}
               {field.required && <span className="text-[#c1361f]"> *</span>}
             </span>
-            <input
-              type={field.type}
-              value={values[field.name] ?? ""}
-              onChange={(event) => setValues((prev) => ({ ...prev, [field.name]: event.target.value }))}
-              className="rounded-lg border border-[#e1bfb3] px-3 py-2 text-[13px] text-[#20180f] outline-none focus:border-[#e0662e]"
-            />
+            {field.type === "select" ? (
+              <select
+                value={values[field.name] ?? ""}
+                onChange={(event) => setValues((prev) => ({ ...prev, [field.name]: event.target.value }))}
+                className="rounded-lg border border-[#e1bfb3] bg-white px-3 py-2 text-[13px] text-[#20180f] outline-none focus:border-[#e0662e]"
+              >
+                <option value="">Pilih…</option>
+                {field.options?.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type={field.type === "number" ? "text" : field.type}
+                inputMode={field.type === "number" ? "numeric" : undefined}
+                value={values[field.name] ?? ""}
+                onChange={(event) =>
+                  setValues((prev) => ({ ...prev, [field.name]: field.type === "number" ? event.target.value.replace(/\D/g, "") : event.target.value }))
+                }
+                className="rounded-lg border border-[#e1bfb3] px-3 py-2 text-[13px] text-[#20180f] outline-none focus:border-[#e0662e]"
+              />
+            )}
           </label>
         ))}
         <div className="mt-1 flex justify-end gap-2.5">

@@ -50,7 +50,7 @@ export async function GET(
   if (!item) {
     return NextResponse.json({ error: "Dokumen tidak dikenali" }, { status: 400 });
   }
-  const fields = documentDataFieldValues(key, payload, toCompanyLegalContext(company));
+  const fields = documentDataFieldValues(key, payload, { companyLegal: toCompanyLegalContext(company), companyLocations: company?.locations });
 
   if (key in COMPANY_MAPPED_DOCUMENT_KEYS) {
     if (!company) {
@@ -138,7 +138,7 @@ export async function PATCH(
 
   const updatedPayload = applyChecklistDocumentPath(applyDocumentDataToPayload(payload, documentData.values, key), key, path);
   await db.application.update({ where: { id: application.id }, data: { payload: updatedPayload } });
-  await syncLocationDocumentToCompany(application.companyId, key, path);
+  await syncLocationDocumentToCompany(application.companyId, key, path, documentData.values);
 
   if (key in COMPANY_MAPPED_DOCUMENT_KEYS) {
     if (!company) {
