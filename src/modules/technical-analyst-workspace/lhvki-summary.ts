@@ -15,15 +15,21 @@ export const WORKING_DAYS_PER_MONTH = 26;
 
 /** Line capacity from the bottleneck machine — the analyst's pick (inputs.mesinBottleneck) or the lowest per day. */
 export function computeBottleneck(machines: readonly MachineChecklistItem[], chosenName?: string) {
-  const rows = machines.map((m) => ({ ...m, perHari: parseNumeric(m.kapasitasPerHari) }));
+  const rows = machines.map((m) => ({ ...m, perHari: parseNumeric(m.kapasitasPerHari), perTahun: parseNumeric(m.kapasitasPerTahun) }));
   const withCapacity = rows.filter((m) => m.perHari !== null && m.perHari > 0);
-  const auto = withCapacity.length > 0 ? withCapacity.reduce((min, m) => (m.perHari! < min.perHari! ? m : min)) : null;
+  const unitOf = (m: { kapasitasJamSatuan: string }) => m.kapasitasJamSatuan.trim().toLowerCase();
+  const counts = new Map<string, number>();
+  for (const m of withCapacity) counts.set(unitOf(m), (counts.get(unitOf(m)) ?? 0) + 1);
+  const lineUnit = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  const sameUnit = withCapacity.filter((m) => unitOf(m) === lineUnit);
+  const auto = sameUnit.length > 0 ? sameUnit.reduce((min, m) => (m.perHari! < min.perHari! ? m : min)) : null;
   const name = chosenName?.trim() ?? "";
   const chosen = name ? (rows.find((m) => (m.nama ?? "").trim() === name) ?? null) : null;
   const bottleneck = chosen ?? auto;
   const harian = bottleneck?.perHari ?? null;
-  const bulanan = harian !== null ? harian * WORKING_DAYS_PER_MONTH : null;
-  const tahunan = bulanan !== null ? bulanan * 12 : null;
+  const hariEfektif = parseNumeric(bottleneck?.hariEfektifPerTahun) ?? WORKING_DAYS_PER_MONTH * 12;
+  const tahunan = bottleneck?.perTahun ?? (harian !== null ? harian * hariEfektif : null);
+  const bulanan = tahunan !== null ? tahunan / 12 : null;
   return { rows, auto, chosen, bottleneck, harian, bulanan, tahunan };
 }
 

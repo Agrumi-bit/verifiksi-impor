@@ -19,17 +19,27 @@ export function KapasitasModule({
   canEdit,
   submitting,
 }: ModuleProps) {
-  const machineRows = data.machines.map((m) => ({ ...m, perHari: parseNumeric(m.kapasitasPerHari) }));
+  // Same figures the verifikator sees on Verifikasi Mesin: Kapasitas/Hari = jumlah × kapasitas/jam ×
+  // jam operasi, Kapasitas/Tahun = Kapasitas/Hari × hari efektif per tahun of that machine.
+  const machineRows = data.machines.map((m) => ({ ...m, perHari: parseNumeric(m.kapasitasPerHari), perTahun: parseNumeric(m.kapasitasPerTahun) }));
   const withCapacity = machineRows.filter((m) => m.perHari !== null && m.perHari > 0);
-  // Default: the machine with the lowest daily capacity. The analyst can pick another machine/process
-  // as the bottleneck (stored by name in inputs.mesinBottleneck, so the report prints it as such).
-  const autoBottleneck = withCapacity.length > 0 ? withCapacity.reduce((min, m) => (m.perHari! < min.perHari! ? m : min)) : null;
+  // Default: the lowest daily capacity among the machines that produce in the line's output unit (the
+  // unit most machines share, e.g. pcs) — a plate maker counted in "plat" is not comparable. The
+  // analyst can pick another machine/process (stored by name in inputs.mesinBottleneck).
+  const unitCount = new Map<string, number>();
+  for (const m of withCapacity) unitCount.set(m.kapasitasJamSatuan.trim().toLowerCase(), (unitCount.get(m.kapasitasJamSatuan.trim().toLowerCase()) ?? 0) + 1);
+  const lineUnit = [...unitCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  const sameUnit = withCapacity.filter((m) => m.kapasitasJamSatuan.trim().toLowerCase() === lineUnit);
+  const autoBottleneck = sameUnit.length > 0 ? sameUnit.reduce((min, m) => (m.perHari! < min.perHari! ? m : min)) : null;
   const chosenName = inputs.mesinBottleneck?.trim() ?? "";
   const chosenBottleneck = chosenName ? (machineRows.find((m) => (m.nama ?? "").trim() === chosenName) ?? null) : null;
   const bottleneck = chosenBottleneck ?? autoBottleneck;
   const kapasitasLiniHarian = bottleneck?.perHari ?? null;
-  const kapasitasLiniBulanan = kapasitasLiniHarian !== null ? kapasitasLiniHarian * 26 : null;
-  const kapasitasLiniTahunan = kapasitasLiniBulanan !== null ? kapasitasLiniBulanan * 12 : null;
+  // Hari efektif per tahun of the bottleneck machine (Verifikasi Mesin); 312 (26 hari × 12) when not recorded.
+  const hariEfektif = parseNumeric(bottleneck?.hariEfektifPerTahun) ?? 312;
+  const kapasitasLiniTahunan = bottleneck?.perTahun ?? (kapasitasLiniHarian !== null ? kapasitasLiniHarian * hariEfektif : null);
+  const kapasitasLiniBulanan = kapasitasLiniTahunan !== null ? kapasitasLiniTahunan / 12 : null;
+  const satuanLini = bottleneck?.kapasitasJamSatuan?.trim() || "pcs";
 
   // Pasal 32 ayat (3) huruf c dan d: kapasitas per tahun sesuai Perizinan Berusaha (Kapasitas data on the
   // application) vs sesuai hasil VKI (typed by the analyst per row, stored as JSON in inputs.kapasitasVki).
@@ -79,7 +89,7 @@ export function KapasitasModule({
       </Section>
 
       <Section letter="A" title="Data Produksi Mesin">
-        <Table headers={["Mesin", "Unit", "Kapasitas/Unit", "Jam Operasi", "Kapasitas/Hari"]}>
+        <Table headers={["Mesin", "Unit", "Kapasitas/Unit per Jam", "Jam Operasi", "Kapasitas/Hari", "Hari Efektif", "Kapasitas/Tahun"]} minWidth={820}>
           {machineRows.map((m) => (
             <tr key={m.id} style={bottleneck?.id === m.id ? { background: "#fbe4de" } : undefined}>
               <Td strong>
@@ -91,7 +101,13 @@ export function KapasitasModule({
                 {m.kapasitasJam || "—"} {m.kapasitasJamSatuan}
               </Td>
               <Td>{m.waktuBeroperasi || "—"} jam</Td>
-              <Td strong>{m.kapasitasPerHari || "—"}</Td>
+              <Td strong>
+                {m.perHari !== null ? fmtNum(m.perHari, 2) : "—"} {m.perHari !== null ? m.kapasitasJamSatuan : ""}
+              </Td>
+              <Td>{m.hariEfektifPerTahun ? `${m.hariEfektifPerTahun} hari` : "—"}</Td>
+              <Td>
+                {m.perTahun !== null ? fmtNum(m.perTahun, 0) : "—"} {m.perTahun !== null ? m.kapasitasJamSatuan : ""}
+              </Td>
             </tr>
           ))}
         </Table>
@@ -135,14 +151,17 @@ export function KapasitasModule({
         <StatBoxes
           items={[
             { label: "Mesin/Proses Bottleneck", value: bottleneck?.nama || "—" },
-            { label: "Kapasitas Lini per Hari", value: kapasitasLiniHarian !== null ? `${fmtNum(kapasitasLiniHarian, 0)} pcs` : "—" },
-            { label: "Kapasitas Lini per Bulan (26 hari)", value: kapasitasLiniBulanan !== null ? `${fmtNum(kapasitasLiniBulanan, 0)} pcs` : "—" },
+            { label: "Kapasitas Lini per Hari", value: kapasitasLiniHarian !== null ? `${fmtNum(kapasitasLiniHarian, 0)} ${satuanLini}` : "—" },
+            { label: "Kapasitas Lini per Bulan (rata-rata)", value: kapasitasLiniBulanan !== null ? `${fmtNum(kapasitasLiniBulanan, 0)} ${satuanLini}` : "—" },
           ]}
         />
         <div className="mb-4 rounded-[9px] bg-[#f7f2ec] px-3.5 py-3">
           <div className="text-[11px] text-[#8a7565]">Kapasitas Produksi per Tahun</div>
           <div className="mt-0.75 text-[16px] font-extrabold text-[#20180f]">
-            {kapasitasLiniTahunan !== null ? `${fmtNum(kapasitasLiniTahunan, 0)} pcs` : "—"}
+            {kapasitasLiniTahunan !== null ? `${fmtNum(kapasitasLiniTahunan, 0)} ${satuanLini}` : "—"}
+            {kapasitasLiniTahunan !== null && (
+              <span className="ml-2 text-[11px] font-normal text-[#8a7565]">({fmtNum(kapasitasLiniHarian, 0)} × {fmtNum(hariEfektif, 0)} hari efektif)</span>
+            )}
           </div>
         </div>
         <AnalystNote
