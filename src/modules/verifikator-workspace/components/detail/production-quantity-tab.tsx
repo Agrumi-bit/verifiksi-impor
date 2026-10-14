@@ -26,6 +26,8 @@ import { RichTextEditor } from "@/components/form/rich-text-editor";
 import { SearchSelectInput } from "@/components/form/search-select-input";
 
 type CapacityRow = {
+  /** Uraian KBLI taken from the KBLI master data (not editable by hand). */
+  kbliDescriptionFromMaster?: boolean;
   id: string;
   jenisProduk: string;
   kbliCode: string;
@@ -629,6 +631,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
   const capacity = data?.capacity ?? [];
   const kbliOptions = data?.kbliOptions ?? [];
   const kbliSelectOptions = kbliOptions.map((k) => ({ value: k.code, label: k.code, hint: k.description }));
+  const newCapacityMasterKbli = kbliOptions.find((k) => k.code === newCapacity.kbliCode.trim())?.description;
   const capacityDocumentPath = data?.capacityDocumentPath ?? null;
   const rawMaterialUsage = data?.rawMaterialUsage ?? [];
 
@@ -996,10 +999,11 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
                 <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Uraian KBLI</div>
                 <input
                   type="text"
-                  value={newCapacity.kbliDescription}
+                  value={newCapacityMasterKbli ?? newCapacity.kbliDescription}
+                  readOnly={newCapacityMasterKbli !== undefined}
                   onChange={(e) => setNewCapacity((prev) => ({ ...prev, kbliDescription: e.target.value }))}
-                  placeholder="Terisi otomatis saat memilih KBLI"
-                  className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1.5 text-[11.5px] text-[#20180f] outline-none"
+                  placeholder="Terisi otomatis dari master data KBLI"
+                  className={`w-full rounded-md border border-[#e8dccd] px-2 py-1.5 text-[11.5px] text-[#20180f] outline-none ${newCapacityMasterKbli !== undefined ? "bg-[#faf6f1]" : "bg-white"}`}
                 />
               </div>
             </div>
@@ -1110,8 +1114,9 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
                     )}
                   </td>
                   <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">
-                    {canEdit ? (
+                    {canEdit && !c.kbliDescriptionFromMaster ? (
                       <EditableValueInput
+                        key={c.kbliCode}
                         value={c.kbliDescription}
                         onSave={(value) => savePayloadField("capacity", c.id, "kbliDescription", value, `capacity:${c.id}:kbliDescription`)}
                       />

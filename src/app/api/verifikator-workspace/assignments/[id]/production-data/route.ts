@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
 import { getServerSession } from "@/lib/get-session";
 import { updateApplicationPayload } from "@/lib/application-payload";
+import { kbliMasterDescriptions } from "@/modules/master-data/kbli-lookup.server";
 
 const SOURCE_CONFIG = {
   // capacity rows are matched by their own id now, not productId — see capacityItemSchema for
@@ -89,6 +90,17 @@ export async function PATCH(
     return NextResponse.json({ error: "Tidak ada field yang valid untuk diubah" }, { status: 400 });
   }
 
+  // Capacity: Uraian KBLI follows the KBLI master data — looked up for the new code, or for the
+  // row's current code when only the description is sent (a manual description is kept only for
+  // codes the master data doesn't list).
+  let kbliMaster: Map<string, string> | null = null;
+  if (source === "capacity" && ("kbliCode" in filteredFields || "kbliDescription" in filteredFields)) {
+    const currentRow = ((assignment.application.payload as { capacity?: Array<Record<string, unknown>> } | null)?.capacity ?? []).find(
+      (item) => (item.id ?? item.productId) === itemId,
+    );
+    kbliMaster = await kbliMasterDescriptions([filteredFields.kbliCode, currentRow?.kbliCode as string | undefined]);
+  }
+
   const result = await updateApplicationPayload<{ ok: boolean; item?: Record<string, unknown> }>(
     assignment.applicationId,
     (freshPayload) => {
@@ -115,6 +127,10 @@ export async function PATCH(
       // time it's edited, so future edits/deletes address it by a real id instead of productId.
       if (source === "capacity" && !merged.id) {
         merged.id = itemId;
+      }
+      const masterKbli = kbliMaster?.get(String(merged.kbliCode ?? "").trim());
+      if (source === "capacity" && masterKbli) {
+        merged.kbliDescription = masterKbli;
       }
       // rencanaKebutuhan is kept as an auto-summed total (dalamNegeri + luarNegeri) — report
       // code reads this single field, so keep it in sync whenever either half changes.

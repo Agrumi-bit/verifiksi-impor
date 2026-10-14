@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
 import { getServerSession } from "@/lib/get-session";
 import { updateApplicationPayload } from "@/lib/application-payload";
+import { kbliMasterDescriptions } from "@/modules/master-data/kbli-lookup.server";
 
 async function findOwnedAssignment(assignmentNumber: string, verifikatorId: string) {
   const assignment = await db.assignment.findUnique({
@@ -60,7 +61,9 @@ export async function POST(
     return NextResponse.json({ error: "Data tidak valid" }, { status: 400 });
   }
 
-  const newRow = { id: randomUUID(), ...parsed.data };
+  // Uraian KBLI from the KBLI master data whenever the code is listed there.
+  const masterKbli = (await kbliMasterDescriptions([parsed.data.kbliCode])).get(parsed.data.kbliCode ?? "");
+  const newRow = { id: randomUUID(), ...parsed.data, ...(masterKbli ? { kbliDescription: masterKbli } : {}) };
   await updateApplicationPayload(assignment.applicationId, (payload) => {
     const capacity = [...(payload.capacity ?? []), newRow];
     return { payload: { ...payload, capacity }, result: undefined };

@@ -6,6 +6,8 @@ import { isAssignmentReviewable } from "@/modules/applications/assignment-review
 import { getServerSession } from "@/lib/get-session";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { kbliEntrySchema } from "@/modules/shared/schema";
+import { updateApplicationPayload } from "@/lib/application-payload";
+import { kbliMasterDescriptions } from "@/modules/master-data/kbli-lookup.server";
 import {
   PRODUCTION_QTY_VERIFICATION_STATUSES,
   PRODUCTION_QTY_SEBELUMNYA_SUMMARY_KEY,
@@ -83,11 +85,35 @@ export async function GET(
   const capacityDocumentPath = payload.capacityDocumentPath ?? null;
   // Kapasitas Produksi Berdasarkan Perizinan is keyed off KBLI — offer the company's own
   // registered KBLI list as pick-from options (izin is granted per KBLI, not invented ad hoc).
-  const kbliOptions = kbliEntrySchema.array().safeParse(assignment.application.company?.kbliEntries ?? []).data ?? [];
+  const companyKbli = kbliEntrySchema.array().safeParse(assignment.application.company?.kbliEntries ?? []).data ?? [];
+  // Uraian KBLI always comes from the KBLI master data when the code is there — a description
+  // typed by hand earlier is replaced (and, while the assignment is still reviewable, saved back).
+  const kbliDescriptions = await kbliMasterDescriptions([...capacity.map((c) => c.kbliCode), ...companyKbli.map((k) => k.code)]);
+  const masterDescription = (code: string | undefined) => kbliDescriptions.get((code ?? "").trim());
+  const kbliOptions = companyKbli.map((k) => ({ ...k, description: masterDescription(k.code) ?? k.description }));
+  const staleKbli = capacity.some((c) => {
+    const d = masterDescription(c.kbliCode);
+    return d !== undefined && d !== c.kbliDescription;
+  });
+  if (staleKbli && isAssignmentReviewable(assignment)) {
+    await updateApplicationPayload(assignment.applicationId, (fresh) => ({
+      payload: {
+        ...fresh,
+        capacity: (fresh.capacity ?? []).map((row) => {
+          const d = masterDescription(row.kbliCode);
+          return d !== undefined && d !== row.kbliDescription ? { ...row, kbliDescription: d } : row;
+        }),
+      },
+      result: undefined,
+    }));
+  }
 
   return NextResponse.json({
     data: {
-      capacity,
+      capacity: capacity.map((c) => {
+        const d = masterDescription(c.kbliCode);
+        return { ...c, kbliDescription: d ?? c.kbliDescription, kbliDescriptionFromMaster: d !== undefined };
+      }),
       capacityDocumentPath,
       kbliOptions,
       rows: checklist.map((item) => ({
