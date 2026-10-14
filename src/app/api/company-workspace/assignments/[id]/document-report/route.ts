@@ -30,6 +30,7 @@ import {
   PRODUCTION_QTY_RENCANA_SUMMARY_KEY,
   PRODUCTION_QTY_RENCANA_KEBUTUHAN_SUMMARY_KEY,
   PRODUCTION_QTY_PENJUALAN_SUMMARY_KEY,
+  PRODUCTION_QTY_MESIN_SUMMARY_KEY,
 } from "@/modules/verifikator-workspace/status";
 import { buildApplicationDocumentChecklistWithBrands } from "@/modules/verifikator-workspace/application-checklist";
 
@@ -178,6 +179,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       rencanaConclusion,
       rencanaKebutuhanConclusion,
       penjualanConclusion,
+      mesinConclusion: summaryConclusion(PRODUCTION_QTY_MESIN_SUMMARY_KEY),
       payload,
       companyLegal,
       companyLocations,

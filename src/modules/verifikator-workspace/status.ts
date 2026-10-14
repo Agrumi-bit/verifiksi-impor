@@ -106,6 +106,8 @@ export const PRODUCTION_QTY_RENCANA_SUMMARY_KEY = "summary:rencana";
 export const PRODUCTION_QTY_RENCANA_KEBUTUHAN_SUMMARY_KEY = "summary:rencana-kebutuhan";
 /** Synthetic key for the whole-section conclusion on "Penjualan Dalam Negeri & Ekspor". */
 export const PRODUCTION_QTY_PENJUALAN_SUMMARY_KEY = "summary:penjualan";
+/** Synthetic key for the Uraian Observasi of the whole Machine Verification tab ("2. Kemampuan Produksi Setiap Mesin per Hari"). */
+export const PRODUCTION_QTY_MESIN_SUMMARY_KEY = "summary:mesin";
 
 /**
  * Per-row decision key for the Penggunaan/Stok/Rencana-Kebutuhan raw-material tables — same row

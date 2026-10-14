@@ -230,6 +230,8 @@ type Props = {
   rencanaConclusion: { status: string; keterangan: string; kesimpulan: string };
   rencanaKebutuhanConclusion: { status: string; keterangan: string; kesimpulan: string };
   penjualanConclusion: { status: string; keterangan: string; kesimpulan: string };
+  /** Uraian Observasi of the Machine Verification tab — replaces the generated machine narrative when filled. */
+  mesinConclusion?: { status: string; keterangan: string; kesimpulan: string };
   company: string;
   chapterIdx: number;
   startPage: number;
@@ -251,6 +253,7 @@ export function ProductionCapabilityChapter({
   rencanaConclusion,
   rencanaKebutuhanConclusion,
   penjualanConclusion,
+  mesinConclusion,
   company,
   chapterIdx,
   startPage,
@@ -604,7 +607,14 @@ export function ProductionCapabilityChapter({
         <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: ORANGE_TEXT, margin: "20px 0 10px" }}>
           2. KEMAMPUAN PRODUKSI SETIAP MESIN PER HARI <span style={{ fontWeight: 400, color: MUTED_2 }}>(lanjutan)</span>
         </div>
-        <CatatanVerifikator paragraphs={machineParagraphs} />
+        {mesinConclusion?.keterangan && mesinConclusion.keterangan.replace(/<[^>]*>/g, "").trim() ? (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: ORANGE_TEXT, marginBottom: 8 }}>Catatan Verifikator</div>
+            <SanitizedHtml html={mesinConclusion.keterangan} />
+          </div>
+        ) : (
+          <CatatanVerifikator paragraphs={machineParagraphs} />
+        )}
         <NoteBox ok={machines.length > 0}>
           <p style={{ fontSize: 10, lineHeight: 1.6, color: "#1f2f26", margin: 0 }}>
             {machines.length === 0

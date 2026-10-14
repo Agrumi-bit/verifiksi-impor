@@ -15,6 +15,7 @@ import {
   PRODUCTION_QTY_RENCANA_SUMMARY_KEY,
   PRODUCTION_QTY_RENCANA_KEBUTUHAN_SUMMARY_KEY,
   PRODUCTION_QTY_PENJUALAN_SUMMARY_KEY,
+  PRODUCTION_QTY_MESIN_SUMMARY_KEY,
   rawMaterialUsageRowKey,
 } from "@/modules/verifikator-workspace/status";
 
@@ -35,6 +36,7 @@ const SUMMARY_KEYS: string[] = [
   PRODUCTION_QTY_RENCANA_SUMMARY_KEY,
   PRODUCTION_QTY_RENCANA_KEBUTUHAN_SUMMARY_KEY,
   PRODUCTION_QTY_PENJUALAN_SUMMARY_KEY,
+  PRODUCTION_QTY_MESIN_SUMMARY_KEY,
 ];
 
 function summaryConclusion(decisions: ReturnType<typeof productionQtyVerificationsSchema.parse>, key: string) {
@@ -112,6 +114,7 @@ export async function GET(
       rencanaConclusion: summaryConclusion(decisions, PRODUCTION_QTY_RENCANA_SUMMARY_KEY),
       rencanaKebutuhanConclusion: summaryConclusion(decisions, PRODUCTION_QTY_RENCANA_KEBUTUHAN_SUMMARY_KEY),
       penjualanConclusion: summaryConclusion(decisions, PRODUCTION_QTY_PENJUALAN_SUMMARY_KEY),
+      mesinConclusion: summaryConclusion(decisions, PRODUCTION_QTY_MESIN_SUMMARY_KEY),
     },
   });
 }

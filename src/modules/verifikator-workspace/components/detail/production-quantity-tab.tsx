@@ -1,7 +1,9 @@
 "use client";
 
 import { CountryNamesMultiSelect } from "@/modules/master-data/components/country-names-multi-select";
-import { useMemo, useState } from "react";
+import { UnitSelect } from "@/modules/master-data/components/unit-select";
+import { useHsCodeOptions } from "@/modules/applications/hooks/use-hs-code-options";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -381,6 +383,8 @@ function RawMaterialUsageTable({
 }) {
   const [sortField, setSortField] = useState<RawMaterialSortField | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const hsCodeOptions = useHsCodeOptions();
+  const unitForHsCode = (hsCode: string) => hsCodeOptions.find((o) => o.value === hsCode)?.unit ?? "";
 
   function handleSort(field: RawMaterialSortField) {
     if (sortField === field) {
@@ -537,9 +541,13 @@ function RawMaterialUsageTable({
               )}
               <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
                 {canEdit ? (
-                  <EditableValueInput value={r.satuan} onSave={(value) => onSaveValue(r, "satuan", value)} />
+                  <UnitSelect
+                    value={r.satuan || unitForHsCode(r.hsCode)}
+                    onChange={(value) => onSaveValue(r, "satuan", value)}
+                    className="h-8 w-full min-w-[90px] rounded-md border border-[#e8dccd] bg-white px-2 text-[11.5px] text-[#20180f] outline-none focus:border-[#e0662e]"
+                  />
                 ) : (
-                  r.satuan || "—"
+                  r.satuan || unitForHsCode(r.hsCode) || "—"
                 )}
               </td>
               <td className="border border-[#efe2d4] px-3 py-2.25 font-bold text-[#20180f]">{r.productName || "—"}</td>
@@ -623,6 +631,22 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
   const kbliSelectOptions = kbliOptions.map((k) => ({ value: k.code, label: k.code, hint: k.description }));
   const capacityDocumentPath = data?.capacityDocumentPath ?? null;
   const rawMaterialUsage = data?.rawMaterialUsage ?? [];
+
+  // Satuan bahan baku defaults to the HS Code's unit (master data): a row still without one gets it
+  // saved — one at a time, so concurrent PATCHes don't overwrite each other — and stays changeable.
+  const hsCodeOptionsForUnit = useHsCodeOptions();
+  const defaultedSatuan = useRef(new Set<string>());
+  useEffect(() => {
+    if (!canEdit || savingKey || hsCodeOptionsForUnit.length === 0) return;
+    const row = rawMaterialUsage.find(
+      (r) => !r.satuan && r.hsCode && !defaultedSatuan.current.has(r.rawMaterialId) && hsCodeOptionsForUnit.some((o) => o.value === r.hsCode && o.unit),
+    );
+    if (!row) return;
+    defaultedSatuan.current.add(row.rawMaterialId);
+    const unit = hsCodeOptionsForUnit.find((o) => o.value === row.hsCode)?.unit ?? "";
+    void savePayloadField("rawMaterialUsage", row.rawMaterialId, "satuan", unit, `rawMaterialUsage:${row.rawMaterialId}:satuan`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canEdit, savingKey, hsCodeOptionsForUnit, rawMaterialUsage]);
   const rawMaterialConversion = data?.rawMaterialConversion ?? [];
   const sales = data?.sales ?? [];
   const sebelumnya = (data?.rows ?? []).filter((r) => r.section === "sebelumnya");
@@ -1448,9 +1472,9 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
                 </td>
                 <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
                   {canEdit ? (
-                    <EditableValueInput
+                    <CountryNamesMultiSelect
                       value={row.negaraTujuan}
-                      onSave={(value) => savePayloadField("sales", row.productId, "negaraTujuan", value, `sales:${row.productId}:negaraTujuan`)}
+                      onChange={(value) => savePayloadField("sales", row.productId, "negaraTujuan", value, `sales:${row.productId}:negaraTujuan`)}
                     />
                   ) : (
                     row.negaraTujuan || "—"

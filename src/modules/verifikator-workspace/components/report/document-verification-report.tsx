@@ -94,6 +94,7 @@ export type ReportData = {
   rencanaConclusion: { status: string; keterangan: string; kesimpulan: string };
   rencanaKebutuhanConclusion: { status: string; keterangan: string; kesimpulan: string };
   penjualanConclusion: { status: string; keterangan: string; kesimpulan: string };
+  mesinConclusion?: { status: string; keterangan: string; kesimpulan: string };
   payload: ApplicationWizardValues;
   companyLegal: CompanyLegalContext;
   companyLocations: LocationValues[] | null;
@@ -2086,6 +2087,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
             rencanaConclusion={data.rencanaConclusion}
             rencanaKebutuhanConclusion={data.rencanaKebutuhanConclusion}
             penjualanConclusion={data.penjualanConclusion}
+            mesinConclusion={data.mesinConclusion}
             company={company}
             chapterIdx={categories.length + (machines.length > 0 ? 1 : 0) + (hasProductChapter ? 1 : 0)}
             startPage={productionCapabilityChapterStartPage}

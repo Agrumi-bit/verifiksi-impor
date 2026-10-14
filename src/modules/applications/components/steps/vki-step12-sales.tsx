@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { useFieldArray, useWatch, type UseFormReturn } from "react-hook-form";
+import { Controller, useFieldArray, useWatch, type UseFormReturn } from "react-hook-form";
 
 import { Input } from "@/components/ui/input";
+import { CountryNamesMultiSelect } from "@/modules/master-data/components/country-names-multi-select";
 import type { ApplicationWizardValues } from "../../schema";
 
 type Props = { form: UseFormReturn<ApplicationWizardValues> };
@@ -69,7 +70,11 @@ export function VkiStep12Sales({ form }: Props) {
                       <Input placeholder="0" {...register(`sales.${index}.luarNegeri`)} />
                     </td>
                     <td className="border border-border p-1.5">
-                      <Input placeholder="Contoh: Malaysia" {...register(`sales.${index}.negaraTujuan`)} />
+                      <Controller
+                        control={control}
+                        name={`sales.${index}.negaraTujuan`}
+                        render={({ field }) => <CountryNamesMultiSelect value={field.value ?? ""} onChange={field.onChange} />}
+                      />
                     </td>
                     <td className="border border-border p-1.5">
                       <Input placeholder="kg" {...register(`sales.${index}.satuan`)} />

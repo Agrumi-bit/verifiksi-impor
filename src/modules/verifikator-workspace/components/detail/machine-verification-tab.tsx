@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { MaterialIcon } from "../material-icon";
 import { RichTextEditor } from "@/components/form/rich-text-editor";
+import { MachineObservationEditor } from "./machine-observation-editor";
 import { MACHINE_VERIFICATION_STATUS_BADGE, MACHINE_VERIFICATION_STATUS_LABELS, type MachineVerificationStatusValue } from "../../status";
 import type { AssignmentStatusValue } from "../../status";
 import { MACHINE_KONDISI_LABELS, MACHINE_KONDISI_VALUES, type MachineKondisiValue } from "@/modules/applications/schema";
@@ -845,6 +846,7 @@ export function MachineVerificationTab({ assignmentId, assignmentStatus }: Props
           })}
         </div>
       )}
+      <MachineObservationEditor assignmentId={assignmentId} canEdit={canEdit} onSaved={invalidateAll} />
     </div>
   );
 }
