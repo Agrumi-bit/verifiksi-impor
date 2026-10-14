@@ -1273,7 +1273,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
   // against the cover so nothing repeats.
   const bentoPhotos: BentoPhotoItem[] = [
     ...machines.flatMap((m) => {
-      const gallery = [...new Set([m.photoMesinPath, ...m.photoMesinPaths].filter((p): p is string => Boolean(p)))];
+      const gallery = [...new Set([m.photoMesinPath, ...(m.photoMesinPaths ?? [])].filter((p): p is string => Boolean(p)))];
       const label = m.proses || m.nama || "Mesin";
       return gallery.map((path, i) => ({
         key: `machine:${m.id}:${i}`,

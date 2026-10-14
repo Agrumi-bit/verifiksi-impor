@@ -96,6 +96,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const machines = buildMachineChecklist(payload).map((item) => ({
     ...item,
     photoMesinPath: machineDecisions[item.id]?.photoPath || item.photoMesinPath,
+    photoMesinPaths: machineDecisions[item.id]?.photoPaths ?? [],
     status: machineDecisions[item.id]?.status ?? "PENDING",
     note: machineDecisions[item.id]?.note ?? "",
     jumlahTerpasang: machineDecisions[item.id]?.jumlahTerpasang ?? "",
