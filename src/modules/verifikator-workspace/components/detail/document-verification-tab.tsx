@@ -85,7 +85,8 @@ function fileHref(path: string): string {
   return `/api/files?path=${encodeURIComponent(path)}`;
 }
 
-const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png"]);
+// webp: photos are compressed to WebP in the browser before upload (lib/image-compress.ts).
+const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "jfif", "png", "webp"]);
 function isImagePath(path: string): boolean {
   const extension = path.split(".").pop()?.toLowerCase() ?? "";
   return IMAGE_EXTENSIONS.has(extension);

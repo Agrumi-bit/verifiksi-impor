@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/get-session";
 import { storage, STORAGE_NAMESPACES, type StorageNamespace } from "@/lib/storage";
 import { schedulePdfPreview } from "@/lib/pdf-preview";
+import { scheduleImageThumb } from "@/lib/image-thumb";
+import { parsePhotoMeta } from "@/lib/photo-meta";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
@@ -51,8 +53,14 @@ export async function POST(request: Request) {
   const buffer = Buffer.from(await file.arrayBuffer());
   const key = `${randomUUID()}-${sanitizeFileName(file.name)}`;
   const path = await storage.save(namespace, key, buffer);
-  // Large scanned PDFs get a compressed viewing copy in the background (original untouched).
+  // Large scanned PDFs get a compressed viewing copy in the background (original untouched); photos
+  // get a small WebP thumbnail for grids and lists.
   schedulePdfPreview(path);
+  scheduleImageThumb(path);
+
+  // Date/GPS the browser read from the photo before compressing it (compression drops EXIF).
+  const meta = parsePhotoMeta(formData.get("takenAt"), formData.get("lat"), formData.get("lng"));
+  if (meta) await storage.save(namespace, `${key}.meta.json`, Buffer.from(JSON.stringify(meta)));
 
   return NextResponse.json({ path, name: file.name, size: file.size });
 }

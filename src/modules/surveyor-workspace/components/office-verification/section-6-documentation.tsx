@@ -1,5 +1,6 @@
 "use client";
 
+import { appendUploadFile } from "@/lib/image-compress";
 import { useState } from "react";
 
 import { MaterialIcon } from "../material-icon";
@@ -25,7 +26,7 @@ const FIXED_DOC_TYPE_DEFS = DOC_TYPE_DEFS.filter((dt) => dt.key !== "other");
 
 async function uploadFile(file: File): Promise<string> {
   const formData = new FormData();
-  formData.append("file", file);
+  await appendUploadFile(formData, file);
   formData.append("namespace", "inspection");
   const response = await fetch("/api/uploads", { method: "POST", body: formData });
   if (!response.ok) {

@@ -14,14 +14,14 @@ export function DocumentPreview({ path, label }: Props) {
   }
 
   const url = `/api/files?path=${encodeURIComponent(path)}`;
-  const isImage = /\.(jpg|jpeg|png)$/i.test(path);
+  const isImage = /\.(jpg|jpeg|jfif|png|webp)$/i.test(path);
 
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="aspect-[0.77] w-full overflow-hidden rounded-lg border border-border bg-white shadow-sm">
         {isImage ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={label ?? "Dokumen"} className="size-full object-contain" />
+          <img src={`${url}&variant=thumb`} alt={label ?? "Dokumen"} className="size-full object-contain" loading="lazy" />
         ) : (
           <PdfViewer url={url} title={label ?? "Dokumen"} className="size-full overflow-y-auto" />
         )}

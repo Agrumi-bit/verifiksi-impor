@@ -1,5 +1,6 @@
 "use client";
 
+import { appendUploadFile } from "@/lib/image-compress";
 import type { ReactNode } from "react";
 
 export function Field({
@@ -142,7 +143,7 @@ export function UploadBox({
     event.target.value = "";
     if (!file) return;
     const formData = new FormData();
-    formData.append("file", file);
+    await appendUploadFile(formData, file);
     formData.append("namespace", "temporary");
     const response = await fetch("/api/uploads", { method: "POST", body: formData });
     if (!response.ok) return;

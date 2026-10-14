@@ -1,5 +1,6 @@
 "use client";
 
+import { appendUploadFile } from "@/lib/image-compress";
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -118,7 +119,7 @@ export function LhviuTab({ data, applicationNumber, jenis }: { data: PmApplicati
     setUploading(true);
     try {
       const form = new FormData();
-      form.append("file", file);
+      await appendUploadFile(form, file);
       form.append("namespace", "documents");
       const uploadResponse = await fetch("/api/uploads", { method: "POST", body: form });
       const uploaded = await uploadResponse.json().catch(() => null);

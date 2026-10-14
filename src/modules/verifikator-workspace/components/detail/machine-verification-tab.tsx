@@ -1,5 +1,7 @@
 "use client";
 
+import { photoThumbHref } from "@/lib/file-href";
+import { appendUploadFile } from "@/lib/image-compress";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -97,7 +99,7 @@ function MachinePhotoGallery({
     setIsUploading(true);
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      await appendUploadFile(formData, file);
       formData.append("namespace", "photos");
       const response = await fetch("/api/uploads", { method: "POST", body: formData });
       if (!response.ok) throw new Error("Upload failed");
@@ -115,7 +117,7 @@ function MachinePhotoGallery({
       {cover ? (
         <a href={fileHref(cover)} target="_blank" rel="noopener noreferrer">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={fileHref(cover)} alt={row.proses} className="mb-2.5 aspect-[1.3] w-full rounded-lg border border-[#e8dccd] object-cover" />
+          <img src={photoThumbHref(cover)} alt={row.proses} className="mb-2.5 aspect-[1.3] w-full rounded-lg border border-[#e8dccd] object-cover" />
         </a>
       ) : (
         <div className="mb-2.5 flex aspect-[1.3] w-full items-center justify-center rounded-lg border border-dashed border-[#c8dbc9] text-center text-[10.5px] text-[#5a7a63]">
@@ -136,7 +138,7 @@ function MachinePhotoGallery({
                 style={{ borderColor: isCover ? "#2f6fe0" : "#e8dccd" }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={fileHref(path)} alt="" className="size-full object-cover" />
+                <img src={photoThumbHref(path)} alt="" className="size-full object-cover" />
               </button>
               {isOriginal && (
                 <span className="pointer-events-none absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-full bg-[#20180f] px-1.5 py-px text-[8px] font-bold text-white">

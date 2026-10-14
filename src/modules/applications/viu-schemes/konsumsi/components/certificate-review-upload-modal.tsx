@@ -1,5 +1,6 @@
 "use client";
 
+import { appendUploadFile } from "@/lib/image-compress";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -72,7 +73,7 @@ export function CertificateReviewUploadModal({ apiBase, docKey, docTitle, onClos
     setUploadStatus("uploading");
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      await appendUploadFile(formData, file);
       formData.append("namespace", "documents");
       const response = await fetch("/api/uploads", { method: "POST", body: formData });
       if (!response.ok) throw new Error("Upload failed");

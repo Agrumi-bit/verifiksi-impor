@@ -1,5 +1,6 @@
 "use client";
 
+import { appendUploadFile } from "@/lib/image-compress";
 import { useState } from "react";
 import { FileCheck2, Loader2, Upload, X } from "lucide-react";
 
@@ -36,7 +37,7 @@ export function FileUploadField({
     setError(null);
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      await appendUploadFile(formData, file);
       formData.append("namespace", namespace);
       const response = await fetch("/api/uploads", {
         method: "POST",

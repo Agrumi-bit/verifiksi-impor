@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+import { photoMapsHref, photoMetaCaption, type PhotoMeta } from "@/lib/photo-meta";
 
 /** One uploaded field-documentation photo shown in a survey report. */
 export type DocumentationPhoto = {
@@ -59,14 +62,40 @@ function placement(index: number, orientations: Orientation[]): { col: number; s
 
 const TRACK = 28; // px row track — a 6-col grid in the ~610px A4 content area
 
-function Caption({ photo }: { photo: DocumentationPhoto }) {
+function Caption({ photo, meta }: { photo: DocumentationPhoto; meta?: PhotoMeta }) {
+  const taken = photoMetaCaption(meta);
   return (
     <figcaption style={{ marginTop: 4, fontSize: 10, lineHeight: 1.35, color: "var(--ink-faint, #8a7565)" }}>
       <span style={{ fontWeight: 600, color: "var(--ink, #20180f)" }}>{photo.title}</span>
       {photo.caption ? ` — ${photo.caption}` : ""}
       {photo.date ? ` · ${photo.date}` : ""}
+      {taken && (
+        <span style={{ display: "block" }}>
+          {meta?.lat !== undefined ? (
+            <a href={photoMapsHref(meta)} target="_blank" rel="noopener noreferrer" style={{ color: "inherit" }}>{taken}</a>
+          ) : (
+            taken
+          )}
+        </span>
+      )}
     </figcaption>
   );
+}
+
+/** Date/GPS kept with each photo at upload (read from EXIF in the browser before compression). */
+function usePhotoMeta(paths: string[]): Record<string, PhotoMeta> {
+  const { data } = useQuery({
+    queryKey: ["photo-meta", paths],
+    enabled: paths.length > 0,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const query = paths.map((p) => `path=${encodeURIComponent(p)}`).join("&");
+      const res = await fetch(`/api/files/meta?${query}`);
+      if (!res.ok) return {};
+      return ((await res.json()) as { data: Record<string, PhotoMeta> }).data;
+    },
+  });
+  return data ?? {};
 }
 
 const imageStyle: CSSProperties = {
@@ -85,6 +114,7 @@ const imageStyle: CSSProperties = {
  */
 export function DocumentationBento({ photos }: { photos: DocumentationPhoto[] }) {
   const [orientationByKey, setOrientationByKey] = useState<Record<string, Orientation>>({});
+  const metaByPath = usePhotoMeta(photos.map((photo) => photo.filePath));
   const orientations = photos.map((photo) => orientationByKey[photo.key] ?? "landscape");
 
   function onLoad(key: string, image: HTMLImageElement) {
@@ -107,7 +137,7 @@ export function DocumentationBento({ photos }: { photos: DocumentationPhoto[] })
           onLoad={(event) => onLoad(photo.key, event.currentTarget)}
           style={{ ...imageStyle, height: "auto", maxHeight: 420, width: "auto", maxWidth: "100%", margin: "0 auto" }}
         />
-        <Caption photo={photo} />
+        <Caption photo={photo} meta={metaByPath[photo.filePath]} />
       </figure>
     );
   }
@@ -142,7 +172,7 @@ export function DocumentationBento({ photos }: { photos: DocumentationPhoto[] })
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={fileUrl(photo.filePath)} alt={photo.title} onLoad={(event) => onLoad(photo.key, event.currentTarget)} style={imageStyle} />
             </div>
-            <Caption photo={photo} />
+            <Caption photo={photo} meta={metaByPath[photo.filePath]} />
           </figure>
         );
       })}

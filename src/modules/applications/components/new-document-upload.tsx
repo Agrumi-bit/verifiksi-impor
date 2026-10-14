@@ -1,5 +1,6 @@
 "use client";
 
+import { appendUploadFile } from "@/lib/image-compress";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -53,7 +54,7 @@ export function useNewDocumentUpload({
     let path: string;
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      await appendUploadFile(formData, file);
       formData.append("namespace", "temporary");
       const uploadRes = await fetch("/api/uploads", { method: "POST", body: formData });
       if (!uploadRes.ok) throw new Error("Gagal mengunggah file");

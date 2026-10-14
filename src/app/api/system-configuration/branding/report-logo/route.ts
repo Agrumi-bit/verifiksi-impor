@@ -7,6 +7,8 @@ const CONTENT_TYPES: Record<string, string> = {
   jpg: "image/jpeg",
   jpeg: "image/jpeg",
   png: "image/png",
+  // Uploaded through the shared upload field, which compresses images to WebP.
+  webp: "image/webp",
 };
 
 /**

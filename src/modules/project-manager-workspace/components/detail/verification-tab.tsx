@@ -1,5 +1,6 @@
 "use client";
 
+import { photoThumbHref } from "@/lib/file-href";
 import { useState } from "react";
 import DOMPurify from "dompurify";
 
@@ -146,7 +147,7 @@ function MesinSection({ data }: { data: PmApplicationDetail }) {
                           <a href={fileHref(row.photoMesinPath)} target="_blank" rel="noopener noreferrer">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                              src={fileHref(row.photoMesinPath)}
+                              src={photoThumbHref(row.photoMesinPath)}
                               alt={row.proses}
                               className="aspect-[0.77] w-full rounded-lg border border-[#e8dccd] object-cover"
                             />
@@ -240,7 +241,7 @@ function ProductSection({ data }: { data: PmApplicationDetail }) {
                   {p.photoPath ? (
                     <a href={fileHref(p.photoPath)} target="_blank" rel="noopener noreferrer" className="shrink-0">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={fileHref(p.photoPath)} alt={p.materialType} className="h-18 w-18 rounded-lg border border-[#e8dccd] object-cover" />
+                      <img src={photoThumbHref(p.photoPath)} alt={p.materialType} className="h-18 w-18 rounded-lg border border-[#e8dccd] object-cover" />
                     </a>
                   ) : (
                     <div className="h-18 w-18 shrink-0 rounded-lg bg-[#f1e9df]" />
@@ -310,7 +311,7 @@ function ProductSection({ data }: { data: PmApplicationDetail }) {
                             <a href={fileHref(b.photoPath)} target="_blank" rel="noopener noreferrer" className="shrink-0">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
-                                src={fileHref(b.photoPath)}
+                                src={photoThumbHref(b.photoPath)}
                                 alt={b.jenis || "Bahan baku"}
                                 className="aspect-square w-27.5 rounded-lg border border-[#e8dccd] object-cover"
                               />

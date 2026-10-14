@@ -1,5 +1,6 @@
 "use client";
 
+import { appendUploadFile } from "@/lib/image-compress";
 import { Controller, type UseFormReturn } from "react-hook-form";
 
 import { Field, TextInput, OptionCard, SimpleOptionCard } from "../wizard-ui";
@@ -17,7 +18,7 @@ const INVESTMENT_DESC: Record<(typeof INVESTMENT_STATUSES)[number], string> = {
 
 async function uploadLogo(file: File): Promise<string | undefined> {
   const formData = new FormData();
-  formData.append("file", file);
+  await appendUploadFile(formData, file);
   formData.append("namespace", "temporary");
   const response = await fetch("/api/uploads", { method: "POST", body: formData });
   if (!response.ok) return undefined;

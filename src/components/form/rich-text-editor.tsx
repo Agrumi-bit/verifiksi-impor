@@ -1,5 +1,6 @@
 "use client";
 
+import { appendUploadFile } from "@/lib/image-compress";
 import { useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -95,7 +96,7 @@ export function RichTextEditor({ value, onChange, placeholder, disabled, imageNa
     setIsUploading(true);
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      await appendUploadFile(formData, file);
       formData.append("namespace", imageNamespace);
       const response = await fetch("/api/uploads", { method: "POST", body: formData });
       if (!response.ok) throw new Error("Upload failed");

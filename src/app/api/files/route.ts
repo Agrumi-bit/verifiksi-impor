@@ -6,6 +6,7 @@ import { storage } from "@/lib/storage";
 import type { StorageFileStat } from "@/lib/storage";
 import { getServerSession } from "@/lib/get-session";
 import { resolvePdfPreview } from "@/lib/pdf-preview";
+import { resolveImageThumb } from "@/lib/image-thumb";
 
 const CONTENT_TYPES: Record<string, string> = {
   pdf: "application/pdf",
@@ -29,7 +30,7 @@ type ResolvedFile = {
   contentType: string;
   stat: StorageFileStat;
   /** Which copy is served — exposed as `X-Pdf-Variant` so the lazy viewer can pin its range requests. */
-  variant: "original" | "preview";
+  variant: "original" | "preview" | "thumb";
 };
 
 type Resolution = { ok: true; file: ResolvedFile } | { ok: false; response: NextResponse };
@@ -71,6 +72,20 @@ async function resolveFile(request: Request): Promise<Resolution> {
       try {
         const previewStat = await storage.stat(previewPath);
         return { ok: true, file: { path: previewPath, filename, contentType, stat: previewStat, variant: "preview" } };
+      } catch {
+        // fall through to the original
+      }
+    }
+  }
+
+  // Grids and lists ask for `variant=thumb`: a small WebP of the photo when one is ready (else the
+  // original, and a thumbnail gets queued). Preview modals, reports and downloads get the photo itself.
+  if (contentType.startsWith("image/") && new URL(request.url).searchParams.get("variant") === "thumb") {
+    const thumbPath = await resolveImageThumb(path).catch(() => null);
+    if (thumbPath) {
+      try {
+        const thumbStat = await storage.stat(thumbPath);
+        return { ok: true, file: { path: thumbPath, filename, contentType: "image/webp", stat: thumbStat, variant: "thumb" } };
       } catch {
         // fall through to the original
       }

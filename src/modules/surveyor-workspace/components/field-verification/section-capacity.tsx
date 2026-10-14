@@ -1,5 +1,6 @@
 "use client";
 
+import { appendUploadFile } from "@/lib/image-compress";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -28,7 +29,7 @@ type Props = {
 
 async function uploadFile(file: File): Promise<string> {
   const formData = new FormData();
-  formData.append("file", file);
+  await appendUploadFile(formData, file);
   formData.append("namespace", "inspection");
   const response = await fetch("/api/uploads", { method: "POST", body: formData });
   if (!response.ok) throw new Error("Gagal mengunggah file");

@@ -1,5 +1,6 @@
 "use client";
 
+import { appendUploadFile } from "@/lib/image-compress";
 import { LOCATION_SOURCE_BADGE_STYLE, locationSourceBadge } from "@/modules/shared/location-meta";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -81,7 +82,8 @@ function fileHref(path: string | null | undefined): string | null {
   return path ? `/api/files?path=${encodeURIComponent(path)}` : null;
 }
 
-const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png"]);
+// webp: photos are compressed to WebP in the browser before upload (lib/image-compress.ts).
+const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "jfif", "png", "webp"]);
 
 function isImagePath(path: string): boolean {
   const extension = path.split(".").pop()?.toLowerCase() ?? "";
@@ -194,7 +196,7 @@ function VersionHistoryModal({
     setIsUploading(true);
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      await appendUploadFile(formData, file);
       formData.append("namespace", "temporary");
       const uploadRes = await fetch("/api/uploads", { method: "POST", body: formData });
       if (!uploadRes.ok) throw new Error("Gagal mengunggah file");

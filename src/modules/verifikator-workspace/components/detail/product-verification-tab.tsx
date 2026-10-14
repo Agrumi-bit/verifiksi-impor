@@ -1,5 +1,6 @@
 "use client";
 
+import { photoThumbHref } from "@/lib/file-href";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -1187,7 +1188,7 @@ export function ProductVerificationTab({
                   <a href={fileHref(row.photoPath)} target="_blank" rel="noopener noreferrer" className="shrink-0">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={fileHref(row.photoPath)}
+                      src={photoThumbHref(row.photoPath)}
                       alt={row.materialType}
                       className="aspect-square w-27.5 rounded-lg border border-[#e8dccd] object-cover"
                     />
@@ -1382,7 +1383,7 @@ export function ProductVerificationTab({
                             <a href={fileHref(m.photoPath)} target="_blank" rel="noopener noreferrer" className="shrink-0">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
-                                src={fileHref(m.photoPath)}
+                                src={photoThumbHref(m.photoPath)}
                                 alt={m.jenis || "Bahan baku"}
                                 className="aspect-square w-27.5 rounded-lg border border-[#e8dccd] object-cover"
                               />

@@ -1,5 +1,6 @@
 "use client";
 
+import { appendUploadFile } from "@/lib/image-compress";
 import { useState } from "react";
 import { Controller, useWatch, type UseFormReturn } from "react-hook-form";
 import { CheckCircle2, FileText, Loader2, Upload } from "lucide-react";
@@ -27,7 +28,7 @@ function DocumentUpload({
     setStatus("uploading");
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      await appendUploadFile(formData, file);
       formData.append("namespace", "documents");
       const response = await fetch("/api/uploads", { method: "POST", body: formData });
       if (!response.ok) throw new Error("Upload failed");

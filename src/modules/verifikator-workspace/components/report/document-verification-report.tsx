@@ -262,7 +262,7 @@ export function DocImage({
   aspectRatio?: string;
 }) {
   const url = fileUrl(path);
-  const isImage = path ? /\.(jpg|jpeg|png)$/i.test(path) : false;
+  const isImage = path ? /\.(jpg|jpeg|jfif|png|webp)$/i.test(path) : false;
   const [thumbFailed, setThumbFailed] = useState(false);
   if (!url) {
     return (
