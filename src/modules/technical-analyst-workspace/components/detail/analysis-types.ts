@@ -3,6 +3,7 @@ import type {
   MachineChecklistItem,
   ProductionQtyChecklistItem,
   RawMaterialConversionRow,
+  RawMaterialUsageRow,
 } from "@/modules/verifikator-workspace/schema";
 import type { KonsumsiImportPlan } from "@/modules/applications/viu-import-plan";
 import type { TechnicalAnalysisData } from "../../schema";
@@ -33,6 +34,8 @@ export type AnalysisData = {
   capacity: CapacityRow[];
   productionQty: ProductionQtyChecklistItem[];
   rawMaterialConversion: RawMaterialConversionRow[];
+  /** VKI — Rencana Kebutuhan 1 Tahun ke Depan etc. per raw material, as on Verifikasi Jumlah Produksi. */
+  rawMaterialUsage?: RawMaterialUsageRow[];
 };
 
 /** Props every per-module report component receives — computed data, manual inputs, and the trailing Kesimpulan Analis card's bound state. */

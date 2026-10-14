@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { CapacityRow, RawMaterialConversionRow } from "@/modules/verifikator-workspace/schema";
+import type { CapacityRow, RawMaterialConversionRow, RawMaterialUsageRow } from "@/modules/verifikator-workspace/schema";
 import { capacitySummary, conversionRatio, materialNeeds, materialTotals } from "./lhvki-summary";
 
 const cap = (id: string, jenisProduk: string, izin: string): CapacityRow => ({ id, jenisProduk, kbliCode: "13112", kbliDescription: "Pertenunan", berdasarkanIzin: izin, kapasitasTerpasang: "", satuan: "m" });
 const conv = (id: string, productName: string, jenis: string, produksi: string, kebutuhan: string): RawMaterialConversionRow => ({
-  id, productId: null, productName, productHsCode: "", rawMaterialId: null, jenis, hsCode: "5205.11", hsDesc: "", deskripsi: "", photoPath: null,
+  id, productId: null, productName, productHsCode: "", rawMaterialId: "rm1", jenis, hsCode: "5205.11", hsDesc: "", deskripsi: "", photoPath: null,
   kategori: "Bahan Baku", volumeProduksiJumlah: produksi, volumeProduksiSatuan: "m", volumeKebutuhanJumlah: kebutuhan, volumeKebutuhanSatuan: "kg", rasioKonversi: "", keterangan: "",
 });
 
@@ -30,7 +30,12 @@ describe("LHVKI figures (Pasal 32 ayat (3) huruf c–f)", () => {
       [conv("k1", "Kain Tenun", "Benang", "100", "25"), conv("k2", "Kain Rajut", "Benang", "10", "5")],
       capacity,
       data,
+      [
+        { rawMaterialId: "rm1", conversionId: "k1", rencanaKebutuhan: "300", satuan: "kg" },
+        { rawMaterialId: "rm1", conversionId: "k2", rencanaKebutuhan: "300", satuan: "kg" },
+      ] as unknown as RawMaterialUsageRow[],
     );
+    assert.equal(needs[0].permohonan, 300);
     assert.equal(needs[0].izin, 250000);
     assert.equal(needs[0].vki, 200000);
     assert.equal(needs[1].izinOtomatis, 250000);
@@ -40,6 +45,7 @@ describe("LHVKI figures (Pasal 32 ayat (3) huruf c–f)", () => {
     assert.equal(totals.length, 1);
     assert.equal(totals[0].izin, 250999);
     assert.equal(totals[0].vki, 200000);
-    assert.equal(totals[0].permohonan, 30);
+    // Rencana kebutuhan is per raw material — counted once although two products use it.
+    assert.equal(totals[0].permohonan, 300);
   });
 });

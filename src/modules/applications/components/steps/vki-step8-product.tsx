@@ -12,6 +12,7 @@ import { FormField } from "@/components/form/form-field";
 import { SearchSelectInput } from "@/components/form/search-select-input";
 import { FileUploadField } from "@/components/form/file-upload-field";
 import { useHsCodeOptions } from "../../hooks/use-hs-code-options";
+import { UnitSelect } from "@/modules/master-data/components/unit-select";
 import {
   createEmptyProduct,
   createEmptyRawMaterial,
@@ -32,7 +33,7 @@ const KATEGORI_LABELS: Record<RawMaterialConversionKategori, string> = {
 type Props = { form: UseFormReturn<ApplicationWizardValues> };
 
 export function VkiStep8Product({ form }: Props) {
-  const { control, register, watch } = form;
+  const { control, register, watch, setValue } = form;
   const { fields: productFields, append: appendProduct, remove: removeProduct } = useFieldArray({
     control,
     name: "products",
@@ -54,6 +55,25 @@ export function VkiStep8Product({ form }: Props) {
   const [isImportingRawMaterials, setIsImportingRawMaterials] = useState(false);
   const conversionFileInputRef = useRef<HTMLInputElement>(null);
   const [isImportingConversions, setIsImportingConversions] = useState(false);
+
+  // Satuan konversi: defaults to the unit registered for the HS Code (produk / bahan baku) and can be
+  // changed to any unit of the Satuan master data. Only an empty satuan is filled in automatically.
+  const conversions = watch("rawMaterialConversions") ?? [];
+  const unitOfHs = (hsCode: string | undefined) => (hsCode ? (hsCodeOptions.find((o) => o.value === hsCode)?.unit ?? "") : "");
+  const defaultProduksiSatuan = (productId: string | undefined) => unitOfHs(products.find((p) => p.id === productId)?.hsCode);
+  const defaultKebutuhanSatuan = (rawMaterialId: string | undefined) => unitOfHs(rawMaterials.find((r) => r.id === rawMaterialId)?.hsCode);
+  const conversionDefaultsKey = conversions
+    .map((c) => `${c.productId}|${c.rawMaterialId}|${c.volumeProduksiSatuan ? 1 : 0}|${c.volumeKebutuhanSatuan ? 1 : 0}`)
+    .join(",");
+  useEffect(() => {
+    conversions.forEach((c, index) => {
+      const produksi = defaultProduksiSatuan(c.productId);
+      const kebutuhan = defaultKebutuhanSatuan(c.rawMaterialId);
+      if (!c.volumeProduksiSatuan && produksi) setValue(`rawMaterialConversions.${index}.volumeProduksiSatuan`, produksi);
+      if (!c.volumeKebutuhanSatuan && kebutuhan) setValue(`rawMaterialConversions.${index}.volumeKebutuhanSatuan`, kebutuhan);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversionDefaultsKey, hsCodeOptions.length]);
 
   // `products` defaults to [] (see use-application-wizard.ts) rather than a seeded row shared
   // with VIU — VKI always needs at least one product, so seed the first editable row here.
@@ -389,7 +409,11 @@ export function VkiStep8Product({ form }: Props) {
                         <Input placeholder="Contoh: 4" {...register(`rawMaterialConversions.${index}.volumeProduksiJumlah`)} />
                       </td>
                       <td className="border border-border p-1.5">
-                        <Input className="w-20" placeholder="meter" {...register(`rawMaterialConversions.${index}.volumeProduksiSatuan`)} />
+                        <Controller
+                          control={control}
+                          name={`rawMaterialConversions.${index}.volumeProduksiSatuan`}
+                          render={({ field: f }) => <UnitSelect value={f.value ?? ""} onChange={f.onChange} />}
+                        />
                       </td>
                       <td className="border border-border p-1.5">
                         <select
@@ -422,7 +446,11 @@ export function VkiStep8Product({ form }: Props) {
                         <Input placeholder="Contoh: 1" {...register(`rawMaterialConversions.${index}.volumeKebutuhanJumlah`)} />
                       </td>
                       <td className="border border-border p-1.5">
-                        <Input className="w-20" placeholder="kg" {...register(`rawMaterialConversions.${index}.volumeKebutuhanSatuan`)} />
+                        <Controller
+                          control={control}
+                          name={`rawMaterialConversions.${index}.volumeKebutuhanSatuan`}
+                          render={({ field: f }) => <UnitSelect value={f.value ?? ""} onChange={f.onChange} />}
+                        />
                       </td>
                       <td className="border border-border p-1.5">
                         <Input placeholder="Contoh: 1 kg/4 meter" {...register(`rawMaterialConversions.${index}.rasioKonversi`)} />

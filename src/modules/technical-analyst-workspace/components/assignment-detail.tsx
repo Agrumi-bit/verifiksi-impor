@@ -23,6 +23,7 @@ import { SurveyorReportTab } from "./detail/surveyor-report-tab";
 import { DocumentReportTab } from "./detail/document-report-tab";
 import { AnalysisTab } from "./detail/analysis-tab";
 import { DecisionPanel } from "./detail/decision-panel";
+import { TechnicalDraftReportTab } from "./detail/draft-report-tab";
 import { isDocumentReportVerified, type DocumentReportReview } from "../document-report-review";
 import { formatAssignmentDate } from "@/lib/assignment-date";
 
@@ -66,7 +67,7 @@ export type AssignmentDetailData = {
   documentReportReview?: DocumentReportReview;
 };
 
-const TAB_NAMES = ["Laporan Surveyor", "Laporan Verifikasi Dokumen", "Analisis Teknis"] as const;
+const TAB_NAMES = ["Laporan Surveyor", "Laporan Verifikasi Dokumen", "Analisis Teknis", "Draft Report"] as const;
 type TabName = (typeof TAB_NAMES)[number];
 
 function fmtDate(value: string | null): string {
@@ -170,6 +171,20 @@ export function AssignmentDetail({ id }: { id: string }) {
         <DocumentReportTab assignmentNumber={data.assignmentNumber} dokumen={data.siblings.dokumen} />
       )}
       {tab === "Analisis Teknis" && <AnalysisTab assignmentNumber={data.assignmentNumber} verificationType={data.application.verificationType} />}
+      {tab === "Draft Report" && (
+        <TechnicalDraftReportTab
+          assignmentId={data.assignmentNumber}
+          initialNotes={data.validationNotes}
+          canEdit={isAssignmentReviewable(data)}
+          readyForDecision={data.readyForDecision}
+          blockedReason={[
+            data.modulesDecided ? null : "Masih ada modul analisis teknis yang belum dinilai.",
+            isDocumentReportVerified(data.documentReportReview) ? null : "Laporan Verifikasi Dokumen belum direview dengan hasil Verified.",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        />
+      )}
 
       <div className="mt-5 -mx-7 -mb-7">
         <DecisionPanel assignmentId={data.assignmentNumber} status={isAssignmentReviewable(data) ? "SUBMITTED" : data.status} readyForDecision={data.readyForDecision}

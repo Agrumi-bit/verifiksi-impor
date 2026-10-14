@@ -72,6 +72,39 @@ type ConversionDraft = {
   keterangan: string;
 };
 
+/** Active units from the Satuan master data (symbol), for the conversion's satuan pickers. */
+function useUnitOptions(): string[] {
+  const { data } = useQuery({
+    queryKey: ["master-data-uom", "options"],
+    queryFn: async () => {
+      const response = await fetch("/api/master-data/unit-of-measurement");
+      if (!response.ok) throw new Error("Gagal memuat satuan");
+      return ((await response.json()) as { data: { name: string; symbol: string; status?: string }[] }).data;
+    },
+  });
+  return [...new Set((data ?? []).filter((u) => !u.status || u.status === "ACTIVE").map((u) => (u.symbol || u.name).trim()).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, "id"),
+  );
+}
+
+function UnitSelect({ value, options, onChange }: { value: string; options: string[]; onChange: (value: string) => void }) {
+  const all = value && !options.includes(value) ? [value, ...options] : options;
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-28 shrink-0 rounded-lg border border-[#e8dccd] bg-white px-2 py-2.5 text-[12.5px] text-[#20180f] outline-none"
+    >
+      <option value="">satuan</option>
+      {all.map((unit) => (
+        <option key={unit} value={unit}>
+          {unit}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 const EMPTY_CONVERSION_DRAFT: ConversionDraft = {
   rawMaterialId: "",
   kategori: "",
@@ -148,6 +181,7 @@ function ConversionForm({
     ? unitForHsCode(materialLink.draft.hsCode)
     : unitForHsCode(selectedRawMaterial?.hsCode);
   const produkSatuan = unitForHsCode(productHsCode);
+  const unitOptions = useUnitOptions();
   const rawMaterialOptions = rawMaterials.map((rm) => ({
     value: rm.id,
     label: rm.jenis || "—",
@@ -299,11 +333,9 @@ function ConversionForm({
               placeholder="Volume"
               className="w-full min-w-0 rounded-lg border border-[#e8dccd] bg-white px-3 py-2.5 text-[12.5px] text-[#20180f] outline-none"
             />
-            <div className="flex w-20 shrink-0 items-center justify-center rounded-lg border border-[#e8dccd] bg-[#f7f2ec] px-2 py-2.5 text-[12.5px] text-[#8a7565]">
-              {bahanBakuSatuan || "satuan"}
-            </div>
+            <UnitSelect value={draft.volumeKebutuhanSatuan || bahanBakuSatuan} options={unitOptions} onChange={(v) => onChange({ volumeKebutuhanSatuan: v })} />
           </div>
-          <div className="mt-1 text-[10px] text-[#a68f80]">Satuan mengikuti HS Code bahan baku</div>
+          <div className="mt-1 text-[10px] text-[#a68f80]">Bawaan mengikuti HS Code bahan baku{bahanBakuSatuan ? ` (${bahanBakuSatuan})` : ""} — bisa diganti</div>
         </div>
         <div>
           <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Menghasilkan Produk</div>
@@ -315,11 +347,9 @@ function ConversionForm({
               placeholder="Volume"
               className="w-full min-w-0 rounded-lg border border-[#e8dccd] bg-white px-3 py-2.5 text-[12.5px] text-[#20180f] outline-none"
             />
-            <div className="flex w-20 shrink-0 items-center justify-center rounded-lg border border-[#e8dccd] bg-[#f7f2ec] px-2 py-2.5 text-[12.5px] text-[#8a7565]">
-              {produkSatuan || "satuan"}
-            </div>
+            <UnitSelect value={draft.volumeProduksiSatuan || produkSatuan} options={unitOptions} onChange={(v) => onChange({ volumeProduksiSatuan: v })} />
           </div>
-          <div className="mt-1 text-[10px] text-[#a68f80]">Satuan mengikuti HS Code produk</div>
+          <div className="mt-1 text-[10px] text-[#a68f80]">Bawaan mengikuti HS Code produk{produkSatuan ? ` (${produkSatuan})` : ""} — bisa diganti</div>
         </div>
       </div>
       <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -878,8 +908,9 @@ export function ProductVerificationTab({
 
     const product = rows.find((r) => r.id === productId);
     const rasioKonversi = computeRasio(newConversion.volumeKebutuhanJumlah, newConversion.volumeProduksiJumlah);
-    const volumeKebutuhanSatuan = unitForHsCode(materialLinkDraft.hsCode);
-    const volumeProduksiSatuan = unitForHsCode(product?.hsCode);
+    // The verifikator's own pick wins; the HS Code's unit is only the default.
+    const volumeKebutuhanSatuan = newConversion.volumeKebutuhanSatuan || unitForHsCode(materialLinkDraft.hsCode);
+    const volumeProduksiSatuan = newConversion.volumeProduksiSatuan || unitForHsCode(product?.hsCode);
     const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/raw-material-conversions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -916,8 +947,8 @@ export function ProductVerificationTab({
     const product = rows.find((r) => r.id === existing?.productId);
     const rawMaterial = rawMaterials.find((r) => r.id === editConversion.rawMaterialId);
     const rasioKonversi = computeRasio(editConversion.volumeKebutuhanJumlah, editConversion.volumeProduksiJumlah);
-    const volumeKebutuhanSatuan = unitForHsCode(rawMaterial?.hsCode);
-    const volumeProduksiSatuan = unitForHsCode(product?.hsCode);
+    const volumeKebutuhanSatuan = editConversion.volumeKebutuhanSatuan || unitForHsCode(rawMaterial?.hsCode);
+    const volumeProduksiSatuan = editConversion.volumeProduksiSatuan || unitForHsCode(product?.hsCode);
     const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/raw-material-conversions`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

@@ -19,7 +19,7 @@ const STATUS_PILL: Record<string, { label: string; bg: string; color: string }> 
  */
 export function LhvkiSummaryPanel({ data, moduleKeys }: { data: AnalysisData; moduleKeys: readonly TechnicalModuleKey[] }) {
   const capacity = capacitySummary(data.capacity, data.technicalAnalysisData.kapasitas?.inputs);
-  const totals = materialTotals(materialNeeds(data.rawMaterialConversion, data.capacity, data.technicalAnalysisData));
+  const totals = materialTotals(materialNeeds(data.rawMaterialConversion, data.capacity, data.technicalAnalysisData, data.rawMaterialUsage ?? []));
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -52,7 +52,7 @@ export function LhvkiSummaryPanel({ data, moduleKeys }: { data: AnalysisData; mo
       </Section>
 
       <Section letter="B" title="Kebutuhan Bahan Baku dan/atau Bahan Penolong 1 Tahun (Pasal 32 ayat (3) huruf e dan f)">
-        <Table headers={["No", "Bahan Baku dan/atau Bahan Penolong", "HS Code", "Sesuai Kapasitas Produksi", "Sesuai Hasil VKI", "Permohonan", "Satuan"]} minWidth={860}>
+        <Table headers={["No", "Bahan Baku dan/atau Bahan Penolong", "HS Code", "Sesuai Kapasitas Produksi", "Sesuai Hasil VKI", "Rencana Kebutuhan (Permohonan)", "Satuan"]} minWidth={860}>
           {totals.map((row, i) => (
             <tr key={`${row.hsCode}-${row.bahanBaku}-${row.satuan}`}>
               <Td>{i + 1}</Td>

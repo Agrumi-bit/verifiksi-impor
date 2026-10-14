@@ -1,4 +1,4 @@
-import type { CapacityRow, MachineChecklistItem, RawMaterialConversionRow } from "@/modules/verifikator-workspace/schema";
+import type { CapacityRow, MachineChecklistItem, RawMaterialConversionRow, RawMaterialUsageRow } from "@/modules/verifikator-workspace/schema";
 import { parseNumeric, parseRekapBahanBaku } from "./components/detail/analysis-types";
 import type { TechnicalAnalysisData } from "./schema";
 
@@ -90,8 +90,24 @@ function capacityOf(row: RawMaterialConversionRow, capacity: readonly CapacityRo
   return match ? (summary.find((s) => s.id === match.id) ?? null) : null;
 }
 
+/**
+ * Rencana Kebutuhan Bahan Baku/Penolong 1 Tahun ke Depan of a conversion row — the same figures the
+ * verifikator checks on Verifikasi Jumlah Produksi (payload.rawMaterialUsage, per raw material).
+ */
+export function rencanaKebutuhanOf(row: RawMaterialConversionRow, usage: readonly RawMaterialUsageRow[]) {
+  const u = usage.find((x) => x.conversionId === row.id) ?? usage.find((x) => x.rawMaterialId && x.rawMaterialId === row.rawMaterialId);
+  return {
+    total: parseNumeric(u?.rencanaKebutuhan),
+    dalamNegeri: parseNumeric(u?.rencanaKebutuhanDalamNegeri),
+    luarNegeri: parseNumeric(u?.rencanaKebutuhanLuarNegeri),
+    negaraAsal: u?.rencanaKebutuhanNegaraAsal ?? "",
+    satuan: u?.satuan || row.volumeKebutuhanSatuan,
+  };
+}
+
 export type MaterialNeedRow = {
   id: string;
+  rawMaterialId: string | null;
   produk: string;
   bahanBaku: string;
   hsCode: string;
@@ -111,6 +127,7 @@ export function materialNeeds(
   conversions: readonly RawMaterialConversionRow[],
   capacity: readonly CapacityRow[],
   data: TechnicalAnalysisData,
+  usage: readonly RawMaterialUsageRow[] = [],
 ): MaterialNeedRow[] {
   const capSummary = capacitySummary(capacity, data.kapasitas?.inputs);
   const rekap = parseRekapBahanBaku(data.bahanbaku?.inputs?.rekapBahanBaku);
@@ -121,13 +138,16 @@ export function materialNeeds(
     const vkiOtomatis = ratio !== null && cap?.vki != null ? cap.vki * ratio : null;
     const izinManual = rekap[row.id]?.izin?.trim() ?? "";
     const vkiManual = rekap[row.id]?.vki?.trim() ?? "";
+    const rencana = rencanaKebutuhanOf(row, usage);
     return {
       id: row.id,
+      rawMaterialId: row.rawMaterialId,
       produk: row.productName,
       bahanBaku: row.jenis,
       hsCode: row.hsCode,
-      satuan: row.volumeKebutuhanSatuan,
-      permohonan: parseNumeric(row.volumeKebutuhanJumlah),
+      satuan: rencana.satuan,
+      // Berdasarkan Permohonan = Rencana Kebutuhan 1 Tahun ke Depan (Verifikasi Jumlah Produksi).
+      permohonan: rencana.total,
       izin: izinManual ? parseNumeric(izinManual) : izinOtomatis,
       izinOtomatis,
       vki: vkiManual ? parseNumeric(vkiManual) : vkiOtomatis,
@@ -144,12 +164,15 @@ export type MaterialTotalRow = { bahanBaku: string; hsCode: string; satuan: stri
 export function materialTotals(rows: readonly MaterialNeedRow[]): MaterialTotalRow[] {
   const map = new Map<string, MaterialTotalRow>();
   const add = (a: number | null, b: number | null) => (b === null ? a : (a ?? 0) + b);
+  // Rencana kebutuhan is recorded per raw material: count it once even when the material feeds several products.
+  const countedRaw = new Set<string>();
   for (const r of rows) {
     const key = `${r.hsCode}|${r.bahanBaku.trim().toLowerCase()}|${r.satuan}`;
     const t = map.get(key) ?? { bahanBaku: r.bahanBaku, hsCode: r.hsCode, satuan: r.satuan, izin: null, vki: null, permohonan: null };
     t.izin = add(t.izin, r.izin);
     t.vki = add(t.vki, r.vki);
-    t.permohonan = add(t.permohonan, r.permohonan);
+    if (!r.rawMaterialId || !countedRaw.has(r.rawMaterialId)) t.permohonan = add(t.permohonan, r.permohonan);
+    if (r.rawMaterialId) countedRaw.add(r.rawMaterialId);
     map.set(key, t);
   }
   return [...map.values()];

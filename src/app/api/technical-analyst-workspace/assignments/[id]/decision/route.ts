@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { db } from "@/lib/db";
 import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
@@ -39,7 +40,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     );
   }
 
-  const parsed = decisionSchema.safeParse(await request.json());
+  const body = await request.json();
+  const parsed = decisionSchema.safeParse(body);
+  // Submit Report (Draft Report tab): signature + date printed under "Disusun Oleh".
+  const signature = z
+    .object({ signaturePath: z.string().trim().optional(), signatureDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).optional() })
+    .safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Data tidak valid" }, { status: 400 });
   }
@@ -50,6 +56,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       status: parsed.data.decision,
       validationNotes: parsed.data.notes,
       validatedAt: new Date(),
+      ...(signature.success && signature.data.signaturePath ? { signaturePath: signature.data.signaturePath } : {}),
+      ...(signature.success && signature.data.signatureDate ? { signatureDate: new Date(signature.data.signatureDate) } : {}),
     },
   });
 

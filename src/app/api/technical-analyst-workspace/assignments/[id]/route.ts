@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
 
 import { db } from "@/lib/db";
 import { findApplicationEditAfter } from "@/modules/applications/server/edited-after";
@@ -120,4 +122,27 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       readyForDecision: modulesDecided && isDocumentReportVerified(documentReportReview),
     },
   });
+}
+
+const patchSchema = z.object({ validationNotes: z.string().trim().max(20000) });
+
+/** Draft Report → Save Draft: the Kesimpulan Analis Teknis, before Submit Report. */
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { session, error } = await requireTechnicalAnalystSession();
+  if (error) return error;
+
+  const { id } = await params;
+  const assignment = await db.assignment.findUnique({ where: { assignmentNumber: id } });
+  if (!assignment || assignment.technicalReviewerId !== session.user.id) {
+    return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
+  }
+  if (!isAssignmentReviewable(assignment)) {
+    return NextResponse.json({ error: "Draft hanya dapat disimpan saat assignment berstatus Submitted." }, { status: 400 });
+  }
+  const parsed = patchSchema.safeParse(await request.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Data tidak valid" }, { status: 400 });
+  }
+  await db.assignment.update({ where: { id: assignment.id }, data: { validationNotes: parsed.data.validationNotes } });
+  return NextResponse.json({ data: { validationNotes: parsed.data.validationNotes } });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { materialNeeds } from "../../../lhvki-summary";
+import { materialNeeds, rencanaKebutuhanOf } from "../../../lhvki-summary";
 import { fmtNum, parseRekapBahanBaku, type ModuleProps, type RekapBahanBakuEntry } from "../analysis-types";
 import { AnalystNote, ConclusionCard, Formula, Paragraphs, Section, Table, Td } from "./shared";
 
@@ -28,9 +28,47 @@ export function BahanBakuModule({
   const needs = materialNeeds(data.rawMaterialConversion, data.capacity, {
     ...data.technicalAnalysisData,
     bahanbaku: { ...data.technicalAnalysisData.bahanbaku, status: data.technicalAnalysisData.bahanbaku?.status ?? "PENDING", inputs },
-  });
+  }, data.rawMaterialUsage ?? []);
+  const usage = data.rawMaterialUsage ?? [];
   const needOf = (id: string) => needs.find((n) => n.id === id);
   const auto = (n: number | null | undefined) => (n === null || n === undefined ? "" : fmtNum(n, 2));
+  // Izin / VKI cell: shows the calculated figure by default and can be edited. A manual figure is kept
+  // only while it differs from the calculation; clearing it (or "Pakai hitungan") returns to the
+  // calculation, which then follows later changes in capacity or conversion.
+  function VolumeCell({ row, field }: { row: (typeof rows)[number]; field: "izin" | "vki" }) {
+    const manual = rekap[row.id]?.[field] ?? "";
+    const computed = auto(field === "izin" ? needOf(row.id)?.izinOtomatis : needOf(row.id)?.vkiOtomatis);
+    if (!canEdit) return <>{manual || computed || "—"}</>;
+    const edited = Boolean(manual) && manual !== computed;
+    return (
+      <>
+        <input
+          value={manual || computed}
+          onFocus={() => {
+            if (!manual && computed) setVolume(row, field, computed);
+          }}
+          onChange={(e) => setVolume(row, field, e.target.value)}
+          onBlur={() => {
+            if (manual === computed) setVolume(row, field, "");
+          }}
+          placeholder="Volume"
+          className={cellInput}
+        />
+        {edited ? (
+          <span className="mt-0.5 flex items-center gap-1.5 text-[10.5px] text-[#a3690a]">
+            diubah analis
+            {computed && (
+              <button type="button" onClick={() => setVolume(row, field, "")} className="font-semibold text-[#2f6fe0] hover:underline">
+                Pakai hitungan ({computed})
+              </button>
+            )}
+          </span>
+        ) : (
+          computed && <span className="mt-0.5 block text-[10.5px] text-[#a68f80]">otomatis dari perhitungan</span>
+        )}
+      </>
+    );
+  }
   const rows = data.rawMaterialConversion;
   function setVolume(row: (typeof rows)[number], field: "izin" | "vki", value: string) {
     const current = rekap[row.id];
@@ -38,8 +76,8 @@ export function BahanBakuModule({
       produk: row.productName,
       bahanBaku: row.jenis,
       hsCode: row.hsCode,
-      permohonan: row.volumeKebutuhanJumlah,
-      satuan: row.volumeKebutuhanSatuan,
+      permohonan: needOf(row.id)?.permohonan != null ? String(needOf(row.id)?.permohonan) : "",
+      satuan: needOf(row.id)?.satuan ?? row.volumeKebutuhanSatuan,
       izin: current?.izin ?? "",
       vki: current?.vki ?? "",
       [field]: value,
@@ -62,22 +100,40 @@ export function BahanBakuModule({
       </Section>
 
       <Section letter="A" title="Kebutuhan Bahan Baku per Produk">
-        <Table headers={["Produk", "Bahan Baku", "HS Code", "Kategori", "Volume Kebutuhan (Permohonan)", "Rasio Konversi"]} minWidth={900}>
-          {data.rawMaterialConversion.map((row) => (
+        <Paragraphs
+          items={[
+            "Rencana kebutuhan bahan baku/penolong 1 tahun ke depan mengikuti data yang diverifikasi Verifikator pada Verifikasi Jumlah Produksi (dalam negeri, luar negeri, dan total).",
+          ]}
+        />
+        <Table
+          headers={["Produk", "Bahan Baku", "HS Code", "Kategori", "Rencana Kebutuhan 1 Tahun (Total)", "Dalam Negeri", "Luar Negeri", "Satuan", "Rasio Konversi"]}
+          minWidth={1080}
+        >
+          {data.rawMaterialConversion.map((row) => {
+            const rencana = rencanaKebutuhanOf(row, usage);
+            return (
             <tr key={row.id}>
               <Td strong>{row.productName || "—"}</Td>
               <Td>{row.jenis || "—"}</Td>
               <Td>{row.hsCode || "—"}</Td>
               <Td>{row.kategori || "—"}</Td>
-              <Td strong>
-                {row.volumeKebutuhanJumlah || "—"} {row.volumeKebutuhanSatuan}
+              <Td strong>{rencana.total !== null ? fmtNum(rencana.total, 2) : "—"}</Td>
+              <Td>{rencana.dalamNegeri !== null ? fmtNum(rencana.dalamNegeri, 2) : "—"}</Td>
+              <Td>
+                {rencana.luarNegeri !== null ? fmtNum(rencana.luarNegeri, 2) : "—"}
+                {rencana.negaraAsal && <span className="block text-[10.5px] text-[#a68f80]">{rencana.negaraAsal}</span>}
               </Td>
+              <Td>{rencana.satuan || "—"}</Td>
               <Td>{row.rasioKonversi || "—"}</Td>
             </tr>
-          ))}
+            );
+          })}
           {data.rawMaterialConversion.length === 0 && (
             <tr>
               <Td>Belum ada data konversi bahan baku.</Td>
+              <Td>—</Td>
+              <Td>—</Td>
+              <Td>—</Td>
               <Td>—</Td>
               <Td>—</Td>
               <Td>—</Td>
@@ -122,27 +178,13 @@ export function BahanBakuModule({
                     {row.hsCode && <span className="block text-[10.5px] text-[#a68f80]">HS {row.hsCode}</span>}
                   </Td>
                   <Td>
-                    {canEdit ? (
-                      <>
-                        <input value={rekap[row.id]?.izin ?? ""} onChange={(e) => setVolume(row, "izin", e.target.value)} placeholder={auto(needOf(row.id)?.izinOtomatis) || "Volume"} className={cellInput} />
-                        {!rekap[row.id]?.izin && needOf(row.id)?.izinOtomatis != null && <span className="mt-0.5 block text-[10.5px] text-[#a68f80]">otomatis</span>}
-                      </>
-                    ) : (
-                      rekap[row.id]?.izin || auto(needOf(row.id)?.izinOtomatis) || "—"
-                    )}
+                    {VolumeCell({ row, field: "izin" })}
                   </Td>
                   <Td>
-                    {canEdit ? (
-                      <>
-                        <input value={rekap[row.id]?.vki ?? ""} onChange={(e) => setVolume(row, "vki", e.target.value)} placeholder={auto(needOf(row.id)?.vkiOtomatis) || "Volume"} className={cellInput} />
-                        {!rekap[row.id]?.vki && needOf(row.id)?.vkiOtomatis != null && <span className="mt-0.5 block text-[10.5px] text-[#a68f80]">otomatis</span>}
-                      </>
-                    ) : (
-                      rekap[row.id]?.vki || auto(needOf(row.id)?.vkiOtomatis) || "—"
-                    )}
+                    {VolumeCell({ row, field: "vki" })}
                   </Td>
-                  <Td strong>{row.volumeKebutuhanJumlah || "—"}</Td>
-                  <Td>{row.volumeKebutuhanSatuan || "—"}</Td>
+                  <Td strong>{needOf(row.id)?.permohonan != null ? fmtNum(needOf(row.id)!.permohonan, 2) : "—"}</Td>
+                  <Td>{needOf(row.id)?.satuan || "—"}</Td>
                 </tr>
               ))}
               {rows.length === 0 && (

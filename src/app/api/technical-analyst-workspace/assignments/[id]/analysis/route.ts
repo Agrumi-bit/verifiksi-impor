@@ -10,6 +10,7 @@ import {
   buildMachineChecklist,
   buildProductionQtyChecklist,
   buildRawMaterialConversionRows,
+  buildRawMaterialUsageChecklist,
 } from "@/modules/verifikator-workspace/schema";
 import { ALL_TECHNICAL_MODULE_KEYS, TECHNICAL_MODULE_STATUSES } from "@/modules/technical-analyst-workspace/status";
 import { technicalAnalysisDataSchema, technicalModuleDecisionSchema } from "@/modules/technical-analyst-workspace/schema";
@@ -52,6 +53,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       capacity: buildCapacityRows(payload),
       productionQty: buildProductionQtyChecklist(payload),
       rawMaterialConversion: buildRawMaterialConversionRows(payload),
+      rawMaterialUsage: buildRawMaterialUsageChecklist(payload),
     },
   });
 }

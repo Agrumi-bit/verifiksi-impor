@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { fmtNum, parseRekapBahanBaku } from "../detail/analysis-types";
 import { capacitySummary, materialNeeds, materialTotals } from "../../lhvki-summary";
-import type { CapacityRow, RawMaterialConversionRow } from "@/modules/verifikator-workspace/schema";
+import type { CapacityRow, RawMaterialConversionRow, RawMaterialUsageRow } from "@/modules/verifikator-workspace/schema";
 import Link from "next/link";
 import DOMPurify from "dompurify";
 import { useQuery } from "@tanstack/react-query";
@@ -37,6 +37,8 @@ type TechnicalReportData = {
   businessAddress: string | null;
   status: string;
   technicalReviewerName: string | null;
+  signaturePath?: string | null;
+  signatureDate?: string | null;
   validatedAt: string | null;
   validationNotes: string | null;
   pmReviewStatus: string | null;
@@ -48,6 +50,7 @@ type TechnicalReportData = {
   /** VKI — Kapasitas (Perizinan Berusaha) and konversi bahan baku, for the LHVKI figures (Pasal 32 ayat (3) c–f). */
   capacity?: CapacityRow[];
   rawMaterialConversion?: RawMaterialConversionRow[];
+  rawMaterialUsage?: RawMaterialUsageRow[];
 };
 
 const IMPORT_TYPE_LABELS: Record<string, string> = {
@@ -110,7 +113,7 @@ function LhvkiFigures({ data }: { data: TechnicalReportData }) {
   const n = (v: number | null) => (v === null ? "—" : fmtNum(v, 2));
   const technicalAnalysisData = data.technicalAnalysisData as Parameters<typeof materialNeeds>[2];
   const capacity = capacitySummary(data.capacity ?? [], technicalAnalysisData.kapasitas?.inputs);
-  const totals = materialTotals(materialNeeds(data.rawMaterialConversion ?? [], data.capacity ?? [], technicalAnalysisData));
+  const totals = materialTotals(materialNeeds(data.rawMaterialConversion ?? [], data.capacity ?? [], technicalAnalysisData, data.rawMaterialUsage ?? []));
   return (
     <>
       <h3 className="rd-serif" style={{ fontSize: 15, margin: "18px 0 6px" }}>Kapasitas Produksi per Tahun (Pasal 32 ayat (3) huruf c dan d)</h3>
@@ -207,7 +210,7 @@ export function TechnicalAnalysisReport({
   backHref,
 }: {
   assignmentId: string;
-  basePath?: "/api/project-manager-workspace";
+  basePath?: "/api/project-manager-workspace" | "/api/technical-analyst-workspace";
   backHref?: string;
 }) {
   const { data, isLoading, isError } = useQuery({
@@ -231,7 +234,7 @@ export function TechnicalAnalysisReport({
   const isFinal = data.status === "COMPLETED" || data.status === "RETURNED";
   const isPmApproved = data.pmReviewStatus === "APPROVED";
   const coverDateLabel = isPmApproved ? "TANGGAL TERBIT" : "TANGGAL PENYUSUNAN";
-  const coverDateValue = isPmApproved ? data.pmReviewedAt : isFinal ? data.validatedAt : null;
+  const coverDateValue = isPmApproved ? data.pmReviewedAt : isFinal ? (data.signatureDate ?? data.validatedAt) : null;
   const total = 1 + moduleKeys.length;
   const docReview = data.documentReportReview;
   const plan = data.konsumsiImportPlan;
@@ -348,6 +351,19 @@ export function TechnicalAnalysisReport({
                   : "Belum diputuskan"}
             </div>
             {data.validationNotes && <p style={{ margin: "6px 0 0", fontSize: 12 }}>Catatan: {data.validationNotes}</p>}
+          </div>
+
+          <div className="rd-card" style={{ marginTop: 12, maxWidth: 280 }}>
+            <div className="rd-card-label">DISUSUN OLEH</div>
+            <div className="rd-card-value" style={{ fontSize: 14 }}>{data.technicalReviewerName ?? "—"}</div>
+            <div style={{ fontSize: 11, color: "var(--ink-faint)" }}>Technical Analyst</div>
+            {data.signaturePath ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={`/api/files?path=${encodeURIComponent(data.signaturePath)}`} alt="Tanda tangan" style={{ height: 56, marginTop: 8, objectFit: "contain" }} />
+            ) : (
+              <div style={{ height: 56, marginTop: 8, borderBottom: "1px dashed #d8cdb8" }} />
+            )}
+            <div style={{ fontSize: 11, marginTop: 4 }}>Tanggal: {fmtDate(data.signatureDate ?? (isFinal ? data.validatedAt : null))}</div>
           </div>
         </PageShell>
 
