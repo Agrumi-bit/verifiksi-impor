@@ -1,0 +1,14 @@
+/*
+ * Laporan Analisis Teknis — every sheet is one A4 page (see a4-pages.tsx, which splits the content
+ * over as many sheets as it needs). In print each sheet is exactly one A4 page.
+ */
+@media print {
+  .report-doc .rd-a4-measure {
+    display: none !important;
+  }
+  .report-doc .rd-sheet.rd-ta-page {
+    height: 297mm;
+    min-height: 297mm;
+    overflow: hidden;
+  }
+}
