@@ -11,9 +11,9 @@ export default function TechnicalAnalystWorkspaceLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  // The A4 print-style report pages (survey report + document verification report) are
+  // The A4 print-style report pages (survey, document verification and technical analysis reports) are
   // standalone, same as verifikator/company-workspace's equivalents — no sidebar chrome.
-  const isStandalonePage = /^\/technical-analyst-workspace\/assignments\/[^/]+\/(report\/|document-report)/.test(pathname ?? "");
+  const isStandalonePage = /^\/technical-analyst-workspace\/assignments\/[^/]+\/(report\/|document-report|technical-report)/.test(pathname ?? "");
 
   if (isStandalonePage) {
     return (
