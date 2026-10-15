@@ -1,6 +1,7 @@
 "use client";
 
 import { schemeLabel } from "@/modules/schemes";
+import { ReportLoadProgress } from "@/modules/surveyor-workspace/components/report/report-load-progress";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -316,6 +317,7 @@ export function OfficeReportPreview({
 
   return (
     <div className="report-doc">
+      <ReportLoadProgress />
       <div className="rd-topbar">
         <Link href={backHref ?? `/surveyor-workspace/assignments/${assignmentId}`} className="rd-back">
           <MaterialIcon name="arrow_back" className="text-base" />

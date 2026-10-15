@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { ReportLoadProgress } from "@/modules/surveyor-workspace/components/report/report-load-progress";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import DOMPurify from "dompurify";
@@ -1298,6 +1299,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
 
   return (
     <div className="report-doc" style={{ fontFamily: "var(--font-archivo), sans-serif" }}>
+      <ReportLoadProgress />
       <div className="rd-topbar">
         <Link href={backHref ?? `/verifikator-workspace/assignments/${assignmentId}`} className="rd-back">
           <MaterialIcon name="arrow_back" className="text-base" />

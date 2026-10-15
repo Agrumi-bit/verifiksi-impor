@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { ReportLoadProgress } from "@/modules/surveyor-workspace/components/report/report-load-progress";
 import { fmtNum, parseRekapBahanBaku } from "../detail/analysis-types";
 import { capacitySummary, materialNeeds, materialTotals } from "../../lhvki-summary";
 import type { CapacityRow, RawMaterialConversionRow, RawMaterialUsageRow } from "@/modules/verifikator-workspace/schema";
@@ -545,6 +546,7 @@ export function TechnicalAnalysisReport({
 
   return (
     <div className="report-doc" style={{ fontFamily: "var(--font-archivo), sans-serif" }}>
+      <ReportLoadProgress />
       <div className="rd-topbar">
         <Link href={backHref ?? "/project-manager-workspace"} className="rd-back">
           ← Kembali

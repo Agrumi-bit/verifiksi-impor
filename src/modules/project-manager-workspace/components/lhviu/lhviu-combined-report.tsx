@@ -10,6 +10,7 @@ import { DocumentVerificationReport } from "@/modules/verifikator-workspace/comp
 import { TechnicalAnalysisReport } from "@/modules/technical-analyst-workspace/components/report/technical-analysis-report";
 import { decodeLhviuItems, finalReportLabels, type LhviuDocumentInfo, type LhviuItem, type LhviuMode, type LhviuOrder } from "./lhviu";
 import { LhviuPdfPages } from "./lhviu-pdf-pages";
+import { ReportLoadProgress } from "@/modules/surveyor-workspace/components/report/report-load-progress";
 
 const BASE = "/api/project-manager-workspace" as const;
 
@@ -71,6 +72,7 @@ export function LhviuCombinedReport({
 
   return (
     <div className="lhviu-combined">
+      <ReportLoadProgress />
       <div className="report-doc" style={{ fontFamily: "var(--font-archivo), sans-serif" }}>
         <div className="rd-topbar">
           <Link href={`/project-manager-workspace/applications/${type}/${applicationNumber}?tab=LHVIU`} className="rd-back">
