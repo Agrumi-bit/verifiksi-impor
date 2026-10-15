@@ -6,7 +6,7 @@ import { storage } from "@/lib/storage";
 import type { StorageFileStat } from "@/lib/storage";
 import { getServerSession } from "@/lib/get-session";
 import { resolvePdfPreview } from "@/lib/pdf-preview";
-import { resolveImageThumb } from "@/lib/image-thumb";
+import { resolveImageCopy } from "@/lib/image-thumb";
 
 const CONTENT_TYPES: Record<string, string> = {
   pdf: "application/pdf",
@@ -31,6 +31,9 @@ type ResolvedFile = {
   stat: StorageFileStat;
   /** Which copy is served — exposed as `X-Pdf-Variant` so the lazy viewer can pin its range requests. */
   variant: "original" | "preview" | "thumb";
+  /** A sized copy was asked for but isn't ready yet, so the original is served — cache it only
+   * briefly, or the browser would keep the heavy original for this URL for a week. */
+  fallback?: boolean;
 };
 
 type Resolution = { ok: true; file: ResolvedFile } | { ok: false; response: NextResponse };
@@ -78,10 +81,15 @@ async function resolveFile(request: Request): Promise<Resolution> {
     }
   }
 
-  // Grids and lists ask for `variant=thumb`: a small WebP of the photo when one is ready (else the
-  // original, and a thumbnail gets queued). Preview modals, reports and downloads get the photo itself.
-  if (contentType.startsWith("image/") && new URL(request.url).searchParams.get("variant") === "thumb") {
-    const thumbPath = await resolveImageThumb(path).catch(() => null);
+  // Grids and lists ask for `variant=thumb` (480 px), A4 reports for `variant=report` (1400 px): a
+  // WebP copy of the photo when one is ready (else the original, and the copy gets queued). Preview
+  // modals and downloads get the photo itself.
+  const imageVariant = new URL(request.url).searchParams.get("variant");
+  let copyPending = false;
+  if (contentType.startsWith("image/") && (imageVariant === "thumb" || imageVariant === "report")) {
+    const copy = await resolveImageCopy(path, imageVariant).catch(() => ({ path: null, pending: false }));
+    copyPending = copy.pending;
+    const thumbPath = copy.path;
     if (thumbPath) {
       try {
         const thumbStat = await storage.stat(thumbPath);
@@ -94,7 +102,7 @@ async function resolveFile(request: Request): Promise<Resolution> {
 
   return {
     ok: true,
-    file: { path, filename, contentType, stat, variant: "original" },
+    file: { path, filename, contentType, stat, variant: "original", fallback: copyPending },
   };
 }
 
@@ -102,7 +110,7 @@ function baseHeaders(file: ResolvedFile): Record<string, string> {
   return {
     "Content-Type": file.contentType,
     "Content-Disposition": `inline; filename="${file.filename}"`,
-    "Cache-Control": CACHE_CONTROL,
+    "Cache-Control": file.fallback ? "private, max-age=60" : CACHE_CONTROL,
     "Accept-Ranges": "bytes",
     "Last-Modified": new Date(file.stat.mtimeMs).toUTCString(),
     ETag: etagOf(file),

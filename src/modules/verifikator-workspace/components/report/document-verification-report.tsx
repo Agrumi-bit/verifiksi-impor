@@ -294,7 +294,7 @@ export function DocImage({
         <a href={url} target="_blank" rel="noopener noreferrer" style={{ display: "block", width: "100%", height: "100%" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={isImage ? url : (thumbnailUrl(path) as string)}
+            src={isImage ? `${url}&variant=report` : (thumbnailUrl(path) as string)}
             alt={label}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
             onError={isImage ? undefined : () => setThumbFailed(true)}
@@ -356,7 +356,7 @@ function BentoPhotoTile({ item, hero }: { item: BentoPhotoItem; hero?: boolean }
     >
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt={item.label} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        <img src={`${url}&variant=report`} alt={item.label} decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       ) : (
         <div
           style={{

@@ -16,7 +16,9 @@ export type DocumentationPhoto = {
 
 type Orientation = "portrait" | "landscape";
 
-const fileUrl = (path: string) => `/api/files?path=${encodeURIComponent(path)}`;
+// The report's 1400 px copy of each photo (lib/image-thumb.ts) — a survey can carry ~100 camera
+// originals of several MB each, which made Dokumentasi Lapangan very slow to render.
+const fileUrl = (path: string) => `/api/files?path=${encodeURIComponent(path)}&variant=report`;
 
 /**
  * Placement of photo `index` in a 6-column grid of TRACK px rows for `count` photos, by
