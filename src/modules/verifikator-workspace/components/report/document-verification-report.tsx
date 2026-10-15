@@ -250,7 +250,8 @@ export function fileUrl(path: string | null | undefined): string | null {
 /** Rasterized first-page preview for a PDF — real visual content without embedding the browser's PDF viewer chrome. */
 function thumbnailUrl(path: string | null | undefined): string | null {
   if (!path) return null;
-  return `/api/files/thumbnail?path=${encodeURIComponent(path)}`;
+  // JPEG, not the route's PNG default: ~4× lighter for a scanned page shown 200 px wide.
+  return `/api/files/thumbnail?path=${encodeURIComponent(path)}&format=jpeg`;
 }
 
 export function DocImage({
@@ -295,7 +296,7 @@ export function DocImage({
         <a href={url} target="_blank" rel="noopener noreferrer" style={{ display: "block", width: "100%", height: "100%" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={isImage ? `${url}&variant=report` : (thumbnailUrl(path) as string)}
+            src={isImage ? `${url}&variant=thumb` : (thumbnailUrl(path) as string)}
             alt={label}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
             onError={isImage ? undefined : () => setThumbFailed(true)}
@@ -357,7 +358,7 @@ function BentoPhotoTile({ item, hero }: { item: BentoPhotoItem; hero?: boolean }
     >
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={`${url}&variant=report`} alt={item.label} decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        <img src={`${url}&variant=${hero ? "report" : "thumb"}`} alt={item.label} decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       ) : (
         <div
           style={{

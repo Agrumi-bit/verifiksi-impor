@@ -16,9 +16,10 @@ export type DocumentationPhoto = {
 
 type Orientation = "portrait" | "landscape";
 
-// The report's 1400 px copy of each photo (lib/image-thumb.ts) — a survey can carry ~100 camera
-// originals of several MB each, which made Dokumentasi Lapangan very slow to render.
-const fileUrl = (path: string) => `/api/files?path=${encodeURIComponent(path)}&variant=report`;
+// Sized copies of each photo (lib/image-thumb.ts) instead of camera originals of several MB:
+// `report` (1400 px) for the large cells, `thumb` (480 px, ~30 KB — still ~200 dpi at the ~6 cm a
+// small tile takes on A4) for the small tiles. Keeps a report with dozens of photos light.
+const fileUrl = (path: string, variant: "report" | "thumb" = "report") => `/api/files?path=${encodeURIComponent(path)}&variant=${variant}`;
 
 /**
  * Placement of photo `index` in a 6-column grid of TRACK px rows for `count` photos, by
@@ -172,7 +173,12 @@ export function DocumentationBento({ photos }: { photos: DocumentationPhoto[] })
           >
             <div style={{ flex: 1, minHeight: 0 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={fileUrl(photo.filePath)} alt={photo.title} onLoad={(event) => onLoad(photo.key, event.currentTarget)} style={imageStyle} />
+              <img
+                src={fileUrl(photo.filePath, index === 0 || photos.length <= 2 ? "report" : "thumb")}
+                alt={photo.title}
+                onLoad={(event) => onLoad(photo.key, event.currentTarget)}
+                style={imageStyle}
+              />
             </div>
             <Caption photo={photo} meta={metaByPath[photo.filePath]} />
           </figure>
