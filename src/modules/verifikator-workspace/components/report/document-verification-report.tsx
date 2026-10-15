@@ -1804,6 +1804,8 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                   {/* B. Per-document narrative pages */}
                   {narrativeDocs.map((doc, i) => {
                     const k = doc.kesimpulan(ctx);
+                    // The verifikator's Catatan Verifikasi on this document (kept for every status).
+                    const verifierNote = documents.find((d) => d.key === doc.key)?.note?.trim() ?? "";
                     const isPending = ctx.documentStatuses[doc.key] === "PENDING";
                     const boxBg = isPending ? "#e9ecef" : MINT;
                     const textColor = isPending ? MUTED : MINT_INK;
@@ -1833,11 +1835,26 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                             </div>
                             <DocImage path={doc.documentPath(ctx)} label={doc.title} aspectRatio={doc.imageAspectRatio} />
                           </div>
-                          {doc.findings(ctx).map((p, pi) => (
-                            <p key={pi} style={{ fontSize: 10, lineHeight: 1.5, color: textColor, margin: "14px 0 0" }}>
-                              {p}
-                            </p>
-                          ))}
+                          {/* The verifikator's own observation replaces the standard findings text. */}
+                          {!verifierNote &&
+                            doc.findings(ctx).map((p, pi) => (
+                              <p key={pi} style={{ fontSize: 10, lineHeight: 1.5, color: textColor, margin: "14px 0 0" }}>
+                                {p}
+                              </p>
+                            ))}
+                          {verifierNote && (
+                            <div style={{ background: "#fffaf0", border: "1px solid #f0dcb8", borderRadius: 10, padding: "10px 14px", marginTop: 12 }}>
+                              <div style={{ fontSize: 9.5, fontWeight: 700, color: "#8a5a12", marginBottom: 4, letterSpacing: "0.04em" }}>CATATAN VERIFIKATOR</div>
+                              {/<[a-z][\s\S]*>/i.test(verifierNote) ? (
+                                <div
+                                  style={{ fontSize: 10, lineHeight: 1.5, color: MUTED }}
+                                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(verifierNote, { ADD_ATTR: ["target"] }) }}
+                                />
+                              ) : (
+                                <p style={{ fontSize: 10, lineHeight: 1.5, color: MUTED, margin: 0, whiteSpace: "pre-wrap" }}>{verifierNote}</p>
+                              )}
+                            </div>
+                          )}
                           <div style={{ background: k.memenuhi ? "#fff" : "#ffe0dc", borderRadius: 10, padding: "12px 14px", marginTop: 10 }}>
                             <div style={{ fontSize: 9.5, fontWeight: 700, color: k.memenuhi ? GREEN : "#7a1f14", marginBottom: 5, letterSpacing: "0.04em" }}>KESIMPULAN</div>
                             <p style={{ fontSize: 10, lineHeight: 1.5, color: k.memenuhi ? MINT_INK : "#7a1f14", margin: 0 }} dangerouslySetInnerHTML={{ __html: k.text }} />
