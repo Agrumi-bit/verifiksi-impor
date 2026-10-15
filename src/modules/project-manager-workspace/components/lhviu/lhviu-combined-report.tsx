@@ -11,6 +11,7 @@ import { TechnicalAnalysisReport } from "@/modules/technical-analyst-workspace/c
 import { decodeLhviuItems, finalReportLabels, type LhviuDocumentInfo, type LhviuItem, type LhviuMode, type LhviuOrder } from "./lhviu";
 import { LhviuPdfPages } from "./lhviu-pdf-pages";
 import { ReportLoadProgress } from "@/modules/surveyor-workspace/components/report/report-load-progress";
+import { CurrentPagePdfButton } from "@/modules/technical-analyst-workspace/components/report/pdf-download-button";
 
 const BASE = "/api/project-manager-workspace" as const;
 
@@ -87,9 +88,7 @@ export function LhviuCombinedReport({
             <button type="button" className="rd-btn" onClick={() => window.print()}>
               Cetak
             </button>
-            <button type="button" className="rd-btn rd-btn-primary" onClick={() => window.print()}>
-              Unduh PDF
-            </button>
+            <CurrentPagePdfButton name={`${mode === "laporan-lengkap" ? "Laporan-Lengkap" : "Laporan-Verifikasi"}-${applicationNumber}`} />
           </div>
         </div>
       </div>

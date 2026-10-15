@@ -15,7 +15,7 @@ import path from "node:path";
  */
 
 const CHROMIUM = process.env.CHROMIUM_PATH || "/usr/bin/chromium";
-const TIMEOUT_MS = 120_000;
+const TIMEOUT_MS = 300_000;
 
 type Cdp = {
   send: <T = Record<string, unknown>>(method: string, params?: Record<string, unknown>, sessionId?: string) => Promise<T>;
@@ -102,13 +102,31 @@ let queue: Promise<unknown> = Promise.resolve();
  * fonts and images are loaded and the network is quiet, and returns the printed PDF.
  * Throws if `errorSelector` appears or the page is not ready in time.
  */
-export function renderAppPageToPdf(pagePath: string, opts: { cookie: string; readySelector: string; errorText?: string }): Promise<Buffer> {
+type RenderOptions = {
+  cookie: string;
+  readySelector: string;
+  errorText?: string;
+  /** Regex source: keep waiting while the page text still matches it (e.g. "Memuat laporan" placeholders). */
+  pendingPattern?: string;
+  /** Progress while the page loads (images done/total) and while printing — for "Unduh PDF" progress bars. */
+  onProgress?: (progress: RenderProgress) => void;
+};
+
+export type RenderProgress =
+  | { phase: "queued" }
+  | { phase: "starting" }
+  | { phase: "loading"; imagesDone: number; imagesTotal: number; waitingForContent: boolean }
+  | { phase: "printing" };
+
+export function renderAppPageToPdf(pagePath: string, opts: RenderOptions): Promise<Buffer> {
+  opts.onProgress?.({ phase: "queued" });
   const run = queue.then(() => render(pagePath, opts));
   queue = run.catch(() => undefined);
   return run;
 }
 
-async function render(pagePath: string, { cookie, readySelector, errorText }: { cookie: string; readySelector: string; errorText?: string }): Promise<Buffer> {
+async function render(pagePath: string, { cookie, readySelector, errorText, pendingPattern, onProgress }: RenderOptions): Promise<Buffer> {
+  onProgress?.({ phase: "starting" });
   const port = process.env.PORT || "3000";
   const url = `http://127.0.0.1:${port}${pagePath}`;
   const userDataDir = await mkdtemp(path.join(tmpdir(), "pdf-chromium-"));
@@ -129,20 +147,29 @@ async function render(pagePath: string, { cookie, readySelector, errorText }: { 
 
     const deadline = Date.now() + TIMEOUT_MS;
     const check = `(() => {
-      if (${JSON.stringify(errorText ?? "")} && document.body && document.body.innerText.includes(${JSON.stringify(errorText ?? "")})) return "error";
-      if (!document.querySelector(${JSON.stringify(readySelector)})) return "wait";
-      if (document.fonts.status !== "loaded") return "wait";
-      if ([...document.images].some((i) => !i.complete)) return "wait";
-      return "ready";
+      const imgs = [...document.images];
+      const counts = { done: imgs.filter((i) => i.complete).length, total: imgs.length };
+      if (${JSON.stringify(errorText ?? "")} && document.body && document.body.innerText.includes(${JSON.stringify(errorText ?? "")})) return { state: "error", ...counts };
+      const pending = !document.querySelector(${JSON.stringify(readySelector)})
+        || (${JSON.stringify(pendingPattern ?? "")} && new RegExp(${JSON.stringify(pendingPattern ?? "")}).test(document.body.innerText));
+      if (pending) return { state: "content", ...counts };
+      if (document.fonts.status !== "loaded" || counts.done < counts.total) return { state: "images", ...counts };
+      return { state: "ready", ...counts };
     })()`;
     for (;;) {
       if (Date.now() > deadline) throw new Error("Laporan tidak selesai dimuat");
-      const { result } = await send<{ result: { value?: string } }>("Runtime.evaluate", { expression: check, returnByValue: true });
-      if (result.value === "error") throw new Error("Laporan gagal dimuat");
-      if (result.value === "ready") break;
+      const { result } = await send<{ result: { value?: { state: string; done: number; total: number } } }>("Runtime.evaluate", {
+        expression: check,
+        returnByValue: true,
+      });
+      const value = result.value;
+      if (value?.state === "error") throw new Error("Laporan gagal dimuat");
+      if (value?.state === "ready") break;
+      onProgress?.({ phase: "loading", imagesDone: value?.done ?? 0, imagesTotal: value?.total ?? 0, waitingForContent: value?.state === "content" });
       await sleep(500);
     }
     await sleep(800); // charts settle (layout effects, late images)
+    onProgress?.({ phase: "printing" });
 
     const { data } = await send<{ data: string }>("Page.printToPDF", {
       printBackground: true,

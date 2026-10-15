@@ -13,7 +13,7 @@ import "@/modules/surveyor-workspace/components/report/office-report-preview.css
 import "@/components/form/rich-text-editor.css";
 import "./technical-analysis-report.css";
 import { A4Pages, textToHtml, type FlowItem } from "./a4-pages";
-import { PdfDownloadButton } from "./pdf-download-button";
+import { CurrentPagePdfButton } from "./pdf-download-button";
 import { formatAssignmentDate } from "@/lib/assignment-date";
 import type { KonsumsiImportPlan } from "@/modules/applications/viu-import-plan";
 import {
@@ -563,7 +563,7 @@ export function TechnicalAnalysisReport({
           <button type="button" className="rd-btn" onClick={() => window.print()}>
             Cetak
           </button>
-          <PdfDownloadButton url={`${basePath}/assignments/${encodeURIComponent(assignmentId)}/technical-report/pdf`} />
+          <CurrentPagePdfButton name={`Laporan-Analisis-Teknis-${assignmentId}`} />
         </div>
       </div>
 
