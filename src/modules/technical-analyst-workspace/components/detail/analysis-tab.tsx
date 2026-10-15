@@ -28,7 +28,7 @@ type AnalysisTabProps = {
 
 type Draft = { status: TechnicalModuleStatusValue; keterangan: string; kesimpulan: string; inputs: Record<string, string> };
 
-const MODULE_COMPONENT: Record<TechnicalModuleKey, (props: ModuleProps) => React.ReactNode> = {
+export const MODULE_COMPONENT: Record<TechnicalModuleKey, (props: ModuleProps) => React.ReactNode> = {
   listrik: ListrikModule,
   kapasitas: KapasitasModule,
   bahanbaku: BahanBakuModule,

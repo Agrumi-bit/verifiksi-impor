@@ -4,17 +4,9 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
 import { requireTechnicalAnalystSession } from "@/lib/require-technical-analyst-session";
-import type { ApplicationWizardValues } from "@/modules/applications/schema";
-import {
-  buildCapacityRows,
-  buildMachineChecklist,
-  buildProductionQtyChecklist,
-  buildRawMaterialConversionRows,
-  buildRawMaterialUsageChecklist,
-} from "@/modules/verifikator-workspace/schema";
 import { ALL_TECHNICAL_MODULE_KEYS, TECHNICAL_MODULE_STATUSES } from "@/modules/technical-analyst-workspace/status";
 import { technicalAnalysisDataSchema, technicalModuleDecisionSchema } from "@/modules/technical-analyst-workspace/schema";
-import { buildKonsumsiImportPlan, buildModalKerjaFromApplication } from "@/modules/applications/viu-import-plan";
+import { buildAnalysisData } from "@/modules/technical-analyst-workspace/server/analysis-data";
 
 async function findOwnedAssignment(assignmentNumber: string, technicalAnalystId: string) {
   const assignment = await db.assignment.findUnique({
@@ -36,26 +28,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
   }
 
-  const payload = assignment.application.payload as ApplicationWizardValues;
-  const technicalAnalysisData = technicalAnalysisDataSchema.parse(assignment.technicalAnalysisData ?? {});
-
-  return NextResponse.json({
-    data: {
-      status: assignment.status,
-      reviewable: isAssignmentReviewable(assignment),
-      verificationType: assignment.application.verificationType,
-      importTypes: payload.importTypes ?? [],
-      konsumsiImportPlan: buildKonsumsiImportPlan(payload),
-      modalKerjaFromApplication: buildModalKerjaFromApplication(payload),
-      technicalAnalysisData,
-      machines: buildMachineChecklist(payload),
-      electricityMonths: payload.electricityMonths ?? [],
-      capacity: buildCapacityRows(payload),
-      productionQty: buildProductionQtyChecklist(payload),
-      rawMaterialConversion: buildRawMaterialConversionRows(payload),
-      rawMaterialUsage: buildRawMaterialUsageChecklist(payload),
-    },
-  });
+  return NextResponse.json({ data: buildAnalysisData(assignment) });
 }
 
 const patchSchema = z.object({
