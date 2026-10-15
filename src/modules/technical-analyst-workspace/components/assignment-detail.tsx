@@ -42,6 +42,9 @@ export type AssignmentDetailData = {
   dueDate: string | null;
   validationNotes: string | null;
   validatedAt: string | null;
+  pmReviewStatus?: string | null;
+  pmReviewNote?: string | null;
+  pmReviewedAt?: string | null;
   application: {
     applicationNumber: string;
     verificationType: string;
@@ -114,6 +117,32 @@ export function AssignmentDetail({ id }: { id: string }) {
       <div className="mb-3.5 empty:hidden">
         <ApplicationEditedNotice notice={data.applicationEditedAfterAssignment} />
       </div>
+
+      {/* Project Manager's review of the Laporan Analisis Teknis. */}
+      {!data.pmReviewStatus && data.pmReviewNote && data.status !== "COMPLETED" && (
+        <div className="mb-3.5 rounded-[10px] border border-[#f3d9a8] bg-[#fdf4de] p-4 text-[12.5px] text-[#4a4038]">
+          <div className="flex flex-wrap items-center gap-2">
+            <MaterialIcon name="undo" className="text-[17px] text-[#c98a1f]" />
+            <span className="font-bold text-[#20180f]">Revisi diminta Project Manager</span>
+            {data.pmReviewedAt && <span>· {formatAssignmentDate(data.pmReviewedAt)}</span>}
+          </div>
+          <div className="mt-1.5 whitespace-pre-line pl-6">Catatan: {data.pmReviewNote}</div>
+          <div className="mt-1 pl-6 text-[11.5px] text-[#8a7565]">Perbaiki analisis sesuai catatan, lalu submit ulang laporan analisis teknis.</div>
+        </div>
+      )}
+      {data.pmReviewStatus && (
+        <div
+          className={`mb-3.5 rounded-[10px] border p-4 text-[12.5px] ${
+            data.pmReviewStatus === "APPROVED" ? "border-[#bfe6cd] bg-[#eefaf2] text-[#1a7a4c]" : "border-[#f2c4b8] bg-[#fdf0ec] text-[#a5321c]"
+          }`}
+        >
+          <span className="font-bold">
+            Laporan Analisis Teknis {data.pmReviewStatus === "APPROVED" ? "disetujui" : "ditolak"} Project Manager
+          </span>
+          {data.pmReviewedAt && <span> · {formatAssignmentDate(data.pmReviewedAt)}</span>}
+          {data.pmReviewNote && <div className="mt-1 whitespace-pre-line text-[#4a4038]">Catatan: {data.pmReviewNote}</div>}
+        </div>
+      )}
 
       <div className="mb-5 rounded-[10px] border border-[#f0ded0] bg-white p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

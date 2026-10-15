@@ -10,7 +10,7 @@ import { collectApplicationVisits, isAssignmentSurveyComplete, type SurveyPayloa
 
 const patchSchema = z.object({
   category: z.enum(APPROVAL_CATEGORIES),
-  /** REVISION (Laporan Verifikasi Dokumen only): send the report back to the verifikator. */
+  /** REVISION (Laporan Verifikasi Dokumen / Laporan Analisis Teknis): send the report back to its author. */
   decision: z.enum(["APPROVED", "REJECTED", "REVISION"]),
   note: z.string().trim().optional(),
   /** "Tanggal Review" (YYYY-MM-DD) chosen by the PM — prints as the report's TANGGAL TERBIT.
@@ -54,8 +54,8 @@ export async function PATCH(
   if (parsed.data.decision === "REVISION" && !parsed.data.note?.trim()) {
     return NextResponse.json({ error: "Catatan revisi wajib diisi" }, { status: 400 });
   }
-  if (parsed.data.decision === "REVISION" && parsed.data.category !== "laporanVerifikasi") {
-    return NextResponse.json({ error: "Revisi hanya tersedia untuk Laporan Verifikasi Dokumen." }, { status: 400 });
+  if (parsed.data.decision === "REVISION" && parsed.data.category !== "laporanVerifikasi" && parsed.data.category !== "laporanTeknis") {
+    return NextResponse.json({ error: "Revisi hanya tersedia untuk Laporan Verifikasi Dokumen dan Laporan Analisis Teknis." }, { status: 400 });
   }
 
   const assignment = await db.assignment.findUnique({
@@ -99,8 +99,12 @@ export async function PATCH(
     if (assignment.application.status === "COMPLETED") {
       return NextResponse.json({ error: "Permohonan sudah selesai (LHVIU telah dicatat); laporan tidak dapat dikembalikan." }, { status: 400 });
     }
+    const isTeknis = category === "laporanTeknis";
     if (assignment.status !== "COMPLETED") {
-      return NextResponse.json({ error: "Laporan belum disubmit verifikator atau sedang direvisi." }, { status: 400 });
+      return NextResponse.json(
+        { error: isTeknis ? "Laporan belum disubmit Technical Analyst atau sedang direvisi." : "Laporan belum disubmit verifikator atau sedang direvisi." },
+        { status: 400 },
+      );
     }
     await db.$transaction([
       db.assignment.update({
@@ -114,7 +118,9 @@ export async function PATCH(
           actorId: session.user.id,
           actorName: session.user.name ?? null,
           actorRole: session.user.role ?? "PROJECT_MANAGER",
-          reason: `Laporan Verifikasi Dokumen ${assignment.assignmentNumber} dikembalikan ke verifikator: ${note!.trim()}`,
+          reason: isTeknis
+            ? `Laporan Analisis Teknis ${assignment.assignmentNumber} dikembalikan ke Technical Analyst: ${note!.trim()}`
+            : `Laporan Verifikasi Dokumen ${assignment.assignmentNumber} dikembalikan ke verifikator: ${note!.trim()}`,
         },
       }),
     ]);

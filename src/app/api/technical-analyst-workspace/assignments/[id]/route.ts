@@ -99,6 +99,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       dueDate: assignment.dueDate,
       validationNotes: assignment.validationNotes,
       validatedAt: assignment.validatedAt,
+      // Project Manager's review of the Laporan Analisis Teknis (a revision request = note, no status).
+      pmReviewStatus: assignment.pmReviewStatus,
+      pmReviewNote: assignment.pmReviewNote,
+      pmReviewedAt: assignment.pmReviewedAt,
       application: {
         applicationNumber: assignment.application.applicationNumber,
         verificationType: assignment.application.verificationType,

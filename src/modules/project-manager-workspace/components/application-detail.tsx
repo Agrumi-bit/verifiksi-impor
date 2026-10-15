@@ -150,7 +150,7 @@ export function ApplicationDetail({ applicationNumber, jenis, scheme }: { applic
       {tab === "Documents" && <DocumentsTab data={data} applicationNumber={applicationNumber} />}
       {tab === "Survey" && <SurveyTab data={data} applicationNumber={applicationNumber} />}
       {tab === "Verification" && <VerificationTab data={data} />}
-      {tab === "Analisis" && <AnalisisTab data={data} />}
+      {tab === "Analisis" && <AnalisisTab data={data} applicationNumber={applicationNumber} />}
       {tab === "LHVIU" && <LhviuTab data={data} applicationNumber={applicationNumber} jenis={jenis} />}
       {tab === "Communication" && (
         messageThreadAssignmentNumber ? (

@@ -16,6 +16,7 @@ import {
 import type { AnalysisData } from "@/modules/technical-analyst-workspace/components/detail/analysis-types";
 import { MODULE_COMPONENT } from "@/modules/technical-analyst-workspace/components/detail/analysis-tab";
 import { LhvkiSummaryPanel } from "@/modules/technical-analyst-workspace/components/detail/analysis/lhvki-summary-panel";
+import { TechnicalReportApproval } from "./technical-report-approval";
 import type { PmApplicationDetail } from "./types";
 import { formatAssignmentDate } from "@/lib/assignment-date";
 import {
@@ -38,7 +39,7 @@ const noop = () => undefined;
  * sub-tab Ringkasan (review laporan dokumen + Ringkasan LHVKI / hasil per modul), one sub-tab per
  * analysis module (the TA's own module view, not editable) and Laporan Analisis (the printable report).
  */
-export function AnalisisTab({ data }: { data: PmApplicationDetail }) {
+export function AnalisisTab({ data, applicationNumber }: { data: PmApplicationDetail; applicationNumber: string }) {
   const technical = data.assignments.technical;
   const moduleKeys = technicalModuleKeysFor(data.verificationType, data.payload?.importTypes);
   const [tab, setTab] = useState<SubTab>("ringkasan");
@@ -93,6 +94,7 @@ export function AnalisisTab({ data }: { data: PmApplicationDetail }) {
     return (
       <div className="flex flex-col gap-3.5">
         {nav}
+        <TechnicalReportApproval data={data} applicationNumber={applicationNumber} />
         <div className="flex items-center justify-between gap-2 rounded-[10px] border border-[#f0ded0] bg-white px-4 py-3">
           <div className="text-[12.5px] text-[#4a4038]">Laporan Analisis Teknis · {assignmentNumber}</div>
           <a href={reportHref} target="_blank" rel="noreferrer" className="rounded-lg border border-[#e1bfb3] bg-white px-3 py-1.5 text-[12px] font-bold text-[#261813]">
@@ -135,6 +137,7 @@ export function AnalisisTab({ data }: { data: PmApplicationDetail }) {
   return (
     <div className="flex flex-col gap-3.5">
       {nav}
+      <TechnicalReportApproval data={data} applicationNumber={applicationNumber} />
       <div className="rounded-[10px] border border-[#f0ded0] bg-white p-5">
         <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
           <div className="text-[13.5px] font-extrabold text-[#20180f]">Review Laporan Verifikasi Dokumen oleh Technical Analyst</div>
