@@ -132,6 +132,20 @@ function migrateGudangSection1Docs(saved: DocCheckValues[], defaults: DocCheckVa
   return tdgRow ? [tdgRow, ...rest] : rest;
 }
 
+// Saved rows only keep the surveyor's verdict (status / addressText) — records saved before
+// `documentPath` was part of the row, or before the applicant re-uploaded a document, carry no or a
+// stale path, which hides "Lihat Dokumen". Always take the path from the live application data, and
+// add any document row that exists now but wasn't there when the draft was first saved.
+function hydrateSection1Docs(saved: DocCheckValues[], defaults: DocCheckValues[]): DocCheckValues[] {
+  const defaultsByKey = new Map(defaults.map((d) => [d.key, d]));
+  const merged = saved.map((row) => {
+    const live = defaultsByKey.get(row.key);
+    return live ? { ...row, name: live.name, documentPath: live.documentPath } : row;
+  });
+  const savedKeys = new Set(saved.map((d) => d.key));
+  return [...merged, ...defaults.filter((d) => !savedKeys.has(d.key))];
+}
+
 type Props = { kind: FieldKind; assignmentId: string; locationId: string };
 
 export function FieldVerificationWizard({ kind, assignmentId, locationId }: Props) {
@@ -175,10 +189,12 @@ export function FieldVerificationWizard({ kind, assignmentId, locationId }: Prop
         };
     setValues({
       ...base,
-      section1Docs:
-        kind === "GUDANG" && data[dataField]
-          ? migrateGudangSection1Docs(base.section1Docs, defaultSection1Docs)
-          : base.section1Docs,
+      section1Docs: data[dataField]
+        ? hydrateSection1Docs(
+            kind === "GUDANG" ? migrateGudangSection1Docs(base.section1Docs, defaultSection1Docs) : base.section1Docs,
+            defaultSection1Docs,
+          )
+        : base.section1Docs,
       // Pre-fill from Customer Relation's actual assignment date (synced regardless of Surat
       // Tugas draft/approval status) whenever the surveyor hasn't already set one themselves.
       // Tanggal Penugasan is CR's date (scheduledDate, as a Jakarta calendar date) — it wins
