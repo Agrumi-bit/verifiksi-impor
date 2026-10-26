@@ -30,6 +30,7 @@ import { REPORT_CHECKLIST_SECTIONS, reportResultLabels, type ReportChecklistCont
 import type { ReportVerificationState } from "@/modules/verifikator-workspace/report-verification";
 import "./office-report-preview.css";
 import { formatAssignmentDate } from "@/lib/assignment-date";
+import { LEASE_DOCUMENT_TYPE_LABELS, OWNERSHIP_DOCUMENT_TYPE_LABELS } from "@/modules/shared/schema";
 import { resolveReportPreparedDate } from "../../report-prepared-date";
 import { reportFamilyLabel, reportVerificationName } from "../../report-scheme-text";
 
@@ -86,9 +87,14 @@ function fmtDate(value: string | null | undefined): string {
   return formatAssignmentDate(value, "full");
 }
 
-function basename(path: string | null | undefined): string {
-  if (!path) return "—";
-  return path.split("/").pop() ?? path;
+/**
+ * Lampiran shows what a document IS ("Sertifikat Hak Guna Bangunan (HGB)"), never the stored file
+ * name ("c125a6ed-…-merged__pdf.io___47_-compressed.pdf"). Only entries with an uploaded file count.
+ */
+function tenureDocumentNames(entries: { type: string; documentPath?: string | null }[] | null | undefined, isSewa: boolean): string {
+  const labels: Record<string, string> = isSewa ? LEASE_DOCUMENT_TYPE_LABELS : OWNERSHIP_DOCUMENT_TYPE_LABELS;
+  const names = (entries ?? []).filter((entry) => entry.documentPath).map((entry) => labels[entry.type] ?? entry.type);
+  return [...new Set(names)].join(", ") || "—";
 }
 
 function Pill({ kind, children }: { kind: "ok" | "bad" | "warn" | "neutral"; children: ReactNode }) {
@@ -246,6 +252,8 @@ export function OfficeReportPreview({
   const otherLabel = DOC_TYPE_DEFS.find((dt) => dt.key === "other")!.label;
   // Only documentation that was actually uploaded appears in the report (grid, index, numbering).
   const uploadedOthers = ov.documentationOther.filter((item) => item.filePath);
+  // Indeks Dokumentasi Foto dates every photo with the survey date (Tanggal Kunjungan Aktual), not the submit time.
+  const photoIndexDate = ov.actualVisitDate || data.submittedAt ? fmtDate(ov.actualVisitDate || data.submittedAt) : undefined;
   const documentationPhotos: DocumentationPhoto[] = [
     ...fixedDocTypeDefs.flatMap((dt) => {
       const item = ov.documentation[dt.key];
@@ -257,7 +265,7 @@ export function OfficeReportPreview({
       caption: item.caption,
       filePath: item.filePath!,
     })),
-  ].map((photo) => ({ ...photo, date: data.submittedAt ? fmtDate(data.submittedAt) : undefined }));
+  ].map((photo) => ({ ...photo, date: photoIndexDate }));
   const company = data.company.companyName;
   const reportVerification = data.reportVerification;
   const reviewDecision = reportVerification?.decision ?? null;
@@ -1180,11 +1188,8 @@ export function OfficeReportPreview({
                 <tr>
                   <td style={{ color: "var(--ink-faint)" }}>03</td>
                   <td>{isSewa ? "Dokumen Sewa Lokasi" : "Dokumen Kepemilikan Lokasi"}</td>
-                  <td style={{ fontWeight: 600, textAlign: "right" }} className="rd-mono">
-                    {(isSewa ? data.payloadLocation?.leaseDocuments : data.payloadLocation?.ownershipDocuments)
-                      ?.map((entry) => basename(entry.documentPath))
-                      .filter(Boolean)
-                      .join(", ") || "—"}
+                  <td style={{ fontWeight: 600, textAlign: "right" }}>
+                    {tenureDocumentNames(isSewa ? data.payloadLocation?.leaseDocuments : data.payloadLocation?.ownershipDocuments, isSewa)}
                   </td>
                 </tr>
               </tbody>

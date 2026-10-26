@@ -7,6 +7,8 @@
  * `ReportChecklistItemRow` in `field-verification-tab.tsx`.
  */
 
+import { formatAssignmentDate } from "@/lib/assignment-date";
+
 export type ReportChecklistContext = {
   applicationNumber: string;
   companyName: string;
@@ -87,7 +89,8 @@ export const REPORT_CHECKLIST_SECTIONS: ReportChecklistSection[] = [
         title: "Tanggal Pelaksanaan Survei",
         question: "Apakah tanggal survei lapangan sesuai dengan jadwal pelaksanaan?",
         dataSource: "Data ditampilkan otomatis berdasarkan laporan surveyor.",
-        getValue: (ctx) => ctx.visitDate,
+        // Tanggal Kunjungan Aktual (Section 0) as a calendar date — "18 Agustus 2026", never a raw ISO timestamp.
+        getValue: (ctx) => (ctx.visitDate ? formatAssignmentDate(ctx.visitDate, "full") : null),
         criteria: ["Tanggal survei tercantum dengan jelas.", "Tanggal sesuai dengan jadwal penugasan."],
       },
       {

@@ -35,6 +35,7 @@ import { REPORT_CHECKLIST_SECTIONS, reportResultLabels, type ReportChecklistCont
 import type { ReportVerificationState } from "@/modules/verifikator-workspace/report-verification";
 import "../report/office-report-preview.css";
 import { formatAssignmentDate } from "@/lib/assignment-date";
+import { LEASE_DOCUMENT_TYPE_LABELS, OWNERSHIP_DOCUMENT_TYPE_LABELS } from "@/modules/shared/schema";
 import { resolveReportPreparedDate } from "../../report-prepared-date";
 import { reportFamilyLabel, reportVerificationName } from "../../report-scheme-text";
 
@@ -99,9 +100,14 @@ function fmtDate(value: string | null | undefined): string {
   return formatAssignmentDate(value, "full");
 }
 
-function basename(path: string | null | undefined): string {
-  if (!path) return "—";
-  return path.split("/").pop() ?? path;
+/**
+ * Lampiran shows what a document IS ("Sertifikat Hak Guna Bangunan (HGB)"), never the stored file
+ * name ("c125a6ed-…-merged__pdf.io___47_-compressed.pdf"). Only entries with an uploaded file count.
+ */
+function tenureDocumentNames(entries: { type: string; documentPath?: string | null }[] | null | undefined, isSewa: boolean): string {
+  const labels: Record<string, string> = isSewa ? LEASE_DOCUMENT_TYPE_LABELS : OWNERSHIP_DOCUMENT_TYPE_LABELS;
+  const names = (entries ?? []).filter((entry) => entry.documentPath).map((entry) => labels[entry.type] ?? entry.type);
+  return [...new Set(names)].join(", ") || "—";
 }
 
 function Pill({ kind, children }: { kind: "ok" | "bad" | "warn" | "neutral"; children: ReactNode }) {
@@ -262,6 +268,8 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
   const otherLabel = docTypes.find((dt) => dt.key === "other")!.label;
   // Only documentation that was actually uploaded appears in the report (grid, index, numbering).
   const uploadedOthers = fv.documentationOther.filter((item) => item.filePath);
+  // Indeks Dokumentasi Foto dates every photo with the survey date (Tanggal Kunjungan Aktual), not the submit time.
+  const photoIndexDate = fv.actualVisitDate || data.submittedAt ? fmtDate(fv.actualVisitDate || data.submittedAt) : undefined;
   const documentationPhotos: DocumentationPhoto[] = [
     ...fixedDocTypes.flatMap((dt) => {
       const item = fv.documentation[dt.key];
@@ -273,7 +281,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
       caption: item.caption,
       filePath: item.filePath!,
     })),
-  ].map((photo) => ({ ...photo, date: data.submittedAt ? fmtDate(data.submittedAt) : undefined }));
+  ].map((photo) => ({ ...photo, date: photoIndexDate }));
   const company = data.company.companyName;
   const capacityEfektif = computeCapacityEfektif(fv.capacity);
 
@@ -343,7 +351,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
     applicationNumber: data.applicationNumber,
     companyName: company,
     surveyorName,
-    visitDate: data.submittedAt,
+    visitDate: fv.actualVisitDate || data.submittedAt,
     address: data.address,
     city: data.city,
     buildingStatus,
@@ -1297,11 +1305,8 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
                 <tr>
                   <td style={{ color: "var(--ink-faint)" }}>03</td>
                   <td>{isSewa ? `Dokumen Sewa ${label}` : `Dokumen Kepemilikan ${label}`}</td>
-                  <td style={{ fontWeight: 600, textAlign: "right" }} className="rd-mono">
-                    {(isSewa ? data.payloadLocation?.leaseDocuments : data.payloadLocation?.ownershipDocuments)
-                      ?.map((entry) => basename(entry.documentPath))
-                      .filter(Boolean)
-                      .join(", ") || "—"}
+                  <td style={{ fontWeight: 600, textAlign: "right" }}>
+                    {tenureDocumentNames(isSewa ? data.payloadLocation?.leaseDocuments : data.payloadLocation?.ownershipDocuments, isSewa)}
                   </td>
                 </tr>
                 {isWarehouse ? (
@@ -1309,7 +1314,8 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
                     <td style={{ color: "var(--ink-faint)" }}>04</td>
                     <td>Tanda Daftar Gudang (TDG)</td>
                     <td style={{ fontWeight: 600, textAlign: "right" }} className="rd-mono">
-                      {basename(data.payloadLocation?.warehouseRegistrationDocumentPath)}
+                      {data.payloadLocation?.warehouseRegistrationNumber ||
+                        (data.payloadLocation?.warehouseRegistrationDocumentPath ? "Terlampir" : "—")}
                     </td>
                   </tr>
                 ) : (
@@ -1317,7 +1323,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
                     <td style={{ color: "var(--ink-faint)" }}>04</td>
                     <td>Daftar KBLI</td>
                     <td style={{ fontWeight: 600, textAlign: "right" }} className="rd-mono">
-                      {basename(data.company.kbliDocumentPath)}
+                      {data.company.kbliEntries.map((entry) => entry.code).join(", ") || (data.company.kbliDocumentPath ? "Terlampir" : "—")}
                     </td>
                   </tr>
                 )}
