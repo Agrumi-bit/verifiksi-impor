@@ -1,5 +1,5 @@
 /**
- * Browser-side photo compression before upload: a JPG/PNG/WebP (or HEIC, where the browser can
+ * Browser-side photo compression before upload: a JPG/PNG/WebP/AVIF (or HEIC, where the browser can
  * decode it — Safari) is re-encoded at most IMAGE_MAX_EDGE px on its longest side, as WebP, so a
  * 3–8 MB phone photo uploads as a few hundred KB. The full-resolution original is NOT kept: that is
  * a decision (screen and A4 print never need more than 2000 px).
@@ -19,14 +19,20 @@ export const IMAGE_MIN_BYTES = 300 * 1024;
 const COMPRESSIBLE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const HEIC_TYPES = new Set(["image/heic", "image/heif"]);
 const HEIC_NAME = /\.(heic|heif)$/i;
+const AVIF_NAME = /\.avif$/i;
 
 export function isHeic(file: { name: string; type: string }): boolean {
   return HEIC_TYPES.has(file.type.toLowerCase()) || HEIC_NAME.test(file.name);
 }
 
-/** Whether a file is worth decoding at all. HEIC is always converted: the server refuses it. */
+/** AVIF is accepted, but always converted to WebP so thumbnails, report copies and older viewers handle it like any photo. */
+export function isAvif(file: { name: string; type: string }): boolean {
+  return file.type.toLowerCase() === "image/avif" || AVIF_NAME.test(file.name);
+}
+
+/** Whether a file is worth decoding at all. HEIC is always converted: the server refuses it. AVIF too (see isAvif). */
 export function shouldCompress(file: { name: string; type: string; size: number }): boolean {
-  if (isHeic(file)) return true;
+  if (isHeic(file) || isAvif(file)) return true;
   return COMPRESSIBLE_TYPES.has(file.type.toLowerCase()) && file.size >= IMAGE_MIN_BYTES;
 }
 
@@ -42,9 +48,9 @@ export function renameExtension(name: string, extension: string): string {
   return `${base}.${extension}`;
 }
 
-/** The encoded result is kept only when it is a real gain, or when the source can't be uploaded as is (HEIC). */
+/** The encoded result is kept only when it is a real gain, or when the source must be converted (HEIC, AVIF). */
 export function keepCompressed(original: { name: string; type: string; size: number }, compressedSize: number): boolean {
-  return isHeic(original) || compressedSize < original.size;
+  return isHeic(original) || isAvif(original) || compressedSize < original.size;
 }
 
 type Canvas = OffscreenCanvas | HTMLCanvasElement;

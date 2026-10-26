@@ -17,6 +17,8 @@ const CONTENT_TYPES: Record<string, string> = {
   jpe: "image/jpeg",
   png: "image/png",
   webp: "image/webp",
+  // Normally converted to WebP in the browser before upload; served as is if that wasn't possible.
+  avif: "image/avif",
 };
 
 /** Stored files are immutable per version (a new upload gets a new UUID path), so a long

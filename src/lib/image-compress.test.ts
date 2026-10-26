@@ -9,6 +9,8 @@ describe("image compression rules", () => {
     assert.equal(shouldCompress({ name: "a.jpg", type: "image/jpeg", size: IMAGE_MIN_BYTES - 1 }), false);
     assert.equal(shouldCompress({ name: "a.pdf", type: "application/pdf", size: 9_000_000 }), false);
     assert.equal(shouldCompress({ name: "IMG_1.HEIC", type: "", size: 10 }), true);
+    assert.equal(shouldCompress({ name: "foto.avif", type: "image/avif", size: 10 }), true);
+    assert.equal(shouldCompress({ name: "foto.AVIF", type: "", size: 10 }), true);
   });
 
   it("fits the longest edge within the limit without enlarging", () => {
@@ -27,5 +29,6 @@ describe("image compression rules", () => {
     assert.equal(keepCompressed({ name: "a.jpg", type: "image/jpeg", size: 1000 }, 400), true);
     assert.equal(keepCompressed({ name: "a.jpg", type: "image/jpeg", size: 1000 }, 1200), false);
     assert.equal(keepCompressed({ name: "a.heic", type: "image/heic", size: 1000 }, 1200), true);
+    assert.equal(keepCompressed({ name: "a.avif", type: "image/avif", size: 1000 }, 1200), true);
   });
 });
