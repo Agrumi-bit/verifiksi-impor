@@ -33,7 +33,6 @@ describe("document data re-entered with a new document version", () => {
     const sp = { vkiSupportDocs: [{ key: "memiliki-menguasai", nomorSurat: "SP-1", tanggal: "2026-01-02", penandatangan: "Budi", documentPath: "a.pdf" }, { key: "kebenaran-data", nomorSurat: "SP-9" }] } as unknown as ApplicationWizardValues;
     const key = "vki-support:memiliki-menguasai";
     assert.deepEqual(documentDataFieldValues(key, sp, { companyLegal: { sktNumber: "x" } }).map((f) => f.value), ["SP-1", "2026-01-02", "Budi"]);
-    assert.deepEqual(documentDataFieldValues("vki-support:tenaga-kerja", sp), []);
     const parsed = parseDocumentData(key, { nomorSurat: "SP-2", tanggal: "2026-10-05", penandatangan: "Sari" });
     assert.ok(parsed.ok);
     const next = applyDocumentDataToPayload(sp, parsed.values, key);
@@ -41,6 +40,28 @@ describe("document data re-entered with a new document version", () => {
     assert.equal(next.vkiSupportDocs?.[1].nomorSurat, "SP-9");
     assert.equal((next as Record<string, unknown>).nomorSurat, undefined);
     assert.deepEqual(companyDocumentDataUpdate(key, parsed.values), {});
+  });
+
+  it("Surat Pernyataan Tenaga Kerja: re-enters the whole per-kategori list", () => {
+    const key = "vki-support:tenaga-kerja";
+    const p = { tenagaKerjaEntries: [{ id: "t1", kategori: "Produksi", jumlah: "40" }] } as unknown as ApplicationWizardValues;
+    const [field] = documentDataFieldValues(key, p);
+    assert.equal(field.type, "rows");
+    assert.deepEqual(JSON.parse(field.value), [{ kategori: "Produksi", jumlah: "40" }]);
+    assert.deepEqual(parseDocumentData(key, { tenagaKerjaEntries: "[]" }), { ok: false, error: "Jumlah Tenaga Kerja per Kategori wajib diisi" });
+    assert.deepEqual(parseDocumentData(key, { tenagaKerjaEntries: JSON.stringify([{ kategori: "Kantor", jumlah: "" }]) }), {
+      ok: false,
+      error: "Jumlah Tenaga Kerja per Kategori: lengkapi setiap baris",
+    });
+    const parsed = parseDocumentData(key, {
+      tenagaKerjaEntries: JSON.stringify([{ kategori: " Produksi ", jumlah: "1.250" }, { kategori: "", jumlah: "" }, { kategori: "Kantor", jumlah: "12" }]),
+    });
+    assert.ok(parsed.ok);
+    const next = applyDocumentDataToPayload(p, parsed.values, key);
+    assert.equal(next.tenagaKerjaEntries?.length, 2);
+    assert.deepEqual(next.tenagaKerjaEntries?.[0], { id: "t1", kategori: "Produksi", jumlah: "1250" });
+    assert.equal(next.tenagaKerjaEntries?.[1].kategori, "Kantor");
+    assert.ok(next.tenagaKerjaEntries?.[1].id);
   });
 
   it("location, listrik, LHVKI mitra and modal kerja keep their data on their own entry", () => {

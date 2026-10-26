@@ -10,17 +10,38 @@ import type { ApplicationWizardValues } from "./schema";
  * - company documents (NIB, SK, Akta, NPWP, SKT): top-level payload field + the same column on Company;
  * - location documents (`location:{id}:…`): that entry of payload.locations + Company.locations;
  * - everything else: the payload entry that carries the file (vkiSupportDocs, electricityMonths,
- *   partnerIndustriEntries, nonIndustriDocuments / konsumsiFinancialDocuments).
+ *   partnerIndustriEntries, nonIndustriDocuments / konsumsiFinancialDocuments);
+ * - Surat Pernyataan Tenaga Kerja: the whole payload.tenagaKerjaEntries list (a `rows` field).
  * Documents without data of their own (rincian pajak, SHM/AJB, layout, bukti finansial, …) save the
  * file right away. Client-safe: no DB access.
  */
 export type DocumentDataField = {
   name: string;
   label: string;
-  type: "text" | "date" | "month" | "number" | "select";
+  /** `rows`: a variable list (e.g. tenaga kerja per kategori), carried as a JSON array string of `columns` records. */
+  type: "text" | "date" | "month" | "number" | "select" | "rows";
   required: boolean;
   options?: readonly { value: string; label: string }[];
+  columns?: readonly { name: string; label: string; numeric?: boolean }[];
 };
+
+/** One row of a `rows` field. */
+export type DocumentDataRow = Record<string, string>;
+
+/** Rows of a `rows` field value ("[]" / invalid JSON → none); every column coerced to a trimmed string. */
+export function parseDocumentDataRows(value: string, columns: readonly { name: string }[]): DocumentDataRow[] {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(value || "[]");
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => {
+    const record = (row && typeof row === "object" ? row : {}) as Record<string, unknown>;
+    return Object.fromEntries(columns.map((c) => [c.name, typeof record[c.name] === "string" || typeof record[c.name] === "number" ? String(record[c.name]).trim() : ""]));
+  });
+}
 
 export type DocumentDataFieldValue = DocumentDataField & { value: string };
 
@@ -69,6 +90,11 @@ const WAREHOUSE_REGISTRATION_OPTIONS = [
 
 const MODAL_KERJA_KEY = "surat-pernyataan-modal-kerja";
 
+const TENAGA_KERJA_COLUMNS = [
+  { name: "kategori", label: "Kategori / Departemen" },
+  { name: "jumlah", label: "Jumlah (orang)", numeric: true },
+] as const;
+
 /** Read/write one entry of a payload array, matched by `match`; a missing entry is created with `seed`. */
 function arrayEntry<K extends keyof ApplicationWizardValues>(field: K, match: (entry: Entry) => boolean, seed: Entry) {
   const list = (payload: ApplicationWizardValues) => ((payload[field] as unknown as Entry[] | undefined) ?? []);
@@ -101,6 +127,26 @@ function specFor(key: string): Spec | null {
   const sp = key.match(/^vki-support:([^:]+)$/)?.[1];
   if (sp && SURAT_PERNYATAAN_KEYS.includes(sp)) {
     return { fields: SURAT_PERNYATAAN_FIELDS, ...arrayEntry("vkiSupportDocs", (e) => e.key === sp, { key: sp }) };
+  }
+
+  // Surat Pernyataan Tenaga Kerja: the per-kategori numbers on the letter ARE payload.tenagaKerjaEntries
+  // (what the checklist "Data Tenaga Kerja" and the report's Tenaga Kerja section print).
+  if (key === "vki-support:tenaga-kerja") {
+    return {
+      fields: [{ name: "tenagaKerjaEntries", label: "Jumlah Tenaga Kerja per Kategori", type: "rows", required: true, columns: TENAGA_KERJA_COLUMNS }],
+      read: (payload) => ({
+        tenagaKerjaEntries: JSON.stringify((payload.tenagaKerjaEntries ?? []).map((e) => ({ kategori: e.kategori ?? "", jumlah: e.jumlah ?? "" }))),
+      }),
+      write: (payload, values) => {
+        const previous = payload.tenagaKerjaEntries ?? [];
+        const rows = parseDocumentDataRows(values.tenagaKerjaEntries ?? "[]", TENAGA_KERJA_COLUMNS);
+        return {
+          ...payload,
+          // Keeps each row's id by position so nothing that refers to an entry loses it.
+          tenagaKerjaEntries: rows.map((row, i) => ({ id: previous[i]?.id ?? crypto.randomUUID(), kategori: row.kategori, jumlah: row.jumlah })),
+        };
+      },
+    };
   }
 
   const monthId = key.match(/^vki-support:listrik:(.+)$/)?.[1];
@@ -183,6 +229,16 @@ export function parseDocumentData(key: string, raw: Record<string, unknown> | nu
   for (const field of specFor(key)?.fields ?? []) {
     const input = raw?.[field.name];
     let value = typeof input === "string" ? input.trim() : "";
+    if (field.type === "rows") {
+      const columns = field.columns ?? [];
+      const rows = parseDocumentDataRows(value, columns)
+        .map((row) => Object.fromEntries(columns.map((c) => [c.name, c.numeric ? row[c.name].replace(/\D/g, "") : row[c.name]])))
+        .filter((row) => columns.some((c) => row[c.name]));
+      if (rows.some((row) => columns.some((c) => !row[c.name]))) return { ok: false, error: `${field.label}: lengkapi setiap baris` };
+      if (rows.length === 0 && field.required) return { ok: false, error: `${field.label} wajib diisi` };
+      values[field.name] = JSON.stringify(rows);
+      continue;
+    }
     if (field.type === "number") value = value.replace(/\D/g, "");
     if (!value) {
       if (field.required) return { ok: false, error: `${field.label} wajib diisi` };

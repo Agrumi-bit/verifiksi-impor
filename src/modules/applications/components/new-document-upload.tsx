@@ -4,7 +4,7 @@ import { appendUploadFile } from "@/lib/image-compress";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import type { DocumentDataFieldValue } from "../document-data-fields";
+import { parseDocumentDataRows, type DocumentDataField, type DocumentDataFieldValue, type DocumentDataRow } from "../document-data-fields";
 
 /**
  * "Upload New Document" in every Version History modal (Verifikator, CR, Perusahaan). A document
@@ -94,7 +94,7 @@ export function NewDocumentDataForm({
   onSubmit: (values: Record<string, string>) => void;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.map((f) => [f.name, f.value])));
-  const missing = fields.filter((f) => f.required && !values[f.name]?.trim());
+  const missing = fields.filter((f) => (f.type === "rows" ? !rowsComplete(f, values[f.name] ?? "") : f.required && !values[f.name]?.trim()));
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(20,12,8,.45)] p-5" onClick={(event) => event.stopPropagation()}>
@@ -111,7 +111,10 @@ export function NewDocumentDataForm({
             Sesuaikan data dengan dokumen yang baru diunggah: <span className="font-semibold text-[#4a4038]">{fileName}</span>
           </div>
         </div>
-        {fields.map((field) => (
+        {fields.map((field) =>
+          field.type === "rows" ? (
+            <RowsField key={field.name} field={field} value={values[field.name] ?? "[]"} onChange={(value) => setValues((prev) => ({ ...prev, [field.name]: value }))} />
+          ) : (
           <label key={field.name} className="flex flex-col gap-1">
             <span className="text-[11.5px] font-semibold text-[#4a4038]">
               {field.label}
@@ -142,7 +145,8 @@ export function NewDocumentDataForm({
               />
             )}
           </label>
-        ))}
+          ),
+        )}
         <div className="mt-1 flex justify-end gap-2.5">
           <button type="button" onClick={onCancel} disabled={saving} className="rounded-lg border border-[#e1bfb3] px-4 py-2 text-[12.5px] font-semibold text-[#261813]">
             Batal
@@ -156,6 +160,65 @@ export function NewDocumentDataForm({
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+/** A `rows` field is complete when it has at least one row (if required) and no half-filled row. */
+function rowsComplete(field: DocumentDataField, value: string): boolean {
+  const columns = field.columns ?? [];
+  const rows = parseDocumentDataRows(value, columns).filter((row) => columns.some((c) => row[c.name]));
+  if (rows.some((row) => columns.some((c) => !row[c.name]))) return false;
+  return !field.required || rows.length > 0;
+}
+
+/** Editable list (e.g. Kategori / Jumlah tenaga kerja) — add and remove rows; value travels as a JSON array string. */
+function RowsField({ field, value, onChange }: { field: DocumentDataField; value: string; onChange: (value: string) => void }) {
+  const columns = field.columns ?? [];
+  const parsed = parseDocumentDataRows(value, columns);
+  const rows: DocumentDataRow[] = parsed.length > 0 ? parsed : [Object.fromEntries(columns.map((c) => [c.name, ""]))];
+  const update = (next: DocumentDataRow[]) => onChange(JSON.stringify(next));
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[11.5px] font-semibold text-[#4a4038]">
+        {field.label}
+        {field.required && <span className="text-[#c1361f]"> *</span>}
+      </span>
+      {rows.map((row, index) => (
+        <div key={index} className="flex items-center gap-2">
+          {columns.map((column) => (
+            <input
+              key={column.name}
+              type="text"
+              inputMode={column.numeric ? "numeric" : undefined}
+              placeholder={column.label}
+              value={row[column.name] ?? ""}
+              onChange={(event) => {
+                const v = column.numeric ? event.target.value.replace(/\D/g, "") : event.target.value;
+                update(rows.map((r, i) => (i === index ? { ...r, [column.name]: v } : r)));
+              }}
+              className={`${column.numeric ? "w-28" : "min-w-0 flex-1"} rounded-lg border border-[#e1bfb3] px-3 py-2 text-[13px] text-[#20180f] outline-none focus:border-[#e0662e]`}
+            />
+          ))}
+          <button
+            type="button"
+            aria-label="Hapus baris"
+            disabled={rows.length === 1}
+            onClick={() => update(rows.filter((_, i) => i !== index))}
+            className="rounded-md px-2 py-1 text-[16px] leading-none text-[#c1361f] disabled:opacity-30"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => update([...rows, Object.fromEntries(columns.map((c) => [c.name, ""]))])}
+        className="self-start rounded-lg border border-dashed border-[#e1bfb3] px-3 py-1.5 text-[12px] font-semibold text-[#e0662e]"
+      >
+        + Tambah Kategori
+      </button>
     </div>
   );
 }
