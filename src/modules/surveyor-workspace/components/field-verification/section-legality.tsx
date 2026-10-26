@@ -1,7 +1,8 @@
 "use client";
 
-import { toast } from "sonner";
+import { useState } from "react";
 
+import { DocumentPreviewModal } from "@/components/document-preview-modal";
 import { SectionShell } from "../office-verification/section-shell";
 import { QuestionList, SurveyorNotes } from "../office-verification/question-list";
 import { LEGALITY_QUESTIONS, LOCATION_LABEL, type FieldKind, type AnswerValues } from "./schema";
@@ -45,6 +46,8 @@ export function SectionLegality({
 }: Props) {
   const label = LOCATION_LABEL[kind];
   const isWarehouse = kind === "GUDANG";
+  const [preview, setPreview] = useState<{ path: string; label: string } | null>(null);
+  const tdgLabel = warehouseData?.registrationType?.replaceAll("_", " ") || "Tanda Daftar Gudang";
 
   return (
     <SectionShell index={3} title={`Legalitas ${label}`} onSave={onSave} onSaveNext={onSaveNext} isSaving={isSaving}>
@@ -64,16 +67,15 @@ export function SectionLegality({
             <div className="mb-3.5 flex items-start justify-between gap-3 border-b border-[#eef1f5] pb-3.5">
               <div>
                 <div className="mb-0.5 text-[12.5px] text-[#3b82f6]">Jenis Dokumen Gudang</div>
-                <div className="text-[15px] font-bold text-[#1c2530]">
-                  {warehouseData?.registrationType?.replaceAll("_", " ") || "Tanda Daftar Gudang"}
-                </div>
+                <div className="text-[15px] font-bold text-[#1c2530]">{tdgLabel}</div>
               </div>
               <button
                 type="button"
-                onClick={() => toast.info("Pratinjau dokumen akan tersedia di iterasi berikutnya.")}
-                className="whitespace-nowrap rounded-lg border border-[#d7dbe0] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#1c2530]"
+                disabled={!warehouseData?.documentPath}
+                onClick={() => warehouseData?.documentPath && setPreview({ path: warehouseData.documentPath, label: tdgLabel })}
+                className="whitespace-nowrap rounded-lg border border-[#d7dbe0] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#1c2530] disabled:cursor-not-allowed disabled:text-[#8a96a8]"
               >
-                View Document
+                {warehouseData?.documentPath ? "View Document" : "Belum diunggah"}
               </button>
             </div>
             <div className="mb-3.5 grid grid-cols-2 gap-4">
@@ -105,8 +107,9 @@ export function SectionLegality({
             </div>
             <button
               type="button"
-              onClick={() => toast.info("Pratinjau dokumen akan tersedia di iterasi berikutnya.")}
-              className="whitespace-nowrap rounded-lg border border-[#d7dbe0] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#1c2530]"
+              disabled={!kbliDocumentPath}
+              onClick={() => kbliDocumentPath && setPreview({ path: kbliDocumentPath, label: "Dokumen KBLI" })}
+              className="whitespace-nowrap rounded-lg border border-[#d7dbe0] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#1c2530] disabled:cursor-not-allowed disabled:text-[#8a96a8]"
             >
               {kbliDocumentPath ? "View Document" : "Belum diunggah"}
             </button>
@@ -138,6 +141,8 @@ export function SectionLegality({
             : "Contoh: Kode KBLI pada dokumen sesuai dengan aktivitas industri yang dilaksanakan di lokasi pabrik."
         }
       />
+
+      {preview && <DocumentPreviewModal documentPath={preview.path} label={preview.label} onClose={() => setPreview(null)} />}
     </SectionShell>
   );
 }

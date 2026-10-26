@@ -438,15 +438,16 @@ export function OfficeVerificationWizard({ assignmentId, locationId }: Props) {
             documentation={values.documentation}
             documentationOther={values.documentationOther}
             onChange={(key, docPatch) =>
-              patch({ documentation: { ...values.documentation, [key]: { ...values.documentation[key], ...docPatch } } })
+              setValues((prev) => ({ ...prev, documentation: { ...prev.documentation, [key]: { ...prev.documentation[key], ...docPatch } } }))
             }
-            onOtherAdd={(id) => patch({ documentationOther: [...values.documentationOther, { id }] })}
+            onOtherAdd={(id) => setValues((prev) => ({ ...prev, documentationOther: [...prev.documentationOther, { id }] }))}
             onOtherChange={(id, itemPatch) =>
-              patch({
-                documentationOther: values.documentationOther.map((item) => (item.id === id ? { ...item, ...itemPatch } : item)),
-              })
+              setValues((prev) => ({
+                ...prev,
+                documentationOther: prev.documentationOther.map((item) => (item.id === id ? { ...item, ...itemPatch } : item)),
+              }))
             }
-            onOtherRemove={(id) => patch({ documentationOther: values.documentationOther.filter((item) => item.id !== id) })}
+            onOtherRemove={(id) => setValues((prev) => ({ ...prev, documentationOther: prev.documentationOther.filter((item) => item.id !== id) }))}
             onSave={() => saveMutation.mutate(values)}
             onSaveNext={() => saveAndGoTo(7)}
             isSaving={saveMutation.isPending}

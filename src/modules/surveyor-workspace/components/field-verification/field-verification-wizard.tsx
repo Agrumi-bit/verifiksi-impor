@@ -489,14 +489,17 @@ export function FieldVerificationWizard({ kind, assignmentId, locationId }: Prop
             index={idxDocumentation}
             documentation={values.documentation}
             documentationOther={values.documentationOther}
-            onChange={(key, docPatch) => patch({ documentation: { ...values.documentation, [key]: { ...values.documentation[key], ...docPatch } } })}
-            onOtherAdd={(id) => patch({ documentationOther: [...values.documentationOther, { id }] })}
-            onOtherChange={(id, itemPatch) =>
-              patch({
-                documentationOther: values.documentationOther.map((item) => (item.id === id ? { ...item, ...itemPatch } : item)),
-              })
+            onChange={(key, docPatch) =>
+              setValues((prev) => ({ ...prev, documentation: { ...prev.documentation, [key]: { ...prev.documentation[key], ...docPatch } } }))
             }
-            onOtherRemove={(id) => patch({ documentationOther: values.documentationOther.filter((item) => item.id !== id) })}
+            onOtherAdd={(id) => setValues((prev) => ({ ...prev, documentationOther: [...prev.documentationOther, { id }] }))}
+            onOtherChange={(id, itemPatch) =>
+              setValues((prev) => ({
+                ...prev,
+                documentationOther: prev.documentationOther.map((item) => (item.id === id ? { ...item, ...itemPatch } : item)),
+              }))
+            }
+            onOtherRemove={(id) => setValues((prev) => ({ ...prev, documentationOther: prev.documentationOther.filter((item) => item.id !== id) }))}
             onSave={() => saveMutation.mutate(values)}
             onSaveNext={() => saveAndGoTo(idxFindings)}
             isSaving={saveMutation.isPending}

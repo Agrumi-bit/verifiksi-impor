@@ -1,6 +1,7 @@
 "use client";
 
 import { appendUploadFile } from "@/lib/image-compress";
+import { photoThumbHref } from "@/lib/file-href";
 import { useState } from "react";
 
 import { MaterialIcon } from "../material-icon";
@@ -11,6 +12,9 @@ import {
   type DocumentationItemValues,
   type DocumentationOtherItemValues,
 } from "./schema";
+
+/** How many "Dokumentasi Lainnya" photos upload in parallel. */
+const OTHER_UPLOAD_CONCURRENCY = 3;
 
 type UploadState = { uploading: boolean; error?: string; previewUrl?: string };
 
@@ -62,20 +66,30 @@ export function SectionDocumentation({
   const filledCount =
     Object.values(documentation).filter((d) => d.filePath).length + documentationOther.filter((d) => d.filePath).length;
 
-  async function handleOtherFile(file: File | undefined) {
-    if (!file) return;
-    const id = crypto.randomUUID();
-    const previewUrl = URL.createObjectURL(file);
-    onOtherAdd(id);
-    setUploads((prev) => ({ ...prev, [id]: { uploading: true, previewUrl } }));
-    try {
-      const path = await uploadFile(file);
-      onOtherChange(id, { filePath: path });
-      setUploads((prev) => ({ ...prev, [id]: { uploading: false, previewUrl } }));
-    } catch (err) {
-      const error = err instanceof Error ? err.message : "Gagal mengunggah file";
-      setUploads((prev) => ({ ...prev, [id]: { uploading: false, previewUrl, error } }));
+  // Several photos at once: each gets its own card right away, then uploads run a few at a time
+  // (each is compressed to WebP first by appendUploadFile) so a phone on a slow line isn't flooded.
+  async function handleOtherFiles(files: File[]) {
+    if (files.length === 0) return;
+    const queue = files.map((file) => ({ file, id: crypto.randomUUID(), previewUrl: URL.createObjectURL(file) }));
+    for (const { id, previewUrl } of queue) {
+      onOtherAdd(id);
+      setUploads((prev) => ({ ...prev, [id]: { uploading: true, previewUrl } }));
     }
+    let next = 0;
+    async function worker() {
+      while (next < queue.length) {
+        const { file, id, previewUrl } = queue[next++];
+        try {
+          const path = await uploadFile(file);
+          onOtherChange(id, { filePath: path });
+          setUploads((prev) => ({ ...prev, [id]: { uploading: false, previewUrl } }));
+        } catch (err) {
+          const error = err instanceof Error ? err.message : "Gagal mengunggah file";
+          setUploads((prev) => ({ ...prev, [id]: { uploading: false, previewUrl, error } }));
+        }
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(OTHER_UPLOAD_CONCURRENCY, queue.length) }, worker));
   }
 
   async function handleFile(key: string, file: File | undefined) {
@@ -197,10 +211,10 @@ export function SectionDocumentation({
                   {upload?.previewUrl ? (
                     <div className="aspect-3/4 w-full rounded-lg bg-cover bg-center" style={{ backgroundImage: `url(${upload.previewUrl})` }} />
                   ) : item.filePath ? (
-                    <div className="flex aspect-3/4 w-full flex-col items-center justify-center gap-1.5 rounded-lg bg-[#f2f0ee] text-[#8a96a8]">
-                      <MaterialIcon name="image" className="text-[28px]" />
-                      <span className="text-xs">Sudah diunggah</span>
-                    </div>
+                    <div
+                      className="aspect-3/4 w-full rounded-lg bg-[#f2f0ee] bg-cover bg-center"
+                      style={{ backgroundImage: `url(${photoThumbHref(item.filePath)})` }}
+                    />
                   ) : (
                     <div className="aspect-3/4 w-full rounded-lg bg-[#f2f0ee]" />
                   )}
@@ -228,6 +242,9 @@ export function SectionDocumentation({
 
       <div className="mt-5 border-t border-[#e0e5eb] pt-5">
         <div className="mb-3 text-[13.5px] font-semibold text-[#1c2530]">{otherLabel}</div>
+        <p className="-mt-2 mb-3 text-[12px] text-[#8a96a8]">
+          Format JPG, PNG, atau WebP. Foto dari kamera otomatis dikompres (maks. 2000 px) dan diubah ke WebP sebelum diunggah.
+        </p>
         <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4">
           {documentationOther.map((item) => {
             const upload = uploads[item.id];
@@ -237,10 +254,10 @@ export function SectionDocumentation({
                   {upload?.previewUrl ? (
                     <div className="aspect-3/4 w-full rounded-lg bg-cover bg-center" style={{ backgroundImage: `url(${upload.previewUrl})` }} />
                   ) : item.filePath ? (
-                    <div className="flex aspect-3/4 w-full flex-col items-center justify-center gap-1.5 rounded-lg bg-[#f2f0ee] text-[#8a96a8]">
-                      <MaterialIcon name="image" className="text-[28px]" />
-                      <span className="text-xs">Sudah diunggah</span>
-                    </div>
+                    <div
+                      className="aspect-3/4 w-full rounded-lg bg-[#f2f0ee] bg-cover bg-center"
+                      style={{ backgroundImage: `url(${photoThumbHref(item.filePath)})` }}
+                    />
                   ) : (
                     <div className="flex aspect-3/4 w-full items-center justify-center rounded-lg bg-[#f2f0ee] text-[#8a96a8]">
                       <MaterialIcon name="hourglass_empty" className="text-[22px]" />
@@ -276,14 +293,17 @@ export function SectionDocumentation({
           >
             <MaterialIcon name="add_photo_alternate" className="text-[28px] text-[#f26522]" />
             <span className="text-center text-xs text-[#6b7685]">Tambah Foto</span>
+            <span className="text-center text-[10.5px] text-[#8a96a8]">bisa pilih beberapa sekaligus</span>
             <input
               id={`${kind}-doc-other-gallery`}
               type="file"
               accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.jfif,.png,.webp"
+              multiple
               className="hidden"
               onChange={(e) => {
-                handleOtherFile(e.target.files?.[0]);
+                const files = Array.from(e.target.files ?? []);
                 e.target.value = "";
+                void handleOtherFiles(files);
               }}
             />
           </div>
