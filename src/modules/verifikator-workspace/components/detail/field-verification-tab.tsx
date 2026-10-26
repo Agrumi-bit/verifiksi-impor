@@ -294,7 +294,10 @@ export function FieldVerificationTab({ assignmentId, surveyorName, applicationNu
 function documentationCountFor(loc: LocationReportItem): number {
   const verification = loc.officeVerification ?? loc.warehouseVerification ?? loc.factoryVerification;
   if (!verification) return 0;
-  return Object.values(verification.documentation ?? {}).filter((d) => d.filePath).length;
+  // Fixed slots plus every "Dokumentasi Lainnya" photo — the same set the surveyor report shows.
+  const fixed = Object.values(verification.documentation ?? {}).filter((d) => d.filePath).length;
+  const other = (verification.documentationOther ?? []).filter((d) => d.filePath).length;
+  return fixed + other;
 }
 
 function buildReportChecklistContext(
