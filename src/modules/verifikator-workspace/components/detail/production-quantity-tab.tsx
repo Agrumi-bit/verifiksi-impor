@@ -635,25 +635,31 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
   const capacityDocumentPath = data?.capacityDocumentPath ?? null;
   const rawMaterialUsage = data?.rawMaterialUsage ?? [];
 
-  // Satuan bahan baku defaults to the HS Code's unit (master data): a row still without one gets it
-  // saved — one at a time, so concurrent PATCHes don't overwrite each other — and stays changeable.
+  const rawMaterialConversion = data?.rawMaterialConversion ?? [];
+  const sales = data?.sales ?? [];
+  const productionQtyRows = data?.rows ?? [];
+
+  // Satuan (bahan baku, Jumlah Produksi, Penjualan) defaults to the HS Code's unit (master data): a
+  // row still without one gets it saved — one at a time, so concurrent PATCHes don't overwrite each
+  // other — and stays changeable.
   const hsCodeOptionsForUnit = useHsCodeOptions();
+  const unitForHsCode = (hsCode: string) => (hsCode ? (hsCodeOptionsForUnit.find((o) => o.value === hsCode)?.unit ?? "") : "");
   const defaultedSatuan = useRef(new Set<string>());
   useEffect(() => {
     if (!canEdit || savingKey || hsCodeOptionsForUnit.length === 0) return;
-    const row = rawMaterialUsage.find(
-      (r) => !r.satuan && r.hsCode && !defaultedSatuan.current.has(r.rawMaterialId) && hsCodeOptionsForUnit.some((o) => o.value === r.hsCode && o.unit),
-    );
+    const candidates: { source: "rawMaterialUsage" | "productionQty" | "sales"; id: string; satuan: string; hsCode: string }[] = [
+      ...rawMaterialUsage.map((r) => ({ source: "rawMaterialUsage" as const, id: r.rawMaterialId, satuan: r.satuan, hsCode: r.hsCode })),
+      ...productionQtyRows.map((r) => ({ source: "productionQty" as const, id: r.productId, satuan: r.satuan, hsCode: r.hsCode })),
+      ...sales.map((r) => ({ source: "sales" as const, id: r.productId, satuan: r.satuan, hsCode: r.hsCode })),
+    ];
+    const row = candidates.find((r) => !r.satuan && r.hsCode && !defaultedSatuan.current.has(`${r.source}:${r.id}`) && unitForHsCode(r.hsCode));
     if (!row) return;
-    defaultedSatuan.current.add(row.rawMaterialId);
-    const unit = hsCodeOptionsForUnit.find((o) => o.value === row.hsCode)?.unit ?? "";
-    void savePayloadField("rawMaterialUsage", row.rawMaterialId, "satuan", unit, `rawMaterialUsage:${row.rawMaterialId}:satuan`);
+    defaultedSatuan.current.add(`${row.source}:${row.id}`);
+    void savePayloadField(row.source, row.id, "satuan", unitForHsCode(row.hsCode), `${row.source}:${row.id}:satuan`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canEdit, savingKey, hsCodeOptionsForUnit, rawMaterialUsage]);
-  const rawMaterialConversion = data?.rawMaterialConversion ?? [];
-  const sales = data?.sales ?? [];
-  const sebelumnya = (data?.rows ?? []).filter((r) => r.section === "sebelumnya");
-  const rencana = (data?.rows ?? []).filter((r) => r.section === "rencana");
+  }, [canEdit, savingKey, hsCodeOptionsForUnit, rawMaterialUsage, productionQtyRows, sales]);
+  const sebelumnya = productionQtyRows.filter((r) => r.section === "sebelumnya");
+  const rencana = productionQtyRows.filter((r) => r.section === "rencana");
   const emptyConclusion: ConclusionState = { status: "PENDING", keterangan: "", kesimpulan: "", verifiedAt: null };
   const sebelumnyaConclusion = data?.sebelumnyaConclusion ?? emptyConclusion;
   const penggunaanConclusion = data?.penggunaanConclusion ?? emptyConclusion;
@@ -910,12 +916,13 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
         </td>
         <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
           {canEdit ? (
-            <EditableValueInput
-              value={row.satuan}
-              onSave={(value) => savePayloadField("productionQty", row.productId, "satuan", value, `productionQty:${row.key}:satuan`)}
+            <UnitSelect
+              value={row.satuan || unitForHsCode(row.hsCode)}
+              onChange={(value) => savePayloadField("productionQty", row.productId, "satuan", value, `productionQty:${row.key}:satuan`)}
+              className="h-8 w-full min-w-[90px] rounded-md border border-[#e8dccd] bg-white px-2 text-[11.5px] text-[#20180f] outline-none focus:border-[#e0662e]"
             />
           ) : (
-            row.satuan || "—"
+            row.satuan || unitForHsCode(row.hsCode) || "—"
           )}
         </td>
         <td className="border border-[#efe2d4] px-3 py-2.25">
@@ -1039,11 +1046,11 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
               </div>
               <div>
                 <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Satuan</div>
-                <input
-                  type="text"
+                <UnitSelect
                   value={newCapacity.satuan}
-                  onChange={(e) => setNewCapacity((prev) => ({ ...prev, satuan: e.target.value }))}
-                  className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1.5 text-[11.5px] text-[#20180f] outline-none"
+                  onChange={(value) => setNewCapacity((prev) => ({ ...prev, satuan: value }))}
+                  placeholder="Pilih satuan"
+                  className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1.5 text-[11.5px] text-[#20180f] outline-none focus:border-[#e0662e]"
                 />
               </div>
             </div>
@@ -1158,9 +1165,10 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
                   </td>
                   <td className="border-b border-[#f0ded0] px-3 py-2.25 text-[#4a4038]">
                     {canEdit ? (
-                      <EditableValueInput
+                      <UnitSelect
                         value={c.satuan}
-                        onSave={(value) => savePayloadField("capacity", c.id, "satuan", value, `capacity:${c.id}:satuan`)}
+                        onChange={(value) => savePayloadField("capacity", c.id, "satuan", value, `capacity:${c.id}:satuan`)}
+                        className="h-8 w-full min-w-[90px] rounded-md border border-[#e8dccd] bg-white px-2 text-[11.5px] text-[#20180f] outline-none focus:border-[#e0662e]"
                       />
                     ) : (
                       c.satuan || "—"
@@ -1487,12 +1495,13 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
                 </td>
                 <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
                   {canEdit ? (
-                    <EditableValueInput
-                      value={row.satuan}
-                      onSave={(value) => savePayloadField("sales", row.productId, "satuan", value, `sales:${row.productId}:satuan`)}
+                    <UnitSelect
+                      value={row.satuan || unitForHsCode(row.hsCode)}
+                      onChange={(value) => savePayloadField("sales", row.productId, "satuan", value, `sales:${row.productId}:satuan`)}
+                      className="h-8 w-full min-w-[90px] rounded-md border border-[#e8dccd] bg-white px-2 text-[11.5px] text-[#20180f] outline-none focus:border-[#e0662e]"
                     />
                   ) : (
-                    row.satuan || "—"
+                    row.satuan || unitForHsCode(row.hsCode) || "—"
                   )}
                 </td>
               </tr>

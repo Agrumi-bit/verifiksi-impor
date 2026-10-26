@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { FormField } from "@/components/form/form-field";
 import { SearchSelectInput } from "@/components/form/search-select-input";
+import { UnitSelect } from "@/modules/master-data/components/unit-select";
 import { useHsCodeOptions } from "../../hooks/use-hs-code-options";
 import { usePartnerIndustriOptions } from "../../hooks/use-partner-industri-options";
 import { createEmptyProduct, type ApplicationWizardValues } from "../../schema";
@@ -166,9 +167,17 @@ export function Step6ProductInformation({ form }: Step6Props) {
                 required
                 error={itemErrors?.volumeUnit?.message}
               >
-                <Input
-                  placeholder="e.g. Kg"
-                  {...register(`products.${index}.volumeUnit` as const)}
+                <Controller
+                  control={control}
+                  name={`products.${index}.volumeUnit` as const}
+                  render={({ field }) => (
+                    <UnitSelect
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      placeholder="Pilih satuan"
+                      className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                    />
+                  )}
                 />
               </FormField>
             </div>

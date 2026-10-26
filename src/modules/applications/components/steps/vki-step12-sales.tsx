@@ -5,6 +5,8 @@ import { Controller, useFieldArray, useWatch, type UseFormReturn } from "react-h
 
 import { Input } from "@/components/ui/input";
 import { CountryNamesMultiSelect } from "@/modules/master-data/components/country-names-multi-select";
+import { UnitSelect } from "@/modules/master-data/components/unit-select";
+import { useHsCodeOptions } from "../../hooks/use-hs-code-options";
 import type { ApplicationWizardValues } from "../../schema";
 
 type Props = { form: UseFormReturn<ApplicationWizardValues> };
@@ -16,16 +18,35 @@ export function VkiStep12Sales({ form }: Props) {
   const { fields, replace } = useFieldArray({ control, name: "sales", keyName: "_key" });
 
   const productIds = products.map((p) => p.id).join(",");
+  const hsCodeOptions = useHsCodeOptions();
+
+  // Satuan default = the product HS Code's unit (master data), falling back to the product's own
+  // volume unit when the HS Code has none / isn't in the master.
+  function defaultSatuan(product: (typeof products)[number] | undefined): string {
+    const hsUnit = product?.hsCode ? hsCodeOptions.find((o) => o.value === product.hsCode)?.unit : "";
+    return hsUnit || product?.volumeUnit || "";
+  }
 
   useEffect(() => {
     const current = form.getValues("sales") ?? [];
     const synced = products.map((p) => {
       const existing = current.find((row) => row.productId === p.id);
-      return existing ?? { productId: p.id, satuan: p.volumeUnit ?? "" };
+      return existing ?? { productId: p.id, satuan: defaultSatuan(p) };
     });
     replace(synced);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productIds]);
+
+  // HS Code master data may arrive after the rows were created — fill any still-empty Satuan then.
+  useEffect(() => {
+    if (hsCodeOptions.length === 0) return;
+    (form.getValues("sales") ?? []).forEach((row, index) => {
+      if (row.satuan) return;
+      const unit = defaultSatuan(products.find((p) => p.id === row.productId));
+      if (unit) form.setValue(`sales.${index}.satuan`, unit, { shouldDirty: true });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hsCodeOptions.length, productIds]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -77,7 +98,18 @@ export function VkiStep12Sales({ form }: Props) {
                       />
                     </td>
                     <td className="border border-border p-1.5">
-                      <Input placeholder="kg" {...register(`sales.${index}.satuan`)} />
+                      <Controller
+                        control={control}
+                        name={`sales.${index}.satuan`}
+                        render={({ field }) => (
+                          <UnitSelect
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            placeholder="Pilih satuan"
+                            className="h-9 w-full min-w-[90px] rounded-md border border-input bg-transparent px-2 text-sm"
+                          />
+                        )}
+                      />
                     </td>
                   </tr>
                 );

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { MaterialIcon } from "../material-icon";
 import { RichTextEditor } from "@/components/form/rich-text-editor";
+import { UnitSelect } from "@/modules/master-data/components/unit-select";
 import { MachineObservationEditor } from "./machine-observation-editor";
 import { MACHINE_VERIFICATION_STATUS_BADGE, MACHINE_VERIFICATION_STATUS_LABELS, type MachineVerificationStatusValue } from "../../status";
 import type { AssignmentStatusValue } from "../../status";
@@ -219,14 +220,21 @@ function EditableFieldUnit({
           onChange={(e) => onValueChange(e.target.value)}
           className="w-full min-w-0 rounded-lg border border-[#e8dccd] bg-white px-3 py-2.5 text-[12.5px] text-[#20180f] outline-none disabled:bg-[#f7f2ec] disabled:text-[#8a7565]"
         />
-        <input
-          type="text"
-          value={unit}
-          disabled={disabled}
-          onChange={(e) => onUnitChange(e.target.value)}
-          placeholder="satuan"
-          className="w-20 shrink-0 rounded-lg border border-[#e8dccd] bg-white px-2 py-2.5 text-[12.5px] text-[#20180f] outline-none disabled:bg-[#f7f2ec] disabled:text-[#8a7565]"
-        />
+        {disabled ? (
+          <input
+            type="text"
+            value={unit}
+            disabled
+            placeholder="satuan"
+            className="w-24 shrink-0 rounded-lg border border-[#e8dccd] bg-white px-2 py-2.5 text-[12.5px] text-[#20180f] outline-none disabled:bg-[#f7f2ec] disabled:text-[#8a7565]"
+          />
+        ) : (
+          <UnitSelect
+            value={unit}
+            onChange={onUnitChange}
+            className="w-24 shrink-0 rounded-lg border border-[#e8dccd] bg-white px-2 py-2.5 text-[12.5px] text-[#20180f] outline-none focus:border-[#e0662e]"
+          />
+        )}
       </div>
     </div>
   );

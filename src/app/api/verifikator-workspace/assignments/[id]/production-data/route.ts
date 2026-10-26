@@ -89,6 +89,11 @@ export async function PATCH(
   if (Object.keys(filteredFields).length === 0) {
     return NextResponse.json({ error: "Tidak ada field yang valid untuk diubah" }, { status: 400 });
   }
+  // Satuan is picked from the Satuan master data on the client, but validated here only as a
+  // non-empty string — values saved before the master existed (or since removed from it) stay valid.
+  if ("satuan" in filteredFields && !filteredFields.satuan) {
+    return NextResponse.json({ error: "Satuan wajib dipilih" }, { status: 400 });
+  }
 
   // Capacity: Uraian KBLI follows the KBLI master data — looked up for the new code, or for the
   // row's current code when only the description is sent (a manual description is kept only for

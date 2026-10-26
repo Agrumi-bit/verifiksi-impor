@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/form/form-field";
+import { UnitSelect } from "@/modules/master-data/components/unit-select";
 import { FileUploadField } from "@/components/form/file-upload-field";
 import { createEmptyMachine, MACHINE_KONDISI_VALUES, MACHINE_KONDISI_LABELS, type ApplicationWizardValues } from "../../schema";
 import { downloadMachineExcelTemplate, parseMachineExcelFile } from "../../machine-excel";
@@ -112,13 +113,21 @@ export function VkiStep7DataMesin({ form }: Props) {
                 <FormField label="Kapasitas Produksi">
                   <div className="flex gap-2">
                     <Input placeholder="Contoh: 500" {...register(`machines.${index}.kapasitas`)} />
-                    <Input className="w-20 shrink-0" placeholder="Satuan" {...register(`machines.${index}.kapasitasSatuan`)} />
+                    <Controller
+                      control={control}
+                      name={`machines.${index}.kapasitasSatuan`}
+                      render={({ field }) => <UnitSelect value={field.value ?? ""} onChange={field.onChange} placeholder="Satuan" className="h-9 w-24 shrink-0 rounded-md border border-input bg-transparent px-2 text-sm" />}
+                    />
                   </div>
                 </FormField>
                 <FormField label="Kapasitas Produksi per Jam">
                   <div className="flex gap-2">
                     <Input placeholder="Contoh: 20" {...register(`machines.${index}.kapasitasJam`)} />
-                    <Input className="w-20 shrink-0" placeholder="Satuan" {...register(`machines.${index}.kapasitasJamSatuan`)} />
+                    <Controller
+                      control={control}
+                      name={`machines.${index}.kapasitasJamSatuan`}
+                      render={({ field }) => <UnitSelect value={field.value ?? ""} onChange={field.onChange} placeholder="Satuan" className="h-9 w-24 shrink-0 rounded-md border border-input bg-transparent px-2 text-sm" />}
+                    />
                   </div>
                 </FormField>
                 <FormField label="Power Consumption (kWh/jam)">
