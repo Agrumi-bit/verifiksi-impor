@@ -45,6 +45,9 @@ function varianceLabel(pct: number | null): { label: string; bg: string; color: 
   return { label: "Perlu Verifikasi Lebih Lanjut", bg: "#fbe4de", color: "#c1361f" };
 }
 
+/** Hari operasi per bulan used when the analyst leaves "Jumlah Hari Operasi per Bulan" empty. */
+const DEFAULT_HARI_OPERASI_PER_BULAN = 26;
+
 export function ListrikModule({
   data,
   inputs,
@@ -72,13 +75,15 @@ export function ListrikModule({
   });
   // Total Daya Mesin Produksi (table) and Total Power Consumption Perusahaan per Bulan
   // (hero stat below) both trace back to this same totalDailyConsumption — 85% load
-  // factor + 15% non-operational allowance, x 26 working days/month.
+  // factor + 15% non-operational allowance, x Jumlah Hari Operasi per Bulan (analyst input, 26 when empty).
   const totalPower = machineRows.reduce((sum, m) => sum + (m.totalDaya ?? 0), 0);
   const totalDailyConsumption = machineRows.reduce((sum, m) => sum + (m.dayaPerHari ?? 0), 0);
   const rataRataBeban = totalDailyConsumption * 0.85;
   const nonOperasional = rataRataBeban * 0.15;
   const totalKebutuhanHarian = rataRataBeban + nonOperasional;
-  const totalMonthlyConsumption = totalKebutuhanHarian * 26;
+  const hariOperasiInput = parseNumeric(inputs.hariOperasiPerBulan);
+  const hariOperasiPerBulan = hariOperasiInput !== null && hariOperasiInput > 0 ? hariOperasiInput : DEFAULT_HARI_OPERASI_PER_BULAN;
+  const totalMonthlyConsumption = totalKebutuhanHarian * hariOperasiPerBulan;
 
 
   const { data: tariffs, isLoading: tariffsLoading } = useElectricityTariffs();
@@ -163,17 +168,21 @@ export function ListrikModule({
             <div className="mt-0.75 text-[16px] font-extrabold text-[#20180f]">{fmtNum(totalDailyConsumption, 2)} kWh/hari</div>
           </div>
           <EditableStatBox
-            label="Estimasi Jam Operasi Aktual"
-            value={inputs.estimasiJamOperasi ?? ""}
-            onChange={(v) => onInputChange("estimasiJamOperasi", v)}
+            label="Jumlah Hari Operasi per Bulan"
+            value={inputs.hariOperasiPerBulan ?? ""}
+            onChange={(v) => onInputChange("hariOperasiPerBulan", v.replace(/[^\d.,]/g, ""))}
             canEdit={canEdit}
-            unit="jam/bulan"
+            unit="hari/bulan"
+            placeholder={String(DEFAULT_HARI_OPERASI_PER_BULAN)}
           />
         </div>
         <Formula>
           {fmtNum(totalDailyConsumption, 2)} kWh/hari × 85% = {fmtNum(rataRataBeban, 2)} kWh (mesin) + {fmtNum(nonOperasional, 2)} kWh (non-operasional, 15%) = {fmtNum(totalKebutuhanHarian, 2)} kWh/hari
         </Formula>
-        <HeroStat label="Total Power Consumption Perusahaan per Bulan (26 hari kerja)" value={`${fmtNum(totalMonthlyConsumption, 0)} kWh`} />
+        <HeroStat
+          label={`Total Power Consumption Perusahaan per Bulan (${fmtNum(hariOperasiPerBulan, 2)} hari operasi)`}
+          value={`${fmtNum(totalMonthlyConsumption, 0)} kWh`}
+        />
 
         <div className="mb-4 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           <div>

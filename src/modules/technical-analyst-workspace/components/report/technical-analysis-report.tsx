@@ -83,6 +83,7 @@ const INPUT_LABELS: Record<string, string> = {
   modalKerja: "Kepemilikan Modal / Modal Kerja (Rp)",
   volumeIzin: "Volume sesuai Izin",
   estimasiJamOperasi: "Estimasi Jam Operasi",
+  hariOperasiPerBulan: "Jumlah Hari Operasi per Bulan",
   tarifId: "Golongan Tarif Listrik",
   mesinBottleneck: "Mesin/Proses Bottleneck (dipilih analis)",
   catatanKapasitasIzin: "Catatan Analis — Kapasitas Perizinan Berusaha dan Hasil VKI",
