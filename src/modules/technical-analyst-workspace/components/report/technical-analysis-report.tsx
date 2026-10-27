@@ -6,6 +6,7 @@ import { fmtNum, parseNumeric, parseRekapBahanBaku, type ElectricityMonth } from
 import { capacitySummary, materialNeeds, materialTotals } from "../../lhvki-summary";
 import type { CapacityRow, MachineChecklistItem, RawMaterialConversionRow, RawMaterialUsageRow } from "@/modules/verifikator-workspace/schema";
 import { computeListrik, LISTRIK_TEXT } from "../../listrik-calc";
+import { BOTTLENECK_TEXT, computeBottleneck } from "../../kapasitas-calc";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
@@ -199,6 +200,45 @@ function statusPill(status: TechnicalModuleStatusValue | undefined) {
   const s = status ?? "PENDING";
   const cls = s === "SESUAI" ? "rd-pill-ok" : s === "SESUAI_CATATAN" ? "rd-pill-warn" : s === "TIDAK_SESUAI" ? "rd-pill-bad" : "rd-pill-neutral";
   return <span className={`rd-pill ${cls}`}>{TECHNICAL_MODULE_STATUS_LABELS[s]}</span>;
+}
+
+/**
+ * Stat boxes and highlight boxes laid out like the Analisis Teknis tabs (beige boxes in a grid,
+ * orange highlight for the key totals) — printed with plain inline styles so they survive the PDF.
+ */
+function ReportStatGrid({ items, columns = 3 }: { items: { label: string; value: ReactNode; note?: ReactNode }[]; columns?: number }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gap: 10, margin: "0 0 10px" }}>
+      {items.map((item) => (
+        <div key={item.label} style={{ background: "#f7f2ec", borderRadius: 8, padding: "9px 12px", breakInside: "avoid" }}>
+          <div style={{ fontSize: 9.5, color: "#8a7565" }}>{item.label}</div>
+          <div style={{ marginTop: 3, fontSize: 13, fontWeight: 800, color: "#20180f" }}>
+            {item.value}
+            {item.note && <span style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 400, color: "#8a7565" }}>{item.note}</span>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ReportHero({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div
+      style={{
+        background: "#fdeee6",
+        border: "1px solid #e0662e",
+        borderRadius: 8,
+        padding: "12px 14px",
+        margin: "0 0 10px",
+        textAlign: "center",
+        breakInside: "avoid",
+      }}
+    >
+      <div style={{ fontSize: 10, fontWeight: 600, color: "#8a5a40" }}>{label}</div>
+      <div style={{ marginTop: 4, fontSize: 20, fontWeight: 800, color: "#c14a1f" }}>{value}</div>
+    </div>
+  );
 }
 
 function PageShell({ pageNo, total, companyName, children }: { pageNo: number; total: number; companyName: string; children: ReactNode }) {
@@ -414,6 +454,8 @@ export function TechnicalAnalysisReport({
         k !== "kapasitasVki" &&
         // Energi Listrik: hari operasi and tarif are printed in section C below.
         !(key === "listrik" && (k === "hariOperasiPerBulan" || k === "tarifId")) &&
+        // Kapasitas: the chosen bottleneck is printed in section B below.
+        !(key === "kapasitas" && k === "mesinBottleneck") &&
         !looksLikeHtml(v),
     );
     const rekapBahanBaku = Object.values(parseRekapBahanBaku(mod.inputs?.rekapBahanBaku));
@@ -500,45 +542,28 @@ export function TechnicalAnalysisReport({
             <>
               {sub("C. Beban Produksi Teoritis")}
               {para(LISTRIK_TEXT.beban)}
-              <table className="rd-table" style={{ marginBottom: 10 }}>
-                <tbody>
-                  <tr>
-                    <td>Total Daya Terpasang</td>
-                    <td style={{ textAlign: "right", fontWeight: 600 }}>{fmtNum(calc.totalPower, 2)} kW</td>
-                  </tr>
-                  <tr>
-                    <td>Total Power Consumption per Hari</td>
-                    <td style={{ textAlign: "right", fontWeight: 600 }}>{fmtNum(calc.totalDailyConsumption, 2)} kWh/hari</td>
-                  </tr>
-                  <tr>
-                    <td>Jumlah Hari Operasi per Bulan</td>
-                    <td style={{ textAlign: "right", fontWeight: 600 }}>{fmtNum(calc.hariOperasiPerBulan, 2)} hari/bulan</td>
-                  </tr>
-                </tbody>
-              </table>
+              <ReportStatGrid
+                items={[
+                  { label: "Total Daya Terpasang", value: `${fmtNum(calc.totalPower, 2)} kW` },
+                  { label: "Total Power Consumption per Hari", value: `${fmtNum(calc.totalDailyConsumption, 2)} kWh/hari` },
+                  { label: "Jumlah Hari Operasi per Bulan", value: `${fmtNum(calc.hariOperasiPerBulan, 2)} hari/bulan` },
+                ]}
+              />
               {formula(
                 `${fmtNum(calc.totalDailyConsumption, 2)} kWh/hari × 85% = ${fmtNum(calc.rataRataBeban, 2)} kWh (mesin) + ${fmtNum(calc.nonOperasional, 2)} kWh (non-operasional, 15%) = ${fmtNum(calc.totalKebutuhanHarian, 2)} kWh/hari`,
               )}
-              <table className="rd-table" style={{ marginBottom: 14 }}>
-                <tbody>
-                  <tr>
-                    <td>Total Power Consumption Perusahaan per Bulan ({fmtNum(calc.hariOperasiPerBulan, 2)} hari operasi)</td>
-                    <td style={{ textAlign: "right", fontWeight: 700 }}>{fmtNum(calc.totalMonthlyConsumption, 0)} kWh</td>
-                  </tr>
-                  <tr>
-                    <td>Golongan Tarif Listrik</td>
-                    <td style={{ textAlign: "right" }}>{tariff ? `${tariff.kelompok} — ${tariff.golongan} (${tariff.batasDaya})` : "—"}</td>
-                  </tr>
-                  <tr>
-                    <td>Tarif Nominal per kWh</td>
-                    <td style={{ textAlign: "right" }}>{tarifNominal !== null ? `Rp ${fmtNum(tarifNominal, 2)} / kWh` : "—"}</td>
-                  </tr>
-                  <tr>
-                    <td>Estimasi Jumlah Pembayaran Listrik per Bulan</td>
-                    <td style={{ textAlign: "right", fontWeight: 700 }}>{rp(calc.estimasiPembayaran)}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <ReportHero
+                label={`Total Power Consumption Perusahaan per Bulan (${fmtNum(calc.hariOperasiPerBulan, 2)} hari operasi)`}
+                value={`${fmtNum(calc.totalMonthlyConsumption, 0)} kWh`}
+              />
+              <ReportStatGrid
+                columns={2}
+                items={[
+                  { label: "Golongan Tarif Listrik", value: tariff ? `${tariff.kelompok} — ${tariff.golongan} (${tariff.batasDaya})` : "—" },
+                  { label: "Tarif Nominal per kWh", value: tarifNominal !== null ? `Rp ${fmtNum(tarifNominal, 2)} / kWh` : "—" },
+                ]}
+              />
+              <ReportHero label="Estimasi Jumlah Pembayaran Listrik per Bulan" value={rp(calc.estimasiPembayaran)} />
             </>
           ),
         },
@@ -586,6 +611,109 @@ export function TechnicalAnalysisReport({
           ),
         },
       );
+    }
+    if (key === "kapasitas") {
+      const b = computeBottleneck(data.machines ?? [], mod.inputs);
+      const withUnit = (v: number | null) => (v === null ? "—" : `${fmtNum(v, 0)} ${b.satuanLini}`);
+      // A. Data Produksi Mesin — a node is never split across sheets, so the (often long) machine list
+      // is printed in chunks of rows, each with its own header; "(lanjutan)" from the second chunk on.
+      const MESIN_ROWS_PER_CHUNK = 14;
+      const mesinChunks: (typeof b.machineRows)[] = [];
+      for (let start = 0; start < Math.max(b.machineRows.length, 1); start += MESIN_ROWS_PER_CHUNK) {
+        mesinChunks.push(b.machineRows.slice(start, start + MESIN_ROWS_PER_CHUNK));
+      }
+      mesinChunks.forEach((rows, chunkIndex) =>
+        flowItems.push({
+          kind: "node",
+          key: `${key}-mesin-${chunkIndex}`,
+          node: (
+            <>
+              {chunkIndex === 0 ? (
+                <h3 className="rd-serif" style={{ fontSize: 15, margin: "18px 0 6px" }}>
+                  A. Data Produksi Mesin
+                </h3>
+              ) : (
+                <div style={{ fontSize: 10.5, color: "var(--ink-faint)", margin: "4px 0" }}>A. Data Produksi Mesin (lanjutan)</div>
+              )}
+              <table className="rd-table" style={{ marginBottom: 14, fontSize: 10.5 }}>
+                <thead>
+                  <tr>
+                    <th>Mesin</th>
+                    <th>Unit</th>
+                    <th>Kapasitas/Unit per Jam</th>
+                    <th>Jam Operasi</th>
+                    <th>Kapasitas/Hari</th>
+                    <th>Hari Efektif</th>
+                    <th>Kapasitas/Tahun</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((m) => {
+                    const isBottleneck = b.bottleneck?.id === m.id;
+                    return (
+                      <tr key={m.id} style={isBottleneck ? { background: "#fbe4de" } : undefined}>
+                        <td style={{ fontWeight: 600 }}>
+                          {m.nama || "—"}
+                          {isBottleneck && <span style={{ marginLeft: 4, fontSize: 9, fontWeight: 700, color: "#c1361f" }}>(Bottleneck)</span>}
+                        </td>
+                        <td>{m.quantity || "—"}</td>
+                        <td>
+                          {m.kapasitasJam || "—"} {m.kapasitasJamSatuan}
+                        </td>
+                        <td>{m.waktuBeroperasi ? `${m.waktuBeroperasi} jam` : "—"}</td>
+                        <td style={{ fontWeight: 600 }}>{m.perHari !== null ? `${fmtNum(m.perHari, 2)} ${m.kapasitasJamSatuan}` : "—"}</td>
+                        <td>{m.hariEfektifPerTahun ? `${m.hariEfektifPerTahun} hari` : "—"}</td>
+                        <td>{m.perTahun !== null ? `${fmtNum(m.perTahun, 0)} ${m.kapasitasJamSatuan}` : "—"}</td>
+                      </tr>
+                    );
+                  })}
+                  {rows.length === 0 && (
+                    <tr>
+                      <td colSpan={7} style={{ color: "var(--ink-faint)" }}>
+                        Belum ada data mesin.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </>
+          ),
+        }),
+      );
+      flowItems.push({
+        kind: "node",
+        key: `${key}-bottleneck`,
+        node: (
+          <>
+            <h3 className="rd-serif" style={{ fontSize: 15, margin: "18px 0 6px" }}>
+              B. Penentuan Bottleneck dan Kapasitas Teoritis
+            </h3>
+            <p style={{ fontSize: 12, lineHeight: 1.6, margin: "0 0 10px", color: "var(--ink-soft, #4a4038)" }}>{BOTTLENECK_TEXT}</p>
+            <ReportStatGrid
+              items={[
+                {
+                  label: "Mesin/Proses Bottleneck",
+                  value: b.bottleneck?.nama || "—",
+                  note: b.bottleneck ? (b.chosenBottleneck ? "(dipilih analis)" : "(otomatis)") : undefined,
+                },
+                { label: "Kapasitas Lini per Hari", value: withUnit(b.kapasitasLiniHarian) },
+                { label: "Kapasitas Lini per Bulan (rata-rata)", value: withUnit(b.kapasitasLiniBulanan) },
+              ]}
+            />
+            <ReportStatGrid
+              columns={1}
+              items={[
+                {
+                  label: "Kapasitas Produksi per Tahun",
+                  value: withUnit(b.kapasitasLiniTahunan),
+                  note:
+                    b.kapasitasLiniTahunan !== null ? `(${fmtNum(b.kapasitasLiniHarian, 0)} × ${fmtNum(b.hariEfektif, 0)} hari efektif)` : undefined,
+                },
+              ]}
+            />
+          </>
+        ),
+      });
     }
     if (key === "bahanbaku" && rekapBahanBaku.length > 0) {
       flowItems.push({

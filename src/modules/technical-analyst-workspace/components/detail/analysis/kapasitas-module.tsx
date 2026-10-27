@@ -1,6 +1,7 @@
 "use client";
 
 import { capacitySummary, parseKapasitasVki } from "../../../lhvki-summary";
+import { BOTTLENECK_TEXT, computeBottleneck } from "../../../kapasitas-calc";
 import { fmtNum, parseNumeric, type ModuleProps } from "../analysis-types";
 import { AnalystNote, ConclusionCard, Paragraphs, ResultBanner, Section, StatBoxes, Table, Td, StatusPill } from "./shared";
 
@@ -19,27 +20,19 @@ export function KapasitasModule({
   canEdit,
   submitting,
 }: ModuleProps) {
-  // Same figures the verifikator sees on Verifikasi Mesin: Kapasitas/Hari = jumlah × kapasitas/jam ×
-  // jam operasi, Kapasitas/Tahun = Kapasitas/Hari × hari efektif per tahun of that machine.
-  const machineRows = data.machines.map((m) => ({ ...m, perHari: parseNumeric(m.kapasitasPerHari), perTahun: parseNumeric(m.kapasitasPerTahun) }));
-  const withCapacity = machineRows.filter((m) => m.perHari !== null && m.perHari > 0);
-  // Default: the lowest daily capacity among the machines that produce in the line's output unit (the
-  // unit most machines share, e.g. pcs) — a plate maker counted in "plat" is not comparable. The
-  // analyst can pick another machine/process (stored by name in inputs.mesinBottleneck).
-  const unitCount = new Map<string, number>();
-  for (const m of withCapacity) unitCount.set(m.kapasitasJamSatuan.trim().toLowerCase(), (unitCount.get(m.kapasitasJamSatuan.trim().toLowerCase()) ?? 0) + 1);
-  const lineUnit = [...unitCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
-  const sameUnit = withCapacity.filter((m) => m.kapasitasJamSatuan.trim().toLowerCase() === lineUnit);
-  const autoBottleneck = sameUnit.length > 0 ? sameUnit.reduce((min, m) => (m.perHari! < min.perHari! ? m : min)) : null;
-  const chosenName = inputs.mesinBottleneck?.trim() ?? "";
-  const chosenBottleneck = chosenName ? (machineRows.find((m) => (m.nama ?? "").trim() === chosenName) ?? null) : null;
-  const bottleneck = chosenBottleneck ?? autoBottleneck;
-  const kapasitasLiniHarian = bottleneck?.perHari ?? null;
-  // Hari efektif per tahun of the bottleneck machine (Verifikasi Mesin); 312 (26 hari × 12) when not recorded.
-  const hariEfektif = parseNumeric(bottleneck?.hariEfektifPerTahun) ?? 312;
-  const kapasitasLiniTahunan = bottleneck?.perTahun ?? (kapasitasLiniHarian !== null ? kapasitasLiniHarian * hariEfektif : null);
-  const kapasitasLiniBulanan = kapasitasLiniTahunan !== null ? kapasitasLiniTahunan / 12 : null;
-  const satuanLini = bottleneck?.kapasitasJamSatuan?.trim() || "pcs";
+  // Same calculation as the printed Laporan Analisis Teknis (kapasitas-calc.ts).
+  const {
+    machineRows,
+    autoBottleneck,
+    chosenName,
+    chosenBottleneck,
+    bottleneck,
+    kapasitasLiniHarian,
+    hariEfektif,
+    kapasitasLiniTahunan,
+    kapasitasLiniBulanan,
+    satuanLini,
+  } = computeBottleneck(data.machines, inputs);
 
   // Pasal 32 ayat (3) huruf c dan d: kapasitas per tahun sesuai Perizinan Berusaha (Kapasitas data on the
   // application) vs sesuai hasil VKI (typed by the analyst per row, stored as JSON in inputs.kapasitasVki).
@@ -117,7 +110,7 @@ export function KapasitasModule({
       <Section letter="B" title="Penentuan Bottleneck dan Kapasitas Teoritis">
         <Paragraphs
           items={[
-            "Kapasitas produksi keseluruhan lini ditentukan oleh tahapan proses dengan kapasitas produksi harian terkecil (bottleneck), karena tahapan tersebut membatasi kapasitas produksi lini secara menyeluruh.",
+            BOTTLENECK_TEXT,
           ]}
         />
         <div className="mb-3.5 flex flex-col gap-1">
