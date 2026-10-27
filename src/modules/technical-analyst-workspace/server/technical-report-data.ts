@@ -4,7 +4,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { buildKonsumsiImportPlan, buildModalKerjaFromApplication } from "@/modules/applications/viu-import-plan";
 import { technicalAnalysisDataSchema } from "@/modules/technical-analyst-workspace/schema";
-import { buildCapacityRows, buildRawMaterialConversionRows, buildRawMaterialUsageChecklist } from "@/modules/verifikator-workspace/schema";
+import { buildCapacityRows, buildMachineChecklist, buildRawMaterialConversionRows, buildRawMaterialUsageChecklist } from "@/modules/verifikator-workspace/schema";
 import { readDocumentReportReview } from "@/modules/technical-analyst-workspace/document-report-review-store";
 
 export type TechnicalReportAssignment = Prisma.AssignmentGetPayload<{
@@ -39,5 +39,8 @@ export async function buildTechnicalReportData(assignment: TechnicalReportAssign
     capacity: buildCapacityRows(payload),
     rawMaterialConversion: buildRawMaterialConversionRows(payload),
     rawMaterialUsage: buildRawMaterialUsageChecklist(payload),
+    // Energi Listrik: machines + PLN bills, for the report's own A/C/D sections (listrik-calc.ts).
+    machines: buildMachineChecklist(payload),
+    electricityMonths: payload.electricityMonths ?? [],
   };
 }

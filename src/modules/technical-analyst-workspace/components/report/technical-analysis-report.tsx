@@ -2,9 +2,10 @@
 
 import type { ReactNode } from "react";
 import { ReportLoadProgress } from "@/modules/surveyor-workspace/components/report/report-load-progress";
-import { fmtNum, parseRekapBahanBaku } from "../detail/analysis-types";
+import { fmtNum, parseNumeric, parseRekapBahanBaku, type ElectricityMonth } from "../detail/analysis-types";
 import { capacitySummary, materialNeeds, materialTotals } from "../../lhvki-summary";
-import type { CapacityRow, RawMaterialConversionRow, RawMaterialUsageRow } from "@/modules/verifikator-workspace/schema";
+import type { CapacityRow, MachineChecklistItem, RawMaterialConversionRow, RawMaterialUsageRow } from "@/modules/verifikator-workspace/schema";
+import { computeListrik, LISTRIK_TEXT } from "../../listrik-calc";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
@@ -59,6 +60,9 @@ type TechnicalReportData = {
   capacity?: CapacityRow[];
   rawMaterialConversion?: RawMaterialConversionRow[];
   rawMaterialUsage?: RawMaterialUsageRow[];
+  /** VKI Energi Listrik — machines and PLN bills for sections A/C/D (listrik-calc.ts). */
+  machines?: MachineChecklistItem[];
+  electricityMonths?: ElectricityMonth[];
 };
 
 const IMPORT_TYPE_LABELS: Record<string, string> = {
@@ -404,7 +408,14 @@ export function TechnicalAnalysisReport({
   moduleKeys.forEach((key, i) => {
     const mod = data.technicalAnalysisData[key] ?? {};
     const inputs = Object.entries(mod.inputs ?? {}).filter(([, v]) => v && v.trim() && v.trim() !== "<p></p>");
-    const plainInputs = inputs.filter(([k, v]) => k !== "rekapBahanBaku" && k !== "kapasitasVki" && !looksLikeHtml(v));
+    const plainInputs = inputs.filter(
+      ([k, v]) =>
+        k !== "rekapBahanBaku" &&
+        k !== "kapasitasVki" &&
+        // Energi Listrik: hari operasi and tarif are printed in section C below.
+        !(key === "listrik" && (k === "hariOperasiPerBulan" || k === "tarifId")) &&
+        !looksLikeHtml(v),
+    );
     const rekapBahanBaku = Object.values(parseRekapBahanBaku(mod.inputs?.rekapBahanBaku));
     const noteInputs = inputs.filter(([, v]) => looksLikeHtml(v));
     const asHtml = (v: string) => (looksLikeHtml(v) ? v : textToHtml(v));
@@ -453,6 +464,128 @@ export function TechnicalAnalysisReport({
           </table>
         ),
       });
+    }
+    if (key === "listrik") {
+      const tariff = tariffs?.find((t) => t.id === mod.inputs?.tarifId) ?? null;
+      const tarifNominal = parseNumeric(tariff?.tarifPerKwh);
+      const calc = computeListrik(data.machines ?? [], data.electricityMonths ?? [], mod.inputs, tarifNominal);
+      const rp = (v: number | null) => (v === null ? "—" : `Rp ${fmtNum(v, 0)}`);
+      const sub = (title: string) => (
+        <h3 className="rd-serif" style={{ fontSize: 15, margin: "18px 0 6px" }}>
+          {title}
+        </h3>
+      );
+      const para = (text: string) => <p style={{ fontSize: 12, lineHeight: 1.6, margin: "0 0 10px", color: "var(--ink-soft, #4a4038)" }}>{text}</p>;
+      const formula = (text: string) => (
+        <div style={{ background: "#f7f2ec", borderRadius: 6, padding: "9px 12px", margin: "0 0 12px", fontSize: 11.5, fontWeight: 600, textAlign: "center" }}>
+          {text}
+        </div>
+      );
+      flowItems.push(
+        {
+          kind: "node",
+          key: `${key}-dasar`,
+          node: (
+            <>
+              {sub("A. Dasar Perhitungan")}
+              {para(LISTRIK_TEXT.dasar)}
+              {formula(LISTRIK_TEXT.dasarFormula)}
+            </>
+          ),
+        },
+        {
+          kind: "node",
+          key: `${key}-beban`,
+          node: (
+            <>
+              {sub("C. Beban Produksi Teoritis")}
+              {para(LISTRIK_TEXT.beban)}
+              <table className="rd-table" style={{ marginBottom: 10 }}>
+                <tbody>
+                  <tr>
+                    <td>Total Daya Terpasang</td>
+                    <td style={{ textAlign: "right", fontWeight: 600 }}>{fmtNum(calc.totalPower, 2)} kW</td>
+                  </tr>
+                  <tr>
+                    <td>Total Power Consumption per Hari</td>
+                    <td style={{ textAlign: "right", fontWeight: 600 }}>{fmtNum(calc.totalDailyConsumption, 2)} kWh/hari</td>
+                  </tr>
+                  <tr>
+                    <td>Jumlah Hari Operasi per Bulan</td>
+                    <td style={{ textAlign: "right", fontWeight: 600 }}>{fmtNum(calc.hariOperasiPerBulan, 2)} hari/bulan</td>
+                  </tr>
+                </tbody>
+              </table>
+              {formula(
+                `${fmtNum(calc.totalDailyConsumption, 2)} kWh/hari × 85% = ${fmtNum(calc.rataRataBeban, 2)} kWh (mesin) + ${fmtNum(calc.nonOperasional, 2)} kWh (non-operasional, 15%) = ${fmtNum(calc.totalKebutuhanHarian, 2)} kWh/hari`,
+              )}
+              <table className="rd-table" style={{ marginBottom: 14 }}>
+                <tbody>
+                  <tr>
+                    <td>Total Power Consumption Perusahaan per Bulan ({fmtNum(calc.hariOperasiPerBulan, 2)} hari operasi)</td>
+                    <td style={{ textAlign: "right", fontWeight: 700 }}>{fmtNum(calc.totalMonthlyConsumption, 0)} kWh</td>
+                  </tr>
+                  <tr>
+                    <td>Golongan Tarif Listrik</td>
+                    <td style={{ textAlign: "right" }}>{tariff ? `${tariff.kelompok} — ${tariff.golongan} (${tariff.batasDaya})` : "—"}</td>
+                  </tr>
+                  <tr>
+                    <td>Tarif Nominal per kWh</td>
+                    <td style={{ textAlign: "right" }}>{tarifNominal !== null ? `Rp ${fmtNum(tarifNominal, 2)} / kWh` : "—"}</td>
+                  </tr>
+                  <tr>
+                    <td>Estimasi Jumlah Pembayaran Listrik per Bulan</td>
+                    <td style={{ textAlign: "right", fontWeight: 700 }}>{rp(calc.estimasiPembayaran)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </>
+          ),
+        },
+        {
+          kind: "node",
+          key: `${key}-tagihan`,
+          node: (
+            <>
+              {sub("D. Analisis Tagihan Listrik terhadap Kapasitas Produksi")}
+              {para(LISTRIK_TEXT.tagihan)}
+              <table className="rd-table" style={{ marginBottom: 14 }}>
+                <thead>
+                  <tr>
+                    <th>Bulan</th>
+                    <th>Estimasi Perhitungan</th>
+                    <th>Tagihan PLN Aktual</th>
+                    <th>Selisih</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {calc.varianceRows.map((row) => (
+                    <tr key={row.month.id}>
+                      <td style={{ fontWeight: 600 }}>{row.month.bulan || "—"}</td>
+                      <td>{rp(calc.estimasiPembayaran)}</td>
+                      <td>{rp(row.actualNominal)}</td>
+                      <td>{row.variancePct !== null ? `${fmtNum(row.variancePct)}%` : "—"}</td>
+                      <td>
+                        <span className="rd-pill" style={{ background: row.meta.bg, color: row.meta.color }}>
+                          {row.meta.label}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {calc.varianceRows.length === 0 && (
+                    <tr>
+                      <td colSpan={5} style={{ color: "var(--ink-faint)" }}>
+                        Belum ada data tagihan listrik.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </>
+          ),
+        },
+      );
     }
     if (key === "bahanbaku" && rekapBahanBaku.length > 0) {
       flowItems.push({

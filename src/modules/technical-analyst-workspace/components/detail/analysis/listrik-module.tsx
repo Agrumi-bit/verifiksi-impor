@@ -2,7 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { fmtNum, parseNumeric, powerInKw, type ModuleProps } from "../analysis-types";
+import { fmtNum, parseNumeric, type ModuleProps } from "../analysis-types";
+import { computeListrik, DEFAULT_HARI_OPERASI_PER_BULAN, LISTRIK_TEXT } from "../../../listrik-calc";
 import { AnalystNote, ConclusionCard, EditableStatBox, Formula, Paragraphs, ResultBanner, Section, HeroStat, Table, Td, StatusPill, ToggleSwitch } from "./shared";
 
 type ElectricityTariffRow = {
@@ -36,18 +37,6 @@ const ENERGY_SOURCE_DEFS = [
   { key: "lainnya", label: "Lainnya", desc: "Sumber listrik lain yang dapat dibuktikan secara administratif/fisik" },
 ];
 
-function varianceLabel(pct: number | null): { label: string; bg: string; color: string } {
-  if (pct === null) return { label: "—", bg: "#f2ece5", color: "#a68f80" };
-  const abs = Math.abs(pct);
-  if (abs <= 10) return { label: "Sangat Sesuai", bg: "#e2f7ea", color: "#1a9850" };
-  if (abs <= 25) return { label: "Masih Wajar", bg: "#e6effa", color: "#2f6fe0" };
-  if (abs <= 50) return { label: "Perlu Klarifikasi", bg: "#fdf0d5", color: "#a3690a" };
-  return { label: "Perlu Verifikasi Lebih Lanjut", bg: "#fbe4de", color: "#c1361f" };
-}
-
-/** Hari operasi per bulan used when the analyst leaves "Jumlah Hari Operasi per Bulan" empty. */
-const DEFAULT_HARI_OPERASI_PER_BULAN = 26;
-
 export function ListrikModule({
   data,
   inputs,
@@ -64,41 +53,24 @@ export function ListrikModule({
   canEdit,
   submitting,
 }: ModuleProps) {
-  const machineRows = data.machines.map((m) => {
-    // Same values the verifikator saved on Verifikasi Mesin (payload.machines), converted to kW.
-    const power = powerInKw(m.power, m.powerSatuan);
-    const jumlah = parseNumeric(m.quantity);
-    const waktu = parseNumeric(m.waktuBeroperasi);
-    const totalDaya = power !== null && jumlah !== null ? power * jumlah : null;
-    const dayaPerHari = totalDaya !== null && waktu !== null ? totalDaya * waktu : null;
-    return { ...m, power, jumlah, waktu, totalDaya, dayaPerHari };
-  });
-  // Total Daya Mesin Produksi (table) and Total Power Consumption Perusahaan per Bulan
-  // (hero stat below) both trace back to this same totalDailyConsumption — 85% load
-  // factor + 15% non-operational allowance, x Jumlah Hari Operasi per Bulan (analyst input, 26 when empty).
-  const totalPower = machineRows.reduce((sum, m) => sum + (m.totalDaya ?? 0), 0);
-  const totalDailyConsumption = machineRows.reduce((sum, m) => sum + (m.dayaPerHari ?? 0), 0);
-  const rataRataBeban = totalDailyConsumption * 0.85;
-  const nonOperasional = rataRataBeban * 0.15;
-  const totalKebutuhanHarian = rataRataBeban + nonOperasional;
-  const hariOperasiInput = parseNumeric(inputs.hariOperasiPerBulan);
-  const hariOperasiPerBulan = hariOperasiInput !== null && hariOperasiInput > 0 ? hariOperasiInput : DEFAULT_HARI_OPERASI_PER_BULAN;
-  const totalMonthlyConsumption = totalKebutuhanHarian * hariOperasiPerBulan;
-
-
   const { data: tariffs, isLoading: tariffsLoading } = useElectricityTariffs();
   const selectedTariff = tariffs?.find((t) => t.id === inputs.tarifId) ?? null;
   const selectedTariffNominal = parseNumeric(selectedTariff?.tarifPerKwh);
-  const estimasiPembayaran = selectedTariffNominal !== null ? totalMonthlyConsumption * selectedTariffNominal : null;
-
-  const varianceRows = data.electricityMonths.map((month) => {
-    const actualNominal = parseNumeric(month.nominal);
-    const variancePct =
-      actualNominal !== null && estimasiPembayaran ? ((actualNominal - estimasiPembayaran) / estimasiPembayaran) * 100 : null;
-    return { month, actualNominal, variancePct, meta: varianceLabel(variancePct) };
-  });
-  const maxAbsVariance = Math.max(0, ...varianceRows.map((r) => (r.variancePct !== null ? Math.abs(r.variancePct) : 0)));
-  const overall = varianceLabel(varianceRows.length ? maxAbsVariance : null);
+  // Same calculation as the printed Laporan Analisis Teknis (listrik-calc.ts).
+  const {
+    machineRows,
+    totalPower,
+    totalDailyConsumption,
+    rataRataBeban,
+    nonOperasional,
+    totalKebutuhanHarian,
+    hariOperasiPerBulan,
+    totalMonthlyConsumption,
+    estimasiPembayaran,
+    varianceRows,
+    maxAbsVariance,
+    overall,
+  } = computeListrik(data.machines, data.electricityMonths, inputs, selectedTariffNominal);
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -114,10 +86,10 @@ export function ListrikModule({
       <Section letter="A" title="Dasar Perhitungan">
         <Paragraphs
           items={[
-            "Analisis kebutuhan energi listrik dilakukan berdasarkan jumlah mesin produksi, daya terpasang masing-masing mesin, jam operasional perusahaan, faktor penggunaan mesin (Load Factor), dan hari kerja efektif. Hasil perhitungan teoritis kemudian dibandingkan terhadap konsumsi listrik aktual berdasarkan bukti pembayaran rekening listrik perusahaan.",
+            LISTRIK_TEXT.dasar,
           ]}
         />
-        <Formula>Konsumsi Energi (kWh) = Total Daya Terpasang (kW) × Jam Operasional (jam/hari) × Load Factor × Hari Kerja Efektif (hari/tahun)</Formula>
+        <Formula>{LISTRIK_TEXT.dasarFormula}</Formula>
       </Section>
 
       <Section letter="B" title="Data Mesin dan Perhitungan Daya">
@@ -155,7 +127,7 @@ export function ListrikModule({
       <Section letter="C" title="Beban Produksi Teoritis">
         <Paragraphs
           items={[
-            "Dalam kondisi aktual, seluruh mesin tidak bekerja secara bersamaan pada beban maksimum (full load). Berdasarkan praktik operasional industri, faktor beban (Load Factor) mesin produksi umumnya berada pada kisaran 80–90%; analisis ini menggunakan Load Factor sebesar 85%.",
+            LISTRIK_TEXT.beban,
           ]}
         />
         <div className="mb-4 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
@@ -262,7 +234,7 @@ export function ListrikModule({
       <Section letter="D" title="Analisis Tagihan Listrik terhadap Kapasitas Produksi">
         <Paragraphs
           items={[
-            "Analisis pada bagian ini membandingkan estimasi kebutuhan daya listrik hasil perhitungan (dalam Rupiah, berdasarkan golongan tarif yang dipilih) dengan realisasi tagihan pembayaran listrik yang tercantum pada rekening PLN perusahaan. Selisih yang berada dalam rentang wajar mengindikasikan kapasitas produksi dan jumlah mesin yang dilaporkan sesuai dengan konsumsi energi listrik yang sebenarnya.",
+            LISTRIK_TEXT.tagihan,
           ]}
         />
         <div className="mb-2 text-center text-[12.5px] font-bold text-[#20180f]">Perbandingan dengan Rekening Listrik</div>
