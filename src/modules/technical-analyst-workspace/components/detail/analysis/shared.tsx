@@ -97,11 +97,12 @@ export function EditableStatBox({
   );
 }
 
-export function HeroStat({ label, value }: { label: string; value: string }) {
+export function HeroStat({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
     <div className="mb-4 rounded-[10px] border-[1.5px] border-[#e0662e] bg-[#fdeadd] px-5 py-4.5 text-center">
       <div className="text-[12px] font-bold text-[#8a5a3a]">{label}</div>
       <div className="mt-1 text-[28px] font-extrabold text-[#c14a1f]">{value}</div>
+      {note && <div className="mt-0.5 text-[11px] text-[#8a5a3a]">{note}</div>}
     </div>
   );
 }

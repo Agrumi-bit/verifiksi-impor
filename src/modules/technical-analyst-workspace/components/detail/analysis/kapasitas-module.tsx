@@ -3,7 +3,7 @@
 import { capacitySummary, parseKapasitasVki } from "../../../lhvki-summary";
 import { BOTTLENECK_TEXT, computeBottleneck } from "../../../kapasitas-calc";
 import { fmtNum, parseNumeric, type ModuleProps } from "../analysis-types";
-import { AnalystNote, ConclusionCard, Paragraphs, ResultBanner, Section, StatBoxes, Table, Td, StatusPill } from "./shared";
+import { AnalystNote, ConclusionCard, HeroStat, Paragraphs, ResultBanner, Section, StatBoxes, Table, Td, StatusPill } from "./shared";
 
 export function KapasitasModule({
   data,
@@ -149,15 +149,11 @@ export function KapasitasModule({
             { label: "Kapasitas Lini per Bulan (rata-rata)", value: kapasitasLiniBulanan !== null ? `${fmtNum(kapasitasLiniBulanan, 0)} ${satuanLini}` : "—" },
           ]}
         />
-        <div className="mb-4 rounded-[9px] bg-[#f7f2ec] px-3.5 py-3">
-          <div className="text-[11px] text-[#8a7565]">Kapasitas Produksi per Tahun</div>
-          <div className="mt-0.75 text-[16px] font-extrabold text-[#20180f]">
-            {kapasitasLiniTahunan !== null ? `${fmtNum(kapasitasLiniTahunan, 0)} ${satuanLini}` : "—"}
-            {kapasitasLiniTahunan !== null && (
-              <span className="ml-2 text-[11px] font-normal text-[#8a7565]">({fmtNum(kapasitasLiniHarian, 0)} × {fmtNum(hariEfektif, 0)} hari efektif)</span>
-            )}
-          </div>
-        </div>
+        <HeroStat
+          label="Kapasitas Produksi per Tahun"
+          value={kapasitasLiniTahunan !== null ? `${fmtNum(kapasitasLiniTahunan, 0)} ${satuanLini}` : "—"}
+          note={kapasitasLiniTahunan !== null ? `(${fmtNum(kapasitasLiniHarian, 0)} × ${fmtNum(hariEfektif, 0)} hari efektif)` : undefined}
+        />
         <AnalystNote
           value={inputs.catatanB ?? ""}
           onChange={(v) => onInputChange("catatanB", v)}

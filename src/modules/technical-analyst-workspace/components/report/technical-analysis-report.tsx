@@ -222,7 +222,7 @@ function ReportStatGrid({ items, columns = 3 }: { items: { label: string; value:
   );
 }
 
-function ReportHero({ label, value }: { label: string; value: ReactNode }) {
+function ReportHero({ label, value, note }: { label: string; value: ReactNode; note?: ReactNode }) {
   return (
     <div
       style={{
@@ -237,6 +237,7 @@ function ReportHero({ label, value }: { label: string; value: ReactNode }) {
     >
       <div style={{ fontSize: 10, fontWeight: 600, color: "#8a5a40" }}>{label}</div>
       <div style={{ marginTop: 4, fontSize: 20, fontWeight: 800, color: "#c14a1f" }}>{value}</div>
+      {note && <div style={{ marginTop: 2, fontSize: 9.5, color: "#8a5a40" }}>{note}</div>}
     </div>
   );
 }
@@ -700,16 +701,10 @@ export function TechnicalAnalysisReport({
                 { label: "Kapasitas Lini per Bulan (rata-rata)", value: withUnit(b.kapasitasLiniBulanan) },
               ]}
             />
-            <ReportStatGrid
-              columns={1}
-              items={[
-                {
-                  label: "Kapasitas Produksi per Tahun",
-                  value: withUnit(b.kapasitasLiniTahunan),
-                  note:
-                    b.kapasitasLiniTahunan !== null ? `(${fmtNum(b.kapasitasLiniHarian, 0)} × ${fmtNum(b.hariEfektif, 0)} hari efektif)` : undefined,
-                },
-              ]}
+            <ReportHero
+              label="Kapasitas Produksi per Tahun"
+              value={withUnit(b.kapasitasLiniTahunan)}
+              note={b.kapasitasLiniTahunan !== null ? `(${fmtNum(b.kapasitasLiniHarian, 0)} × ${fmtNum(b.hariEfektif, 0)} hari efektif)` : undefined}
             />
           </>
         ),
