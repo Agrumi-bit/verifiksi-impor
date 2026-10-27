@@ -9,6 +9,7 @@ const num = (n: number | null, digits = 2) => (n === null ? "—" : fmtNum(n, di
 
 const STATUS_PILL: Record<string, { label: string; bg: string; color: string }> = {
   SESUAI: { label: "Sesuai", bg: "#e2f7ea", color: "#1a9850" },
+  SESUAI_CATATAN: { label: "Sesuai dengan Catatan", bg: "#fdf1dc", color: "#b3650c" },
   TIDAK_SESUAI: { label: "Tidak Sesuai", bg: "#fbe4de", color: "#c1361f" },
   PENDING: { label: "Belum Dianalisis", bg: "#f2ece5", color: "#8a7565" },
 };

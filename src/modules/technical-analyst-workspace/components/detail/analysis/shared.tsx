@@ -194,15 +194,18 @@ export function ConclusionCard({
   status,
   onMarkSesuai,
   onMarkTidakSesuai,
+  onMarkSesuaiCatatan,
   onSubmit,
   canEdit,
   submitting,
 }: {
   text: string;
   onTextChange: (value: string) => void;
-  status: "PENDING" | "SESUAI" | "TIDAK_SESUAI";
+  status: "PENDING" | "SESUAI" | "SESUAI_CATATAN" | "TIDAK_SESUAI";
   onMarkSesuai: () => void;
   onMarkTidakSesuai: () => void;
+  /** When given, a third "Sesuai dengan Catatan" option; the conclusion text above is the catatan. */
+  onMarkSesuaiCatatan?: () => void;
   onSubmit: () => void;
   canEdit: boolean;
   submitting: boolean;
@@ -216,7 +219,9 @@ export function ConclusionCard({
         value={text}
         disabled={!canEdit}
         onChange={(e) => onTextChange(e.target.value)}
-        placeholder="Tuliskan kesimpulan hasil analisis teknis..."
+        placeholder={
+          status === "SESUAI_CATATAN" ? "Tuliskan kesimpulan beserta catatan yang perlu diperhatikan..." : "Tuliskan kesimpulan hasil analisis teknis..."
+        }
         className="w-full resize-y rounded-lg border-none bg-[#f7f2ec] px-3 py-2.75 text-[12.5px] text-[#20180f] outline-none disabled:opacity-60"
       />
       <div className="mt-2.5 flex gap-2.5">
@@ -230,6 +235,18 @@ export function ConclusionCard({
           <span className="material-symbols-outlined text-[16px]">check_circle</span>
           Sesuai
         </button>
+        {onMarkSesuaiCatatan && (
+          <button
+            type="button"
+            disabled={!canEdit}
+            onClick={onMarkSesuaiCatatan}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-[#b3650c] px-3 py-2.5 text-[12.5px] font-bold disabled:opacity-60"
+            style={{ background: status === "SESUAI_CATATAN" ? "#b3650c" : "#fff", color: status === "SESUAI_CATATAN" ? "#fff" : "#b3650c" }}
+          >
+            <span className="material-symbols-outlined text-[16px]">rate_review</span>
+            Sesuai dengan Catatan
+          </button>
+        )}
         <button
           type="button"
           disabled={!canEdit}

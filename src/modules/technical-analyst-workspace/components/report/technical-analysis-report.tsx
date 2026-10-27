@@ -192,7 +192,7 @@ function LhvkiFigures({ data, part }: { data: TechnicalReportData; part: "capaci
 
 function statusPill(status: TechnicalModuleStatusValue | undefined) {
   const s = status ?? "PENDING";
-  const cls = s === "SESUAI" ? "rd-pill-ok" : s === "TIDAK_SESUAI" ? "rd-pill-bad" : "rd-pill-neutral";
+  const cls = s === "SESUAI" ? "rd-pill-ok" : s === "SESUAI_CATATAN" ? "rd-pill-warn" : s === "TIDAK_SESUAI" ? "rd-pill-bad" : "rd-pill-neutral";
   return <span className={`rd-pill ${cls}`}>{TECHNICAL_MODULE_STATUS_LABELS[s]}</span>;
 }
 

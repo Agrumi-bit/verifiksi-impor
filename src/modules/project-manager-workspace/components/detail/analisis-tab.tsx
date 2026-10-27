@@ -126,6 +126,7 @@ export function AnalisisTab({ data, applicationNumber }: { data: PmApplicationDe
           status={(saved.status ?? "PENDING") as TechnicalModuleStatusValue}
           onMarkSesuai={noop}
           onMarkTidakSesuai={noop}
+          onMarkSesuaiCatatan={noop}
           onSubmit={noop}
           canEdit={false}
           submitting={false}

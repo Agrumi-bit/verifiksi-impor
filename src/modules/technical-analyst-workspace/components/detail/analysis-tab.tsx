@@ -245,6 +245,7 @@ export function AnalysisTab({ assignmentNumber, verificationType }: AnalysisTabP
         status={draft.status}
         onMarkSesuai={() => updateDraft(activeModule, { status: "SESUAI" })}
         onMarkTidakSesuai={() => updateDraft(activeModule, { status: "TIDAK_SESUAI" })}
+        onMarkSesuaiCatatan={() => updateDraft(activeModule, { status: "SESUAI_CATATAN" })}
         onSubmit={() => submitModule(activeModule)}
         canEdit={canEdit}
         submitting={submittingKey === activeModule}

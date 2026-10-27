@@ -25,20 +25,28 @@ export const ASSIGNMENT_PRIORITY_BADGE: Record<AssignmentPriorityValue, string> 
 };
 
 /** Per-module Sesuai/Tidak Sesuai verdict — distinct from `ValidationDecisionValue` (the final Approve/Return on the whole assignment). */
-export const TECHNICAL_MODULE_STATUSES = ["PENDING", "SESUAI", "TIDAK_SESUAI"] as const;
+// SESUAI_CATATAN ("Sesuai dengan Catatan"): passes like SESUAI, with the analyst's conclusion text as the catatan.
+export const TECHNICAL_MODULE_STATUSES = ["PENDING", "SESUAI", "SESUAI_CATATAN", "TIDAK_SESUAI"] as const;
 export type TechnicalModuleStatusValue = (typeof TECHNICAL_MODULE_STATUSES)[number];
 
 export const TECHNICAL_MODULE_STATUS_LABELS: Record<TechnicalModuleStatusValue, string> = {
   PENDING: "Belum Dianalisis",
   SESUAI: "Sesuai",
+  SESUAI_CATATAN: "Sesuai dengan Catatan",
   TIDAK_SESUAI: "Tidak Sesuai",
 };
 
 export const TECHNICAL_MODULE_STATUS_BADGE: Record<TechnicalModuleStatusValue, string> = {
   PENDING: "bg-[#f2ece5] text-[#6b5b4c]",
   SESUAI: "bg-[#e2f7ea] text-[#1a9850]",
+  SESUAI_CATATAN: "bg-[#fdf1dc] text-[#b3650c]",
   TIDAK_SESUAI: "bg-[#fbe4de] text-[#c1361f]",
 };
+
+/** Sesuai or Sesuai dengan Catatan — both count as passing the module. */
+export function isTechnicalModulePassed(status: string | null | undefined): boolean {
+  return status === "SESUAI" || status === "SESUAI_CATATAN";
+}
 
 export const VKI_MODULE_KEYS = ["listrik", "kapasitas", "bahanbaku"] as const;
 /** Legacy VIU set (= VIU Bahan Baku Industri) — the fallback for a VIU application whose import types are unknown. */

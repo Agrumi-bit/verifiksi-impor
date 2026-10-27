@@ -244,7 +244,7 @@ export async function buildPasal47Dataset(period: { from: string; to: string }):
         analystStock: i === 0 ? num(penyimpanan?.inputs?.stokTerkini) : null,
         analystPlan: i === 0 ? num(penyimpanan?.inputs?.rencanaImpor) : null,
         declaredStock: i === 0 ? stockByUnit : {},
-        analystDecision: penyimpanan?.status === "SESUAI" ? "Sesuai" : penyimpanan?.status === "TIDAK_SESUAI" ? "Tidak Sesuai" : "Belum Dianalisis",
+        analystDecision: penyimpanan?.status === "SESUAI" ? "Sesuai" : penyimpanan?.status === "SESUAI_CATATAN" ? "Sesuai dengan Catatan" : penyimpanan?.status === "TIDAK_SESUAI" ? "Tidak Sesuai" : "Belum Dianalisis",
       });
     });
 
@@ -256,7 +256,7 @@ export async function buildPasal47Dataset(period: { from: string; to: string }):
       values.push({
         applicationId: a.id, applicationNumber: a.applicationNumber, company, currency, plan, modalKerja,
         rate: currency === "IDR" ? 1 : num(modal?.inputs?.[`kurs_${currency}`]),
-        decision: modal?.status === "SESUAI" ? status("Sesuai", "ok") : modal?.status === "TIDAK_SESUAI" ? status("Tidak Sesuai", "bad") : status("Belum Dianalisis", "na"),
+        decision: modal?.status === "SESUAI" ? status("Sesuai", "ok") : modal?.status === "SESUAI_CATATAN" ? status("Sesuai dengan Catatan", "warn") : modal?.status === "TIDAK_SESUAI" ? status("Tidak Sesuai", "bad") : status("Belum Dianalisis", "na"),
       });
     }
 

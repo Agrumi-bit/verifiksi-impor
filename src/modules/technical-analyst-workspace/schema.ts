@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { TECHNICAL_MODULE_STATUSES, technicalModuleKeysFor, type TechnicalModuleStatusValue } from "./status";
+import { isTechnicalModulePassed, TECHNICAL_MODULE_STATUSES, technicalModuleKeysFor, type TechnicalModuleStatusValue } from "./status";
 
 export const technicalModuleDecisionSchema = z.object({
   status: z.enum(TECHNICAL_MODULE_STATUSES).default("PENDING"),
@@ -20,8 +20,8 @@ export const decisionSchema = z.object({
 
 /**
  * Overall Belum Dianalisis/Sesuai/Tidak Sesuai verdict for one assignment — any module marked
- * Tidak Sesuai makes the whole thing Tidak Sesuai; every applicable module must be Sesuai for the
- * whole thing to read Sesuai; anything else (nothing started, or partially done) is Belum Dianalisis.
+ * Tidak Sesuai makes the whole thing Tidak Sesuai; every applicable module must be Sesuai (or Sesuai
+ * dengan Catatan) for the whole thing to read Sesuai; anything else (nothing started, or partially done) is Belum Dianalisis.
  */
 export function overallTechnicalStatus(
   verificationType: "VKI" | "VIU" | string,
@@ -31,7 +31,7 @@ export function overallTechnicalStatus(
   const moduleKeys = technicalModuleKeysFor(verificationType, importTypes);
   const statuses = moduleKeys.map((key) => data?.[key]?.status ?? "PENDING");
   if (statuses.some((s) => s === "TIDAK_SESUAI")) return "TIDAK_SESUAI";
-  if (statuses.every((s) => s === "SESUAI")) return "SESUAI";
+  if (statuses.every((s) => isTechnicalModulePassed(s))) return "SESUAI";
   return "PENDING";
 }
 

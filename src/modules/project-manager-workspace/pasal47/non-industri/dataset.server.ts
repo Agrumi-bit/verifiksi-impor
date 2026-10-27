@@ -23,7 +23,7 @@ const num = (v: string | undefined) => {
   return Number.isFinite(n) && String(v ?? "").trim() !== "" ? n : null;
 };
 const decision = (s: string | undefined): Status =>
-  s === "SESUAI" ? status("Sesuai", "ok") : s === "TIDAK_SESUAI" ? status("Tidak Sesuai", "bad") : status("Belum Dianalisis", "na");
+  s === "SESUAI" ? status("Sesuai", "ok") : s === "SESUAI_CATATAN" ? status("Sesuai dengan Catatan", "warn") : s === "TIDAK_SESUAI" ? status("Tidak Sesuai", "bad") : status("Belum Dianalisis", "na");
 
 function areaOfKey(key: string): string {
   if (key.startsWith("location:")) return "Dokumen Lokasi";

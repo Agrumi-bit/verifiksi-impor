@@ -56,6 +56,7 @@ export function ListrikModule({
   status,
   onMarkSesuai,
   onMarkTidakSesuai,
+  onMarkSesuaiCatatan,
   onSubmit,
   canEdit,
   submitting,
@@ -313,6 +314,7 @@ export function ListrikModule({
         status={status}
         onMarkSesuai={onMarkSesuai}
         onMarkTidakSesuai={onMarkTidakSesuai}
+        onMarkSesuaiCatatan={onMarkSesuaiCatatan}
         onSubmit={onSubmit}
         canEdit={canEdit}
         submitting={submitting}

@@ -38,6 +38,7 @@ type ReportData = {
 
 const STATUS_LABEL: Record<string, { label: string; className: string }> = {
   SESUAI: { label: "Sesuai", className: "bg-[#e2f7ea] text-[#1a9850]" },
+  SESUAI_CATATAN: { label: "Sesuai dengan Catatan", className: "bg-[#fdf1dc] text-[#b3650c]" },
   TIDAK_SESUAI: { label: "Tidak Sesuai", className: "bg-[#fbe4de] text-[#c1361f]" },
   PENDING: { label: "Belum Dianalisis", className: "bg-[#f2ece5] text-[#8a7565]" },
 };
@@ -201,9 +202,9 @@ export function TechnicalDraftReportTab({ assignmentId, initialNotes, canEdit, r
           <div className="mb-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             {[
               { label: "Modul Analisis", value: moduleKeys.length },
-              { label: "Sesuai", value: moduleKeys.filter((k) => report.technicalAnalysisData[k]?.status === "SESUAI").length },
+              { label: "Sesuai", value: moduleKeys.filter((k) => ["SESUAI", "SESUAI_CATATAN"].includes(report.technicalAnalysisData[k]?.status ?? "")).length },
               { label: "Tidak Sesuai", value: moduleKeys.filter((k) => report.technicalAnalysisData[k]?.status === "TIDAK_SESUAI").length },
-              { label: "Belum Dianalisis", value: moduleKeys.filter((k) => !["SESUAI", "TIDAK_SESUAI"].includes(report.technicalAnalysisData[k]?.status ?? "")).length },
+              { label: "Belum Dianalisis", value: moduleKeys.filter((k) => !["SESUAI", "SESUAI_CATATAN", "TIDAK_SESUAI"].includes(report.technicalAnalysisData[k]?.status ?? "")).length },
             ].map((stat) => (
               <div key={stat.label} className="rounded-lg border border-[#efe2d4] bg-white p-3">
                 <div className="text-[10px] font-bold uppercase text-[#8a7565]">{stat.label}</div>

@@ -21,7 +21,7 @@ const num = (v: string | undefined | null) => {
   return s !== "" && Number.isFinite(n) ? n : null;
 };
 const decision = (s: string | undefined): Status =>
-  s === "SESUAI" ? status("Sesuai", "ok") : s === "TIDAK_SESUAI" ? status("Tidak Sesuai", "bad") : status("Belum Dianalisis", "na");
+  s === "SESUAI" ? status("Sesuai", "ok") : s === "SESUAI_CATATAN" ? status("Sesuai dengan Catatan", "warn") : s === "TIDAK_SESUAI" ? status("Tidak Sesuai", "bad") : status("Belum Dianalisis", "na");
 const CATEGORY = { BAHAN_BAKU: "Bahan Baku", BAHAN_PENOLONG: "Bahan Penolong" } as const;
 
 function areaOfKey(key: string): string {

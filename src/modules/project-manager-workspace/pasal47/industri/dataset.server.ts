@@ -21,7 +21,7 @@ const num = (v: string | undefined) => {
   return Number.isFinite(n) && String(v ?? "").trim() !== "" ? n : null;
 };
 const decision = (s: string | undefined): Status =>
-  s === "SESUAI" ? status("Sesuai", "ok") : s === "TIDAK_SESUAI" ? status("Tidak Sesuai", "bad") : status("Belum Dianalisis", "na");
+  s === "SESUAI" ? status("Sesuai", "ok") : s === "SESUAI_CATATAN" ? status("Sesuai dengan Catatan", "warn") : s === "TIDAK_SESUAI" ? status("Tidak Sesuai", "bad") : status("Belum Dianalisis", "na");
 
 function areaOfKey(key: string): string {
   if (key.startsWith("location:")) return "Dokumen Lokasi";
@@ -153,7 +153,7 @@ export async function buildIndustriDataset(period: { from: string; to: string })
         analystStock: i === 0 ? num(penyimpanan?.inputs?.stokTerkini) : null,
         analystPlan: i === 0 ? num(penyimpanan?.inputs?.rencanaImpor) : null,
         declaredStock: {},
-        analystDecision: penyimpanan?.status === "SESUAI" ? "Sesuai" : penyimpanan?.status === "TIDAK_SESUAI" ? "Tidak Sesuai" : "Belum Dianalisis",
+        analystDecision: penyimpanan?.status === "SESUAI" ? "Sesuai" : penyimpanan?.status === "SESUAI_CATATAN" ? "Sesuai dengan Catatan" : penyimpanan?.status === "TIDAK_SESUAI" ? "Tidak Sesuai" : "Belum Dianalisis",
       });
     });
 

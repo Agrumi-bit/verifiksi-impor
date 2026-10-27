@@ -50,6 +50,7 @@ export type ModuleProps = {
   status: TechnicalModuleStatusValue;
   onMarkSesuai: () => void;
   onMarkTidakSesuai: () => void;
+  onMarkSesuaiCatatan?: () => void;
   onSubmit: () => void;
   canEdit: boolean;
   submitting: boolean;
