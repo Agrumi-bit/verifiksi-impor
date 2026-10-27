@@ -16,6 +16,7 @@ export function KapasitasModule({
   status,
   onMarkSesuai,
   onMarkTidakSesuai,
+  onMarkSesuaiCatatan,
   onSubmit,
   canEdit,
   submitting,
@@ -289,6 +290,7 @@ export function KapasitasModule({
         status={status}
         onMarkSesuai={onMarkSesuai}
         onMarkTidakSesuai={onMarkTidakSesuai}
+        onMarkSesuaiCatatan={onMarkSesuaiCatatan}
         onSubmit={onSubmit}
         canEdit={canEdit}
         submitting={submitting}

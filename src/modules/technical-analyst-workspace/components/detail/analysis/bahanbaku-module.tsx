@@ -15,6 +15,7 @@ export function BahanBakuModule({
   status,
   onMarkSesuai,
   onMarkTidakSesuai,
+  onMarkSesuaiCatatan,
   onSubmit,
   canEdit,
   submitting,
@@ -209,6 +210,7 @@ export function BahanBakuModule({
         status={status}
         onMarkSesuai={onMarkSesuai}
         onMarkTidakSesuai={onMarkTidakSesuai}
+        onMarkSesuaiCatatan={onMarkSesuaiCatatan}
         onSubmit={onSubmit}
         canEdit={canEdit}
         submitting={submitting}
