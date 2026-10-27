@@ -175,7 +175,7 @@ export function AnalystNote({
   return (
     <div className="mt-4">
       <div className="mb-1.5 text-[12.5px] font-bold text-[#20180f]">Catatan Analis</div>
-      <RichTextEditor value={value} onChange={onChange} disabled={!canEdit} placeholder={placeholder ?? "Tuliskan catatan analis..."} />
+      <RichTextEditor value={value} onChange={onChange} disabled={!canEdit} placeholder={placeholder ?? "Tuliskan catatan analis..."} allowHtmlSource />
     </div>
   );
 }
