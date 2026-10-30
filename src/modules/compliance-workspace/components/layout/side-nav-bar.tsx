@@ -32,11 +32,12 @@ export function SideNavBar() {
               <span
                 key={item.href}
                 aria-disabled="true"
+                title={`${item.label} — segera tersedia`}
                 className="flex cursor-not-allowed items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/35"
               >
                 <Icon className="size-4 shrink-0" aria-hidden />
-                <span className="flex-1 truncate">{item.label}</span>
-                <span className="rounded bg-white/10 px-1.5 py-px text-[10px] font-medium text-white/50">Segera</span>
+                <span className="flex-1 leading-tight">{item.label}</span>
+                <span className="sr-only">(segera tersedia)</span>
               </span>
             );
           }
@@ -58,7 +59,7 @@ export function SideNavBar() {
       </nav>
 
       <p className="border-t border-white/10 px-5 py-3 text-[11px] leading-snug text-white/45">
-        Monitor · Konsolidasi · Trace · Review · Audit. Tidak mengubah data workspace lain.
+        Menu redup segera tersedia. Compliance hanya memantau dan tidak mengubah data workspace lain.
       </p>
     </aside>
   );

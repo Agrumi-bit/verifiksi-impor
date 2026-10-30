@@ -4,8 +4,11 @@ import { describe, it } from "node:test";
 import {
   TOTAL_REQUIREMENTS,
   allWorkspaceCompleted,
+  caseCategory,
+  completedWorkspaceCount,
   complianceSummary,
   handoverStatus,
+  lastWorkspace,
   readiness,
   validateResolutionNote,
 } from "./consolidation";
@@ -93,5 +96,37 @@ describe("validateResolutionNote", () => {
     assert.match(validateResolutionNote("") ?? "", /minimal 10 karakter/);
     assert.match(validateResolutionNote("   singkat   ") ?? "", /minimal 10 karakter/);
     assert.equal(validateResolutionNote("Dokumen pengganti sudah diterima."), null);
+  });
+});
+
+describe("caseCategory", () => {
+  it("keeps every unfinished handover in Menunggu Handover, whatever else is recorded", () => {
+    assert.equal(caseCategory(AT_TA, "SELESAI", [{ kind: "OPEN" }]), "MH");
+  });
+
+  it("puts a handed-over case with nothing recorded in Siap Konsolidasi", () => {
+    assert.equal(caseCategory(COMPLETE, "BELUM_DIREVIEW", []), "SK");
+    assert.equal(caseCategory(COMPLETE, "DALAM_KONSOLIDASI", [{ kind: "RESOLVED" }]), "SK");
+  });
+
+  it("ranks an open finding above clarification and conflict", () => {
+    assert.equal(caseCategory(COMPLETE, "BELUM_DIREVIEW", [{ kind: "KLARIFIKASI" }, { kind: "OPEN" }]), "OI");
+    assert.equal(caseCategory(COMPLETE, "BELUM_DIREVIEW", [{ kind: "CONFLICT" }]), "PTL");
+    assert.equal(caseCategory(COMPLETE, "PERLU_KLARIFIKASI", []), "PTL");
+  });
+
+  it("follows Compliance's own Lengkap / Selesai decisions", () => {
+    assert.equal(caseCategory(COMPLETE, "COMPLIANCE_LENGKAP", []), "CL");
+    assert.equal(caseCategory(COMPLETE, "SELESAI", [{ kind: "OPEN" }]), "SL");
+  });
+});
+
+describe("lastWorkspace / completedWorkspaceCount", () => {
+  it("points at the workspace currently working on the case", () => {
+    assert.equal(lastWorkspace(AT_TA), "TA");
+    assert.equal(lastWorkspace(VF_ISSUE), "VF");
+    assert.equal(lastWorkspace({ CR: "COMPLETED", SV: "NOT_STARTED", VF: "NOT_STARTED", TA: "NOT_STARTED", PM: "NOT_STARTED" }), "SV");
+    assert.equal(lastWorkspace(COMPLETE), "PM");
+    assert.equal(completedWorkspaceCount(AT_TA), 3);
   });
 });

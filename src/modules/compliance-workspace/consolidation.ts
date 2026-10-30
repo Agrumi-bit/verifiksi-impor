@@ -108,3 +108,58 @@ export function validateResolutionNote(note: string | null | undefined): string 
   }
   return null;
 }
+
+export const COMPLIANCE_STATUS_LABELS: Record<ComplianceStatusValue, string> = {
+  BELUM_DIREVIEW: "Belum Direview",
+  DALAM_KONSOLIDASI: "Dalam Konsolidasi",
+  PERLU_TINDAK_LANJUT: "Perlu Tindak Lanjut",
+  PERLU_KLARIFIKASI: "Perlu Klarifikasi",
+  OPEN_ISSUE: "Open Issue",
+  COMPLIANCE_LENGKAP: "Compliance Lengkap",
+  SELESAI: "Selesai",
+};
+
+/** The six buckets of the Daftar Permohonan (summary cards, quick chips, Status filter). */
+export const CASE_CATEGORIES = ["MH", "SK", "PTL", "OI", "CL", "SL"] as const;
+export type CaseCategory = (typeof CASE_CATEGORIES)[number];
+export const CASE_CATEGORY_LABELS: Record<CaseCategory, string> = {
+  MH: "Menunggu Handover",
+  SK: "Siap Konsolidasi",
+  PTL: "Perlu Tindak Lanjut",
+  OI: "Open Issue",
+  CL: "Compliance Lengkap",
+  SL: "Selesai",
+};
+
+/**
+ * Which bucket a case is in. Handover comes first (a case is never "Siap Konsolidasi" while a
+ * workspace is unfinished), then Compliance's own decisions: finished, then its active findings
+ * (an open finding outranks clarification/conflict), then the compliance status it set.
+ */
+export function caseCategory(
+  statuses: WorkspaceStatuses,
+  complianceStatus: ComplianceStatusValue,
+  findings: { kind: FindingKind }[],
+): CaseCategory {
+  if (!allWorkspaceCompleted(statuses)) return "MH";
+  if (complianceStatus === "SELESAI") return "SL";
+  const active = findings.filter(isActiveFinding);
+  if (active.some((finding) => finding.kind === "OPEN") || complianceStatus === "OPEN_ISSUE") return "OI";
+  if (active.length > 0 || complianceStatus === "PERLU_TINDAK_LANJUT" || complianceStatus === "PERLU_KLARIFIKASI") return "PTL";
+  if (complianceStatus === "COMPLIANCE_LENGKAP") return "CL";
+  return "SK";
+}
+
+/**
+ * The workspace a case is currently at: the first one, in CR → SV → VF → TA → PM order, that has
+ * not completed yet; PM once everything is completed. Workspaces don't run in a strict order here
+ * (CR schedules survey, dokumen and technical independently, and the PM reviews each report as it
+ * comes), so the earliest unfinished one is where the case is held up.
+ */
+export function lastWorkspace(statuses: WorkspaceStatuses): WorkspaceKey {
+  return WORKSPACE_KEYS.find((key) => statuses[key] !== "COMPLETED") ?? "PM";
+}
+
+export function completedWorkspaceCount(statuses: WorkspaceStatuses): number {
+  return WORKSPACE_KEYS.filter((key) => statuses[key] === "COMPLETED").length;
+}

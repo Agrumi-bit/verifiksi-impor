@@ -14,7 +14,7 @@ export type ComplianceNavItem = {
 /** Sidebar of the Compliance Workspace (docs/handoff/design-reference/Compliance.dc.html), in build order. */
 export const COMPLIANCE_NAV: ComplianceNavItem[] = [
   { label: "Dashboard", href: COMPLIANCE_HOME, icon: LayoutDashboard, available: true },
-  { label: "Daftar Permohonan", href: `${COMPLIANCE_HOME}/permohonan`, icon: ClipboardCheck, available: false },
+  { label: "Daftar Permohonan", href: `${COMPLIANCE_HOME}/permohonan`, icon: ClipboardCheck, available: true },
   { label: "Workspace Results", href: `${COMPLIANCE_HOME}/workspace-results`, icon: Layers, available: false },
   { label: "Compliance Matrix", href: `${COMPLIANCE_HOME}/matrix`, icon: Grid3x3, available: false },
   { label: "Temuan & Exception", href: `${COMPLIANCE_HOME}/temuan`, icon: TriangleAlert, available: false },
