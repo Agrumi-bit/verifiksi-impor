@@ -20,7 +20,7 @@ export const COMPLIANCE_NAV: ComplianceNavItem[] = [
   { label: "Temuan & Exception", href: `${COMPLIANCE_HOME}/temuan`, icon: TriangleAlert, available: true },
   { label: "Compliance Dossier", href: `${COMPLIANCE_HOME}/dossier`, icon: FolderOpen, available: true },
   { label: "LHVIU & Final Output", href: `${COMPLIANCE_HOME}/lhviu`, icon: FileCheck2, available: true },
-  { label: "Audit & Traceability", href: `${COMPLIANCE_HOME}/audit`, icon: History, available: false },
+  { label: "Audit & Traceability", href: `${COMPLIANCE_HOME}/audit`, icon: History, available: true },
   { label: "Referensi", href: `${COMPLIANCE_HOME}/referensi`, icon: BookOpen, available: false },
 ];
 

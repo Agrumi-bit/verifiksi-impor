@@ -4,6 +4,9 @@ import { LhviuView } from "@/modules/compliance-workspace/components/lhviu/lhviu
 import { lhviuValidity } from "@/modules/compliance-workspace/dossier";
 import { loadIssuedLhviu } from "@/modules/compliance-workspace/server/load-lhviu";
 
+// Reads the database on every request — never prerendered at build time.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "LHVIU & Final Output — Compliance Workspace",
 };

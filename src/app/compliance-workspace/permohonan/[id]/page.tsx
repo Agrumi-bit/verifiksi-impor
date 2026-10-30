@@ -6,6 +6,9 @@ import { CaseDetailView } from "@/modules/compliance-workspace/components/case-d
 import { CASE_STEP_COUNT } from "@/modules/compliance-workspace/requirements";
 import { loadCaseDetail } from "@/modules/compliance-workspace/server/load-case-detail";
 
+// Reads the database on every request — never prerendered at build time.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Case Detail — Compliance Workspace",
 };

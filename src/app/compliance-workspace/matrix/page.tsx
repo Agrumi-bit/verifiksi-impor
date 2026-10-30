@@ -5,6 +5,9 @@ import { buildMatrix, matrixSummary } from "@/modules/compliance-workspace/matri
 import { loadCaseDetail } from "@/modules/compliance-workspace/server/load-case-detail";
 import { loadComplianceCases } from "@/modules/compliance-workspace/server/load-cases";
 
+// Reads the database on every request — never prerendered at build time.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Compliance Matrix — Compliance Workspace",
 };
