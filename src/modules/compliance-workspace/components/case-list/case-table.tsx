@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { CaseRow, SortKey } from "../../case-list";
 import { COMPLIANCE_HOME } from "../../navigation";
+import { firstIssueStep } from "../../requirements";
 import { CategoryBadge, HandoverBadge, LhviuBadge, ReadinessText, WorkspaceProgress } from "./badges";
 import { formatDate, formatDateTime } from "./format";
 
@@ -84,7 +85,13 @@ function RowMenu({ row, pics, onOpen, onAssignPic, onToggleReview }: { row: Case
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[220px] rounded-xl border border-[#E5EAF0] bg-white p-1.5">
         <DropdownMenuItem onClick={() => onOpen(row)}>Ringkasan Case</DropdownMenuItem>
-        <DropdownMenuItem render={<Link href={`${COMPLIANCE_HOME}/permohonan/${row.applicationId}`} />}>Detail Case</DropdownMenuItem>
+        <DropdownMenuItem render={<Link href={`${COMPLIANCE_HOME}/permohonan/${row.applicationId}?step=1`} />}>Buka Compliance Case</DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={row.activeFindings.length === 0}
+          render={<Link href={`${COMPLIANCE_HOME}/permohonan/${row.applicationId}?step=${firstIssueStep(row.activeFindings) ?? 1}`} />}
+        >
+          Lihat Issue{row.activeFindings.length > 0 ? ` (${row.activeFindings.length})` : ""}
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>Assign PIC Compliance</DropdownMenuSubTrigger>

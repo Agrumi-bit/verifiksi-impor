@@ -44,7 +44,7 @@ export async function loadComplianceCases(): Promise<CaseRow[]> {
       company: { select: { companyName: true, nibNumber: true } },
       assignments: { select: { scheduleType: true, status: true, letterStatus: true, pmReviewStatus: true, updatedAt: true } },
       complianceCase: { include: { picUser: { select: { name: true } } } },
-      complianceIssues: { select: { id: true, issueNumber: true, kind: true, title: true, sourceWorkspace: true, updatedAt: true } },
+      complianceIssues: { select: { id: true, issueNumber: true, kind: true, title: true, sourceWorkspace: true, requirementKey: true, updatedAt: true } },
     },
   });
 
@@ -82,7 +82,7 @@ export async function loadComplianceCases(): Promise<CaseRow[]> {
         reviewFlag: complianceCase?.reviewFlag ?? false,
         finalReviewDone: complianceCase?.finalReviewDone ?? false,
         dossierComplete: complianceCase?.dossierComplete ?? false,
-        findings: app.complianceIssues.map(({ id, issueNumber, kind, title, sourceWorkspace }) => ({ id, issueNumber, kind, title, sourceWorkspace })),
+        findings: app.complianceIssues.map(({ id, issueNumber, kind, title, sourceWorkspace, requirementKey }) => ({ id, issueNumber, kind, title, sourceWorkspace, requirementKey })),
       };
       return buildCaseRow(source);
     });

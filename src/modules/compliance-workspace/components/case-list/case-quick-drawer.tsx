@@ -2,13 +2,24 @@
 
 import Link from "next/link";
 
-import { Sheet, SheetBody, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetBody, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 import { COMPLIANCE_STATUS_LABELS, READINESS_LABELS } from "../../consolidation";
 import type { CaseRow } from "../../case-list";
 import { COMPLIANCE_HOME } from "../../navigation";
+import { REQUIREMENTS, firstIssueStep } from "../../requirements";
 import { WORKSPACE_KEYS, WORKSPACE_LABELS } from "../../workspace-status";
-import { CategoryBadge, HandoverBadge, LhviuBadge, WorkspaceStateBadge } from "./badges";
+import { CategoryBadge, HandoverBadge, LhviuBadge, Pill, WorkspaceStateBadge } from "./badges";
 import { formatCalendarDate, formatDate } from "./format";
+
+const KIND_LABELS = { OPEN: "Open Issue", KLARIFIKASI: "Perlu Klarifikasi", CONFLICT: "Conflict", RESOLVED: "Resolved" } as const;
+const REQUIREMENT_LABELS = Object.fromEntries(REQUIREMENTS.map((requirement) => [requirement.key, requirement.label])) as Record<string, string>;
+const FOOTER_BUTTON =
+  "inline-flex h-9 items-center rounded-lg px-3.5 text-[13px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-[#1677FF]/40";
+
+function caseHref(applicationId: string, step = 1): string {
+  return `${COMPLIANCE_HOME}/permohonan/${applicationId}?step=${step}`;
+}
 
 function KeyValue({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -89,6 +100,26 @@ export function CaseQuickDrawer({ row, onClose }: { row: CaseRow | null; onClose
               </section>
 
               <section className="flex flex-col gap-2">
+                <h3 className="text-[13px] font-semibold">Issue Aktif ({row.activeFindings.length})</h3>
+                {row.activeFindings.length === 0 ? (
+                  <p className="text-[12px] text-[#64748B]">Tidak ada issue aktif.</p>
+                ) : (
+                  <ul className="flex flex-col gap-1.5">
+                    {row.activeFindings.map((finding) => (
+                      <li key={finding.id} className="rounded-lg border border-[#E5EAF0] px-3 py-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-mono text-[12px] font-medium">{finding.issueNumber}</span>
+                          <Pill tone={finding.kind === "KLARIFIKASI" ? "orange" : "red"}>{KIND_LABELS[finding.kind]}</Pill>
+                          <span className="text-[11.5px] text-[#64748B]">{REQUIREMENT_LABELS[finding.requirementKey] ?? finding.requirementKey}</span>
+                        </div>
+                        <p className="mt-0.5 text-[12.5px]">{finding.title}</p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+
+              <section className="flex flex-col gap-2">
                 <h3 className="text-[13px] font-semibold">LHVIU</h3>
                 <div className="flex flex-wrap items-center gap-2">
                   <LhviuBadge issued={row.lhviuIssued} />
@@ -97,14 +128,24 @@ export function CaseQuickDrawer({ row, onClose }: { row: CaseRow | null; onClose
                 </div>
                 <p className="text-[12px] text-[#64748B]">Diterbitkan oleh Project Manager. Compliance hanya melihat.</p>
               </section>
-
-              <Link
-                href={`${COMPLIANCE_HOME}/permohonan/${row.applicationId}`}
-                className="inline-flex h-9 w-fit items-center rounded-lg bg-[#1677FF] px-3.5 text-[13px] font-medium text-white outline-none hover:bg-[#0F62D6] focus-visible:ring-2 focus-visible:ring-[#1677FF]/40"
-              >
-                Buka Detail Case (11 tahap)
-              </Link>
             </SheetBody>
+            <SheetFooter className="border-[#E5EAF0] bg-white">
+              {(() => {
+                const issueStep = firstIssueStep(row.activeFindings);
+                return issueStep ? (
+                  <Link href={caseHref(row.applicationId, issueStep)} className={cn(FOOTER_BUTTON, "border border-[#E5EAF0] text-[#10233F] hover:bg-[#F5F7FA]")}>
+                    Lihat Issue ({row.activeFindings.length})
+                  </Link>
+                ) : (
+                  <span aria-disabled="true" title="Tidak ada issue aktif" className={cn(FOOTER_BUTTON, "cursor-not-allowed border border-[#E5EAF0] text-[#94A3B8]")}>
+                    Lihat Issue
+                  </span>
+                );
+              })()}
+              <Link href={caseHref(row.applicationId)} className={cn(FOOTER_BUTTON, "bg-[#1677FF] text-white hover:bg-[#0F62D6]")}>
+                Buka Compliance Case
+              </Link>
+            </SheetFooter>
           </>
         )}
       </SheetContent>

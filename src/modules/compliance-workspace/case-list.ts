@@ -20,7 +20,7 @@ import { WORKSPACE_KEYS, deriveWorkspaceStatuses, type WorkspaceKey, type Worksp
  * pure filter/sort/paginate the API applies. No React, no database.
  */
 
-export type CaseFinding = { id: string; issueNumber: string; kind: FindingKind; title: string; sourceWorkspace: string };
+export type CaseFinding = { id: string; issueNumber: string; kind: FindingKind; title: string; sourceWorkspace: string; requirementKey: string };
 
 export type CaseSource = WorkspaceStatusInput & {
   applicationId: string;

@@ -46,7 +46,7 @@ const rows = [
       lhviuIssued: true,
       reviewFlag: true,
       picUserId: "u2",
-      findings: [{ id: "f1", issueNumber: "ISS-0001", kind: "CONFLICT", title: "Alamat gudang berbeda", sourceWorkspace: "SV" }],
+      findings: [{ id: "f1", issueNumber: "ISS-0001", kind: "CONFLICT", title: "Alamat gudang berbeda", sourceWorkspace: "SV", requirementKey: "gudang" }],
       updatedAt: "2026-07-24T09:00:00.000Z",
     }),
   ),
@@ -110,5 +110,14 @@ describe("chipCounts", () => {
     assert.equal(counts.PTL, 1);
     assert.equal(counts.LH, 2);
     assert.equal(counts.REVIEW, 1);
+  });
+});
+
+describe("firstIssueStep", () => {
+  it("lands on the earliest stage that has an active finding", async () => {
+    const { firstIssueStep } = await import("./requirements");
+    assert.equal(firstIssueStep([]), null);
+    assert.equal(firstIssueStep([{ requirementKey: "modal" }, { requirementKey: "gudang" }]), 3);
+    assert.equal(firstIssueStep([{ requirementKey: "unknown" }]), 1);
   });
 });
