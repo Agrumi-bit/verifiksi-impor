@@ -6,6 +6,7 @@ import { CaseDetailView } from "@/modules/compliance-workspace/components/case-d
 import { CASE_STEP_COUNT } from "@/modules/compliance-workspace/requirements";
 import { loadCaseDetail } from "@/modules/compliance-workspace/server/load-case-detail";
 import { loadLegalitasStage } from "@/modules/compliance-workspace/server/load-legalitas";
+import { loadLokasiStage } from "@/modules/compliance-workspace/server/load-lokasi";
 
 // Reads the database on every request — never prerendered at build time.
 export const dynamic = "force-dynamic";
@@ -30,5 +31,6 @@ export default async function ComplianceCaseDetailPage({
   const current = Number.isInteger(requested) && requested >= 1 && requested <= CASE_STEP_COUNT ? requested : 1;
   // Stage-specific data only for the stage on screen.
   const legalitas = current === 2 ? await loadLegalitasStage(id) : null;
-  return <CaseDetailView row={detail.row} steps={buildCaseSteps(detail)} current={current} legalitas={legalitas} />;
+  const lokasi = current === 3 ? await loadLokasiStage(id) : null;
+  return <CaseDetailView row={detail.row} steps={buildCaseSteps(detail)} current={current} legalitas={legalitas} lokasi={lokasi} />;
 }

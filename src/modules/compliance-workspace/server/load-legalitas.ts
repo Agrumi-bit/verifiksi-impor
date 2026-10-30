@@ -1,16 +1,9 @@
 import "server-only";
 
-import { db } from "@/lib/db";
-import { getApplicationDocumentMeta } from "@/modules/applications/document-versions";
-import type { ApplicationWizardValues } from "@/modules/applications/schema";
-import { normalizeKonsumsiPayload } from "@/modules/applications/viu-schemes/konsumsi/normalize";
-import { getDocumentMeta } from "@/modules/company/document-versions";
 import { VIU_KONSUMSI_KBLI } from "@/modules/schemes/viu-konsumsi/terms";
 import { splitKbliEntries, type KbliCategory } from "@/modules/shared/schema";
-import { buildApplicationDocumentChecklist } from "@/modules/verifikator-workspace/application-checklist";
-import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
-import { COMPANY_MAPPED_DOCUMENT_KEYS } from "@/modules/verifikator-workspace/schema";
-import { LEGALITAS_CATEGORIES, buildLegalitasRows, kbliCheck, type DocumentStatusInput, type LegalitasRow } from "../legalitas";
+import { LEGALITAS_CATEGORIES, buildLegalitasRows, kbliCheck, type LegalitasRow } from "../legalitas";
+import { loadCaseDocuments } from "./document-statuses";
 
 export type LegalitasStage = {
   company: {
@@ -27,7 +20,12 @@ export type LegalitasStage = {
   rows: LegalitasRow[];
 };
 
-type Payload = ApplicationWizardValues & {
+type LegalPayload = {
+  companyName?: string;
+  contactFullName?: string;
+  contactEmail?: string;
+  nibNumber?: string;
+  notarialDeedNumber?: string;
   kbliEntries?: { code: string; description?: string; category?: KbliCategory }[];
   npwpNumber?: string;
   skNumber?: string;
@@ -38,33 +36,13 @@ type Payload = ApplicationWizardValues & {
 
 /**
  * Tahap 2 data for one case — the same document checklist and verification statuses every other
- * workspace reads (buildApplicationDocumentChecklist + document version meta), read only.
+ * workspace reads (loadCaseDocuments), read only.
  */
 export async function loadLegalitasStage(applicationId: string): Promise<LegalitasStage | null> {
-  const application = await db.application.findUnique({
-    where: { id: applicationId },
-    select: { id: true, payload: true, createdAt: true, companyId: true },
-  });
-  if (!application) return null;
-  const company = application.companyId ? await db.company.findUnique({ where: { id: application.companyId } }) : null;
-
-  const payload = normalizeKonsumsiPayload(application.payload as ApplicationWizardValues) as Payload;
-  const checklist = (await buildApplicationDocumentChecklist(payload, toChecklistCompanyContext(company))).filter((item) =>
-    LEGALITAS_CATEGORIES.includes(item.category),
-  );
-
-  const companyKeys = checklist.filter((item) => item.key in COMPANY_MAPPED_DOCUMENT_KEYS).map((item) => item.key);
-  const applicationKeys = checklist.filter((item) => !(item.key in COMPANY_MAPPED_DOCUMENT_KEYS)).map((item) => item.key);
-  const companyMeta = company
-    ? await getDocumentMeta(company.id, companyKeys.map((key) => COMPANY_MAPPED_DOCUMENT_KEYS[key]), company.createdAt)
-    : {};
-  const applicationMeta = await getApplicationDocumentMeta(application.id, applicationKeys, application.createdAt);
-  const statuses: Record<string, DocumentStatusInput | undefined> = Object.fromEntries(
-    checklist.map((item) => [
-      item.key,
-      item.key in COMPANY_MAPPED_DOCUMENT_KEYS ? companyMeta[COMPANY_MAPPED_DOCUMENT_KEYS[item.key]] : applicationMeta[item.key],
-    ]),
-  );
+  const documents = await loadCaseDocuments(applicationId, LEGALITAS_CATEGORIES);
+  if (!documents) return null;
+  const { company, checklist, statuses } = documents;
+  const payload = documents.payload as unknown as LegalPayload;
 
   const { utama, pendukung } = splitKbliEntries(payload.kbliEntries ?? []);
   const kbliText = (entry: { code: string; description?: string }) => [entry.code, entry.description].filter(Boolean).join(" – ");

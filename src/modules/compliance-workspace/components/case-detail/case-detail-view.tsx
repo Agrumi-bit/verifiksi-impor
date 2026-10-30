@@ -7,10 +7,12 @@ import type { CaseStep, StepStatus } from "../../case-detail";
 import type { CaseRow } from "../../case-list";
 import { REQUIREMENTS } from "../../requirements";
 import { COMPLIANCE_HOME } from "../../navigation";
+import type { LokasiInput } from "../../lokasi";
 import type { LegalitasStage as LegalitasStageData } from "../../server/load-legalitas";
 import { CategoryBadge, Pill } from "../case-list/badges";
 import { formatDate } from "../case-list/format";
 import { LegalitasStage } from "./legalitas-stage";
+import { LokasiStage } from "./lokasi-stage";
 
 const STATUS_TONE: Record<StepStatus, "green" | "orange" | "red" | "blue"> = {
   Sesuai: "green",
@@ -189,11 +191,13 @@ export function CaseDetailView({
   steps,
   current,
   legalitas,
+  lokasi,
 }: {
   row: CaseRow;
   steps: CaseStep[];
   current: number;
   legalitas: LegalitasStageData | null;
+  lokasi: LokasiInput | null;
 }) {
   const step = steps[current - 1];
   const previous = steps[current - 2];
@@ -216,7 +220,13 @@ export function CaseDetailView({
         <Pill tone={STATUS_TONE[step.status]}>{step.status}</Pill>
       </div>
 
-      {step.num === 2 && legalitas ? <LegalitasStage data={legalitas} handedOver={step.status !== "Menunggu Handover"} /> : <GenericStage step={step} />}
+      {step.num === 2 && legalitas ? (
+        <LegalitasStage data={legalitas} handedOver={step.status !== "Menunggu Handover"} />
+      ) : step.num === 3 && lokasi ? (
+        <LokasiStage data={lokasi} />
+      ) : (
+        <GenericStage step={step} />
+      )}
       <FindingsCard step={step} />
 
       <div className="flex items-center justify-between">
