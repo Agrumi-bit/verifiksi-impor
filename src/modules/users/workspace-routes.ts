@@ -16,9 +16,9 @@ export const ROLE_HOME: Record<Role, string> = {
   PROJECT_MANAGER: "/project-manager-workspace",
   PERUSAHAAN: "/company-workspace",
   CUSTOMER_RELATIONSHIP: "/customer-relation-workspace",
-  // No workspace has been built for these roles yet — not fabricated, sent to an honest
+  COMPLIANCE: "/compliance-workspace",
+  // No workspace has been built for this role yet — not fabricated, sent to an honest
   // "belum ada workspace" holding page instead of silently falling into the admin area.
-  COMPLIANCE: "/no-workspace",
   GOVERNMENT: "/no-workspace",
 };
 
@@ -30,6 +30,7 @@ export const WORKSPACE_ACCESS: { prefix: string; roles: Role[] }[] = [
   { prefix: "/project-manager-workspace", roles: ["PROJECT_MANAGER", "ADMIN", "SUPER_ADMIN"] },
   { prefix: "/company-workspace", roles: ["PERUSAHAAN", "ADMIN", "SUPER_ADMIN"] },
   { prefix: "/customer-relation-workspace", roles: ["CUSTOMER_RELATIONSHIP", "ADMIN", "SUPER_ADMIN"] },
+  { prefix: "/compliance-workspace", roles: ["COMPLIANCE", "ADMIN", "SUPER_ADMIN"] },
 ];
 
 /** Anything not matched by WORKSPACE_ACCESS and not in PUBLIC_PATHS falls here — the `(dashboard)` admin area (root "/", /applications, /company, /system-configuration, /user-management, ...). Default-deny keeps this safe without having to enumerate every admin sub-path. */

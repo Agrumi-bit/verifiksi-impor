@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { authClient, useSession } from "@/lib/auth-client";
 import { ROLE_LABELS, type Role } from "@/modules/users/roles";
 
-/** Landing page for roles with no workspace built yet (COMPLIANCE, GOVERNMENT) — honest "not built" state instead of silently falling into the admin area. */
+/** Landing page for roles with no workspace built yet (GOVERNMENT) — honest "not built" state instead of silently falling into the admin area. */
 export default function NoWorkspacePage() {
   const router = useRouter();
   const { data: session } = useSession();
