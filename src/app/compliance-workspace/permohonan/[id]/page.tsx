@@ -5,6 +5,7 @@ import { buildCaseSteps } from "@/modules/compliance-workspace/case-detail";
 import { CaseDetailView } from "@/modules/compliance-workspace/components/case-detail/case-detail-view";
 import { CASE_STEP_COUNT } from "@/modules/compliance-workspace/requirements";
 import { loadCaseDetail } from "@/modules/compliance-workspace/server/load-case-detail";
+import { loadKonsumsiStage } from "@/modules/compliance-workspace/server/load-konsumsi";
 import { loadLegalitasStage } from "@/modules/compliance-workspace/server/load-legalitas";
 import { loadLokasiStage } from "@/modules/compliance-workspace/server/load-lokasi";
 
@@ -32,5 +33,6 @@ export default async function ComplianceCaseDetailPage({
   // Stage-specific data only for the stage on screen.
   const legalitas = current === 2 ? await loadLegalitasStage(id) : null;
   const lokasi = current === 3 ? await loadLokasiStage(id) : null;
-  return <CaseDetailView row={detail.row} steps={buildCaseSteps(detail)} current={current} legalitas={legalitas} lokasi={lokasi} />;
+  const konsumsi = current >= 4 && current <= 8 ? await loadKonsumsiStage(id) : null;
+  return <CaseDetailView row={detail.row} steps={buildCaseSteps(detail)} current={current} legalitas={legalitas} lokasi={lokasi} konsumsi={konsumsi} />;
 }

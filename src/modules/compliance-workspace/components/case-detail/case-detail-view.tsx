@@ -7,12 +7,18 @@ import type { CaseStep, StepStatus } from "../../case-detail";
 import type { CaseRow } from "../../case-list";
 import { REQUIREMENTS } from "../../requirements";
 import { COMPLIANCE_HOME } from "../../navigation";
+import type { KonsumsiStageInput } from "../../konsumsi-stages";
 import type { LokasiInput } from "../../lokasi";
 import type { LegalitasStage as LegalitasStageData } from "../../server/load-legalitas";
 import { CategoryBadge, Pill } from "../case-list/badges";
 import { formatDate } from "../case-list/format";
 import { LegalitasStage } from "./legalitas-stage";
 import { LokasiStage } from "./lokasi-stage";
+import { MerekStage } from "./merek-stage";
+import { LabelStage, UjiMutuStage } from "./mutu-label-stages";
+import { RencanaImporStage, StokStage } from "./produk-stages";
+
+const KONSUMSI_STAGES: Partial<Record<number, typeof MerekStage>> = { 4: MerekStage, 5: RencanaImporStage, 6: StokStage, 7: UjiMutuStage, 8: LabelStage };
 
 const STATUS_TONE: Record<StepStatus, "green" | "orange" | "red" | "blue"> = {
   Sesuai: "green",
@@ -192,14 +198,18 @@ export function CaseDetailView({
   current,
   legalitas,
   lokasi,
+  konsumsi,
 }: {
   row: CaseRow;
   steps: CaseStep[];
   current: number;
   legalitas: LegalitasStageData | null;
   lokasi: LokasiInput | null;
+  konsumsi: KonsumsiStageInput | null;
 }) {
   const step = steps[current - 1];
+  const KonsumsiStage = KONSUMSI_STAGES[step.num];
+  const handedOver = step.status !== "Menunggu Handover";
   const previous = steps[current - 2];
   const next = steps[current];
 
@@ -221,9 +231,11 @@ export function CaseDetailView({
       </div>
 
       {step.num === 2 && legalitas ? (
-        <LegalitasStage data={legalitas} handedOver={step.status !== "Menunggu Handover"} />
+        <LegalitasStage data={legalitas} handedOver={handedOver} />
       ) : step.num === 3 && lokasi ? (
         <LokasiStage data={lokasi} />
+      ) : KonsumsiStage && konsumsi ? (
+        <KonsumsiStage data={konsumsi} handedOver={handedOver} />
       ) : (
         <GenericStage step={step} />
       )}

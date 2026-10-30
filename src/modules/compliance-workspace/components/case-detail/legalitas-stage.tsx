@@ -1,10 +1,9 @@
-import { Check, Download, Eye, Info } from "lucide-react";
+import { Check, Info } from "lucide-react";
 
-import { fileHref } from "@/lib/file-href";
 import { cn } from "@/lib/utils";
-import { VERIFICATION_STATUS_LABELS, VERIFICATION_STATUS_TONES, legalitasSummary } from "../../legalitas";
 import type { LegalitasStage as LegalitasStageData } from "../../server/load-legalitas";
 import { Pill } from "../case-list/badges";
+import { DocumentChip, DocumentStatus, RequirementTag, SummaryChips } from "./stage-ui";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -21,7 +20,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
  */
 export function LegalitasStage({ data, handedOver }: { data: LegalitasStageData; handedOver: boolean }) {
   const { company, kbli, rows } = data;
-  const summary = legalitasSummary(rows);
   const settled = rows.filter((row) => row.status === "VERIFIED" || row.status === "NOT_APPLICABLE").length;
 
   return (
@@ -92,15 +90,7 @@ export function LegalitasStage({ data, handedOver }: { data: LegalitasStageData;
               Verifikator belum menyelesaikan pemeriksaan — status di bawah masih dapat berubah.
             </p>
           )}
-          <ul className="flex flex-wrap gap-2" aria-label="Ringkasan status verifikasi">
-            {summary.map((item) => (
-              <li key={item.status}>
-                <Pill tone={VERIFICATION_STATUS_TONES[item.status]} className="border border-current/20">
-                  {VERIFICATION_STATUS_LABELS[item.status]} <span className="font-semibold tabular-nums">{item.count}</span>
-                </Pill>
-              </li>
-            ))}
-          </ul>
+          <SummaryChips rows={rows} />
         </div>
 
         <div className="overflow-x-auto border-t border-[#EEF2F6]">
@@ -124,33 +114,10 @@ export function LegalitasStage({ data, handedOver }: { data: LegalitasStageData;
                   <td className="border-b border-[#EEF2F6] px-4 py-4 text-[#64748B] tabular-nums">{index + 1}</td>
                   <th scope="row" className="border-b border-[#EEF2F6] px-4 py-4 text-left font-semibold">{row.label}</th>
                   <td className="border-b border-[#EEF2F6] px-4 py-4 font-medium">{row.value}</td>
-                  <td className="border-b border-[#EEF2F6] px-4 py-3">
-                    {row.document ? (
-                      <div className="flex w-fit items-center gap-2 rounded-lg border border-[#E5EAF0] px-2.5 py-2">
-                        <span className="rounded bg-[#FEF2F2] px-1.5 py-1 text-[10px] font-bold text-[#B91C1C]">PDF</span>
-                        <span className="max-w-[140px] truncate text-[12.5px] text-[#1677FF]">{row.document.label}</span>
-                        <a href={fileHref(row.document.path)} target="_blank" rel="noopener noreferrer" aria-label={`Lihat ${row.document.label}`} className="rounded p-1 text-[#64748B] hover:bg-[#F5F7FA]">
-                          <Eye className="size-4" aria-hidden />
-                        </a>
-                        <a href={fileHref(row.document.path)} download aria-label={`Unduh ${row.document.label}`} className="rounded p-1 text-[#64748B] hover:bg-[#F5F7FA]">
-                          <Download className="size-4" aria-hidden />
-                        </a>
-                      </div>
-                    ) : (
-                      <span className="text-[12.5px] text-[#64748B]">Tidak diunggah</span>
-                    )}
-                  </td>
+                  <td className="border-b border-[#EEF2F6] px-4 py-3"><DocumentChip document={row.document} /></td>
+                  <td className="border-b border-[#EEF2F6] px-4 py-4"><DocumentStatus row={row} /></td>
                   <td className="border-b border-[#EEF2F6] px-4 py-4">
-                    <div className="flex flex-col items-start gap-1">
-                      <Pill tone={VERIFICATION_STATUS_TONES[row.status]}>{VERIFICATION_STATUS_LABELS[row.status]}</Pill>
-                      {row.verifiedBy && <span className="text-[11.5px] text-[#64748B]">oleh {row.verifiedBy}</span>}
-                      {row.note && <span className="max-w-[200px] text-[11.5px] text-[#B45309]">{row.note}</span>}
-                    </div>
-                  </td>
-                  <td className="border-b border-[#EEF2F6] px-4 py-4">
-                    <span className={cn("rounded px-2 py-0.5 text-[11.5px] font-semibold", row.requirement === "Wajib" ? "bg-[#EAF2FF] text-[#1D4ED8]" : "bg-[#F1F5F9] text-[#475569]")}>
-                      {row.requirement}
-                    </span>
+                    <RequirementTag value={row.requirement} />
                   </td>
                   <td className="max-w-[240px] border-b border-[#EEF2F6] px-4 py-4 text-[12.5px] text-[#475569]">{row.regulation}</td>
                 </tr>

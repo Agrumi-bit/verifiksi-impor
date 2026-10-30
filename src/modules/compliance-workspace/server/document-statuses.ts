@@ -8,7 +8,7 @@ import { getDocumentMeta } from "@/modules/company/document-versions";
 import { buildApplicationDocumentChecklist } from "@/modules/verifikator-workspace/application-checklist";
 import { toChecklistCompanyContext } from "@/modules/verifikator-workspace/company-context";
 import { COMPANY_MAPPED_DOCUMENT_KEYS } from "@/modules/verifikator-workspace/schema";
-import type { ChecklistInput, DocumentStatusInput } from "../legalitas";
+import type { ChecklistInput, DocumentStatusInput } from "../document-matrix";
 
 export type CaseDocuments = {
   payload: ApplicationWizardValues;
