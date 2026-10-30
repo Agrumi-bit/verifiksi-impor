@@ -41,6 +41,8 @@ model User {
   documentVerifications            CompanyDocumentVersion[]     @relation("DocumentVerifiedBy")
   applicationDocumentUploads       ApplicationDocumentVersion[]
   applicationDocumentVerifications ApplicationDocumentVersion[] @relation("ApplicationDocumentVerifiedBy")
+  compliancePicCases               ComplianceCase[]             @relation("CompliancePic")
+  complianceIssuesOwned            ComplianceIssue[]            @relation("ComplianceIssueOwner")
 
   @@unique([email])
   @@map("user")
@@ -153,6 +155,10 @@ model Application {
   returnSections Json?
 
   auditLogs ApplicationAuditLog[]
+
+  // Compliance Workspace's own layer (VIU Konsumsi only for now) — never touches the fields above.
+  complianceCase   ComplianceCase?
+  complianceIssues ComplianceIssue[]
 
   @@index([companyId])
   @@map("application")
@@ -1448,4 +1454,113 @@ model IndonesiaRegion {
   @@index([districtId])
   @@index([subdistrictId])
   @@map("indonesia_region")
+}
+
+// ---------------------------------------------------------------------------
+// Compliance Workspace — the last layer after Project Manager: monitor, consolidate, trace, review,
+// audit. It records only its own work (PIC, review flag, findings and their follow-ups, the two LPV
+// administrative checks); it never changes an Application, Assignment, evidence or LHVIU. Handover,
+// readiness and the 42-requirement summary are computed at read time
+// (src/modules/compliance-workspace/consolidation.ts), never stored.
+// ---------------------------------------------------------------------------
+
+enum ComplianceStatus {
+  BELUM_DIREVIEW
+  DALAM_KONSOLIDASI
+  PERLU_TINDAK_LANJUT
+  PERLU_KLARIFIKASI
+  OPEN_ISSUE
+  COMPLIANCE_LENGKAP
+  SELESAI
+}
+
+/// One per application the Compliance Workspace has touched (created lazily on the first action).
+model ComplianceCase {
+  id               String           @id @default(cuid())
+  applicationId    String           @unique
+  application      Application      @relation(fields: [applicationId], references: [id])
+  complianceStatus ComplianceStatus @default(BELUM_DIREVIEW)
+
+  picUserId String?
+  picUser   User?   @relation("CompliancePic", fields: [picUserId], references: [id])
+
+  // "Mark for review" — a reminder flag, not a workflow switch.
+  reviewFlag          Boolean   @default(false)
+  reviewFlaggedAt     DateTime?
+  reviewFlaggedByName String?
+
+  // The 2 administrative LPV requirements (of the 42): Final Review by Compliance and Dossier complete.
+  finalReviewDone       Boolean   @default(false)
+  finalReviewAt         DateTime?
+  finalReviewByName     String?
+  dossierComplete       Boolean   @default(false)
+  dossierCompleteAt     DateTime?
+  dossierCompleteByName String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([picUserId])
+  @@map("compliance_case")
+}
+
+enum ComplianceIssueKind {
+  OPEN
+  KLARIFIKASI
+  CONFLICT
+  RESOLVED
+}
+
+enum ComplianceIssueSeverity {
+  RENDAH
+  SEDANG
+  TINGGI
+}
+
+/// A finding recorded by Compliance (manual — no automatic detection). A clarification request is
+/// recorded here only (kind KLARIFIKASI); it is not pushed to the source workspace.
+model ComplianceIssue {
+  id              String                  @id @default(cuid())
+  // ISS-0001, ISS-0002, ...
+  issueNumber     String                  @unique
+  applicationId   String
+  application     Application             @relation(fields: [applicationId], references: [id])
+  // A key of the Konsumsi requirement matrix (e.g. "npwp", "uji", "label").
+  requirementKey  String
+  kind            ComplianceIssueKind     @default(OPEN)
+  severity        ComplianceIssueSeverity @default(SEDANG)
+  // CR | SV | VF | TA | PM — the workspace whose output the finding is about.
+  sourceWorkspace String
+  title           String
+  // The two sides being compared (e.g. "Surveyor: Gudang Cikarang" vs "Verifikator: Gudang Karawang").
+  evidenceA       String?
+  evidenceB       String?
+
+  ownerId String?
+  owner   User?   @relation("ComplianceIssueOwner", fields: [ownerId], references: [id])
+
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  followUps ComplianceIssueFollowUp[]
+
+  @@index([applicationId])
+  @@index([kind])
+  @@map("compliance_issue")
+}
+
+/// Append-only follow-up history of a finding. Moving to RESOLVED requires a note of at least 10 characters.
+model ComplianceIssueFollowUp {
+  id        String              @id @default(cuid())
+  issueId   String
+  issue     ComplianceIssue     @relation(fields: [issueId], references: [id])
+  status    ComplianceIssueKind
+  note      String
+  actorId   String?
+  actorName String?
+  createdAt DateTime            @default(now())
+
+  @@index([issueId])
+  @@map("compliance_issue_follow_up")
 }

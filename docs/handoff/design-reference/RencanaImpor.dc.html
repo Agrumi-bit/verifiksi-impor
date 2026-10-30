@@ -1,0 +1,1224 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>VIU Rencana Impor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F7FA}
+a{color:#64748B;text-decoration:none}a:hover{color:#10233F}
+.vf-input:focus{outline:none;border-color:#1677FF !important;box-shadow:0 0 0 3px rgba(22,119,255,0.15)}
+.vf-btn:focus-visible,.vf-nav:focus-visible,.vf-tip:focus-visible{outline:2px solid #1677FF;outline-offset:2px}
+.vf-nav:hover{background:rgba(255,255,255,0.06) !important;color:#FFFFFF !important}
+.vf-ghost:hover{background:#F1F5F9 !important}
+.vf-primary:hover:not(:disabled){background:#0958D9 !important}
+.vf-row:hover{background:#FAFCFF}
+.vf-icon:hover{background:#F1F5F9 !important;color:#10233F !important}
+.vf-link:hover{text-decoration:underline}
+.vf-opt:hover{background:#F5F9FF !important}
+.vf-check{width:18px;height:18px;accent-color:#1677FF;margin:0;cursor:pointer}
+.vf-tip{position:relative;display:inline-flex;align-items:flex-start;gap:6px;cursor:help;border-radius:4px}
+.vf-tipbox{display:none;position:absolute;right:calc(100% + 8px);top:-6px;width:300px;padding:10px 12px;border-radius:8px;background:#10233F;color:#FFFFFF;font-size:12px;line-height:1.5;font-weight:400;box-shadow:0 8px 24px rgba(16,42,67,0.25);z-index:5;white-space:normal;text-transform:none;letter-spacing:0}
+.vf-tip-down .vf-tipbox{right:auto;left:0;top:calc(100% + 6px);width:260px}
+.vf-tip:hover .vf-tipbox,.vf-tip:focus .vf-tipbox{display:block}
+.vf-file-input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.vf-filebtn:focus-within{outline:2px solid #1677FF;outline-offset:2px}
+.vf-filebtn:hover{background:#F1F5F9 !important}
+</style>
+</helmet>
+
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; color: #10233F; background: #F5F7FA; font-size: 14px; line-height: 1.5">
+
+  <!-- SIDEBAR -->
+  <aside aria-label="Navigasi utama" style="flex: 1 1 240px; max-width: 100%; background: #102A43; color: #C3CFDD; display: flex; flex-direction: column; padding: 20px 14px 24px; box-sizing: border-box; gap: 4px">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 4px 10px 22px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px">
+      <div aria-hidden="true" style="width: 36px; height: 36px; border-radius: 10px; background: #1677FF; display: flex; align-items: center; justify-content: center; color: #FFFFFF">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"></path><path d="M9 12l2 2 4-4"></path></svg>
+      </div>
+      <div style="display: flex; flex-direction: column">
+        <span style="color: #FFFFFF; font-weight: 700; font-size: 16px; letter-spacing: 0.02em">LPV TPT</span>
+        <span style="font-size: 12px; color: #9FB3C8">Workspace Compliance</span>
+      </div>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 2px">
+      <button type="button" class="vf-nav" style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; font-weight: 500; text-align: left; cursor: pointer">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>
+        Dashboard
+      </button>
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 6px 10px; color: #E2E8F0; font-weight: 600">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+          Permohonan
+        </div>
+        <button type="button" aria-current="page" class="vf-btn" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: rgba(22,119,255,0.22); color: #FFFFFF; font: inherit; font-weight: 600; text-align: left; cursor: pointer; position: relative">
+          <span aria-hidden="true" style="position: absolute; left: 22px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: #69B1FF"></span>
+          Daftar Permohonan
+        </button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Penugasan</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Kalender Verifikasi</button>
+      </div>
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 6px 10px; color: #E2E8F0; font-weight: 600">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"></path><path d="M9 12l2 2 4-4"></path></svg>
+          Verifikasi
+        </div>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">VKI</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">VIU</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Kunjungan Lapangan</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Upload Temuan</button>
+      </div>
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 6px 10px; color: #E2E8F0; font-weight: 600">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"></path><path d="M10 20V4"></path><path d="M16 20v-7"></path><path d="M21 20H3"></path></svg>
+          Laporan
+        </div>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">LHVKI / LHVIU</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Rekapitulasi</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Audit Trail</button>
+      </div>
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 6px 10px; color: #E2E8F0; font-weight: 600">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"></path><path d="M4 19a2 2 0 0 1 2-2h13"></path></svg>
+          Referensi
+        </div>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">HS Code</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Kelompok Komoditas</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Sub Kelompok</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Instansi</button>
+      </div>
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 6px 10px; color: #E2E8F0; font-weight: 600">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10"></path><path d="M18 6h2"></path><path d="M4 12h4"></path><path d="M12 12h8"></path><path d="M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>
+          Pengaturan
+        </div>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">User &amp; Akses</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Parameter</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Template Dokumen</button>
+      </div>
+    </nav>
+    <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08)">
+      <button type="button" class="vf-nav" style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; font-weight: 500; text-align: left; cursor: pointer">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17h.01"></path></svg>
+        Bantuan
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN COLUMN -->
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+
+    <!-- TOP BAR -->
+    <header style="background: #FFFFFF; border-bottom: 1px solid #E5EAF0; padding: 12px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; min-height: 64px; box-sizing: border-box">
+      <nav aria-label="Breadcrumb">
+        <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: #64748B">
+          <li><a href="#">Beranda</a></li>
+          <li aria-hidden="true" style="display: flex; color: #94A3B8"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></li>
+          <li><a href="#">Daftar Permohonan</a></li>
+          <li aria-hidden="true" style="display: flex; color: #94A3B8"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></li>
+          <li><a href="#">VIU – Barang Konsumsi</a></li>
+          <li aria-hidden="true" style="display: flex; color: #94A3B8"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></li>
+          <li><a href="Main.dc.html">VIU-2025-000123</a></li>
+          <li aria-hidden="true" style="display: flex; color: #94A3B8"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></li>
+          <li aria-current="page" style="color: #10233F; font-weight: 600">Rencana Impor</li>
+        </ol>
+      </nav>
+      <div style="display: flex; align-items: center; gap: 16px">
+        <button type="button" aria-label="Notifikasi, 3 belum dibaca" class="vf-btn vf-ghost" style="position: relative; width: 40px; height: 40px; border-radius: 10px; border: 1px solid #E5EAF0; background: #FFFFFF; color: #475569; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg>
+          <span aria-hidden="true" style="position: absolute; top: 9px; right: 10px; width: 7px; height: 7px; border-radius: 50%; background: #1677FF; border: 2px solid #FFFFFF"></span>
+        </button>
+        <div style="width: 1px; height: 28px; background: #E5EAF0"></div>
+        <div style="position: relative">
+          <button type="button" class="vf-btn vf-ghost" aria-haspopup="menu" aria-expanded="{{profileOpen}}" onClick="{{toggleProfile}}" style="display: flex; align-items: center; gap: 10px; padding: 4px 8px 4px 4px; border: 0; border-radius: 10px; background: transparent; font: inherit; color: #10233F; cursor: pointer; text-align: left">
+            <span aria-hidden="true" style="width: 36px; height: 36px; border-radius: 50%; background: #E8F1FF; color: #0958D9; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">VR</span>
+            <span style="display: flex; flex-direction: column; line-height: 1.25">
+              <span style="font-weight: 600; font-size: 13px">Verifikator</span>
+              <span style="font-size: 12px; color: #64748B">LPV TPT</span>
+            </span>
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+          </button>
+          <sc-if value="{{profileOpen}}" hint-placeholder-val="{{ false }}">
+            <div role="menu" style="position: absolute; right: 0; top: 48px; width: 200px; background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; box-shadow: 0 10px 30px rgba(16,42,67,0.12); padding: 6px; z-index: 20; display: flex; flex-direction: column">
+              <button type="button" role="menuitem" class="vf-btn vf-ghost" onClick="{{closeProfile}}" style="padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; font: inherit; color: #10233F; text-align: left; cursor: pointer">Profil Saya</button>
+              <button type="button" role="menuitem" class="vf-btn vf-ghost" onClick="{{closeProfile}}" style="padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; font: inherit; color: #10233F; text-align: left; cursor: pointer">Ganti Peran</button>
+              <div style="height: 1px; background: #E5EAF0; margin: 4px 0"></div>
+              <button type="button" role="menuitem" class="vf-btn vf-ghost" onClick="{{closeProfile}}" style="padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; font: inherit; color: #B42318; text-align: left; cursor: pointer">Keluar</button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </header>
+
+    <main style="flex: 1; padding: 28px 32px 48px; box-sizing: border-box">
+      <div style="max-width: 1360px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px">
+
+        <!-- CASE HEADER -->
+        <section aria-labelledby="case-title" style="background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,35,63,0.04); padding: 24px 28px; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px 24px">
+          <div style="display: flex; flex-direction: column; gap: 14px; min-width: 0">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px">
+              <h1 id="case-title" style="margin: 0; font-size: 22px; line-height: 1.3; font-weight: 700; letter-spacing: -0.01em">VIU – Produk Tekstil sebagai Barang Konsumsi</h1>
+              <span style="display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 6px; background: #F1F5F9; border: 1px solid #E5EAF0; color: #334155; font-size: 12px; font-weight: 600; font-family: ui-monospace, 'SF Mono', Menlo, monospace">VIU-2025-000123</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #E8F1FF; color: #0958D9; font-size: 12px; font-weight: 600"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #1677FF"></span>Draft Verifikasi</span>
+            </div>
+            <dl style="margin: 0; display: flex; flex-wrap: wrap; gap: 8px 32px; font-size: 13px">
+              <div style="display: flex; gap: 6px"><dt style="color: #64748B">Tanggal Permohonan:</dt><dd style="margin: 0; font-weight: 500">25 Jul 2025 10:24</dd></div>
+              <div style="display: flex; gap: 6px"><dt style="color: #64748B">Pemohon:</dt><dd style="margin: 0; font-weight: 500">PT Maju Tekstil Indonesia</dd></div>
+              <div style="display: flex; gap: 6px"><dt style="color: #64748B">NIB:</dt><dd style="margin: 0; font-weight: 500">8123456789012</dd></div>
+            </dl>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+            <div style="position: relative">
+              <button type="button" class="vf-btn vf-ghost" aria-haspopup="menu" aria-expanded="{{aksiOpen}}" onClick="{{toggleAksi}}" style="display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 600; cursor: pointer">
+                Aksi
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+              </button>
+              <sc-if value="{{aksiOpen}}" hint-placeholder-val="{{ false }}">
+                <div role="menu" style="position: absolute; right: 0; top: 46px; width: 240px; background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; box-shadow: 0 10px 30px rgba(16,42,67,0.12); padding: 6px; z-index: 20; display: flex; flex-direction: column">
+                  <button type="button" role="menuitem" class="vf-btn vf-ghost" onClick="{{openAdd}}" style="padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; font: inherit; color: #10233F; text-align: left; cursor: pointer">Tambah Rencana Impor</button>
+                  <button type="button" role="menuitem" class="vf-btn vf-ghost" onClick="{{exportPlans}}" style="padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; font: inherit; color: #10233F; text-align: left; cursor: pointer">Export Rencana Impor</button>
+                </div>
+              </sc-if>
+            </div>
+            <a href="Merek.dc.html" class="vf-btn vf-ghost" style="display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; box-sizing: border-box; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font-weight: 600; text-decoration: none">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg>
+              Kembali
+            </a>
+            <a href="Stok.dc.html" class="vf-btn vf-primary" style="display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; box-sizing: border-box; border: 1px solid #1677FF; border-radius: 10px; background: #1677FF; color: #FFFFFF; font-weight: 600; text-decoration: none">
+              Lanjut ke Stok Terkini
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+            </a>
+          </div>
+        </section>
+
+        <!-- STEPPER (8 STEPS) -->
+        <nav aria-label="Tahapan verifikasi" style="background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,35,63,0.04); padding: 20px 24px; overflow-x: auto">
+          <ol style="list-style: none; margin: 0; padding: 0; display: flex; min-width: 1380px">
+            <sc-for list="{{steps}}" as="item" hint-placeholder-count="11">
+              <li style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+                <div style="display: flex; align-items: center">
+                  <sc-if value="{{item.isLink}}" hint-placeholder-val="{{ false }}">
+                    <a href="{{item.href}}" class="vf-btn" aria-label="{{item.ariaLabel}}" title="{{item.label}}" style="width: 32px; height: 32px; flex: none; box-sizing: border-box; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; text-decoration: none; {{item.circleStyle}}">
+                      <sc-if value="{{item.done}}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg></sc-if>
+                      <sc-if value="{{item.showNum}}" hint-placeholder-val="{{ false }}"><span>{{item.num}}</span></sc-if>
+                    </a>
+                  </sc-if>
+                  <sc-if value="{{item.notLink}}" hint-placeholder-val="{{ true }}">
+                    <span aria-label="{{item.ariaLabel}}" aria-current="{{item.ariaCurrent}}" title="{{item.title}}" style="width: 32px; height: 32px; flex: none; box-sizing: border-box; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; {{item.circleStyle}}">{{item.num}}</span>
+                  </sc-if>
+                  <sc-if value="{{item.hasLine}}" hint-placeholder-val="{{ true }}">
+                    <div aria-hidden="true" style="flex: 1; height: 2px; margin: 0 8px; border-radius: 2px; {{item.lineStyle}}"></div>
+                  </sc-if>
+                </div>
+                <div style="padding-right: 10px; display: flex; flex-direction: column; gap: 2px">
+                  <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; {{item.kickerStyle}}">Tahap {{item.num}}</span>
+                  <span style="font-size: 12.5px; line-height: 1.35; {{item.labelStyle}}">{{item.label}}</span>
+                </div>
+              </li>
+            </sc-for>
+          </ol>
+        </nav>
+
+        <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+          <div role="status" style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; font-weight: 500; {{toastStyle}}">
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg>
+            {{toast}}
+          </div>
+        </sc-if>
+
+        <!-- SUMMARY CARDS -->
+        <section aria-label="Ringkasan rencana impor" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px">
+          <sc-for list="{{cards}}" as="c" hint-placeholder-count="7">
+            <div style="background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                <span style="font-size: 24px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums">{{c.value}}</span>
+                <sc-if value="{{c.iconOk}}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="width: 28px; height: 28px; border-radius: 8px; background: #ECFDF3; color: #16A34A; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg></span></sc-if>
+                <sc-if value="{{c.iconWarn}}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="width: 28px; height: 28px; border-radius: 8px; background: #FFFBEB; color: #F59E0B; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 16H3z"></path><path d="M12 10v4"></path><path d="M12 17h.01"></path></svg></span></sc-if>
+                <sc-if value="{{c.iconBad}}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="width: 28px; height: 28px; border-radius: 8px; background: #FEF2F2; color: #DC2626; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg></span></sc-if>
+              </div>
+              <span style="font-size: 13px; font-weight: 600">{{c.label}}</span>
+              <span style="font-size: 12px; {{c.subStyle}}">{{c.sub}}</span>
+            </div>
+          </sc-for>
+        </section>
+
+        <!-- DAFTAR RENCANA IMPOR -->
+        <section aria-labelledby="plan-title" style="background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,35,63,0.04)">
+          <div style="padding: 20px 24px 14px; display: flex; flex-direction: column; gap: 14px">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+              <div style="display: flex; flex-direction: column; gap: 2px">
+                <h2 id="plan-title" style="margin: 0; font-size: 17px; font-weight: 700">Daftar Rencana Impor</h2>
+                <p style="margin: 0; font-size: 13px; color: #64748B">Merek berasal dari tahap Merek &amp; Hubungan Importir. Klasifikasi diisi otomatis dari master HS.</p>
+              </div>
+              <div style="display: flex; gap: 10px">
+                <button type="button" class="vf-btn vf-ghost" onClick="{{exportPlans}}" style="display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 600; cursor: pointer">
+                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"></path><path d="M7 10l5 5 5-5"></path><path d="M5 20h14"></path></svg>
+                  Export
+                </button>
+                <button type="button" class="vf-btn vf-primary" onClick="{{openAdd}}" style="display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px; border: 1px solid #1677FF; border-radius: 10px; background: #1677FF; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">
+                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+                  Tambah Rencana Impor
+                </button>
+              </div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+              <div style="position: relative; flex: 1 1 260px; max-width: 360px">
+                <label for="pl-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Cari rencana impor</label>
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 12px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+                <input id="pl-search" class="vf-input" type="search" value="{{search}}" onChange="{{onSearch}}" placeholder="Cari merek, HS Code, uraian barang..." style="width: 100%; height: 40px; padding: 0 12px 0 36px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; font-size: 13.5px; box-sizing: border-box; background: #FFFFFF; color: #10233F" />
+              </div>
+              <label for="pl-brand" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Filter merek</label>
+              <select id="pl-brand" class="vf-input" value="{{brandF}}" onChange="{{onBrandF}}" style="height: 40px; padding: 0 10px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; font-size: 13.5px; background: #FFFFFF; color: #10233F">
+                <option value="">Semua Merek</option>
+                <option value="ABC">ABC</option>
+                <option value="XYZ">XYZ</option>
+                <option value="FASHION PRO">FASHION PRO</option>
+              </select>
+              <label for="pl-group" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Filter kelompok</label>
+              <select id="pl-group" class="vf-input" value="{{groupF}}" onChange="{{onGroupF}}" style="height: 40px; padding: 0 10px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; font-size: 13.5px; background: #FFFFFF; color: #10233F; max-width: 260px">
+                <option value="">Semua Kelompok</option>
+                <option value="Pakaian Jadi dan Aksesori Pakaian Jadi">Pakaian Jadi dan Aksesori Pakaian Jadi</option>
+                <option value="Barang Tekstil Sudah Jadi Lainnya">Barang Tekstil Sudah Jadi Lainnya</option>
+                <option value="Tekstil, Karpet, dan Penutup Lantai Tekstil Lainnya">Tekstil, Karpet, dan Penutup Lantai Tekstil Lainnya</option>
+                <option value="Benang dan Serat Tekstil">Benang dan Serat Tekstil</option>
+              </select>
+              <label for="pl-status" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Filter status</label>
+              <select id="pl-status" class="vf-input" value="{{statusF}}" onChange="{{onStatusF}}" style="height: 40px; padding: 0 10px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; font-size: 13.5px; background: #FFFFFF; color: #10233F">
+                <option value="">Semua Status</option>
+                <option value="Sesuai">Sesuai</option>
+                <option value="Perlu Klarifikasi">Perlu Klarifikasi</option>
+                <option value="Tidak Sesuai">Tidak Sesuai</option>
+              </select>
+              <label style="display: inline-flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border-radius: 10px; cursor: pointer; font-size: 13.5px; font-weight: 500; {{problemStyle}}">
+                <input type="checkbox" class="vf-check" checked="{{problemOnly}}" onChange="{{toggleProblem}}" />
+                Tampilkan Hanya Bermasalah
+              </label>
+              <span style="margin-left: auto; font-size: 12.5px; color: #64748B">{{planShown}}</span>
+            </div>
+          </div>
+
+          <div style="max-height: 560px; overflow: auto; border-top: 1px solid #E5EAF0">
+            <div role="table" aria-labelledby="plan-title" style="min-width: 1440px">
+              <div role="row" style="position: sticky; top: 0; z-index: 3; display: grid; grid-template-columns: 44px minmax(0, 0.8fr) minmax(0, 1.35fr) minmax(0, 0.9fr) minmax(0, 0.85fr) minmax(0, 1.3fr) minmax(0, 0.7fr) minmax(0, 0.5fr) minmax(0, 0.8fr) minmax(0, 0.95fr) minmax(0, 1fr) 84px; background: #F8FAFC; border-bottom: 1px solid #E5EAF0; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748B">
+                <div role="columnheader" style="padding: 11px 6px 11px 20px">No</div>
+                <div role="columnheader" style="padding: 11px 8px">Merek</div>
+                <div role="columnheader" style="padding: 11px 8px">Kelompok Komoditas</div>
+                <div role="columnheader" style="padding: 11px 8px">Sub Kelompok</div>
+                <div role="columnheader" style="padding: 11px 8px">HS Code</div>
+                <div role="columnheader" style="padding: 11px 8px">Uraian HS</div>
+                <div role="columnheader" style="padding: 11px 8px; text-align: right">Jumlah</div>
+                <div role="columnheader" style="padding: 11px 8px">Satuan</div>
+                <div role="columnheader" style="padding: 11px 8px; text-align: right">Harga Satuan</div>
+                <div role="columnheader" style="padding: 11px 8px; text-align: right">Total Nilai</div>
+                <div role="columnheader" style="padding: 11px 8px">Status Compliance</div>
+                <div role="columnheader" style="padding: 11px 20px 11px 8px">Aksi</div>
+              </div>
+              <sc-for list="{{planRows}}" as="p" hint-placeholder-count="8">
+                <div role="row" class="vf-row" style="display: grid; grid-template-columns: 44px minmax(0, 0.8fr) minmax(0, 1.35fr) minmax(0, 0.9fr) minmax(0, 0.85fr) minmax(0, 1.3fr) minmax(0, 0.7fr) minmax(0, 0.5fr) minmax(0, 0.8fr) minmax(0, 0.95fr) minmax(0, 1fr) 84px; align-items: center; border-bottom: 1px solid #EEF2F6; font-size: 13.5px; {{p.rowStyle}}">
+                  <div role="cell" style="padding: 12px 6px 12px 20px; color: #64748B; font-variant-numeric: tabular-nums">{{p.no}}</div>
+                  <div role="cell" style="padding: 12px 8px; font-weight: 700">{{p.brand}}</div>
+                  <div role="cell" style="padding: 12px 8px; color: #334155">{{p.group}}</div>
+                  <div role="cell" style="padding: 12px 8px">{{p.sub}}</div>
+                  <div role="rowheader" style="padding: 8px">
+                    <button type="button" class="vf-btn vf-link" onClick="{{p.open}}" style="padding: 4px 0; border: 0; background: transparent; font: inherit; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 13px; font-weight: 600; color: #0958D9; cursor: pointer">{{p.hs}}</button>
+                  </div>
+                  <div role="cell" style="padding: 12px 8px; color: #334155">{{p.desc}}</div>
+                  <div role="cell" style="padding: 12px 8px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 500">{{p.qty}}</div>
+                  <div role="cell" style="padding: 12px 8px; color: #475569">{{p.unit}}</div>
+                  <div role="cell" style="padding: 12px 8px; text-align: right; font-variant-numeric: tabular-nums; color: #475569">{{p.price}}</div>
+                  <div role="cell" style="padding: 12px 8px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600">{{p.total}}</div>
+                  <div role="cell" style="padding: 12px 8px"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; {{p.statusStyle}}"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; {{p.statusDot}}"></span>{{p.status}}</span></div>
+                  <div role="cell" style="padding: 8px 20px 8px 8px">
+                    <button type="button" class="vf-btn vf-ghost" onClick="{{p.open}}" aria-label="Detail rencana impor {{p.brand}} {{p.hs}}" style="height: 34px; padding: 0 12px; border: 1px solid #D5DDE7; border-radius: 8px; background: #FFFFFF; color: #10233F; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer">Detail</button>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{noPlans}}" hint-placeholder-val="{{ false }}">
+                <div style="padding: 40px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; color: #64748B">
+                  <span>Tidak ada rencana impor yang cocok dengan filter.</span>
+                  <button type="button" class="vf-btn vf-ghost" onClick="{{resetPlanFilters}}" style="height: 36px; padding: 0 14px; border: 1px solid #D5DDE7; border-radius: 8px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 600; cursor: pointer">Reset filter</button>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 24px; font-size: 13px; border-top: 1px solid #E5EAF0">
+            <span style="color: #64748B">Total Nilai = Jumlah × Harga Satuan (dihitung otomatis, tidak dapat diketik manual)</span>
+            <span><span style="color: #64748B">Total ditampilkan: </span><strong style="font-variant-numeric: tabular-nums">{{shownTotal}}</strong></span>
+          </div>
+        </section>
+
+        <!-- MATRIKS PEMERIKSAAN -->
+        <section aria-labelledby="mx-title" style="background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,35,63,0.04)">
+          <div style="padding: 20px 24px 14px; display: flex; flex-direction: column; gap: 14px">
+            <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px">
+              <div style="display: flex; flex-direction: column; gap: 2px">
+                <h2 id="mx-title" style="margin: 0; font-size: 17px; font-weight: 700">Matriks Pemeriksaan Rencana Impor</h2>
+                <p style="margin: 0; font-size: 13px; color: #64748B">Empat pemeriksaan utama, dihitung otomatis dari master HS. Hasil tidak dapat ditandai manual.</p>
+              </div>
+              <div role="status" aria-label="Ringkasan matriks" style="display: flex; flex-wrap: wrap; gap: 8px">
+                <sc-for list="{{mxSummary}}" as="ms" hint-placeholder-count="3">
+                  <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; {{ms.style}}"><span style="font-weight: 700; font-variant-numeric: tabular-nums">{{ms.count}}</span>{{ms.label}}</span>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+              <div style="position: relative; flex: 1 1 220px; max-width: 300px">
+                <label for="mx-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Cari pemeriksaan</label>
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 12px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+                <input id="mx-search" class="vf-input" type="search" value="{{mxSearch}}" onChange="{{onMxSearch}}" placeholder="Cari pemeriksaan..." style="width: 100%; height: 40px; padding: 0 12px 0 36px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; font-size: 13.5px; box-sizing: border-box; background: #FFFFFF; color: #10233F" />
+              </div>
+              <label for="mx-status" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Filter status pemeriksaan</label>
+              <select id="mx-status" class="vf-input" value="{{mxStatus}}" onChange="{{onMxStatus}}" style="height: 40px; padding: 0 10px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; font-size: 13.5px; background: #FFFFFF; color: #10233F">
+                <option value="">Semua Status</option>
+                <option value="Sesuai">Sesuai</option>
+                <option value="Tidak Sesuai">Tidak Sesuai</option>
+                <option value="Perlu Klarifikasi">Perlu Klarifikasi</option>
+                <option value="Informasi">Informasi</option>
+              </select>
+              <label for="mx-group" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Filter kelompok pemeriksaan</label>
+              <select id="mx-group" class="vf-input" value="{{mxGroup}}" onChange="{{onMxGroup}}" style="height: 40px; padding: 0 10px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; font-size: 13.5px; background: #FFFFFF; color: #10233F; max-width: 260px">
+                <option value="">Semua Kelompok</option>
+                <option value="Pakaian Jadi dan Aksesori Pakaian Jadi">Pakaian Jadi dan Aksesori Pakaian Jadi</option>
+                <option value="Barang Tekstil Sudah Jadi Lainnya">Barang Tekstil Sudah Jadi Lainnya</option>
+                <option value="Tekstil, Karpet, dan Penutup Lantai Tekstil Lainnya">Tekstil, Karpet, dan Penutup Lantai Tekstil Lainnya</option>
+                <option value="Benang dan Serat Tekstil">Benang dan Serat Tekstil</option>
+              </select>
+              <label style="display: inline-flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border-radius: 10px; cursor: pointer; font-size: 13.5px; font-weight: 500; {{mxProblemStyle}}">
+                <input type="checkbox" class="vf-check" checked="{{mxProblem}}" onChange="{{toggleMxProblem}}" />
+                Tampilkan Hanya Bermasalah
+              </label>
+            </div>
+          </div>
+
+          <div style="overflow-x: auto; border-top: 1px solid #E5EAF0">
+            <div role="table" aria-labelledby="mx-title" style="min-width: 1180px">
+              <div role="row" style="display: grid; grid-template-columns: 48px minmax(0, 1.4fr) minmax(0, 0.9fr) minmax(0, 1.6fr) minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1.6fr) 110px; background: #F8FAFC; border-bottom: 1px solid #E5EAF0; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748B">
+                <div role="columnheader" style="padding: 11px 8px 11px 24px">No</div>
+                <div role="columnheader" style="padding: 11px 10px">Parameter Pemeriksaan</div>
+                <div role="columnheader" style="padding: 11px 10px">Objek Pemeriksaan</div>
+                <div role="columnheader" style="padding: 11px 10px">Hasil / Keterangan</div>
+                <div role="columnheader" style="padding: 11px 10px">Status Compliance</div>
+                <div role="columnheader" style="padding: 11px 10px">Tipe</div>
+                <div role="columnheader" style="padding: 11px 10px">Note Regulasi</div>
+                <div role="columnheader" style="padding: 11px 24px 11px 10px">Aksi</div>
+              </div>
+              <sc-for list="{{mxRows}}" as="m" hint-placeholder-count="4">
+                <div role="rowgroup" style="border-bottom: 1px solid #EEF2F6">
+                  <div role="row" class="vf-row" style="display: grid; grid-template-columns: 48px minmax(0, 1.4fr) minmax(0, 0.9fr) minmax(0, 1.6fr) minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1.6fr) 110px; align-items: start; font-size: 13.5px">
+                    <div role="cell" style="padding: 16px 8px 16px 24px; color: #64748B">{{m.no}}</div>
+                    <div role="rowheader" style="padding: 16px 10px; font-weight: 700">{{m.param}}</div>
+                    <div role="cell" style="padding: 16px 10px; color: #334155">{{m.obj}}</div>
+                    <div role="cell" style="padding: 16px 10px; font-weight: 500">{{m.result}}</div>
+                    <div role="cell" style="padding: 14px 10px"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; {{m.statusStyle}}"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; {{m.statusDot}}"></span>{{m.status}}</span></div>
+                    <div role="cell" style="padding: 14px 10px"><span style="display: inline-flex; padding: 3px 9px; border-radius: 6px; font-size: 11.5px; font-weight: 700; {{m.typeStyle}}">{{m.type}}</span></div>
+                    <div role="cell" style="padding: 14px 10px; font-size: 12.5px; color: #334155">{{m.note}}</div>
+                    <div role="cell" style="padding: 10px 24px 10px 10px">
+                      <button type="button" class="vf-btn vf-ghost" aria-expanded="{{m.expanded}}" aria-controls="mx-detail-{{m.no}}" onClick="{{m.toggle}}" style="display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border: 1px solid #D5DDE7; border-radius: 8px; background: #FFFFFF; color: #10233F; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer">
+                        {{m.toggleLabel}}
+                        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" style="{{m.chevStyle}}"><path d="M6 9l6 6 6-6"></path></svg>
+                      </button>
+                    </div>
+                  </div>
+                  <sc-if value="{{m.expanded}}" hint-placeholder-val="{{ false }}">
+                    <div id="mx-detail-{{m.no}}" style="padding: 4px 24px 20px 82px">
+                      <sc-if value="{{m.isTable}}" hint-placeholder-val="{{ true }}">
+                        <div style="border: 1px solid #E5EAF0; border-radius: 10px; overflow: hidden">
+                          <div style="display: grid; grid-template-columns: 130px minmax(0, 1.3fr) minmax(0, 1.3fr) 150px; background: #F8FAFC; font-size: 11.5px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: #64748B; border-bottom: 1px solid #E5EAF0">
+                            <span style="padding: 9px 12px">{{m.h1}}</span><span style="padding: 9px 12px">{{m.h2}}</span><span style="padding: 9px 12px">{{m.h3}}</span><span style="padding: 9px 12px">Status</span>
+                          </div>
+                          <sc-for list="{{m.detail}}" as="dr" hint-placeholder-count="4">
+                            <div style="display: grid; grid-template-columns: 130px minmax(0, 1.3fr) minmax(0, 1.3fr) 150px; font-size: 13px; border-bottom: 1px solid #EEF2F6; align-items: center; {{dr.rowStyle}}">
+                              <span style="padding: 9px 12px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12.5px">{{dr.c1}}</span>
+                              <span style="padding: 9px 12px">{{dr.c2}}</span>
+                              <span style="padding: 9px 12px; {{dr.c3Style}}">{{dr.c3}}</span>
+                              <span style="padding: 9px 12px"><span style="display: inline-flex; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; {{dr.style}}">{{dr.status}}</span></span>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{m.isTotals}}" hint-placeholder-val="{{ false }}">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px">
+                          <sc-for list="{{m.totals}}" as="t" hint-placeholder-count="3">
+                            <div style="padding: 12px 14px; border: 1px solid #E5EAF0; border-radius: 10px; display: flex; flex-direction: column; gap: 4px">
+                              <span style="font-size: 12.5px; color: #475569">{{t.group}}</span>
+                              <span style="font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums">{{t.value}}</span>
+                              <span style="font-size: 12px; color: #64748B">{{t.count}}</span>
+                            </div>
+                          </sc-for>
+                          <div style="padding: 12px 14px; border: 1px solid #10233F; border-radius: 10px; background: #10233F; color: #FFFFFF; display: flex; flex-direction: column; gap: 4px">
+                            <span style="font-size: 12.5px; color: #C3CFDD">Grand Total</span>
+                            <span style="font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums">{{m.grand}}</span>
+                            <span style="font-size: 12px; color: #C3CFDD">{{m.grandNote}}</span>
+                          </div>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+              <sc-if value="{{mxEmpty}}" hint-placeholder-val="{{ false }}">
+                <div style="padding: 32px 24px; text-align: center; color: #64748B">Tidak ada pemeriksaan yang cocok dengan filter.</div>
+              </sc-if>
+            </div>
+          </div>
+        </section>
+
+        <!-- FOOTER NAV -->
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 4px">
+          <a href="Merek.dc.html" class="vf-btn vf-ghost" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; box-sizing: border-box; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font-weight: 600; text-decoration: none">
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg>
+            Kembali ke Merek &amp; Hubungan Importir
+          </a>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+            <a href="Stok.dc.html" class="vf-btn vf-primary" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 20px; box-sizing: border-box; border: 1px solid #1677FF; border-radius: 10px; background: #1677FF; color: #FFFFFF; font-weight: 600; text-decoration: none">
+              Lanjut ke Stok Terkini
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ADD DRAWER -->
+  <sc-if value="{{adOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; z-index: 40">
+      <button type="button" aria-label="Tutup panel" onClick="{{closeAdd}}" style="position: absolute; inset: 0; width: 100%; height: 100%; border: 0; padding: 0; margin: 0; background: rgba(16,42,67,0.45); cursor: pointer"></button>
+      <aside role="dialog" aria-modal="true" aria-labelledby="ad-title" style="position: absolute; top: 0; right: 0; bottom: 0; width: 560px; max-width: 100%; background: #FFFFFF; box-shadow: -12px 0 40px rgba(16,42,67,0.18); display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 24px; border-bottom: 1px solid #E5EAF0">
+          <h2 id="ad-title" style="margin: 0; font-size: 18px; font-weight: 700">Tambah Rencana Impor</h2>
+          <button type="button" class="vf-btn vf-icon" aria-label="Tutup" onClick="{{closeAdd}}" style="width: 40px; height: 40px; border: 0; border-radius: 8px; background: transparent; color: #64748B; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg></button>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: 22px 24px 28px; display: flex; flex-direction: column; gap: 20px">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="ad-brand" style="font-size: 13px; font-weight: 600">Merek</label>
+            <select id="ad-brand" class="vf-input" value="{{ad.brand}}" onChange="{{onAdBrand}}" style="height: 42px; padding: 0 10px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; background: #FFFFFF; color: #10233F; width: 100%">
+              <option value="">Pilih Merek</option>
+              <option value="ABC">ABC — Terverifikasi</option>
+              <option value="XYZ">XYZ — Terverifikasi</option>
+              <option value="FASHION PRO">FASHION PRO — Terverifikasi</option>
+            </select>
+            <span style="font-size: 12px; color: #64748B">Hanya merek yang tercatat pada tahap Merek &amp; Hubungan Importir.</span>
+            <sc-if value="{{adErr.brand}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B91C1C">{{adErr.brand}}</span></sc-if>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="ad-hs" style="font-size: 13px; font-weight: 600">HS Code</label>
+            <sc-if value="{{hsPicked}}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 6px 8px 6px 14px; border: 1px solid #1677FF; border-radius: 10px; background: #F5F9FF; box-sizing: border-box">
+                <span><strong style="font-family: ui-monospace, 'SF Mono', Menlo, monospace">{{adHs.code}}</strong> — {{adHs.description}}</span>
+                <button type="button" class="vf-btn vf-ghost" onClick="{{clearHs}}" style="height: 32px; padding: 0 10px; border: 1px solid #D5DDE7; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 12.5px; font-weight: 600; color: #10233F; cursor: pointer">Ganti</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{hsNotPicked}}" hint-placeholder-val="{{ true }}">
+              <div style="position: relative">
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 14px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+                <input id="ad-hs" class="vf-input" type="text" role="combobox" aria-expanded="{{hsListOpen}}" aria-controls="hs-list" aria-autocomplete="list" value="{{hsQuery}}" onChange="{{onHsQuery}}" placeholder="Cari HS Code atau uraian barang" autocomplete="off" style="width: 100%; height: 44px; padding: 0 12px 0 36px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; box-sizing: border-box; color: #10233F; background: #FFFFFF" />
+                <sc-if value="{{hsListOpen}}" hint-placeholder-val="{{ false }}">
+                  <ul id="hs-list" role="listbox" aria-label="Saran HS Code" style="list-style: none; margin: 6px 0 0; padding: 6px; border: 1px solid #E5EAF0; border-radius: 10px; background: #FFFFFF; box-shadow: 0 10px 30px rgba(16,42,67,0.12); max-height: 280px; overflow-y: auto">
+                    <sc-for list="{{hsSuggest}}" as="o" hint-placeholder-count="3">
+                      <li role="option" aria-selected="false">
+                        <button type="button" class="vf-btn vf-opt" onClick="{{o.pick}}" style="width: 100%; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; font: inherit; text-align: left; cursor: pointer">
+                          <span style="font-size: 13.5px"><strong style="font-family: ui-monospace, 'SF Mono', Menlo, monospace">{{o.code}}</strong> — {{o.description}}</span>
+                          <span style="font-size: 12px; color: #64748B">{{o.path}}</span>
+                        </button>
+                      </li>
+                    </sc-for>
+                    <sc-if value="{{hsNoMatch}}" hint-placeholder-val="{{ false }}"><li style="padding: 10px; font-size: 13px; color: #64748B">Tidak ditemukan pada master HS.</li></sc-if>
+                  </ul>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{adErr.hs}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B91C1C">{{adErr.hs}}</span></sc-if>
+          </div>
+
+          <sc-if value="{{hsPicked}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 10px; {{elig.box}}">
+              <span style="flex: none; display: inline-flex; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; {{elig.badge}}">{{elig.label}}</span>
+              <span style="font-size: 13px; {{elig.textStyle}}">{{elig.msg}}</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border: 1px solid #E5EAF0; border-radius: 12px; background: #F8FAFC">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+                <span class="vf-tip vf-tip-down" tabindex="0" aria-describedby="tip-master" style="font-size: 12px; font-weight: 700; color: #46597A; text-transform: uppercase; letter-spacing: 0.05em">
+                  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px"><ellipse cx="12" cy="5" rx="8" ry="3"></ellipse><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"></path><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path></svg>
+                  Master Data
+                  <span id="tip-master" role="tooltip" class="vf-tipbox">Data berdasarkan referensi HS dan klasifikasi komoditas.</span>
+                </span>
+                <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: #475569; cursor: pointer">
+                  <input type="checkbox" class="vf-check" checked="{{ad.manual}}" onChange="{{toggleManual}}" />
+                  Ubah klasifikasi manual
+                </label>
+              </div>
+              <dl style="margin: 0; display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 10px 14px; font-size: 13.5px; align-items: center">
+                <dt style="color: #64748B">Uraian HS</dt><dd style="margin: 0; font-weight: 500">{{adHs.description}}</dd>
+                <dt style="color: #64748B">Kelompok Komoditas</dt>
+                <dd style="margin: 0">
+                  <sc-if value="{{adReadOnly}}" hint-placeholder-val="{{ true }}"><span style="font-weight: 500">{{ad.group}}</span></sc-if>
+                  <sc-if value="{{ad.manual}}" hint-placeholder-val="{{ false }}">
+                    <label for="ad-group" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Kelompok komoditas</label>
+                    <select id="ad-group" class="vf-input" value="{{ad.group}}" onChange="{{onAdGroup}}" style="height: 38px; padding: 0 8px; border: 1px solid #CBD5E1; border-radius: 8px; font: inherit; font-size: 13px; background: #FFFFFF; width: 100%">
+                      <option value="Pakaian Jadi dan Aksesori Pakaian Jadi">Pakaian Jadi dan Aksesori Pakaian Jadi</option>
+                      <option value="Barang Tekstil Sudah Jadi Lainnya">Barang Tekstil Sudah Jadi Lainnya</option>
+                      <option value="Tekstil, Karpet, dan Penutup Lantai Tekstil Lainnya">Tekstil, Karpet, dan Penutup Lantai Tekstil Lainnya</option>
+                      <option value="Benang dan Serat Tekstil">Benang dan Serat Tekstil</option>
+                    </select>
+                  </sc-if>
+                </dd>
+                <dt style="color: #64748B">Sub Kelompok</dt>
+                <dd style="margin: 0">
+                  <sc-if value="{{adReadOnly}}" hint-placeholder-val="{{ true }}"><span style="font-weight: 500">{{adSubLabel}}</span></sc-if>
+                  <sc-if value="{{ad.manual}}" hint-placeholder-val="{{ false }}">
+                    <label for="ad-sub" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Sub kelompok komoditas</label>
+                    <select id="ad-sub" class="vf-input" value="{{ad.sub}}" onChange="{{onAdSub}}" style="height: 38px; padding: 0 8px; border: 1px solid #CBD5E1; border-radius: 8px; font: inherit; font-size: 13px; background: #FFFFFF; width: 100%">
+                      <option value="">Tidak ada sub kelompok</option>
+                      <option value="T-Shirt">T-Shirt</option>
+                      <option value="Kemeja">Kemeja</option>
+                      <option value="Jaket">Jaket</option>
+                      <option value="Celana Panjang">Celana Panjang</option>
+                      <option value="Rok">Rok</option>
+                      <option value="Sprei">Sprei</option>
+                      <option value="Sarung Bantal">Sarung Bantal</option>
+                      <option value="Kain Katun">Kain Katun</option>
+                      <option value="Benang Sintetis">Benang Sintetis</option>
+                    </select>
+                  </sc-if>
+                </dd>
+              </dl>
+              <sc-if value="{{adMismatch}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12.5px; color: #B91C1C; font-weight: 500">{{adMismatch}}</span></sc-if>
+            </div>
+          </sc-if>
+
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <label for="ad-qty" style="font-size: 13px; font-weight: 600">Jumlah</label>
+              <input id="ad-qty" class="vf-input" type="number" min="0" step="1" inputmode="numeric" value="{{ad.qty}}" onChange="{{onQty}}" placeholder="10000" style="height: 42px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; box-sizing: border-box; width: 100%; color: #10233F" />
+              <sc-if value="{{adErr.qty}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B91C1C">{{adErr.qty}}</span></sc-if>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <label for="ad-unit" style="font-size: 13px; font-weight: 600">Satuan</label>
+              <select id="ad-unit" class="vf-input" value="{{ad.unit}}" onChange="{{onUnit}}" style="height: 42px; padding: 0 10px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; background: #FFFFFF; color: #10233F; width: 100%">
+                <option value="">Pilih satuan</option>
+                <option value="PCS">PCS</option>
+                <option value="KG">KG</option>
+                <option value="MTR">MTR</option>
+                <option value="SET">SET</option>
+                <option value="LBR">LBR</option>
+              </select>
+              <sc-if value="{{adUnitHint}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #64748B">{{adUnitHint}}</span></sc-if>
+              <sc-if value="{{adErr.unit}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B91C1C">{{adErr.unit}}</span></sc-if>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; grid-column: 1 / -1">
+              <div style="display: flex; align-items: center; gap: 8px">
+                <label for="ad-price" style="font-size: 13px; font-weight: 600">Harga Satuan</label>
+                <span style="display: inline-flex; padding: 2px 8px; border-radius: 6px; background: #F1F5F9; border: 1px solid #CBD5E1; color: #475569; font-size: 11px; font-weight: 700">Data Pendukung</span>
+              </div>
+              <div style="display: flex; gap: 8px">
+                <label for="ad-cur" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Mata uang</label>
+                <select id="ad-cur" class="vf-input" value="{{ad.cur}}" onChange="{{onCur}}" style="flex: none; width: 96px; height: 42px; padding: 0 8px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; font-weight: 600; background: #FFFFFF; color: #10233F">
+                  <option value="USD">USD</option>
+                  <option value="IDR">IDR</option>
+                  <option value="EUR">EUR</option>
+                  <option value="CNY">CNY</option>
+                </select>
+                <input id="ad-price" class="vf-input" type="number" min="0" step="0.01" inputmode="decimal" value="{{ad.price}}" onChange="{{onPrice}}" placeholder="3.50" style="flex: 1; height: 42px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; box-sizing: border-box; color: #10233F" />
+              </div>
+              <span style="font-size: 12px; color: #64748B">Harga satuan adalah data pendukung dan tidak menentukan status compliance.</span>
+            </div>
+            <div style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-radius: 10px; background: #F8FAFC; border: 1px solid #E5EAF0">
+              <span style="font-size: 13px; color: #475569">Total Nilai <span style="color: #64748B">(otomatis)</span></span>
+              <strong style="font-size: 16px; font-variant-numeric: tabular-nums">{{adTotal}}</strong>
+            </div>
+          </div>
+
+          <sc-if value="{{adWarn}}" hint-placeholder-val="{{ false }}">
+            <div role="alert" style="display: flex; gap: 8px; padding: 10px 12px; border-radius: 8px; background: #FEF2F2; border: 1px solid #FECACA; color: #B91C1C; font-size: 13px; font-weight: 500">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 1px"><path d="M12 3l9 16H3z"></path><path d="M12 10v4"></path><path d="M12 17h.01"></path></svg>
+              {{adWarn}}
+            </div>
+          </sc-if>
+        </div>
+        <div style="padding: 14px 24px; border-top: 1px solid #E5EAF0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px">
+          <span style="font-size: 12.5px; {{adStatusStyle}}">{{adStatusText}}</span>
+          <div style="display: flex; gap: 10px">
+            <button type="button" class="vf-btn vf-ghost" onClick="{{closeAdd}}" style="height: 40px; padding: 0 16px; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 600; cursor: pointer">Batal</button>
+            <button type="button" class="vf-btn vf-primary" onClick="{{saveAdd}}" style="height: 40px; padding: 0 18px; border: 1px solid #1677FF; border-radius: 10px; background: #1677FF; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">Simpan</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </sc-if>
+
+  <!-- DETAIL DRAWER -->
+  <sc-if value="{{dtOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; z-index: 40">
+      <button type="button" aria-label="Tutup panel" onClick="{{closeDt}}" style="position: absolute; inset: 0; width: 100%; height: 100%; border: 0; padding: 0; margin: 0; background: rgba(16,42,67,0.45); cursor: pointer"></button>
+      <aside role="dialog" aria-modal="true" aria-labelledby="dt-title" style="position: absolute; top: 0; right: 0; bottom: 0; width: 580px; max-width: 100%; background: #FFFFFF; box-shadow: -12px 0 40px rgba(16,42,67,0.18); display: flex; flex-direction: column">
+        <div style="padding: 18px 24px 0; border-bottom: 1px solid #E5EAF0; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+            <div style="display: flex; flex-direction: column; gap: 4px">
+              <h2 id="dt-title" style="margin: 0; font-size: 18px; font-weight: 700">Detail Rencana Impor</h2>
+              <span style="display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: #475569">
+                <strong style="color: #10233F">{{dt.brand}}</strong> · <span style="font-family: ui-monospace, 'SF Mono', Menlo, monospace">{{dt.hs}}</span>
+                <span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; {{dt.statusStyle}}"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; {{dt.statusDot}}"></span>{{dt.status}}</span>
+              </span>
+            </div>
+            <button type="button" class="vf-btn vf-icon" aria-label="Tutup" onClick="{{closeDt}}" style="flex: none; width: 40px; height: 40px; border: 0; border-radius: 8px; background: transparent; color: #64748B; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg></button>
+          </div>
+          <div role="tablist" aria-label="Bagian detail" style="display: flex; gap: 2px; overflow-x: auto">
+            <sc-for list="{{dtTabs}}" as="tb" hint-placeholder-count="4">
+              <button type="button" role="tab" aria-selected="{{tb.active}}" class="vf-btn" onClick="{{tb.pick}}" style="height: 42px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; background: transparent; font: inherit; font-weight: 600; white-space: nowrap; cursor: pointer; {{tb.style}}">{{tb.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="flex: 1; overflow-y: auto; padding: 22px 24px 28px; display: flex; flex-direction: column; gap: 20px">
+          <sc-if value="{{tabInfo}}" hint-placeholder-val="{{ true }}">
+            <dl style="margin: 0; display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 12px 16px; font-size: 13.5px">
+              <dt style="color: #64748B">Merek</dt><dd style="margin: 0; font-weight: 700">{{dt.brand}}</dd>
+              <dt style="color: #64748B">Kelompok Komoditas</dt><dd style="margin: 0">{{dt.group}}</dd>
+              <dt style="color: #64748B">Sub Kelompok</dt><dd style="margin: 0">{{dt.sub}}</dd>
+              <dt style="color: #64748B">HS Code</dt><dd style="margin: 0; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-weight: 600">{{dt.hs}}</dd>
+              <dt style="color: #64748B">Uraian HS</dt><dd style="margin: 0">{{dt.desc}}</dd>
+              <dt style="color: #64748B">Jumlah</dt><dd style="margin: 0; font-variant-numeric: tabular-nums">{{dt.qty}}</dd>
+              <dt style="color: #64748B">Satuan</dt><dd style="margin: 0">{{dt.unit}}</dd>
+              <dt style="color: #64748B">Harga Satuan</dt><dd style="margin: 0; font-variant-numeric: tabular-nums">{{dt.price}} <span style="margin-left: 6px; padding: 1px 7px; border-radius: 6px; background: #F1F5F9; color: #475569; font-size: 11px; font-weight: 700">Data Pendukung</span></dd>
+              <dt style="color: #64748B">Total Nilai</dt><dd style="margin: 0; font-weight: 700; font-variant-numeric: tabular-nums">{{dt.total}}</dd>
+            </dl>
+            <div>
+              <button type="button" class="vf-btn vf-ghost" aria-expanded="{{showHs}}" onClick="{{toggleHs}}" style="display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 600; cursor: pointer">
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"></ellipse><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"></path><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path></svg>
+                {{hsBtnLabel}}
+              </button>
+            </div>
+            <sc-if value="{{showHs}}" hint-placeholder-val="{{ false }}">
+              <div style="padding: 14px 16px; border: 1px solid #C8D3E3; border-radius: 12px; background: #F5F8FC; display: flex; flex-direction: column; gap: 10px">
+                <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #46597A">Master HS · {{dt.hs}}</span>
+                <dl style="margin: 0; display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 8px 14px; font-size: 13px">
+                  <dt style="color: #64748B">Uraian</dt><dd style="margin: 0">{{dtMaster.description}}</dd>
+                  <dt style="color: #64748B">Kelompok Komoditas</dt><dd style="margin: 0">{{dtMaster.group}}</dd>
+                  <dt style="color: #64748B">Sub Kelompok</dt><dd style="margin: 0">{{dtMaster.sub}}</dd>
+                  <dt style="color: #64748B">API-U Barang Konsumsi</dt><dd style="margin: 0; font-weight: 600; {{dtMaster.eligStyle}}">{{dtMaster.elig}}</dd>
+                  <dt style="color: #64748B">Satuan default</dt><dd style="margin: 0">{{dtMaster.unit}}</dd>
+                </dl>
+                <span style="font-size: 12px; color: #64748B">Mapping master tidak dapat diubah dari screen ini.</span>
+              </div>
+            </sc-if>
+          </sc-if>
+
+          <sc-if value="{{tabCheck}}" hint-placeholder-val="{{ false }}">
+            <sc-for list="{{dtChecks}}" as="c" hint-placeholder-count="4">
+              <div style="border: 1px solid #E5EAF0; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+                  <span style="font-weight: 700">{{c.title}}</span>
+                  <span style="display: inline-flex; padding: 2px 9px; border-radius: 6px; font-size: 11px; font-weight: 700; {{c.typeStyle}}">{{c.type}}</span>
+                </div>
+                <dl style="margin: 0; display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 6px 12px; font-size: 13px">
+                  <sc-for list="{{c.lines}}" as="l" hint-placeholder-count="3">
+                    <dt style="color: #64748B">{{l.k}}</dt><dd style="margin: 0; font-weight: 500">{{l.v}}</dd>
+                  </sc-for>
+                </dl>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span style="color: #64748B">Hasil:</span><span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; {{c.style}}"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; {{c.dot}}"></span>{{c.result}}</span></div>
+              </div>
+            </sc-for>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <label for="dt-note" style="font-size: 13px; font-weight: 700">Catatan Verifikator</label>
+              <textarea id="dt-note" class="vf-input" rows="4" value="{{dtNote}}" onChange="{{onDtNote}}" placeholder="Tuliskan dasar penilaian pemeriksaan…" style="padding: 12px 14px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; line-height: 1.5; box-sizing: border-box; width: 100%; resize: vertical"></textarea>
+              <dl style="margin: 0; display: flex; flex-wrap: wrap; gap: 6px 24px; font-size: 12.5px">
+                <div style="display: flex; gap: 6px"><dt style="color: #64748B">Diverifikasi Oleh:</dt><dd style="margin: 0; font-weight: 600">{{dt.by}}</dd></div>
+                <div style="display: flex; gap: 6px"><dt style="color: #64748B">Tanggal Verifikasi:</dt><dd style="margin: 0; font-weight: 600">{{dt.at}}</dd></div>
+              </dl>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{tabDoc}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+              <span style="font-size: 13px; color: #475569">Dokumen pendukung untuk rencana impor ini.</span>
+              <label class="vf-filebtn" style="position: relative; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border: 1px solid #D5DDE7; border-radius: 8px; background: #FFFFFF; font-size: 13px; font-weight: 600; color: #10233F; cursor: pointer; box-sizing: border-box">
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+                Unggah Dokumen
+                <input type="file" class="vf-file-input" onChange="{{onDocUpload}}" />
+              </label>
+            </div>
+            <sc-if value="{{noDocs}}" hint-placeholder-val="{{ true }}">
+              <div style="padding: 28px 16px; border: 1px dashed #CBD5E1; border-radius: 12px; text-align: center; color: #64748B; font-size: 13px">Belum ada dokumen pendukung.</div>
+            </sc-if>
+            <sc-for list="{{dtDocs}}" as="d" hint-placeholder-count="1">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #E5EAF0; border-radius: 10px">
+                <span aria-hidden="true" style="flex: none; padding: 1px 5px; border-radius: 4px; background: #FEF3F2; color: #B42318; border: 1px solid #FECDCA; font-size: 9px; font-weight: 800">{{d.ext}}</span>
+                <span style="flex: 1; font-size: 13px; font-weight: 600; color: #0958D9; overflow-wrap: anywhere">{{d.name}}</span>
+                <span style="font-size: 12px; color: #64748B">{{d.at}}</span>
+              </div>
+            </sc-for>
+          </sc-if>
+
+          <sc-if value="{{tabAudit}}" hint-placeholder-val="{{ false }}">
+            <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column">
+              <sc-for list="{{dtAudit}}" as="ev" hint-placeholder-count="3">
+                <li style="display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #EEF2F6; font-size: 13px">
+                  <span aria-hidden="true" style="flex: none; margin-top: 6px; width: 8px; height: 8px; border-radius: 50%; background: #1677FF"></span>
+                  <span style="display: flex; flex-direction: column; gap: 2px"><span>{{ev.text}}</span><span style="font-size: 12px; color: #64748B">{{ev.at}} · {{ev.by}}</span></span>
+                </li>
+              </sc-for>
+            </ol>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{tabCheck}}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 14px 24px; border-top: 1px solid #E5EAF0; display: flex; justify-content: flex-end; gap: 10px">
+            <button type="button" class="vf-btn vf-ghost" onClick="{{closeDt}}" style="height: 40px; padding: 0 16px; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 600; cursor: pointer">Tutup</button>
+            <button type="button" class="vf-btn vf-primary" onClick="{{saveDt}}" style="height: 40px; padding: 0 18px; border: 1px solid #1677FF; border-radius: 10px; background: #1677FF; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">Simpan Pemeriksaan</button>
+          </div>
+        </sc-if>
+      </aside>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2500}}'>
+var USER = 'Budi Santoso';
+var MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+var G1 = 'Pakaian Jadi dan Aksesori Pakaian Jadi';
+var G2 = 'Barang Tekstil Sudah Jadi Lainnya';
+var G3 = 'Tekstil, Karpet, dan Penutup Lantai Tekstil Lainnya';
+var G4 = 'Benang dan Serat Tekstil';
+
+// Mock regulatory master (contoh). eligible: true = sesuai, false = tidak sesuai, null = perlu validasi.
+var HS_MASTER = {
+  '6109.10.20': { description: 'T-shirt dari kapas', group: G1, sub: 'T-Shirt', eligible: true, unit: 'PCS' },
+  '6109.90.00': { description: 'T-shirt dari bahan tekstil lainnya', group: G1, sub: 'T-Shirt', eligible: true, unit: 'PCS' },
+  '6205.20.00': { description: 'Kemeja dari kapas', group: G1, sub: 'Kemeja', eligible: true, unit: 'PCS' },
+  '6201.93.00': { description: 'Jaket dari serat sintetis', group: G1, sub: 'Jaket', eligible: true, unit: 'PCS' },
+  '6203.42.00': { description: 'Celana panjang dari kapas', group: G1, sub: 'Celana Panjang', eligible: true, unit: 'PCS' },
+  '6204.52.00': { description: 'Rok dari kapas', group: G1, sub: 'Rok', eligible: true, unit: 'PCS' },
+  '6302.21.00': { description: 'Sprei dari kapas', group: G2, sub: 'Sprei', eligible: true, unit: 'PCS' },
+  '6302.31.00': { description: 'Linen tempat tidur dari kapas', group: G2, sub: 'Sarung Bantal', eligible: true, unit: 'PCS' },
+  '6304.92.00': { description: 'Perabot tekstil lainnya dari kapas, bukan rajutan', group: G2, sub: null, eligible: true, unit: 'PCS' },
+  '5208.11.00': { description: 'Kain tenun dari kapas', group: G3, sub: 'Kain Katun', eligible: null, unit: 'MTR' },
+  '5509.21.00': { description: 'Benang dari serat stapel poliester, tunggal', group: G4, sub: 'Benang Sintetis', eligible: false, unit: 'KG' }
+};
+
+var NOTE_HS = 'HS Code harus termasuk cakupan API-U Barang Konsumsi sesuai daftar Pos Tarif/HS dan pelaku usaha pada Lampiran Permenperin.';
+var NOTE_GROUP = 'Kelompok Komoditas ditentukan berdasarkan klasifikasi HS pada master regulasi.';
+var NOTE_SUB = 'Sub Kelompok Komoditas harus sesuai dengan klasifikasi masing-masing HS Code.';
+var NOTE_TOTAL = 'Nilai dihitung otomatis dari jumlah × harga satuan dan bukan penentu compliance regulasi.';
+
+var NF2 = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+var NF0 = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 });
+function money(cur, v) { return cur + ' ' + NF2.format(v); }
+function nowText() { var n = new Date(); var p = function (v) { return (v < 10 ? '0' : '') + v; }; return p(n.getDate()) + ' ' + MONTHS[n.getMonth()] + ' ' + n.getFullYear() + ' ' + p(n.getHours()) + ':' + p(n.getMinutes()); }
+
+var T = {
+  ok: { bg: '#ECFDF3', fg: '#15803D', bd: '#BBF7D0', dot: '#16A34A' },
+  warn: { bg: '#FFFBEB', fg: '#B45309', bd: '#FDE68A', dot: '#F59E0B' },
+  bad: { bg: '#FEF2F2', fg: '#B91C1C', bd: '#FECACA', dot: '#DC2626' },
+  none: { bg: '#F1F5F9', fg: '#475569', bd: '#CBD5E1', dot: '#94A3B8' },
+  info: { bg: '#EEF2F8', fg: '#46597A', bd: '#C8D3E3', dot: '#64748B' },
+  na: { bg: '#F8FAFC', fg: '#64748B', bd: '#E2E8F0', dot: '#CBD5E1' },
+  blue: { bg: '#E8F1FF', fg: '#0958D9', bd: '#BAD6FF', dot: '#1677FF' },
+  purple: { bg: '#F3EEFF', fg: '#6D28D9', bd: '#DDD0FB', dot: '#7C3AED' }
+};
+function tone(s) { return s === 'Sesuai' ? T.ok : s === 'Tidak Sesuai' ? T.bad : s === 'Perlu Klarifikasi' ? T.warn : s === 'Informasi' ? T.info : s === 'N/A' ? T.na : T.none; }
+function pill(t) { return 'background:' + t.bg + ';color:' + t.fg + ';border:1px solid ' + t.bd; }
+
+function isEligibleForVIUConsumption(hsCode) {
+  var m = HS_MASTER[hsCode];
+  if (!m) return null;
+  return m.eligible;
+}
+
+function evaluatePlan(plan) {
+  var m = HS_MASTER[plan.hs] || null;
+  var elig = isEligibleForVIUConsumption(plan.hs);
+  var hsValidated = !!m && elig !== null;
+  var groupRes = !m ? 'Perlu Klarifikasi' : plan.group === m.group ? 'Sesuai' : 'Tidak Sesuai';
+  var subRes = !m ? 'Perlu Klarifikasi' : m.sub === null ? 'N/A' : plan.sub === m.sub ? 'Sesuai' : 'Tidak Sesuai';
+  var hsRes = !hsValidated ? 'Perlu Klarifikasi' : elig ? 'Sesuai' : 'Tidak Sesuai';
+  var status;
+  if (!hsValidated) status = 'Perlu Klarifikasi';
+  else if (!elig) status = 'Tidak Sesuai';
+  else if (groupRes === 'Tidak Sesuai') status = 'Tidak Sesuai';
+  else if (subRes === 'Tidak Sesuai') status = 'Tidak Sesuai';
+  else status = 'Sesuai';
+  var total = plan.qty * plan.price;
+  return { master: m, elig: elig, hsRes: hsRes, groupRes: groupRes, subRes: subRes, status: status, total: total, totalOk: isFinite(total) && plan.qty > 0 };
+}
+
+// Workflow utama VIU – 11 tahap (urutan baku, dipakai semua artboard)
+var VIU_STEP_NAMES = ['Ringkasan','Perusahaan & Legalitas','Lokasi','Merek & Hubungan Importir','Rencana Impor','Stok Terkini','Uji Mutu','Pernyataan Label','Modal Kerja','Review & Submit','Generate Laporan'];
+var VIU_STEP_HREFS = { 1: 'Main.dc.html', 2: 'Legalitas.dc.html', 3: 'Lokasi.dc.html', 4: 'Merek.dc.html', 5: 'RencanaImpor.dc.html', 6: 'Stok.dc.html', 7: 'UjiMutu.dc.html', 8: 'Label.dc.html', 9: 'ModalKerja.dc.html' };
+function viuSteps(current, lock) {
+  return VIU_STEP_NAMES.map(function (label, i) {
+    var num = i + 1, active = num === current, done = num < current;
+    var href = VIU_STEP_HREFS[num], link = !!href && !active && !lock;
+    return {
+      num: num, label: label, href: href || '#', isLink: link, notLink: !link, done: done, showNum: !done,
+      hasLine: num < VIU_STEP_NAMES.length,
+      title: href ? label : label + ' – belum tersedia',
+      ariaLabel: 'Tahap ' + num + ': ' + label + (done ? ' (selesai)' : active ? ' (aktif)' : href ? '' : ' (belum tersedia)'),
+      ariaCurrent: active ? 'step' : undefined,
+      circleStyle: active ? 'background:#1677FF;color:#FFFFFF;border:2px solid #1677FF;box-shadow:0 0 0 4px #E8F1FF'
+        : done ? 'background:#E8F1FF;color:#0958D9;border:2px solid #1677FF'
+        : href ? 'background:#FFFFFF;color:#64748B;border:2px solid #CBD5E1'
+        : 'background:#F5F7FA;color:#94A3B8;border:2px dashed #CBD5E1',
+      lineStyle: done ? 'background:#1677FF' : 'background:#E5EAF0',
+      kickerStyle: active || done ? 'color:#0958D9' : 'color:#64748B',
+      labelStyle: active ? 'color:#10233F;font-weight:600' : done ? 'color:#10233F;font-weight:500' : href ? 'color:#64748B;font-weight:500' : 'color:#94A3B8;font-weight:500'
+    };
+  });
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    var mk = function (id, brand, hs, qty, unit, price, at) {
+      var m = HS_MASTER[hs];
+      return { id: id, brand: brand, hs: hs, description: m.description, group: m.group, sub: m.sub, qty: qty, unit: unit, cur: 'USD', price: price, note: '', by: '', at: '', docs: [],
+        audit: [{ at: at, by: USER, text: 'Rencana impor ' + brand + ' / ' + (m.sub || m.description) + ' ditambahkan.' }] };
+    };
+    var plans = [
+      mk('RI01', 'ABC', '6109.10.20', 10000, 'PCS', 3.5, '25 Jul 2025 13:10'),
+      mk('RI02', 'ABC', '6205.20.00', 5000, 'PCS', 6.25, '25 Jul 2025 13:12'),
+      mk('RI03', 'ABC', '6201.93.00', 2000, 'PCS', 12, '25 Jul 2025 13:14'),
+      mk('RI04', 'XYZ', '6203.42.00', 7500, 'PCS', 8, '25 Jul 2025 13:16'),
+      mk('RI05', 'XYZ', '6204.52.00', 3500, 'PCS', 7, '25 Jul 2025 13:18'),
+      mk('RI06', 'FASHION PRO', '6302.21.00', 4000, 'PCS', 9.5, '25 Jul 2025 13:20'),
+      mk('RI07', 'FASHION PRO', '6302.31.00', 8000, 'PCS', 4.25, '25 Jul 2025 13:22'),
+      mk('RI08', 'FASHION PRO', '5208.11.00', 1200, 'MTR', 2.1, '25 Jul 2025 13:24')
+    ];
+    plans[0].note = 'HS Code, kelompok komoditas, dan sub kelompok telah sesuai dengan referensi regulatory master.';
+    plans[0].by = USER; plans[0].at = '25 Jul 2025 14:32';
+    plans[0].audit.push({ at: '25 Jul 2025 13:25', by: USER, text: 'HS Code diperbarui dari 6109.90.00 menjadi 6109.10.20.' });
+    plans[0].audit.push({ at: '25 Jul 2025 14:32', by: USER, text: 'HS Code diverifikasi sesuai jenis VIU Barang Konsumsi.' });
+    this.state = {
+      plans: plans, profileOpen: false, aksiOpen: false, toast: '', toastBad: false, navHint: '',
+      search: '', brandF: '', groupF: '', statusF: '', problemOnly: false,
+      mxSearch: '', mxStatus: '', mxGroup: '', mxProblem: false, mxOpen: { 1: true },
+      ad: null, adErr: {}, hsQuery: '',
+      dt: null, dtTab: 'info', dtNote: '', showHs: false
+    };
+    this.timer = null;
+  }
+
+  componentWillUnmount() { if (this.timer) clearTimeout(this.timer); }
+  flash(t, bad) { var self = this; if (this.timer) clearTimeout(this.timer); this.setState({ toast: t, toastBad: !!bad }); this.timer = setTimeout(function () { self.setState({ toast: '' }); }, 3600); }
+  setAd(patch) { this.setState(function (p) { var er = Object.assign({}, p.adErr); Object.keys(patch).forEach(function (k) { er[k] = ''; }); return { ad: Object.assign({}, p.ad, patch), adErr: er }; }); }
+
+  renderVals() {
+    var self = this;
+    var s = this.state;
+    var evals = {};
+    s.plans.forEach(function (p) { evals[p.id] = evaluatePlan(p); });
+
+    // Stepper (8 tahap)
+    var steps = viuSteps(5, false);
+
+    // Summary cards
+    var uniq = function (arr) { return arr.filter(function (x, i) { return arr.indexOf(x) === i; }); };
+    var brands = uniq(s.plans.map(function (p) { return p.brand; }));
+    var groups = uniq(s.plans.map(function (p) { return p.group; }));
+    var subs = uniq(s.plans.filter(function (p) { return p.sub; }).map(function (p) { return p.sub; }));
+    var hsList = uniq(s.plans.map(function (p) { return p.hs; }));
+    var hsElig = hsList.filter(function (h) { return isEligibleForVIUConsumption(h) === true; }).length;
+    var cOk = s.plans.filter(function (p) { return evals[p.id].status === 'Sesuai'; }).length;
+    var cWarn = s.plans.filter(function (p) { return evals[p.id].status === 'Perlu Klarifikasi'; }).length;
+    var cBad = s.plans.filter(function (p) { return evals[p.id].status === 'Tidak Sesuai'; }).length;
+    var muted = 'color:#64748B';
+    var cards = [
+      { value: s.plans.length, label: 'Rencana Impor', sub: 'dari ' + brands.length + ' merek', subStyle: muted },
+      { value: brands.length, label: 'Merek Terkait', sub: brands.length + ' telah diverifikasi', subStyle: muted },
+      { value: groups.length, label: 'Kelompok Komoditas', sub: 'digunakan', subStyle: muted },
+      { value: subs.length, label: 'Sub Kelompok', sub: 'digunakan', subStyle: muted },
+      { value: hsList.length, label: 'HS Code', sub: hsElig + ' sesuai jenis VIU', subStyle: hsElig === hsList.length ? 'color:#15803D;font-weight:600' : 'color:#B45309;font-weight:600' },
+      { value: cOk, label: 'Sesuai', sub: 'rencana impor', subStyle: muted, iconOk: true },
+      { value: cWarn, label: 'Perlu Klarifikasi', sub: 'rencana impor', subStyle: muted, iconWarn: true }
+    ];
+    if (cBad) cards.push({ value: cBad, label: 'Tidak Sesuai', sub: 'rencana impor', subStyle: muted, iconBad: true });
+
+    // Plans table
+    var q = s.search.trim().toLowerCase();
+    var qDigits = q.replace(/\./g, '');
+    var shown = s.plans.filter(function (p) {
+      var ev = evals[p.id];
+      if (s.brandF && p.brand !== s.brandF) return false;
+      if (s.groupF && p.group !== s.groupF) return false;
+      if (s.statusF && ev.status !== s.statusF) return false;
+      if (s.problemOnly && ev.status === 'Sesuai') return false;
+      if (q) {
+        var hay = (p.brand + ' ' + p.hs + ' ' + p.description + ' ' + p.group + ' ' + (p.sub || '')).toLowerCase();
+        if (hay.indexOf(q) === -1 && (!qDigits || p.hs.replace(/\./g, '').indexOf(qDigits) === -1)) return false;
+      }
+      return true;
+    });
+    var openDetail = function (p) { return function () { self.setState({ dt: p.id, dtTab: 'info', dtNote: p.note || '', showHs: false, aksiOpen: false }); }; };
+    var planRows = shown.map(function (p, i) {
+      var ev = evals[p.id], t = tone(ev.status);
+      return {
+        no: i + 1, brand: p.brand, group: p.group, sub: p.sub || '—', hs: p.hs, desc: p.description,
+        qty: NF0.format(p.qty), unit: p.unit, price: money(p.cur, p.price), total: money(p.cur, ev.total),
+        status: ev.status, statusStyle: pill(t), statusDot: 'background:' + t.dot,
+        rowStyle: ev.status === 'Tidak Sesuai' ? 'background:#FFFAFA' : '',
+        open: openDetail(p)
+      };
+    });
+    var sumByCur = function (list) {
+      var acc = {};
+      list.forEach(function (p) { acc[p.cur] = (acc[p.cur] || 0) + evals[p.id].total; });
+      var keys = Object.keys(acc);
+      return keys.length ? keys.map(function (c) { return money(c, acc[c]); }).join(' + ') : '—';
+    };
+
+    // Matrix
+    var mxPlans = s.mxGroup ? s.plans.filter(function (p) { return p.group === s.mxGroup; }) : s.plans;
+    var mxHs = uniq(mxPlans.map(function (p) { return p.hs; }));
+    // Row 1
+    var r1Detail = mxHs.map(function (h) {
+      var m = HS_MASTER[h], e = isEligibleForVIUConsumption(h);
+      var st = e === true ? 'Sesuai' : e === false ? 'Tidak Sesuai' : 'Perlu Klarifikasi';
+      return { c1: h, c2: m ? m.description : 'Tidak ditemukan di master', c3: e === true ? 'Ya' : e === false ? 'Tidak' : 'Perlu Validasi', c3Style: e === true ? 'color:#15803D;font-weight:600' : e === false ? 'color:#B91C1C;font-weight:600' : 'color:#B45309;font-weight:600', status: st, style: pill(tone(st)), rowStyle: '' };
+    });
+    var r1Ok = r1Detail.filter(function (d) { return d.status === 'Sesuai'; }).length;
+    var r1Status = r1Detail.some(function (d) { return d.status === 'Tidak Sesuai'; }) ? 'Tidak Sesuai' : r1Detail.some(function (d) { return d.status === 'Perlu Klarifikasi'; }) ? 'Perlu Klarifikasi' : 'Sesuai';
+    // Row 2
+    var r2Detail = mxPlans.map(function (p) {
+      var ev = evals[p.id];
+      return { c1: p.hs, c2: p.group, c3: ev.master ? ev.master.group : 'Master belum tersedia', c3Style: ev.groupRes === 'Tidak Sesuai' ? 'color:#B91C1C;font-weight:600' : '', status: ev.groupRes, style: pill(tone(ev.groupRes)), rowStyle: '' };
+    });
+    var r2Ok = r2Detail.filter(function (d) { return d.status === 'Sesuai'; }).length;
+    var r2Status = r2Detail.some(function (d) { return d.status === 'Tidak Sesuai'; }) ? 'Tidak Sesuai' : r2Detail.some(function (d) { return d.status === 'Perlu Klarifikasi'; }) ? 'Perlu Klarifikasi' : 'Sesuai';
+    var mxGroups = uniq(mxPlans.map(function (p) { return p.group; }));
+    // Row 3
+    var r3Detail = mxPlans.map(function (p) {
+      var ev = evals[p.id];
+      return { c1: p.hs, c2: p.sub || '—', c3: ev.master ? (ev.master.sub || 'Tidak ada pembagian sub kelompok') : 'Master belum tersedia', c3Style: ev.subRes === 'Tidak Sesuai' ? 'color:#B91C1C;font-weight:600' : '', status: ev.subRes, style: pill(tone(ev.subRes)), rowStyle: '' };
+    });
+    var r3Applicable = r3Detail.filter(function (d) { return d.status !== 'N/A'; });
+    var r3Ok = r3Applicable.filter(function (d) { return d.status === 'Sesuai'; }).length;
+    var r3Na = r3Detail.length - r3Applicable.length;
+    var r3Status = r3Detail.some(function (d) { return d.status === 'Tidak Sesuai'; }) ? 'Tidak Sesuai' : r3Detail.some(function (d) { return d.status === 'Perlu Klarifikasi'; }) ? 'Perlu Klarifikasi' : r3Applicable.length ? 'Sesuai' : 'N/A';
+    var mxSubs = uniq(mxPlans.filter(function (p) { return p.sub; }).map(function (p) { return p.sub; }));
+    // Row 4
+    var gTot = {};
+    var dataErr = false;
+    mxPlans.forEach(function (p) {
+      var ev = evals[p.id];
+      if (!ev.totalOk) { dataErr = true; return; }
+      gTot[p.group] = gTot[p.group] || { cur: {}, n: 0 };
+      gTot[p.group].cur[p.cur] = (gTot[p.group].cur[p.cur] || 0) + p.qty * p.price;
+      gTot[p.group].n++;
+    });
+    var totals = Object.keys(gTot).map(function (g) {
+      return { group: g, value: Object.keys(gTot[g].cur).map(function (c) { return money(c, gTot[g].cur[c]); }).join(' + '), count: gTot[g].n + ' rencana impor' };
+    });
+    var grandCur = {};
+    Object.keys(gTot).forEach(function (g) { Object.keys(gTot[g].cur).forEach(function (c) { grandCur[c] = (grandCur[c] || 0) + gTot[g].cur[c]; }); });
+    var grandKeys = Object.keys(grandCur);
+    var grand = grandKeys.length ? grandKeys.map(function (c) { return money(c, grandCur[c]); }).join(' + ') : '—';
+    var r4Status = dataErr ? 'Perlu Klarifikasi' : 'Informasi';
+    var r4Result = totals.map(function (t) { return t.group + ': ' + t.value; }).join(' · ');
+
+    var typeHS = pill(T.blue), typeCls = pill(T.purple), typeSup = pill(T.none);
+    var mxAll = [
+      { no: 1, param: 'Kesesuaian HS Code terhadap Jenis VIU', obj: mxHs.length + ' HS Code', result: r1Ok + ' dari ' + mxHs.length + ' HS sesuai dengan API-U Barang Konsumsi', status: r1Status, type: 'Wajib Regulasi', typeStyle: typeHS, note: NOTE_HS, isTable: true, h1: 'HS Code', h2: 'Uraian', h3: 'Eligible API-U Barang Konsumsi', detail: r1Detail },
+      { no: 2, param: 'Kesesuaian Kelompok Komoditas', obj: mxGroups.length + ' Kelompok Komoditas', result: r2Ok === r2Detail.length ? 'Seluruh Kelompok Komoditas sesuai dengan mapping HS' : r2Ok + ' dari ' + r2Detail.length + ' rencana sesuai dengan mapping HS', status: r2Status, type: 'Regulatory Classification', typeStyle: typeCls, note: NOTE_GROUP, isTable: true, h1: 'HS', h2: 'Kelompok pada Rencana', h3: 'Kelompok Master', detail: r2Detail },
+      { no: 3, param: 'Kesesuaian Sub Kelompok Komoditas', obj: mxSubs.length + ' Sub Kelompok', result: r3Ok + ' dari ' + r3Applicable.length + ' sesuai dengan mapping HS' + (r3Na ? ' · ' + r3Na + ' N/A (tanpa sub kelompok)' : ''), status: r3Status, type: 'Regulatory Classification', typeStyle: typeCls, note: NOTE_SUB, isTable: true, h1: 'HS', h2: 'Sub Kelompok Rencana', h3: 'Sub Kelompok Master', detail: r3Detail },
+      { no: 4, param: 'Total Nilai per Kelompok Komoditas', obj: 'Nilai Rencana Impor', result: dataErr ? 'Terdapat data jumlah/harga yang tidak valid.' : 'Grand Total ' + grand, status: r4Status, type: 'Data Pendukung', typeStyle: typeSup, note: NOTE_TOTAL, isTotals: true, totals: totals, grand: grand, grandNote: grandKeys.length > 1 ? 'Tidak dikonversi antar mata uang' : mxPlans.length + ' rencana impor', detail: [] }
+    ];
+    var mq = s.mxSearch.trim().toLowerCase();
+    var mxFiltered = mxAll.filter(function (r) {
+      if (s.mxStatus && r.status !== s.mxStatus) return false;
+      if (s.mxProblem && ['Sesuai', 'Informasi', 'N/A'].indexOf(r.status) !== -1) return false;
+      if (mq && (r.param + ' ' + r.note + ' ' + r.result).toLowerCase().indexOf(mq) === -1) return false;
+      return true;
+    });
+    var mxRows = mxFiltered.map(function (r) {
+      var t = tone(r.status), ex = !!s.mxOpen[r.no];
+      return Object.assign({}, r, {
+        statusStyle: pill(t), statusDot: 'background:' + t.dot,
+        expanded: ex, toggleLabel: ex ? 'Tutup' : 'Detail', chevStyle: ex ? 'transform:rotate(180deg)' : '',
+        isTable: !!r.isTable, isTotals: !!r.isTotals, totals: r.totals || [],
+        toggle: function () { self.setState(function (p) { var o = Object.assign({}, p.mxOpen); o[r.no] = !o[r.no]; return { mxOpen: o }; }); }
+      });
+    });
+    var mc = function (st) { return mxAll.filter(function (r) { return r.status === st; }).length; };
+    var mxSummary = [
+      { label: 'Pemeriksaan', count: mxAll.length, style: 'background:#F8FAFC;color:#10233F;border:1px solid #E5EAF0' },
+      { label: 'Sesuai', count: mc('Sesuai'), style: pill(T.ok) },
+      { label: 'Informasi', count: mc('Informasi'), style: pill(T.info) },
+      { label: 'Perlu Klarifikasi', count: mc('Perlu Klarifikasi'), style: pill(T.warn) },
+      { label: 'Tidak Sesuai', count: mc('Tidak Sesuai'), style: pill(T.bad) }
+    ].filter(function (x, i) { return i < 3 || x.count > 0; });
+
+    // Add drawer
+    var adVals = { adOpen: false, ad: {}, adErr: {}, adHs: {}, elig: {}, hsSuggest: [] };
+    if (s.ad) {
+      var ad = s.ad;
+      var am = ad.hs ? HS_MASTER[ad.hs] : null;
+      var hq = s.hsQuery.trim().toLowerCase();
+      var hqD = hq.replace(/\./g, '');
+      var sugg = hq ? Object.keys(HS_MASTER).filter(function (code) {
+        var m = HS_MASTER[code];
+        return code.replace(/\./g, '').indexOf(hqD) !== -1 && hqD.length > 0 && /^\d+$/.test(hqD) || m.description.toLowerCase().indexOf(hq) !== -1 || (m.sub || '').toLowerCase().indexOf(hq) !== -1;
+      }).slice(0, 8).map(function (code) {
+        var m = HS_MASTER[code];
+        return { code: code, description: m.description, path: m.group + (m.sub ? ' › ' + m.sub : ''),
+          pick: function () { self.setState(function (p) { return { ad: Object.assign({}, p.ad, { hs: code, group: m.group, sub: m.sub || '', manual: false, unit: p.ad.unit || m.unit }), adErr: Object.assign({}, p.adErr, { hs: '' }), hsQuery: '' }; }); } };
+      }) : [];
+      var e = am ? am.eligible : undefined;
+      var elig = e === true
+        ? { label: 'Sesuai Jenis VIU', msg: 'HS Code dapat digunakan untuk API-U Barang Konsumsi.', badge: pill(T.ok), box: 'background:#ECFDF3;border:1px solid #BBF7D0', textStyle: 'color:#15803D' }
+        : e === false
+          ? { label: 'Tidak Sesuai Jenis VIU', msg: 'HS Code tidak termasuk cakupan API-U Barang Konsumsi.', badge: pill(T.bad), box: 'background:#FEF2F2;border:1px solid #FECACA', textStyle: 'color:#B91C1C' }
+          : { label: 'Perlu Validasi', msg: 'Cakupan HS ini belum terkonfirmasi pada master; rencana akan berstatus Perlu Klarifikasi.', badge: pill(T.warn), box: 'background:#FFFBEB;border:1px solid #FDE68A', textStyle: 'color:#B45309' };
+      var qty = parseFloat(ad.qty), price = parseFloat(ad.price);
+      var adTotal = isFinite(qty) && isFinite(price) && qty > 0 ? money(ad.cur, qty * price) : '—';
+      var preview = am ? evaluatePlan({ hs: ad.hs, group: ad.group, sub: ad.sub || null, qty: qty || 0, price: price || 0 }) : null;
+      var mismatch = '';
+      if (am && ad.manual) {
+        if (ad.group !== am.group) mismatch = 'Kelompok berbeda dari master (' + am.group + '). Status akan Tidak Sesuai.';
+        else if (am.sub !== null && (ad.sub || null) !== am.sub) mismatch = 'Sub kelompok berbeda dari master (' + am.sub + '). Status akan Tidak Sesuai.';
+      }
+      var pst = preview ? preview.status : '';
+      adVals = {
+        adOpen: true, ad: ad, adErr: s.adErr, hsQuery: s.hsQuery,
+        hsPicked: !!am, hsNotPicked: !am, hsListOpen: !am && hq.length > 0, hsSuggest: sugg, hsNoMatch: hq.length > 0 && sugg.length === 0,
+        adHs: am ? { code: ad.hs, description: am.description } : {},
+        adReadOnly: !ad.manual, adSubLabel: ad.sub || 'Tidak ada sub kelompok (N/A)',
+        elig: elig, adMismatch: mismatch,
+        adUnitHint: am ? 'Default dari master HS: ' + am.unit : '',
+        adTotal: adTotal,
+        adWarn: e === false ? 'HS Code tidak sesuai dengan jenis VIU Barang Konsumsi.' : '',
+        adStatusText: pst ? 'Status compliance otomatis: ' + pst : 'Status dihitung setelah HS dipilih.',
+        adStatusStyle: pst ? 'font-weight:600;color:' + tone(pst).fg : 'color:#64748B'
+      };
+    }
+
+    // Detail drawer
+    var dtVals = { dtOpen: false, dt: {}, dtTabs: [], dtChecks: [], dtDocs: [], dtAudit: [], dtMaster: {} };
+    var plan = s.dt ? s.plans.filter(function (p) { return p.id === s.dt; })[0] : null;
+    if (plan) {
+      var ev = evals[plan.id], m = ev.master, t2 = tone(ev.status);
+      var ck = function (title, type, typeStyle, lines, result) { var tt = tone(result); return { title: title, type: type, typeStyle: typeStyle, lines: lines, result: result, style: pill(tt), dot: 'background:' + tt.dot }; };
+      dtVals = {
+        dtOpen: true,
+        dt: {
+          brand: plan.brand, hs: plan.hs, group: plan.group, sub: plan.sub || '— (N/A)', desc: plan.description,
+          qty: NF0.format(plan.qty), unit: plan.unit, price: money(plan.cur, plan.price), total: money(plan.cur, ev.total),
+          status: ev.status, statusStyle: pill(t2), statusDot: 'background:' + t2.dot,
+          by: plan.by || '—', at: plan.at || '—'
+        },
+        dtTabs: [['info', 'Informasi'], ['check', 'Pemeriksaan'], ['doc', 'Dokumen'], ['audit', 'Audit Trail']].map(function (x) {
+          var a = s.dtTab === x[0];
+          return { label: x[1], active: a, style: a ? 'color:#0958D9;border-bottom-color:#1677FF' : 'color:#64748B', pick: function () { self.setState({ dtTab: x[0] }); } };
+        }),
+        tabInfo: s.dtTab === 'info', tabCheck: s.dtTab === 'check', tabDoc: s.dtTab === 'doc', tabAudit: s.dtTab === 'audit',
+        showHs: s.showHs, hsBtnLabel: s.showHs ? 'Sembunyikan Detail HS' : 'Lihat Detail HS',
+        dtMaster: m ? { description: m.description, group: m.group, sub: m.sub || 'Tidak ada pembagian sub kelompok', elig: m.eligible === true ? 'Ya' : m.eligible === false ? 'Tidak' : 'Perlu Validasi', eligStyle: m.eligible === true ? 'color:#15803D' : m.eligible === false ? 'color:#B91C1C' : 'color:#B45309', unit: m.unit } : { description: 'Tidak ditemukan', group: '—', sub: '—', elig: '—', unit: '—' },
+        dtChecks: [
+          ck('Kesesuaian HS dengan Jenis VIU', 'Wajib Regulasi', typeHS, [{ k: 'HS', v: plan.hs }, { k: 'Jenis VIU', v: 'API-U Barang Konsumsi' }, { k: 'Eligible', v: ev.elig === true ? 'Ya' : ev.elig === false ? 'Tidak' : 'Perlu Validasi' }], ev.hsRes),
+          ck('Kesesuaian Kelompok', 'Regulatory Classification', typeCls, [{ k: 'Expected (master)', v: m ? m.group : '—' }, { k: 'Actual (rencana)', v: plan.group }], ev.groupRes),
+          ck('Kesesuaian Sub Kelompok', 'Regulatory Classification', typeCls, [{ k: 'Expected (master)', v: m ? (m.sub || 'Tidak ada sub kelompok') : '—' }, { k: 'Actual (rencana)', v: plan.sub || '—' }], ev.subRes),
+          ck('Nilai Rencana', 'Data Pendukung', typeSup, [{ k: 'Jumlah', v: NF0.format(plan.qty) + ' ' + plan.unit }, { k: 'Harga', v: money(plan.cur, plan.price) }, { k: 'Total', v: money(plan.cur, ev.total) }], ev.totalOk ? 'Informasi' : 'Perlu Klarifikasi')
+        ],
+        dtNote: s.dtNote,
+        dtDocs: plan.docs.map(function (d) { var ext = (d.name.split('.').pop() || 'FILE').toUpperCase().slice(0, 4); return { name: d.name, at: d.at, ext: ext }; }),
+        noDocs: plan.docs.length === 0,
+        dtAudit: plan.audit.slice().reverse()
+      };
+    }
+
+    return Object.assign({
+      steps: steps, cards: cards, profileOpen: s.profileOpen, aksiOpen: s.aksiOpen, navHint: s.navHint,
+      toast: s.toast, toastStyle: s.toastBad ? 'background:#FFFBEB;border:1px solid #FDE68A;color:#B45309' : 'background:#ECFDF3;border:1px solid #BBF7D0;color:#15803D',
+      search: s.search, brandF: s.brandF, groupF: s.groupF, statusF: s.statusF, problemOnly: s.problemOnly,
+      problemStyle: s.problemOnly ? 'background:#FFFBEB;border:1px solid #FDE68A;color:#B45309' : 'background:#FFFFFF;border:1px solid #D5DDE7;color:#334155',
+      planRows: planRows, noPlans: shown.length === 0, planShown: 'Menampilkan ' + shown.length + ' dari ' + s.plans.length + ' rencana',
+      shownTotal: sumByCur(shown),
+      mxSearch: s.mxSearch, mxStatus: s.mxStatus, mxGroup: s.mxGroup, mxProblem: s.mxProblem,
+      mxProblemStyle: s.mxProblem ? 'background:#FFFBEB;border:1px solid #FDE68A;color:#B45309' : 'background:#FFFFFF;border:1px solid #D5DDE7;color:#334155',
+      mxRows: mxRows, mxSummary: mxSummary, mxEmpty: mxRows.length === 0,
+
+      toggleProfile: function () { self.setState({ profileOpen: !s.profileOpen, aksiOpen: false }); },
+      closeProfile: function () { self.setState({ profileOpen: false }); },
+      toggleAksi: function () { self.setState({ aksiOpen: !s.aksiOpen, profileOpen: false }); },
+      goNext: function () { self.setState({ navHint: 'Tahap 5 – Stok Terkini belum dibuat.' }); },
+      exportPlans: function () { self.setState({ aksiOpen: false }); self.flash('Export belum tersedia di prototipe ini.', true); },
+      onSearch: function (e) { self.setState({ search: e.target.value }); },
+      onBrandF: function (e) { self.setState({ brandF: e.target.value }); },
+      onGroupF: function (e) { self.setState({ groupF: e.target.value }); },
+      onStatusF: function (e) { self.setState({ statusF: e.target.value }); },
+      toggleProblem: function (e) { self.setState({ problemOnly: e.target.checked }); },
+      resetPlanFilters: function () { self.setState({ search: '', brandF: '', groupF: '', statusF: '', problemOnly: false }); },
+      onMxSearch: function (e) { self.setState({ mxSearch: e.target.value }); },
+      onMxStatus: function (e) { self.setState({ mxStatus: e.target.value }); },
+      onMxGroup: function (e) { self.setState({ mxGroup: e.target.value }); },
+      toggleMxProblem: function (e) { self.setState({ mxProblem: e.target.checked }); },
+
+      openAdd: function () { self.setState({ ad: { brand: '', hs: '', group: '', sub: '', manual: false, qty: '', unit: '', cur: 'USD', price: '' }, adErr: {}, hsQuery: '', aksiOpen: false }); },
+      closeAdd: function () { self.setState({ ad: null }); },
+      onAdBrand: function (e) { self.setAd({ brand: e.target.value }); },
+      onHsQuery: function (e) { self.setState({ hsQuery: e.target.value }); },
+      clearHs: function () { self.setAd({ hs: '', group: '', sub: '', manual: false }); },
+      toggleManual: function (e) {
+        var on = e.target.checked;
+        self.setState(function (p) { var mm = HS_MASTER[p.ad.hs]; var patch = { manual: on }; if (!on && mm) { patch.group = mm.group; patch.sub = mm.sub || ''; } return { ad: Object.assign({}, p.ad, patch) }; });
+      },
+      onAdGroup: function (e) { self.setAd({ group: e.target.value }); },
+      onAdSub: function (e) { self.setAd({ sub: e.target.value }); },
+      onQty: function (e) { self.setAd({ qty: e.target.value }); },
+      onUnit: function (e) { self.setAd({ unit: e.target.value }); },
+      onCur: function (e) { self.setAd({ cur: e.target.value }); },
+      onPrice: function (e) { self.setAd({ price: e.target.value }); },
+      saveAdd: function () {
+        var a = s.ad, er = {};
+        if (!a.brand) er.brand = 'Merek wajib dipilih.';
+        if (!a.hs) er.hs = 'HS Code wajib dipilih dari master HS.';
+        var qn = parseFloat(a.qty);
+        if (!(qn > 0)) er.qty = 'Jumlah harus lebih dari 0.';
+        if (!a.unit) er.unit = 'Satuan wajib dipilih.';
+        if (Object.keys(er).length) { self.setState({ adErr: er }); return; }
+        var mm = HS_MASTER[a.hs];
+        var pr = parseFloat(a.price); if (!isFinite(pr) || pr < 0) pr = 0;
+        var at = nowText();
+        var np = { id: 'RI' + Date.now(), brand: a.brand, hs: a.hs, description: mm.description, group: a.group, sub: a.sub || null, qty: qn, unit: a.unit, cur: a.cur, price: pr, note: '', by: '', at: '', docs: [],
+          audit: [{ at: at, by: USER, text: 'Rencana impor ' + a.brand + ' / ' + (a.sub || mm.description) + ' ditambahkan.' }] };
+        if (a.manual && (a.group !== mm.group || (a.sub || null) !== mm.sub)) np.audit.push({ at: at, by: USER, text: 'Klasifikasi diubah manual dan berbeda dari master HS.' });
+        var stt = evaluatePlan(np).status;
+        self.setState(function (p) { return { plans: p.plans.concat([np]), ad: null }; });
+        self.flash('Rencana impor ' + a.brand + ' / ' + a.hs + ' ditambahkan · status ' + stt + '.', stt !== 'Sesuai');
+      },
+
+      closeDt: function () { self.setState({ dt: null }); },
+      toggleHs: function () { self.setState({ showHs: !s.showHs }); },
+      onDtNote: function (e) { self.setState({ dtNote: e.target.value }); },
+      saveDt: function () {
+        if (!plan) return;
+        var at = nowText();
+        var stt = evals[plan.id].status;
+        self.setState(function (p) {
+          return { plans: p.plans.map(function (x) {
+            if (x.id !== plan.id) return x;
+            var ev2 = [{ at: at, by: USER, text: 'Pemeriksaan disimpan · status compliance ' + stt + '.' }];
+            if ((p.dtNote || '') !== (x.note || '')) ev2.unshift({ at: at, by: USER, text: 'Catatan verifikator diperbarui.' });
+            return Object.assign({}, x, { note: p.dtNote, by: USER, at: at, audit: x.audit.concat(ev2) });
+          }) };
+        });
+        self.flash('Pemeriksaan ' + plan.brand + ' / ' + plan.hs + ' disimpan.');
+      },
+      onDocUpload: function (e) {
+        var f = e.target.files && e.target.files[0];
+        if (!f || !plan) return;
+        var at = nowText(), nm = f.name;
+        self.setState(function (p) { return { plans: p.plans.map(function (x) { return x.id !== plan.id ? x : Object.assign({}, x, { docs: x.docs.concat([{ name: nm, at: at }]), audit: x.audit.concat([{ at: at, by: USER, text: 'Dokumen ' + nm + ' diunggah.' }]) }); }) }; });
+      }
+    }, adVals, dtVals);
+  }
+}
+</script>
+</body>
+</html>

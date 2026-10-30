@@ -1,0 +1,1594 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>VIU Merek dan Hubungan Importir</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F7FA}
+a{color:#64748B;text-decoration:none}a:hover{color:#10233F}
+.vf-input:focus{outline:none;border-color:#1677FF !important;box-shadow:0 0 0 3px rgba(22,119,255,0.15)}
+.vf-btn:focus-visible,.vf-nav:focus-visible,.vf-tip:focus-visible{outline:2px solid #1677FF;outline-offset:2px}
+.vf-nav:hover{background:rgba(255,255,255,0.06) !important;color:#FFFFFF !important}
+.vf-ghost:hover{background:#F1F5F9 !important}
+.vf-primary:hover:not(:disabled){background:#0958D9 !important}
+.vf-row:hover{background:#FAFCFF}
+.vf-icon:hover{background:#F1F5F9 !important;color:#10233F !important}
+.vf-link:hover{text-decoration:underline}
+.vf-check{width:18px;height:18px;accent-color:#1677FF;margin:0;cursor:pointer}
+.vf-tip{position:relative;display:inline-flex;align-items:flex-start;gap:6px;cursor:help;border-radius:4px}
+.vf-tipbox{display:none;position:absolute;right:calc(100% + 8px);top:-6px;width:300px;padding:10px 12px;border-radius:8px;background:#10233F;color:#FFFFFF;font-size:12px;line-height:1.5;font-weight:400;box-shadow:0 8px 24px rgba(16,42,67,0.25);z-index:5;white-space:normal}
+.vf-tip:hover .vf-tipbox,.vf-tip:focus .vf-tipbox{display:block}
+.vf-file-input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.vf-filebtn:focus-within{outline:2px solid #1677FF;outline-offset:2px}
+.vf-filebtn:hover{background:#F1F5F9 !important}
+</style>
+</helmet>
+
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; color: #10233F; background: #F5F7FA; font-size: 14px; line-height: 1.5">
+
+  <!-- SIDEBAR -->
+  <aside aria-label="Navigasi utama" style="flex: 1 1 240px; max-width: 100%; background: #102A43; color: #C3CFDD; display: flex; flex-direction: column; padding: 20px 14px 24px; box-sizing: border-box; gap: 4px">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 4px 10px 22px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px">
+      <div aria-hidden="true" style="width: 36px; height: 36px; border-radius: 10px; background: #1677FF; display: flex; align-items: center; justify-content: center; color: #FFFFFF">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"></path><path d="M9 12l2 2 4-4"></path></svg>
+      </div>
+      <div style="display: flex; flex-direction: column">
+        <span style="color: #FFFFFF; font-weight: 700; font-size: 16px; letter-spacing: 0.02em">LPV TPT</span>
+        <span style="font-size: 12px; color: #9FB3C8">Workspace Compliance</span>
+      </div>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 2px">
+      <button type="button" class="vf-nav" style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; font-weight: 500; text-align: left; cursor: pointer">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>
+        Dashboard
+      </button>
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 6px 10px; color: #E2E8F0; font-weight: 600">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+          Permohonan
+        </div>
+        <button type="button" aria-current="page" class="vf-btn" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: rgba(22,119,255,0.22); color: #FFFFFF; font: inherit; font-weight: 600; text-align: left; cursor: pointer; position: relative">
+          <span aria-hidden="true" style="position: absolute; left: 22px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: #69B1FF"></span>
+          Daftar Permohonan
+        </button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Penugasan</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Kalender Verifikasi</button>
+      </div>
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 6px 10px; color: #E2E8F0; font-weight: 600">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"></path><path d="M9 12l2 2 4-4"></path></svg>
+          Verifikasi
+        </div>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">VKI</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">VIU</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Kunjungan Lapangan</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Upload Temuan</button>
+      </div>
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 6px 10px; color: #E2E8F0; font-weight: 600">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"></path><path d="M10 20V4"></path><path d="M16 20v-7"></path><path d="M21 20H3"></path></svg>
+          Laporan
+        </div>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">LHVKI / LHVIU</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Rekapitulasi</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Audit Trail</button>
+      </div>
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 6px 10px; color: #E2E8F0; font-weight: 600">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"></path><path d="M4 19a2 2 0 0 1 2-2h13"></path></svg>
+          Referensi
+        </div>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">HS Code</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">KBLI</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Instansi</button>
+      </div>
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 6px 10px; color: #E2E8F0; font-weight: 600">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10"></path><path d="M18 6h2"></path><path d="M4 12h4"></path><path d="M12 12h8"></path><path d="M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>
+          Pengaturan
+        </div>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">User &amp; Akses</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Parameter</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Template Dokumen</button>
+      </div>
+    </nav>
+    <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08)">
+      <button type="button" class="vf-nav" style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; font-weight: 500; text-align: left; cursor: pointer">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17h.01"></path></svg>
+        Bantuan
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN COLUMN -->
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+
+    <!-- TOP BAR -->
+    <header style="background: #FFFFFF; border-bottom: 1px solid #E5EAF0; padding: 12px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; min-height: 64px; box-sizing: border-box">
+      <nav aria-label="Breadcrumb">
+        <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: #64748B">
+          <li><a href="#">Beranda</a></li>
+          <li aria-hidden="true" style="display: flex; color: #94A3B8"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></li>
+          <li><a href="#">Daftar Permohonan</a></li>
+          <li aria-hidden="true" style="display: flex; color: #94A3B8"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></li>
+          <li><a href="#">VIU – Barang Konsumsi</a></li>
+          <li aria-hidden="true" style="display: flex; color: #94A3B8"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></li>
+          <li><a href="Main.dc.html">VIU-2025-000123</a></li>
+          <li aria-hidden="true" style="display: flex; color: #94A3B8"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></li>
+          <li aria-current="page" style="color: #10233F; font-weight: 600">Merek &amp; Hubungan Importir</li>
+        </ol>
+      </nav>
+      <div style="display: flex; align-items: center; gap: 16px">
+        <button type="button" aria-label="Notifikasi, 3 belum dibaca" class="vf-btn vf-ghost" style="position: relative; width: 40px; height: 40px; border-radius: 10px; border: 1px solid #E5EAF0; background: #FFFFFF; color: #475569; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg>
+          <span aria-hidden="true" style="position: absolute; top: 9px; right: 10px; width: 7px; height: 7px; border-radius: 50%; background: #1677FF; border: 2px solid #FFFFFF"></span>
+        </button>
+        <div style="width: 1px; height: 28px; background: #E5EAF0"></div>
+        <div style="position: relative">
+          <button type="button" class="vf-btn vf-ghost" aria-haspopup="menu" aria-expanded="{{profileOpen}}" onClick="{{toggleProfile}}" style="display: flex; align-items: center; gap: 10px; padding: 4px 8px 4px 4px; border: 0; border-radius: 10px; background: transparent; font: inherit; color: #10233F; cursor: pointer; text-align: left">
+            <span aria-hidden="true" style="width: 36px; height: 36px; border-radius: 50%; background: #E8F1FF; color: #0958D9; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">VR</span>
+            <span style="display: flex; flex-direction: column; line-height: 1.25">
+              <span style="font-weight: 600; font-size: 13px">Verifikator</span>
+              <span style="font-size: 12px; color: #64748B">LPV TPT</span>
+            </span>
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+          </button>
+          <sc-if value="{{profileOpen}}" hint-placeholder-val="{{ false }}">
+            <div role="menu" style="position: absolute; right: 0; top: 48px; width: 200px; background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; box-shadow: 0 10px 30px rgba(16,42,67,0.12); padding: 6px; z-index: 20; display: flex; flex-direction: column">
+              <button type="button" role="menuitem" class="vf-btn vf-ghost" onClick="{{closeProfile}}" style="padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; font: inherit; color: #10233F; text-align: left; cursor: pointer">Profil Saya</button>
+              <button type="button" role="menuitem" class="vf-btn vf-ghost" onClick="{{closeProfile}}" style="padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; font: inherit; color: #10233F; text-align: left; cursor: pointer">Ganti Peran</button>
+              <div style="height: 1px; background: #E5EAF0; margin: 4px 0"></div>
+              <button type="button" role="menuitem" class="vf-btn vf-ghost" onClick="{{closeProfile}}" style="padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; font: inherit; color: #B42318; text-align: left; cursor: pointer">Keluar</button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <main style="flex: 1; padding: 28px 32px 48px; box-sizing: border-box">
+      <div style="max-width: 1320px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px">
+
+        <!-- CASE HEADER -->
+        <section aria-labelledby="case-title" style="background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,35,63,0.04); padding: 24px 28px; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px 24px">
+          <div style="display: flex; flex-direction: column; gap: 14px; min-width: 0">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px">
+              <h1 id="case-title" style="margin: 0; font-size: 22px; line-height: 1.3; font-weight: 700; letter-spacing: -0.01em">VIU – Produk Tekstil sebagai Barang Konsumsi</h1>
+              <span style="display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 6px; background: #F1F5F9; border: 1px solid #E5EAF0; color: #334155; font-size: 12px; font-weight: 600; font-family: ui-monospace, 'SF Mono', Menlo, monospace">VIU-2025-000123</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #E8F1FF; color: #0958D9; font-size: 12px; font-weight: 600">
+                <span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #1677FF"></span>
+                Draft Verifikasi
+              </span>
+            </div>
+            <dl style="margin: 0; display: flex; flex-wrap: wrap; gap: 8px 32px; font-size: 13px">
+              <div style="display: flex; gap: 6px"><dt style="color: #64748B">Tanggal Permohonan:</dt><dd style="margin: 0; font-weight: 500">25 Jul 2025 10:24</dd></div>
+              <div style="display: flex; gap: 6px"><dt style="color: #64748B">Pemohon:</dt><dd style="margin: 0; font-weight: 500">PT Maju Tekstil Indonesia</dd></div>
+              <div style="display: flex; gap: 6px"><dt style="color: #64748B">NIB:</dt><dd style="margin: 0; font-weight: 500">8123456789012</dd></div>
+            </dl>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+            <div style="position: relative">
+              <button type="button" class="vf-btn vf-ghost" aria-haspopup="menu" aria-expanded="{{aksiOpen}}" onClick="{{toggleAksi}}" style="display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 600; cursor: pointer">
+                Aksi
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+              </button>
+              <sc-if value="{{aksiOpen}}" hint-placeholder-val="{{ false }}">
+                <div role="menu" style="position: absolute; right: 0; top: 46px; width: 240px; background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; box-shadow: 0 10px 30px rgba(16,42,67,0.12); padding: 6px; z-index: 20; display: flex; flex-direction: column">
+                  <button type="button" role="menuitem" class="vf-btn vf-ghost" onClick="{{openBulk}}" style="padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; font: inherit; color: #10233F; text-align: left; cursor: pointer">Atur Hubungan Massal</button>
+                  <button type="button" role="menuitem" class="vf-btn vf-ghost" onClick="{{addBrand}}" style="padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; font: inherit; color: #10233F; text-align: left; cursor: pointer">Tambah Merek</button>
+                  <button type="button" role="menuitem" class="vf-btn vf-ghost" onClick="{{openAudit}}" style="padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; font: inherit; color: #10233F; text-align: left; cursor: pointer">Lihat Audit Trail</button>
+                </div>
+              </sc-if>
+            </div>
+            <a href="Lokasi.dc.html" class="vf-btn vf-ghost" style="display: inline-flex; align-items: center; gap: 8px; height: 40px; box-sizing: border-box; padding: 0 14px; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font-weight: 600; text-decoration: none">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg>
+              Kembali
+            </a>
+            <a href="RencanaImpor.dc.html" class="vf-btn vf-primary" style="display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; box-sizing: border-box; border: 1px solid #1677FF; border-radius: 10px; background: #1677FF; color: #FFFFFF; font-weight: 600; text-decoration: none">
+              Lanjut ke Rencana Impor
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+            </a>
+          </div>
+        </section>
+
+        <!-- STEP NAVIGATION -->
+        <nav aria-label="Tahapan verifikasi" style="background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,35,63,0.04); padding: 20px 24px; overflow-x: auto">
+          <ol style="list-style: none; margin: 0; padding: 0; display: flex; min-width: 1380px">
+            <sc-for list="{{steps}}" as="item" hint-placeholder-count="11">
+              <li style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+                <div style="display: flex; align-items: center">
+                  <sc-if value="{{item.isLink}}" hint-placeholder-val="{{ false }}">
+                    <a href="{{item.href}}" class="vf-btn" aria-label="{{item.ariaLabel}}" title="{{item.label}}" style="width: 32px; height: 32px; flex: none; box-sizing: border-box; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; text-decoration: none; {{item.circleStyle}}">
+                      <sc-if value="{{item.done}}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg></sc-if>
+                      <sc-if value="{{item.showNum}}" hint-placeholder-val="{{ false }}"><span>{{item.num}}</span></sc-if>
+                    </a>
+                  </sc-if>
+                  <sc-if value="{{item.notLink}}" hint-placeholder-val="{{ true }}">
+                    <span aria-label="{{item.ariaLabel}}" aria-current="{{item.ariaCurrent}}" title="{{item.title}}" style="width: 32px; height: 32px; flex: none; box-sizing: border-box; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; {{item.circleStyle}}">{{item.num}}</span>
+                  </sc-if>
+                  <sc-if value="{{item.hasLine}}" hint-placeholder-val="{{ true }}">
+                    <div aria-hidden="true" style="flex: 1; height: 2px; margin: 0 8px; border-radius: 2px; {{item.lineStyle}}"></div>
+                  </sc-if>
+                </div>
+                <div style="padding-right: 10px; display: flex; flex-direction: column; gap: 2px">
+                  <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; {{item.kickerStyle}}">Tahap {{item.num}}</span>
+                  <span style="font-size: 12.5px; line-height: 1.35; {{item.labelStyle}}">{{item.label}}</span>
+                </div>
+              </li>
+            </sc-for>
+          </ol>
+        </nav>
+
+        <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+          <div role="status" style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; background: #ECFDF3; border: 1px solid #BBF7D0; color: #15803D; font-weight: 500">
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg>
+            {{toast}}
+          </div>
+        </sc-if>
+
+        <!-- SECTION 1: HUBUNGAN PER MEREK -->
+        <section aria-labelledby="rel-title" style="display: flex; flex-direction: column; gap: 14px">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px">
+            <sc-for list="{{stats}}" as="st" hint-placeholder-count="5">
+              <div style="background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 12px">
+                <span aria-hidden="true" style="flex: none; width: 10px; height: 34px; border-radius: 4px; {{st.bar}}"></span>
+                <span style="display: flex; flex-direction: column; line-height: 1.2">
+                  <span style="font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums">{{st.value}}</span>
+                  <span style="font-size: 12.5px; color: #64748B; font-weight: 500">{{st.label}}</span>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,35,63,0.04)">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px 16px">
+              <div style="display: flex; flex-direction: column; gap: 2px">
+                <h2 id="rel-title" style="margin: 0; font-size: 17px; font-weight: 700">Status Hubungan Importir dengan Pemilik Merek</h2>
+                <p style="margin: 0; font-size: 13px; color: #64748B">Hubungan API-U dicatat per merek agar dokumen dan hasil verifikasi tiap merek dapat ditelusuri secara independen.</p>
+              </div>
+              <button type="button" class="vf-btn vf-ghost" onClick="{{openBulk}}" style="display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 600; cursor: pointer">
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="7" rx="1.5"></rect><rect x="3" y="13" width="7" height="7" rx="1.5"></rect><path d="M14 7.5h7"></path><path d="M14 16.5h7"></path></svg>
+                Atur Hubungan Massal
+              </button>
+            </div>
+            <div style="overflow-x: auto; border-top: 1px solid #E5EAF0">
+              <div role="table" aria-labelledby="rel-title" style="min-width: 1060px">
+                <div role="row" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 0.8fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.1fr) 150px; background: #F8FAFC; border-bottom: 1px solid #E5EAF0; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748B">
+                  <div role="columnheader" style="padding: 11px 12px 11px 24px">Merek</div>
+                  <div role="columnheader" style="padding: 11px 12px">Pemilik Merek</div>
+                  <div role="columnheader" style="padding: 11px 12px">Negara Pemilik</div>
+                  <div role="columnheader" style="padding: 11px 12px">Hubungan API-U</div>
+                  <div role="columnheader" style="padding: 11px 12px">Ditunjuk Oleh</div>
+                  <div role="columnheader" style="padding: 11px 12px">Kelengkapan</div>
+                  <div role="columnheader" style="padding: 11px 12px">Status</div>
+                  <div role="columnheader" style="padding: 11px 24px 11px 12px">Aksi</div>
+                </div>
+                <sc-for list="{{relRows}}" as="rr" hint-placeholder-count="3">
+                  <div role="row" class="vf-row" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 0.8fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.1fr) 150px; align-items: center; border-bottom: 1px solid #EEF2F6">
+                    <div role="rowheader" style="padding: 14px 12px 14px 24px; font-weight: 700; letter-spacing: 0.01em">{{rr.name}}</div>
+                    <div role="cell" style="padding: 14px 12px">{{rr.owner}}</div>
+                    <div role="cell" style="padding: 14px 12px; color: #475569">{{rr.country}}</div>
+                    <div role="cell" style="padding: 14px 12px"><span style="display: inline-flex; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; {{rr.relStyle}}">{{rr.rel}}</span></div>
+                    <div role="cell" style="padding: 14px 12px; color: #475569">{{rr.by}}</div>
+                    <div role="cell" style="padding: 14px 12px; display: flex; flex-direction: column; gap: 2px">
+                      <span style="font-weight: 600; font-variant-numeric: tabular-nums; {{rr.kelStyle}}">{{rr.kel}}</span>
+                      <span style="font-size: 11.5px; color: #64748B">dokumen tersedia</span>
+                    </div>
+                    <div role="cell" style="padding: 14px 12px"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; {{rr.statusStyle}}"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; {{rr.statusDot}}"></span>{{rr.status}}</span></div>
+                    <div role="cell" style="padding: 10px 24px 10px 12px">
+                      <button type="button" class="vf-btn vf-ghost" onClick="{{rr.open}}" style="height: 34px; padding: 0 12px; border: 1px solid #D5DDE7; border-radius: 8px; background: #FFFFFF; color: #10233F; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap">Atur Hubungan</button>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 2: DATA MEREK -->
+        <section aria-labelledby="brand-title" style="background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,35,63,0.04)">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px 16px">
+            <div style="display: flex; flex-direction: column; gap: 2px">
+              <h2 id="brand-title" style="margin: 0; font-size: 17px; font-weight: 700">Data Merek</h2>
+              <p style="margin: 0; font-size: 13px; color: #64748B">Masa berlaku tanda pendaftaran dihitung terhadap tanggal permohonan (25 Jul 2025).</p>
+            </div>
+            <button type="button" class="vf-btn vf-primary" onClick="{{addBrand}}" style="display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px; border: 1px solid #1677FF; border-radius: 10px; background: #1677FF; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+              Tambah Merek
+            </button>
+          </div>
+          <div style="overflow-x: auto; border-top: 1px solid #E5EAF0">
+            <div role="table" aria-labelledby="brand-title" style="min-width: 1280px">
+              <div role="row" style="display: grid; grid-template-columns: 48px minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 0.7fr) minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.2fr) minmax(0, 1fr) 84px; background: #F8FAFC; border-bottom: 1px solid #E5EAF0; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748B">
+                <div role="columnheader" style="padding: 11px 8px 11px 24px">No.</div>
+                <div role="columnheader" style="padding: 11px 10px">Nama Merek</div>
+                <div role="columnheader" style="padding: 11px 10px">Pemilik Merek</div>
+                <div role="columnheader" style="padding: 11px 10px">Negara</div>
+                <div role="columnheader" style="padding: 11px 10px">Jenis Dokumen Merek</div>
+                <div role="columnheader" style="padding: 11px 10px">Nomor Dokumen</div>
+                <div role="columnheader" style="padding: 11px 10px">Tgl Registrasi / Terbit</div>
+                <div role="columnheader" style="padding: 11px 10px">Masa Berlaku</div>
+                <div role="columnheader" style="padding: 11px 10px">Status Dokumen</div>
+                <div role="columnheader" style="padding: 11px 10px">Status Verifikasi</div>
+                <div role="columnheader" style="padding: 11px 24px 11px 10px">Aksi</div>
+              </div>
+              <sc-for list="{{brandRows}}" as="br" hint-placeholder-count="3">
+                <div role="row" class="vf-row" style="display: grid; grid-template-columns: 48px minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 0.7fr) minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.2fr) minmax(0, 1fr) 84px; align-items: center; border-bottom: 1px solid #EEF2F6; font-size: 13.5px">
+                  <div role="cell" style="padding: 14px 8px 14px 24px; color: #64748B">{{br.no}}</div>
+                  <div role="rowheader" style="padding: 14px 10px; font-weight: 700">{{br.name}}</div>
+                  <div role="cell" style="padding: 14px 10px">{{br.owner}}</div>
+                  <div role="cell" style="padding: 14px 10px; color: #475569">{{br.country}}</div>
+                  <div role="cell" style="padding: 14px 10px">{{br.tmType}}</div>
+                  <div role="cell" style="padding: 14px 10px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12.5px">{{br.number}}</div>
+                  <div role="cell" style="padding: 14px 10px">{{br.date}}</div>
+                  <div role="cell" style="padding: 14px 10px">{{br.expiry}}</div>
+                  <div role="cell" style="padding: 14px 10px; display: flex; flex-direction: column; gap: 3px">
+                    <span style="display: inline-flex; align-self: flex-start; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; {{br.docStyle}}"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; {{br.docDot}}"></span>{{br.docStatus}}</span>
+                    <sc-if value="{{br.docSub}}" hint-placeholder-val="{{ false }}"><span style="font-size: 11.5px; color: #64748B">{{br.docSub}}</span></sc-if>
+                  </div>
+                  <div role="cell" style="padding: 14px 10px"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; {{br.vStyle}}"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; {{br.vDot}}"></span>{{br.vStatus}}</span></div>
+                  <div role="cell" style="padding: 10px 24px 10px 10px">
+                    <button type="button" class="vf-btn vf-icon" aria-label="Edit data merek {{br.name}}" onClick="{{br.edit}}" style="width: 36px; height: 36px; border: 1px solid #E5EAF0; border-radius: 8px; background: #FFFFFF; color: #475569; display: flex; align-items: center; justify-content: center; cursor: pointer">
+                      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"></path><path d="M13.5 6.5l4 4"></path></svg>
+                    </button>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 3: MATRIKS -->
+        <section aria-labelledby="mx-title" style="background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,35,63,0.04)">
+          <div style="padding: 20px 24px 14px; display: flex; flex-direction: column; gap: 14px">
+            <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px">
+              <div style="display: flex; flex-direction: column; gap: 2px">
+                <h2 id="mx-title" style="margin: 0; font-size: 17px; font-weight: 700">Matriks Pemeriksaan Merek &amp; Hubungan Importir</h2>
+                <p style="margin: 0; font-size: 13px; color: #64748B">Requirement dihasilkan otomatis dari jenis hubungan, pihak penunjuk, dan jenis dokumen merek.</p>
+              </div>
+              <div role="status" aria-label="Ringkasan matriks" style="display: flex; flex-wrap: wrap; gap: 8px">
+                <sc-for list="{{mxSummary}}" as="ms" hint-placeholder-count="5">
+                  <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; {{ms.style}}"><span style="font-weight: 700; font-variant-numeric: tabular-nums">{{ms.count}}</span>{{ms.label}}</span>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+              <div style="position: relative; flex: 1 1 220px; max-width: 320px">
+                <label for="mx-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Cari parameter</label>
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 12px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+                <input id="mx-search" class="vf-input" type="search" value="{{search}}" onChange="{{onSearch}}" placeholder="Cari parameter..." style="width: 100%; height: 40px; padding: 0 12px 0 36px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; font-size: 13.5px; color: #10233F; box-sizing: border-box; background: #FFFFFF" />
+              </div>
+              <label for="f-rel" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Filter hubungan</label>
+              <select id="f-rel" class="vf-input" value="{{relFilter}}" onChange="{{onRelFilter}}" style="height: 40px; padding: 0 10px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; font-size: 13.5px; color: #10233F; background: #FFFFFF">
+                <option value="">Semua Hubungan</option>
+                <option value="Perwakilan Resmi">Perwakilan Resmi</option>
+                <option value="Importir Ditunjuk">Importir Ditunjuk</option>
+              </select>
+              <label for="f-status" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Filter status</label>
+              <select id="f-status" class="vf-input" value="{{statusFilter}}" onChange="{{onStatusFilter}}" style="height: 40px; padding: 0 10px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; font-size: 13.5px; color: #10233F; background: #FFFFFF">
+                <option value="">Semua Status</option>
+                <option value="Belum Diverifikasi">Belum Diverifikasi</option>
+                <option value="Sesuai">Sesuai</option>
+                <option value="Terverifikasi">Terverifikasi</option>
+                <option value="Tidak Sesuai">Tidak Sesuai</option>
+                <option value="Perlu Klarifikasi">Perlu Klarifikasi</option>
+                <option value="Tidak Berlaku">Tidak Berlaku</option>
+                <option value="Dikecualikan">Dikecualikan</option>
+              </select>
+              <label for="f-type" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Filter tipe</label>
+              <select id="f-type" class="vf-input" value="{{typeFilter}}" onChange="{{onTypeFilter}}" style="height: 40px; padding: 0 10px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; font-size: 13.5px; color: #10233F; background: #FFFFFF">
+                <option value="">Semua Tipe</option>
+                <option value="Wajib">Wajib</option>
+                <option value="Kondisional">Kondisional</option>
+                <option value="Exempt">Exempt</option>
+              </select>
+              <label style="display: inline-flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border-radius: 10px; cursor: pointer; font-size: 13.5px; font-weight: 500; {{problemStyle}}">
+                <input type="checkbox" class="vf-check" checked="{{problemOnly}}" onChange="{{toggleProblem}}" />
+                Tampilkan Hanya Bermasalah
+              </label>
+            </div>
+
+            <div role="group" aria-label="Filter merek" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+              <sc-for list="{{brandFilters}}" as="bf" hint-placeholder-count="4">
+                <button type="button" class="vf-btn" aria-pressed="{{bf.active}}" onClick="{{bf.pick}}" style="height: 32px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; {{bf.style}}">{{bf.label}}</button>
+              </sc-for>
+              <span style="margin-left: auto; font-size: 12.5px; color: #64748B">{{shownText}}</span>
+            </div>
+          </div>
+
+          <div style="max-height: 640px; overflow: auto; border-top: 1px solid #E5EAF0">
+            <div role="table" aria-labelledby="mx-title" style="min-width: 1380px">
+              <div role="row" style="position: sticky; top: 0; z-index: 3; display: grid; grid-template-columns: 48px minmax(0, 1.4fr) minmax(0, 0.8fr) minmax(0, 0.95fr) minmax(0, 1.25fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 0.75fr) minmax(0, 1.5fr) 96px; background: #F8FAFC; border-bottom: 1px solid #E5EAF0; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748B">
+                <div role="columnheader" style="padding: 11px 8px 11px 24px">No.</div>
+                <div role="columnheader" style="padding: 11px 10px">Parameter</div>
+                <div role="columnheader" style="padding: 11px 10px">Merek</div>
+                <div role="columnheader" style="padding: 11px 10px">Hubungan API-U</div>
+                <div role="columnheader" style="padding: 11px 10px">Isian / Keterangan</div>
+                <div role="columnheader" style="padding: 11px 10px">Dokumen Tersedia</div>
+                <div role="columnheader" style="padding: 11px 10px">Status Verifikasi</div>
+                <div role="columnheader" style="padding: 11px 10px">Tipe Regulasi</div>
+                <div role="columnheader" style="padding: 11px 10px">Note Regulasi</div>
+                <div role="columnheader" style="padding: 11px 24px 11px 10px">Aksi</div>
+              </div>
+              <sc-for list="{{mxRows}}" as="m" hint-placeholder-count="8">
+                <div role="row" class="vf-row" style="display: grid; grid-template-columns: 48px minmax(0, 1.4fr) minmax(0, 0.8fr) minmax(0, 0.95fr) minmax(0, 1.25fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 0.75fr) minmax(0, 1.5fr) 96px; align-items: start; border-bottom: 1px solid #EEF2F6; font-size: 13.5px; {{m.rowStyle}}">
+                  <div role="cell" style="padding: 14px 8px 14px 24px; color: #64748B; font-variant-numeric: tabular-nums">{{m.no}}</div>
+                  <div role="rowheader" style="padding: 10px">
+                    <button type="button" class="vf-btn vf-link" onClick="{{m.open}}" style="padding: 4px 0; border: 0; background: transparent; font: inherit; font-weight: 600; color: #10233F; text-align: left; cursor: pointer">{{m.param}}</button>
+                    <sc-if value="{{m.warning}}" hint-placeholder-val="{{ false }}"><div style="display: flex; gap: 6px; margin-top: 2px; font-size: 12px; font-weight: 500; {{m.warnStyle}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 2px"><path d="M12 3l9 16H3z"></path><path d="M12 10v4"></path><path d="M12 17h.01"></path></svg>{{m.warning}}</div></sc-if>
+                  </div>
+                  <div role="cell" style="padding: 14px 10px; font-weight: 700">{{m.brand}}</div>
+                  <div role="cell" style="padding: 12px 10px"><span style="display: inline-flex; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; {{m.relStyle}}">{{m.rel}}</span></div>
+                  <div role="cell" style="padding: 14px 10px; color: #334155; overflow-wrap: anywhere">{{m.isian}}</div>
+                  <div role="cell" style="padding: 10px">
+                    <sc-if value="{{m.hasDoc}}" hint-placeholder-val="{{ true }}">
+                      <div style="display: flex; flex-direction: column; gap: 4px">
+                        <span style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid #E5EAF0; border-radius: 8px; background: #FFFFFF">
+                          <span aria-hidden="true" style="flex: none; padding: 1px 5px; border-radius: 4px; background: #FEF3F2; color: #B42318; border: 1px solid #FECDCA; font-size: 9px; font-weight: 800">PDF</span>
+                          <span style="font-size: 13px; font-weight: 500; color: #0958D9; overflow-wrap: anywhere">{{m.doc}}</span>
+                        </span>
+                        <sc-if value="{{m.entityNote}}" hint-placeholder-val="{{ false }}"><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: #46597A; font-weight: 500"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>{{m.entityNote}}</span></sc-if>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{m.missing}}" hint-placeholder-val="{{ false }}">
+                      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px dashed #FCA5A5; border-radius: 8px; background: #FEF2F2; color: #B91C1C; font-size: 12.5px; font-weight: 600">Belum tersedia</span>
+                    </sc-if>
+                    <sc-if value="{{m.notNeeded}}" hint-placeholder-val="{{ false }}">
+                      <span style="display: inline-flex; padding: 6px 10px; border: 1px dashed #C8D3E3; border-radius: 8px; color: #46597A; font-size: 12.5px; font-weight: 500">Tidak diperlukan</span>
+                    </sc-if>
+                  </div>
+                  <div role="cell" style="padding: 12px 10px"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; {{m.statusStyle}}"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; {{m.statusDot}}"></span>{{m.status}}</span></div>
+                  <div role="cell" style="padding: 12px 10px"><span style="display: inline-flex; padding: 3px 9px; border-radius: 6px; font-size: 11.5px; font-weight: 700; {{m.typeStyle}}">{{m.type}}</span></div>
+                  <div role="cell" style="padding: 12px 10px; font-size: 12.5px; color: #334155">
+                    <span class="vf-tip" tabindex="0" aria-describedby="tip-{{m.id}}">
+                      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 2px"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5"></path><path d="M12 8h.01"></path></svg>
+                      <span>{{m.regulation}}</span>
+                      <span id="tip-{{m.id}}" role="tooltip" class="vf-tipbox">{{m.regText}}</span>
+                    </span>
+                  </div>
+                  <div role="cell" style="padding: 10px 24px 10px 10px">
+                    <button type="button" class="vf-btn vf-ghost" onClick="{{m.open}}" aria-label="Periksa {{m.param}} untuk merek {{m.brand}}" style="height: 34px; padding: 0 12px; border: 1px solid #D5DDE7; border-radius: 8px; background: #FFFFFF; color: #10233F; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer">Periksa</button>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{noRows}}" hint-placeholder-val="{{ false }}">
+                <div style="padding: 40px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; color: #64748B; text-align: center">
+                  <span>Tidak ada parameter yang cocok dengan filter.</span>
+                  <button type="button" class="vf-btn vf-ghost" onClick="{{resetFilters}}" style="height: 36px; padding: 0 14px; border: 1px solid #D5DDE7; border-radius: 8px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 600; cursor: pointer">Reset filter</button>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </section>
+
+        <!-- FOOTER NAVIGATION -->
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 4px">
+          <a href="Lokasi.dc.html" class="vf-btn vf-ghost" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; box-sizing: border-box; padding: 0 18px; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font-weight: 600; text-decoration: none">
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg>
+            Kembali ke Lokasi
+          </a>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+            <sc-if value="{{navHint}}" hint-placeholder-val="{{ false }}"><span role="status" style="font-size: 13px; color: #64748B">{{navHint}}</span></sc-if>
+            <a href="RencanaImpor.dc.html" class="vf-btn vf-primary" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 20px; box-sizing: border-box; border: 1px solid #1677FF; border-radius: 10px; background: #1677FF; color: #FFFFFF; font-weight: 600; text-decoration: none">
+              Lanjut ke Rencana Impor
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- BRAND / RELATIONSHIP DRAWER -->
+  <sc-if value="{{bdOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; z-index: 40">
+      <button type="button" aria-label="Tutup panel" onClick="{{closeBd}}" style="position: absolute; inset: 0; width: 100%; height: 100%; border: 0; padding: 0; margin: 0; background: rgba(16,42,67,0.45); cursor: pointer"></button>
+      <aside role="dialog" aria-modal="true" aria-labelledby="bd-title" style="position: absolute; top: 0; right: 0; bottom: 0; width: 620px; max-width: 100%; background: #FFFFFF; box-shadow: -12px 0 40px rgba(16,42,67,0.18); display: flex; flex-direction: column">
+        <div style="padding: 18px 24px 0; border-bottom: 1px solid #E5EAF0; display: flex; flex-direction: column; gap: 14px">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+            <div style="display: flex; flex-direction: column; gap: 2px">
+              <h2 id="bd-title" style="margin: 0; font-size: 18px; font-weight: 700">{{bdTitle}}</h2>
+              <span style="font-size: 13px; color: #64748B">VIU-2025-000123 · relationship dicatat per merek</span>
+            </div>
+            <button type="button" class="vf-btn vf-icon" aria-label="Tutup" onClick="{{closeBd}}" style="flex: none; width: 40px; height: 40px; border: 0; border-radius: 8px; background: transparent; color: #64748B; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg></button>
+          </div>
+          <dl style="margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; padding: 12px 14px; border-radius: 10px; background: #F8FAFC; border: 1px solid #E5EAF0; font-size: 13px">
+            <div><dt style="color: #64748B; font-size: 12px">Nama Merek</dt><dd style="margin: 0; font-weight: 700">{{bdSum.name}}</dd></div>
+            <div><dt style="color: #64748B; font-size: 12px">Pemilik Merek</dt><dd style="margin: 0; font-weight: 500">{{bdSum.owner}}</dd></div>
+            <div><dt style="color: #64748B; font-size: 12px">Negara Pemilik</dt><dd style="margin: 0; font-weight: 500">{{bdSum.country}}</dd></div>
+            <div><dt style="color: #64748B; font-size: 12px">Status Dokumen Merek</dt><dd style="margin: 0; font-weight: 500">{{bdSum.tm}}</dd></div>
+          </dl>
+          <div role="tablist" aria-label="Bagian" style="display: flex; gap: 4px">
+            <sc-for list="{{bdTabs}}" as="tb" hint-placeholder-count="2">
+              <button type="button" role="tab" aria-selected="{{tb.active}}" class="vf-btn" onClick="{{tb.pick}}" style="display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; background: transparent; font: inherit; font-weight: 600; cursor: pointer; {{tb.style}}">
+                {{tb.label}}
+                <sc-if value="{{tb.hasError}}" hint-placeholder-val="{{ false }}"><span aria-label="ada kesalahan" style="width: 7px; height: 7px; border-radius: 50%; background: #DC2626"></span></sc-if>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="flex: 1; overflow-y: auto; padding: 22px 24px 28px; display: flex; flex-direction: column; gap: 24px">
+
+          <!-- TAB: HUBUNGAN -->
+          <sc-if value="{{tabRel}}" hint-placeholder-val="{{ true }}">
+            <div role="radiogroup" aria-labelledby="lbl-rel" style="display: flex; flex-direction: column; gap: 10px">
+              <span id="lbl-rel" style="font-size: 13px; font-weight: 600; color: #10233F">Pilih Hubungan API-U</span>
+              <sc-for list="{{relCards}}" as="rc" hint-placeholder-count="2">
+                <button type="button" role="radio" aria-checked="{{rc.selected}}" class="vf-btn" onClick="{{rc.pick}}" style="display: flex; gap: 12px; padding: 14px 16px; border-radius: 12px; font: inherit; text-align: left; cursor: pointer; {{rc.style}}">
+                  <span aria-hidden="true" style="flex: none; margin-top: 2px; width: 18px; height: 18px; border-radius: 50%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; {{rc.ring}}"><span style="width: 8px; height: 8px; border-radius: 50%; {{rc.inner}}"></span></span>
+                  <span style="display: flex; flex-direction: column; gap: 4px">
+                    <span style="font-weight: 700; color: #10233F">{{rc.title}}</span>
+                    <span style="font-size: 13px; color: #475569">{{rc.desc}}</span>
+                    <span style="font-size: 12px; color: #64748B">{{rc.hint}}</span>
+                  </span>
+                </button>
+              </sc-for>
+              <sc-if value="{{bdErr.relType}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B91C1C">{{bdErr.relType}}</span></sc-if>
+            </div>
+
+            <sc-if value="{{showAppointedBy}}" hint-placeholder-val="{{ false }}">
+              <div role="radiogroup" aria-labelledby="lbl-by" style="display: flex; flex-direction: column; gap: 10px">
+                <span id="lbl-by" style="font-size: 13px; font-weight: 600; color: #10233F">Ditunjuk Oleh</span>
+                <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+                  <sc-for list="{{appCards}}" as="ac" hint-placeholder-count="2">
+                    <button type="button" role="radio" aria-checked="{{ac.selected}}" class="vf-btn" onClick="{{ac.pick}}" style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border-radius: 10px; font: inherit; font-weight: 600; text-align: left; cursor: pointer; {{ac.style}}">
+                      <span aria-hidden="true" style="flex: none; width: 18px; height: 18px; border-radius: 50%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; {{ac.ring}}"><span style="width: 8px; height: 8px; border-radius: 50%; {{ac.inner}}"></span></span>
+                      {{ac.label}}
+                    </button>
+                  </sc-for>
+                </div>
+                <sc-if value="{{bdErr.appointedBy}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B91C1C">{{bdErr.appointedBy}}</span></sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{showPR}}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid #E5EAF0; border-radius: 12px">
+                <span style="font-size: 13px; font-weight: 700">Identitas Perwakilan Resmi</span>
+                <div role="radiogroup" aria-labelledby="lbl-reuse" style="display: flex; flex-direction: column; gap: 8px">
+                  <span id="lbl-reuse" style="font-size: 12.5px; font-weight: 500; color: #64748B">Gunakan dokumen dari relationship lain</span>
+                  <sc-for list="{{prChoices}}" as="pc" hint-placeholder-count="2">
+                    <button type="button" role="radio" aria-checked="{{pc.selected}}" class="vf-btn" onClick="{{pc.pick}}" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; font: inherit; font-size: 13px; text-align: left; cursor: pointer; {{pc.style}}">
+                      <span aria-hidden="true" style="flex: none; width: 16px; height: 16px; border-radius: 50%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; {{pc.ring}}"><span style="width: 7px; height: 7px; border-radius: 50%; {{pc.inner}}"></span></span>
+                      <span style="display: flex; flex-direction: column"><span style="font-weight: 600">{{pc.label}}</span><span style="font-size: 12px; color: #64748B">{{pc.sub}}</span></span>
+                    </button>
+                  </sc-for>
+                </div>
+                <sc-if value="{{prIsNew}}" hint-placeholder-val="{{ false }}">
+                  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+                    <div style="display: flex; flex-direction: column; gap: 6px; grid-column: 1 / -1">
+                      <label for="pr-name" style="font-size: 12.5px; font-weight: 500; color: #64748B">Nama</label>
+                      <input id="pr-name" class="vf-input" type="text" value="{{bd.prName}}" onChange="{{onPrName}}" style="height: 40px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 8px; font: inherit; box-sizing: border-box; width: 100%" />
+                      <sc-if value="{{bdErr.prName}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B91C1C">{{bdErr.prName}}</span></sc-if>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px">
+                      <label for="pr-nib" style="font-size: 12.5px; font-weight: 500; color: #64748B">NIB</label>
+                      <input id="pr-nib" class="vf-input" type="text" inputmode="numeric" value="{{bd.prNib}}" onChange="{{onPrNib}}" style="height: 40px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 8px; font: inherit; box-sizing: border-box; width: 100%" />
+                      <sc-if value="{{bdErr.prNib}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B91C1C">{{bdErr.prNib}}</span></sc-if>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px">
+                      <label for="pr-akta" style="font-size: 12.5px; font-weight: 500; color: #64748B">Nomor Akta</label>
+                      <input id="pr-akta" class="vf-input" type="text" value="{{bd.prAkta}}" onChange="{{onPrAkta}}" style="height: 40px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 8px; font: inherit; box-sizing: border-box; width: 100%" />
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; grid-column: 1 / -1">
+                      <label for="pr-addr" style="font-size: 12.5px; font-weight: 500; color: #64748B">Alamat</label>
+                      <input id="pr-addr" class="vf-input" type="text" value="{{bd.prAlamat}}" onChange="{{onPrAlamat}}" style="height: 40px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 8px; font: inherit; box-sizing: border-box; width: 100%" />
+                      <sc-if value="{{bdErr.prAlamat}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B91C1C">{{bdErr.prAlamat}}</span></sc-if>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{prSelected}}" hint-placeholder-val="{{ false }}">
+                  <dl style="margin: 0; display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 6px 12px; font-size: 13px">
+                    <dt style="color: #64748B">Nama</dt><dd style="margin: 0; font-weight: 600">{{prEnt.name}}</dd>
+                    <dt style="color: #64748B">NIB</dt><dd style="margin: 0">{{prEnt.nib}}</dd>
+                    <dt style="color: #64748B">Alamat</dt><dd style="margin: 0">{{prEnt.alamat}}</dd>
+                    <dt style="color: #64748B">Nomor Akta</dt><dd style="margin: 0">{{prEnt.akta}}</dd>
+                  </dl>
+                  <p style="margin: 0; padding: 10px 12px; border-radius: 8px; background: #EEF2F8; color: #46597A; font-size: 12.5px">Akta dan Perizinan Berusaha entitas ini direferensikan, tidak diunggah ulang. Surat penunjukan, lisensi, dan bukti pencatatan lisensi tetap disimpan khusus untuk merek ini.</p>
+                </sc-if>
+                <sc-if value="{{bdErr.prEntity}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B91C1C">{{bdErr.prEntity}}</span></sc-if>
+              </div>
+            </sc-if>
+
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px">
+                <span style="font-size: 13px; font-weight: 700">Requirement yang Dihasilkan</span>
+                <span style="font-size: 12px; color: #64748B">{{genSummary}}</span>
+              </div>
+              <sc-if value="{{genEmpty}}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: 13px; color: #64748B">Pilih hubungan API-U untuk melihat requirement.</p></sc-if>
+              <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid #E5EAF0; border-radius: 10px; overflow: hidden">
+                <sc-for list="{{genReqs}}" as="g" hint-placeholder-count="3">
+                  <li style="display: flex; gap: 12px; padding: 12px 14px; border-bottom: 1px solid #EEF2F6; {{g.rowStyle}}">
+                    <span aria-hidden="true" style="flex: none; width: 22px; height: 22px; border-radius: 50%; background: #F1F5F9; color: #475569; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{g.no}}</span>
+                    <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+                      <span style="font-weight: 600; font-size: 13.5px">{{g.name}}</span>
+                      <span style="font-size: 12px; color: #64748B">{{g.regulation}} · {{g.scope}}</span>
+                      <sc-if value="{{g.exemptNote}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #46597A">{{g.exemptNote}}</span></sc-if>
+                    </span>
+                    <span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px">
+                      <span style="padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; {{g.typeStyle}}">{{g.type}}</span>
+                      <span style="font-size: 11.5px; font-weight: 600; {{g.docStyle}}">{{g.docText}}</span>
+                    </span>
+                  </li>
+                </sc-for>
+              </ol>
+            </div>
+          </sc-if>
+
+          <!-- TAB: DATA MEREK -->
+          <sc-if value="{{tabBrand}}" hint-placeholder-val="{{ false }}">
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <label for="bd-name" style="font-size: 12.5px; font-weight: 500; color: #64748B">Nama Merek</label>
+                <input id="bd-name" class="vf-input" type="text" value="{{bd.name}}" onChange="{{onBdName}}" style="height: 42px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 8px; font: inherit; font-weight: 600; box-sizing: border-box; width: 100%" />
+                <sc-if value="{{bdErr.name}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B91C1C">{{bdErr.name}}</span></sc-if>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <label for="bd-country" style="font-size: 12.5px; font-weight: 500; color: #64748B">Negara Pemilik</label>
+                <input id="bd-country" class="vf-input" type="text" value="{{bd.ownerCountry}}" onChange="{{onBdCountry}}" style="height: 42px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 8px; font: inherit; box-sizing: border-box; width: 100%" />
+                <sc-if value="{{bdErr.ownerCountry}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B91C1C">{{bdErr.ownerCountry}}</span></sc-if>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px; grid-column: 1 / -1">
+                <label for="bd-owner" style="font-size: 12.5px; font-weight: 500; color: #64748B">Pemilik Merek</label>
+                <input id="bd-owner" class="vf-input" type="text" value="{{bd.owner}}" onChange="{{onBdOwner}}" style="height: 42px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 8px; font: inherit; box-sizing: border-box; width: 100%" />
+                <sc-if value="{{bdErr.owner}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B91C1C">{{bdErr.owner}}</span></sc-if>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px; grid-column: 1 / -1">
+                <label for="bd-tmtype" style="font-size: 12.5px; font-weight: 500; color: #64748B">Jenis Dokumen Merek</label>
+                <select id="bd-tmtype" class="vf-input" value="{{bd.tmType}}" onChange="{{onBdTmType}}" style="height: 42px; padding: 0 10px; border: 1px solid #CBD5E1; border-radius: 8px; font: inherit; box-sizing: border-box; width: 100%; background: #FFFFFF">
+                  <option value="certificate">Sertifikat Merek</option>
+                  <option value="registration">Tanda Pendaftaran Merek</option>
+                  <option value="intl_registration">Tanda Pendaftaran Merek Internasional</option>
+                </select>
+              </div>
+              <sc-if value="{{tmIsCert}}" hint-placeholder-val="{{ true }}">
+                <div style="display: flex; flex-direction: column; gap: 6px; grid-column: 1 / -1">
+                  <label for="bd-num" style="font-size: 12.5px; font-weight: 500; color: #64748B">Nomor Sertifikat</label>
+                  <input id="bd-num" class="vf-input" type="text" value="{{bd.tmNumber}}" onChange="{{onBdNumber}}" style="height: 42px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 8px; font: inherit; box-sizing: border-box; width: 100%" />
+                  <sc-if value="{{bdErr.tmNumber}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B91C1C">{{bdErr.tmNumber}}</span></sc-if>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px">
+                  <label for="bd-issue" style="font-size: 12.5px; font-weight: 500; color: #64748B">Tanggal Terbit</label>
+                  <input id="bd-issue" class="vf-input" type="date" value="{{bd.issueDate}}" onChange="{{onBdIssue}}" style="height: 42px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 8px; font: inherit; box-sizing: border-box; width: 100%" />
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px">
+                  <label for="bd-exp" style="font-size: 12.5px; font-weight: 500; color: #64748B">Masa Berlaku</label>
+                  <input id="bd-exp" class="vf-input" type="date" value="{{bd.expiryDate}}" onChange="{{onBdExpiry}}" style="height: 42px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 8px; font: inherit; box-sizing: border-box; width: 100%" />
+                </div>
+              </sc-if>
+              <sc-if value="{{tmIsReg}}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 6px">
+                  <label for="bd-regnum" style="font-size: 12.5px; font-weight: 500; color: #64748B">Nomor Registrasi</label>
+                  <input id="bd-regnum" class="vf-input" type="text" value="{{bd.tmNumber}}" onChange="{{onBdNumber}}" style="height: 42px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 8px; font: inherit; box-sizing: border-box; width: 100%" />
+                  <sc-if value="{{bdErr.tmNumber}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B91C1C">{{bdErr.tmNumber}}</span></sc-if>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px">
+                  <label for="bd-regdate" style="font-size: 12.5px; font-weight: 500; color: #64748B">Tanggal Registrasi / Notifikasi</label>
+                  <input id="bd-regdate" class="vf-input" type="date" value="{{bd.regDate}}" onChange="{{onBdRegDate}}" style="height: 42px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 8px; font: inherit; box-sizing: border-box; width: 100%" />
+                  <sc-if value="{{bdErr.regDate}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B91C1C">{{bdErr.regDate}}</span></sc-if>
+                </div>
+                <div style="grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+                  <div style="padding: 12px; border-radius: 10px; border: 1px solid #E5EAF0; background: #F8FAFC"><div style="font-size: 12px; color: #64748B">Usia Registrasi</div><div style="font-weight: 700">{{regInfo.age}}</div></div>
+                  <div style="padding: 12px; border-radius: 10px; border: 1px solid #E5EAF0; background: #F8FAFC"><div style="font-size: 12px; color: #64748B">Sisa Masa Penggunaan</div><div style="font-weight: 700">{{regInfo.remain}}</div></div>
+                  <div style="padding: 12px; border-radius: 10px; {{regInfo.boxStyle}}"><div style="font-size: 12px; color: #64748B">Status</div><div style="font-weight: 700; {{regInfo.textStyle}}">{{regInfo.status}}</div></div>
+                </div>
+                <p style="grid-column: 1 / -1; margin: 0; font-size: 12.5px; color: #475569">Tanda pendaftaran hanya dapat digunakan selama 9 bulan sejak tanggal registrasi / notifikasi. <span style="color: #64748B">Pasal 37 ayat (6) dan ayat (7).</span></p>
+              </sc-if>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border: 1px solid #E5EAF0; border-radius: 12px">
+              <span style="font-size: 13px; font-weight: 700">Data untuk LHVIU</span>
+              <dl style="margin: 0; display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 6px 12px; font-size: 13px">
+                <dt style="color: #64748B">Identitas API-U</dt><dd style="margin: 0">PT Maju Tekstil Indonesia · NIB 8123456789012</dd>
+                <dt style="color: #64748B">Merek</dt><dd style="margin: 0">{{lhviu.brand}}</dd>
+                <dt style="color: #64748B">Pemilik merek</dt><dd style="margin: 0">{{lhviu.owner}}</dd>
+                <dt style="color: #64748B">Perwakilan Resmi</dt><dd style="margin: 0">{{lhviu.pr}}</dd>
+              </dl>
+              <span style="font-size: 12px; color: #64748B">HS, uraian barang, dan asal negara diambil dari tahap Rencana Impor.</span>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{bdWarnings.length}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <sc-for list="{{bdWarnings}}" as="w" hint-placeholder-count="1">
+                <div role="alert" style="display: flex; gap: 8px; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; {{w.style}}">
+                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 1px"><path d="M12 3l9 16H3z"></path><path d="M12 10v4"></path><path d="M12 17h.01"></path></svg>
+                  {{w.text}}
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{bdShowScore}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div style="display: flex; justify-content: space-between; font-size: 13px"><span style="font-weight: 700">Kepatuhan Merek</span><span style="font-weight: 600; color: #334155">{{bdScore.text}}</span></div>
+              <div role="progressbar" aria-valuemin="0" aria-valuemax="{{bdScore.total}}" aria-valuenow="{{bdScore.done}}" aria-label="Requirement selesai" style="height: 8px; border-radius: 999px; background: #EEF2F6; overflow: hidden"><div style="height: 100%; border-radius: 999px; {{bdScore.bar}}"></div></div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <div style="display: flex; align-items: center; justify-content: space-between"><span style="font-size: 13px; font-weight: 700">Aktivitas Terbaru</span><button type="button" class="vf-btn vf-link" onClick="{{openAudit}}" style="border: 0; background: transparent; padding: 4px 0; font: inherit; font-size: 13px; font-weight: 600; color: #0958D9; cursor: pointer">Lihat Audit Trail</button></div>
+              <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+                <sc-for list="{{bdAudit}}" as="ev" hint-placeholder-count="3">
+                  <li style="display: flex; gap: 10px; font-size: 13px"><span aria-hidden="true" style="flex: none; margin-top: 6px; width: 7px; height: 7px; border-radius: 50%; background: #94A3B8"></span><span style="display: flex; flex-direction: column"><span>{{ev.text}}</span><span style="font-size: 12px; color: #64748B">{{ev.at}}</span></span></li>
+                </sc-for>
+              </ol>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="padding: 14px 24px; border-top: 1px solid #E5EAF0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px">
+          <span style="font-size: 12.5px; {{bdFootStyle}}">{{bdFootText}}</span>
+          <div style="display: flex; gap: 10px">
+            <button type="button" class="vf-btn vf-ghost" onClick="{{closeBd}}" style="height: 40px; padding: 0 16px; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 600; cursor: pointer">Batal</button>
+            <button type="button" class="vf-btn vf-primary" onClick="{{saveBd}}" style="height: 40px; padding: 0 18px; border: 1px solid #1677FF; border-radius: 10px; background: #1677FF; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">Simpan</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </sc-if>
+
+  <!-- CHECK DETAIL DRAWER -->
+  <sc-if value="{{ckOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; z-index: 40">
+      <button type="button" aria-label="Tutup panel" onClick="{{closeCk}}" style="position: absolute; inset: 0; width: 100%; height: 100%; border: 0; padding: 0; margin: 0; background: rgba(16,42,67,0.45); cursor: pointer"></button>
+      <aside role="dialog" aria-modal="true" aria-labelledby="ck-title" style="position: absolute; top: 0; right: 0; bottom: 0; width: 560px; max-width: 100%; background: #FFFFFF; box-shadow: -12px 0 40px rgba(16,42,67,0.18); display: flex; flex-direction: column">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 24px; border-bottom: 1px solid #E5EAF0">
+          <div style="display: flex; flex-direction: column; gap: 2px">
+            <h2 id="ck-title" style="margin: 0; font-size: 18px; font-weight: 700">Detail Pemeriksaan</h2>
+            <span style="font-size: 13px; color: #64748B">{{ck.param}} · {{ck.brand}}</span>
+          </div>
+          <button type="button" class="vf-btn vf-icon" aria-label="Tutup" onClick="{{closeCk}}" style="flex: none; width: 40px; height: 40px; border: 0; border-radius: 8px; background: transparent; color: #64748B; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg></button>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: 22px 24px 28px; display: flex; flex-direction: column; gap: 22px">
+          <dl style="margin: 0; display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px 16px; font-size: 13.5px">
+            <dt style="color: #64748B">Parameter</dt><dd style="margin: 0; font-weight: 700">{{ck.param}}</dd>
+            <dt style="color: #64748B">Merek</dt><dd style="margin: 0; font-weight: 600">{{ck.brand}}</dd>
+            <dt style="color: #64748B">Pemilik Merek</dt><dd style="margin: 0">{{ck.owner}}</dd>
+            <dt style="color: #64748B">Hubungan API-U</dt><dd style="margin: 0"><span style="display: inline-flex; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; {{ck.relStyle}}">{{ck.rel}}</span></dd>
+            <dt style="color: #64748B">Tipe Requirement</dt><dd style="margin: 0"><span style="display: inline-flex; padding: 2px 9px; border-radius: 6px; font-size: 12px; font-weight: 700; {{ck.typeStyle}}">{{ck.type}}</span></dd>
+            <dt style="color: #64748B">Status Requirement</dt><dd style="margin: 0; font-weight: 600; {{ck.reqStyle}}">{{ck.reqStatus}}</dd>
+            <dt style="color: #64748B">Dasar Regulasi</dt><dd style="margin: 0"><div style="font-weight: 600">{{ck.regulation}}</div><div style="font-size: 12.5px; color: #475569; margin-top: 2px">{{ck.regText}}</div></dd>
+          </dl>
+          <sc-if value="{{ck.exemptNote}}" hint-placeholder-val="{{ false }}">
+            <p style="margin: 0; padding: 12px 14px; border-radius: 10px; background: #EEF2F8; border: 1px solid #C8D3E3; color: #46597A; font-size: 13px">{{ck.exemptNote}}</p>
+          </sc-if>
+
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 13px; font-weight: 700">Dokumen</span>
+            <sc-if value="{{ck.hasDoc}}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px; border: 1px solid #E5EAF0; border-radius: 10px">
+                <span aria-hidden="true" style="flex: none; width: 30px; height: 34px; border-radius: 5px; background: #FEF3F2; color: #B42318; font-size: 9px; font-weight: 800; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; box-sizing: border-box; border: 1px solid #FECDCA">PDF</span>
+                <span style="flex: 1; min-width: 160px; font-weight: 600; color: #0958D9; overflow-wrap: anywhere">{{ck.doc}}</span>
+                <div style="display: flex; gap: 6px">
+                  <button type="button" class="vf-btn vf-ghost" onClick="{{openPreview}}" style="height: 34px; padding: 0 10px; border: 1px solid #D5DDE7; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600; color: #10233F; cursor: pointer">Preview</button>
+                  <button type="button" class="vf-btn vf-ghost" style="height: 34px; padding: 0 10px; border: 1px solid #D5DDE7; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600; color: #10233F; cursor: pointer">Download</button>
+                  <label class="vf-filebtn" style="position: relative; display: inline-flex; align-items: center; height: 34px; padding: 0 10px; border: 1px solid #D5DDE7; border-radius: 8px; background: #FFFFFF; font-size: 13px; font-weight: 600; color: #10233F; cursor: pointer; box-sizing: border-box">
+                    Replace
+                    <input type="file" class="vf-file-input" accept="application/pdf" onChange="{{onReplace}}" />
+                  </label>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ck.missing}}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border: 1px dashed #FCA5A5; border-radius: 10px; background: #FEF2F2">
+                <span style="font-size: 13px; font-weight: 600; color: #B91C1C">Dokumen belum tersedia</span>
+                <label class="vf-filebtn" style="position: relative; display: inline-flex; align-items: center; height: 34px; padding: 0 12px; border: 1px solid #D5DDE7; border-radius: 8px; background: #FFFFFF; font-size: 13px; font-weight: 600; color: #10233F; cursor: pointer; box-sizing: border-box">
+                  Unggah Dokumen
+                  <input type="file" class="vf-file-input" accept="application/pdf" onChange="{{onReplace}}" />
+                </label>
+              </div>
+            </sc-if>
+            <sc-if value="{{ck.notNeeded}}" hint-placeholder-val="{{ false }}">
+              <span style="font-size: 13px; color: #46597A">Tidak diperlukan karena requirement dikecualikan.</span>
+            </sc-if>
+            <sc-if value="{{ck.entityNote}}" hint-placeholder-val="{{ false }}">
+              <span style="font-size: 12.5px; color: #46597A">{{ck.entityNote}}</span>
+            </sc-if>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <label for="ck-status" style="font-size: 13px; font-weight: 700">Status Verifikasi</label>
+            <select id="ck-status" class="vf-input" value="{{cd.status}}" onChange="{{onCdStatus}}" disabled="{{ck.locked}}" style="height: 42px; padding: 0 10px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; font-weight: 600; box-sizing: border-box; width: 100%; background: #FFFFFF">
+              <option value="Belum Diverifikasi">Belum Diverifikasi</option>
+              <option value="Sesuai">Sesuai</option>
+              <option value="Terverifikasi">Terverifikasi</option>
+              <option value="Tidak Sesuai">Tidak Sesuai</option>
+              <option value="Perlu Klarifikasi">Perlu Klarifikasi</option>
+              <option value="Dikecualikan">Dikecualikan</option>
+            </select>
+            <sc-if value="{{ck.lockReason}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #64748B">{{ck.lockReason}}</span></sc-if>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <label for="ck-note" style="font-size: 13px; font-weight: 700">Catatan Verifikator</label>
+            <textarea id="ck-note" class="vf-input" rows="4" value="{{cd.note}}" onChange="{{onCdNote}}" placeholder="Tuliskan dasar penilaian dokumen…" style="padding: 12px 14px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; line-height: 1.5; box-sizing: border-box; width: 100%; resize: vertical"></textarea>
+            <dl style="margin: 0; display: flex; flex-wrap: wrap; gap: 6px 24px; font-size: 12.5px">
+              <div style="display: flex; gap: 6px"><dt style="color: #64748B">Diverifikasi oleh:</dt><dd style="margin: 0; font-weight: 600">{{ck.by}}</dd></div>
+              <div style="display: flex; gap: 6px"><dt style="color: #64748B">Waktu verifikasi:</dt><dd style="margin: 0; font-weight: 600">{{ck.at}}</dd></div>
+            </dl>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; align-items: center; justify-content: space-between"><span style="font-size: 13px; font-weight: 700">Aktivitas Terbaru · {{ck.brand}}</span><button type="button" class="vf-btn vf-link" onClick="{{openAudit}}" style="border: 0; background: transparent; padding: 4px 0; font: inherit; font-size: 13px; font-weight: 600; color: #0958D9; cursor: pointer">Lihat Audit Trail</button></div>
+            <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+              <sc-for list="{{ckAudit}}" as="ev" hint-placeholder-count="3">
+                <li style="display: flex; gap: 10px; font-size: 13px"><span aria-hidden="true" style="flex: none; margin-top: 6px; width: 7px; height: 7px; border-radius: 50%; background: #94A3B8"></span><span style="display: flex; flex-direction: column"><span>{{ev.text}}</span><span style="font-size: 12px; color: #64748B">{{ev.at}}</span></span></li>
+              </sc-for>
+            </ol>
+          </div>
+        </div>
+        <div style="padding: 14px 24px; border-top: 1px solid #E5EAF0; display: flex; justify-content: flex-end; gap: 10px">
+          <button type="button" class="vf-btn vf-ghost" onClick="{{closeCk}}" style="height: 40px; padding: 0 16px; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 600; cursor: pointer">Tutup</button>
+          <button type="button" class="vf-btn vf-primary" onClick="{{saveCk}}" style="height: 40px; padding: 0 18px; border: 1px solid #1677FF; border-radius: 10px; background: #1677FF; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">Simpan Pemeriksaan</button>
+        </div>
+      </aside>
+    </div>
+  </sc-if>
+
+  <!-- BULK MODAL -->
+  <sc-if value="{{bkOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">
+      <button type="button" aria-label="Tutup" onClick="{{closeBulk}}" style="position: absolute; inset: 0; width: 100%; height: 100%; border: 0; padding: 0; margin: 0; background: rgba(16,42,67,0.48); cursor: pointer"></button>
+      <div role="dialog" aria-modal="true" aria-labelledby="bk-title" style="position: relative; width: 100%; max-width: 560px; max-height: 100%; overflow-y: auto; background: #FFFFFF; border-radius: 14px; box-shadow: 0 24px 60px rgba(16,42,67,0.25); display: flex; flex-direction: column">
+        <div style="padding: 18px 22px; border-bottom: 1px solid #E5EAF0; display: flex; flex-direction: column; gap: 2px">
+          <h2 id="bk-title" style="margin: 0; font-size: 17px; font-weight: 700">Terapkan Hubungan ke Beberapa Merek</h2>
+          <span style="font-size: 12.5px; color: #64748B">Ini hanya pintasan input. Hubungan tetap disimpan per merek beserta audit trail masing-masing.</span>
+        </div>
+        <div style="padding: 18px 22px; display: flex; flex-direction: column; gap: 18px">
+          <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px">
+            <legend style="padding: 0; margin-bottom: 8px; font-size: 13px; font-weight: 700">Merek</legend>
+            <sc-for list="{{bkBrands}}" as="bb" hint-placeholder-count="3">
+              <label style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border: 1px solid #E5EAF0; border-radius: 10px; cursor: pointer">
+                <input type="checkbox" class="vf-check" checked="{{bb.checked}}" onChange="{{bb.toggle}}" />
+                <span style="font-weight: 700">{{bb.name}}</span>
+                <span style="margin-left: auto; font-size: 12px; color: #64748B">{{bb.current}}</span>
+              </label>
+            </sc-for>
+          </fieldset>
+          <div role="radiogroup" aria-labelledby="bk-rel" style="display: flex; flex-direction: column; gap: 8px">
+            <span id="bk-rel" style="font-size: 13px; font-weight: 700">Hubungan API-U</span>
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+              <sc-for list="{{bkRelCards}}" as="rc" hint-placeholder-count="2">
+                <button type="button" role="radio" aria-checked="{{rc.selected}}" class="vf-btn" onClick="{{rc.pick}}" style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border-radius: 10px; font: inherit; font-weight: 600; text-align: left; cursor: pointer; {{rc.style}}">
+                  <span aria-hidden="true" style="flex: none; width: 18px; height: 18px; border-radius: 50%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; {{rc.ring}}"><span style="width: 8px; height: 8px; border-radius: 50%; {{rc.inner}}"></span></span>
+                  {{rc.title}}
+                </button>
+              </sc-for>
+            </div>
+          </div>
+          <sc-if value="{{bkShowApp}}" hint-placeholder-val="{{ false }}">
+            <div role="radiogroup" aria-labelledby="bk-by" style="display: flex; flex-direction: column; gap: 8px">
+              <span id="bk-by" style="font-size: 13px; font-weight: 700">Ditunjuk Oleh</span>
+              <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+                <sc-for list="{{bkAppCards}}" as="ac" hint-placeholder-count="2">
+                  <button type="button" role="radio" aria-checked="{{ac.selected}}" class="vf-btn" onClick="{{ac.pick}}" style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border-radius: 10px; font: inherit; font-weight: 600; text-align: left; cursor: pointer; {{ac.style}}">
+                    <span aria-hidden="true" style="flex: none; width: 18px; height: 18px; border-radius: 50%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; {{ac.ring}}"><span style="width: 8px; height: 8px; border-radius: 50%; {{ac.inner}}"></span></span>
+                    {{ac.label}}
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{bkShowPR}}" hint-placeholder-val="{{ false }}">
+            <div role="radiogroup" aria-labelledby="bk-pr" style="display: flex; flex-direction: column; gap: 8px">
+              <span id="bk-pr" style="font-size: 13px; font-weight: 700">Perwakilan Resmi</span>
+              <sc-for list="{{bkPrChoices}}" as="pc" hint-placeholder-count="1">
+                <button type="button" role="radio" aria-checked="{{pc.selected}}" class="vf-btn" onClick="{{pc.pick}}" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; font: inherit; font-size: 13px; text-align: left; cursor: pointer; {{pc.style}}">
+                  <span aria-hidden="true" style="flex: none; width: 16px; height: 16px; border-radius: 50%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; {{pc.ring}}"><span style="width: 7px; height: 7px; border-radius: 50%; {{pc.inner}}"></span></span>
+                  <span style="display: flex; flex-direction: column"><span style="font-weight: 600">{{pc.label}}</span><span style="font-size: 12px; color: #64748B">{{pc.sub}}</span></span>
+                </button>
+              </sc-for>
+              <span style="font-size: 12px; color: #64748B">Untuk Perwakilan Resmi baru, atur melalui tombol Atur Hubungan pada masing-masing merek.</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{bkError}}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size: 12.5px; color: #B91C1C; font-weight: 500">{{bkError}}</span></sc-if>
+        </div>
+        <div style="padding: 14px 22px; border-top: 1px solid #E5EAF0; display: flex; justify-content: flex-end; gap: 10px">
+          <button type="button" class="vf-btn vf-ghost" onClick="{{closeBulk}}" style="height: 40px; padding: 0 16px; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 600; cursor: pointer">Batal</button>
+          <button type="button" class="vf-btn vf-primary" onClick="{{applyBulk}}" style="height: 40px; padding: 0 18px; border: 1px solid #1677FF; border-radius: 10px; background: #1677FF; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">Terapkan</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- AUDIT TRAIL MODAL -->
+  <sc-if value="{{auOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">
+      <button type="button" aria-label="Tutup" onClick="{{closeAudit}}" style="position: absolute; inset: 0; width: 100%; height: 100%; border: 0; padding: 0; margin: 0; background: rgba(16,42,67,0.48); cursor: pointer"></button>
+      <div role="dialog" aria-modal="true" aria-labelledby="au-title" style="position: relative; width: 100%; max-width: 620px; max-height: 100%; background: #FFFFFF; border-radius: 14px; box-shadow: 0 24px 60px rgba(16,42,67,0.25); display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid #E5EAF0">
+          <h2 id="au-title" style="margin: 0; font-size: 17px; font-weight: 700">Audit Trail · Merek &amp; Hubungan Importir</h2>
+          <button type="button" class="vf-btn vf-icon" aria-label="Tutup" onClick="{{closeAudit}}" style="width: 36px; height: 36px; border: 0; border-radius: 8px; background: transparent; color: #64748B; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg></button>
+        </div>
+        <ol style="list-style: none; margin: 0; padding: 8px 22px 18px; overflow-y: auto; display: flex; flex-direction: column">
+          <sc-for list="{{auEvents}}" as="ev" hint-placeholder-count="5">
+            <li style="display: grid; grid-template-columns: 140px 96px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid #EEF2F6; font-size: 13px; align-items: start">
+              <span style="color: #64748B; font-variant-numeric: tabular-nums">{{ev.at}}</span>
+              <span><span style="display: inline-flex; padding: 2px 8px; border-radius: 6px; background: #F1F5F9; color: #334155; font-size: 11.5px; font-weight: 700">{{ev.brand}}</span></span>
+              <span>{{ev.text}}</span>
+            </li>
+          </sc-for>
+        </ol>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- PREVIEW MODAL -->
+  <sc-if value="{{pvOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">
+      <button type="button" aria-label="Tutup pratinjau" onClick="{{closePreview}}" style="position: absolute; inset: 0; width: 100%; height: 100%; border: 0; padding: 0; margin: 0; background: rgba(16,42,67,0.55); cursor: pointer"></button>
+      <div role="dialog" aria-modal="true" aria-labelledby="pv-title" style="position: relative; width: 100%; max-width: 640px; max-height: 100%; background: #FFFFFF; border-radius: 14px; box-shadow: 0 24px 60px rgba(16,42,67,0.25); display: flex; flex-direction: column; overflow: hidden">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid #E5EAF0">
+          <h3 id="pv-title" style="margin: 0; font-size: 15px; font-weight: 700; overflow-wrap: anywhere">{{pvDoc}}</h3>
+          <button type="button" class="vf-btn vf-icon" aria-label="Tutup pratinjau" onClick="{{closePreview}}" style="flex: none; width: 36px; height: 36px; border: 0; border-radius: 8px; background: transparent; color: #64748B; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg></button>
+        </div>
+        <div style="flex: 1; overflow: auto; background: #EEF2F6; padding: 24px; display: flex; justify-content: center">
+          <div style="width: 100%; max-width: 380px; aspect-ratio: 1 / 1.414; background: #FFFFFF; border-radius: 4px; box-shadow: 0 2px 8px rgba(16,42,67,0.1); padding: 32px 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px">
+            <div style="height: 14px; width: 55%; background: #E2E8F0; border-radius: 3px"></div>
+            <div style="height: 10px; width: 35%; background: #EEF2F6; border-radius: 3px; margin-bottom: 14px"></div>
+            <div style="height: 8px; width: 100%; background: #EEF2F6; border-radius: 3px"></div>
+            <div style="height: 8px; width: 92%; background: #EEF2F6; border-radius: 3px"></div>
+            <div style="height: 8px; width: 70%; background: #EEF2F6; border-radius: 3px"></div>
+            <div style="flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; color: #64748B; font-size: 13px">[Pratinjau isi {{pvDoc}}]</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2900}}'>
+var REF_DATE = new Date(2025, 6, 25);
+var USER = 'Budi Santoso';
+var MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+var REG_TEXT = {
+  p37_2: 'Pasal 37 ayat (2) huruf c angka 2 huruf f — sertifikat merek atas Produk Tekstil yang akan diimpor sesuai kelas merek.',
+  p37_3: 'Pasal 37 ayat (3) — jika API-U merupakan Perwakilan Resmi: bukti penunjukan dalam bentuk akta autentik, perjanjian lisensi/sublisensi, dan bukti pencatatan lisensi/sublisensi.',
+  p37_4: 'Pasal 37 ayat (4) — jika API-U hanya bertindak sebagai importir: surat penunjukan impor dari pemilik merek/pemilik hak atas merek yang berkedudukan di Indonesia, atau dari Perwakilan Resmi.',
+  p37_5: 'Pasal 37 ayat (5) — jika penunjukan berasal dari Perwakilan Resmi: akta pendirian dan perubahan, Perizinan Berusaha, bukti penunjukan sebagai Perwakilan Resmi, lisensi/sublisensi, dan bukti pencatatannya.',
+  p37_67: 'Pasal 37 ayat (6) dan (7) — jika sertifikat merek belum terbit dapat digunakan tanda pendaftaran merek (internasional), yang hanya berlaku 9 bulan sejak tanggal registrasi/notifikasi.'
+};
+var EXEMPT_NOTE = 'Dikecualikan berdasarkan Pasal 37 ayat (8) karena menggunakan tanda pendaftaran sebagaimana Pasal 37 ayat (6).';
+
+function parseISO(s) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+function fmtDate(s) { var d = parseISO(s); return d ? (d.getDate() < 10 ? '0' : '') + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() : '—'; }
+function fmtD(d) { return (d.getDate() < 10 ? '0' : '') + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
+function addMonths(d, n) { return new Date(d.getFullYear(), d.getMonth() + n, d.getDate()); }
+function monthDiff(a, b) {
+  var m = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+  if (b.getDate() < a.getDate()) m--;
+  if (m < 0) m = 0;
+  var days = Math.round((b - addMonths(a, m)) / 86400000);
+  return { m: m, d: Math.max(0, days) };
+}
+function mdText(x) { return x.m + ' bulan' + (x.d ? ' ' + x.d + ' hari' : ''); }
+function nowText() { var n = new Date(); var p = function (v) { return (v < 10 ? '0' : '') + v; }; return p(n.getDate()) + ' ' + MONTHS[n.getMonth()] + ' ' + n.getFullYear() + ' ' + p(n.getHours()) + ':' + p(n.getMinutes()); }
+
+function regInfoOf(tm) {
+  var d = parseISO(tm.registrationDate);
+  if (!d) return null;
+  var deadline = addMonths(d, 9);
+  var expired = REF_DATE > deadline;
+  var age = monthDiff(d, REF_DATE);
+  var remain = expired ? null : monthDiff(REF_DATE, deadline);
+  return { age: mdText(age), remain: expired ? 'Habis' : mdText(remain), expired: expired, deadline: fmtD(deadline), soon: !expired && remain.m < 3 };
+}
+
+function getRequiredDocuments(brand) {
+  var R = [];
+  var tm = brand.trademark || {};
+  var isReg = tm.type === 'registration' || tm.type === 'intl_registration';
+  var tmName = tm.type === 'registration' ? 'Tanda Pendaftaran Merek' : tm.type === 'intl_registration' ? 'Tanda Pendaftaran Merek Internasional' : 'Sertifikat Merek';
+  R.push({ key: 'tm', name: tmName, type: 'mandatory', regulation: isReg ? 'Pasal 37 ayat (6) dan ayat (7)' : 'Pasal 37 ayat (2) huruf c angka 2 huruf f', regKey: isReg ? 'p37_67' : 'p37_2', applicable: true, scope: 'relationship' });
+  var exempt = function (o) { if (isReg) { o.applicable = false; o.exemptionReason = 'Pasal 37 ayat (8)'; } return o; };
+  var rel = brand.relationship || {};
+  if (rel.type === 'official_representative') {
+    R.push({ key: 'pr_appoint', name: 'Bukti Penunjukan Perwakilan Resmi', type: 'conditional', regulation: 'Pasal 37 ayat (3) huruf a', regKey: 'p37_3', applicable: true, scope: 'relationship' });
+    R.push(exempt({ key: 'license', name: 'Perjanjian Lisensi / Sublisensi', type: 'conditional', regulation: 'Pasal 37 ayat (3) huruf b', regKey: 'p37_3', applicable: true, scope: 'relationship' }));
+    R.push(exempt({ key: 'license_rec', name: 'Bukti Pencatatan Lisensi / Sublisensi', type: 'conditional', regulation: 'Pasal 37 ayat (3) huruf c', regKey: 'p37_3', applicable: true, scope: 'relationship' }));
+  } else if (rel.type === 'appointed_importer' && rel.appointedBy) {
+    var byPR = rel.appointedBy === 'official_representative';
+    R.push({ key: 'import_appoint', name: 'Surat Penunjukan Impor', type: 'conditional', regulation: byPR ? 'Pasal 37 ayat (4) huruf b jo. ayat (5)' : 'Pasal 37 ayat (4) huruf a', regKey: 'p37_4', applicable: true, scope: 'relationship' });
+    if (byPR) {
+      R.push({ key: 'pr_deed', name: 'Akta Pendirian dan Perubahan Perwakilan Resmi', type: 'conditional', regulation: 'Pasal 37 ayat (5)', regKey: 'p37_5', applicable: true, scope: 'entity' });
+      R.push({ key: 'pr_license', name: 'Perizinan Berusaha Perwakilan Resmi', type: 'conditional', regulation: 'Pasal 37 ayat (5)', regKey: 'p37_5', applicable: true, scope: 'entity' });
+      R.push({ key: 'pr_appoint', name: 'Bukti Penunjukan sebagai Perwakilan Resmi', type: 'conditional', regulation: 'Pasal 37 ayat (5)', regKey: 'p37_5', applicable: true, scope: 'relationship' });
+      R.push(exempt({ key: 'license', name: 'Perjanjian Lisensi / Sublisensi', type: 'conditional', regulation: 'Pasal 37 ayat (5)', regKey: 'p37_5', applicable: true, scope: 'relationship' }));
+      R.push(exempt({ key: 'license_rec', name: 'Bukti Pencatatan Lisensi / Sublisensi', type: 'conditional', regulation: 'Pasal 37 ayat (5)', regKey: 'p37_5', applicable: true, scope: 'relationship' }));
+    }
+  }
+  return R;
+}
+
+var THEME = {
+  ok: { bg: '#ECFDF3', fg: '#15803D', bd: '#BBF7D0', dot: '#16A34A' },
+  warn: { bg: '#FFFBEB', fg: '#B45309', bd: '#FDE68A', dot: '#F59E0B' },
+  bad: { bg: '#FEF2F2', fg: '#B91C1C', bd: '#FECACA', dot: '#DC2626' },
+  none: { bg: '#F1F5F9', fg: '#475569', bd: '#CBD5E1', dot: '#94A3B8' },
+  exempt: { bg: '#EEF2F8', fg: '#46597A', bd: '#C8D3E3', dot: '#64748B' },
+  blue: { bg: '#E8F1FF', fg: '#0958D9', bd: '#BAD6FF', dot: '#1677FF' },
+  purple: { bg: '#F3EEFF', fg: '#6D28D9', bd: '#DDD0FB', dot: '#7C3AED' }
+};
+function statusTone(s) {
+  if (s === 'Sesuai' || s === 'Terverifikasi') return THEME.ok;
+  if (s === 'Perlu Klarifikasi') return THEME.warn;
+  if (s === 'Tidak Sesuai' || s === 'Tidak Berlaku') return THEME.bad;
+  if (s === 'Dikecualikan') return THEME.exempt;
+  return THEME.none;
+}
+function pill(t) { return 'background:' + t.bg + ';color:' + t.fg + ';border:1px solid ' + t.bd; }
+function relLabel(rel) { return !rel || !rel.type ? '—' : rel.type === 'official_representative' ? 'Perwakilan Resmi' : 'Importir Ditunjuk'; }
+function relTone(rel) { return rel && rel.type === 'official_representative' ? THEME.blue : rel && rel.type ? THEME.purple : THEME.none; }
+function byLabel(rel) { return !rel || rel.type !== 'appointed_importer' ? '—' : rel.appointedBy === 'brand_owner' ? 'Pemilik Merek' : rel.appointedBy === 'official_representative' ? 'Perwakilan Resmi' : '—'; }
+function relFull(rel) { return !rel || !rel.type ? 'belum ditentukan' : rel.type === 'official_representative' ? 'Perwakilan Resmi' : 'Importir yang Ditunjuk oleh ' + (rel.appointedBy === 'brand_owner' ? 'Pemilik Merek' : 'Perwakilan Resmi'); }
+function typeBadge(r) {
+  if (!r.applicable) return { label: 'Exempt', style: pill(THEME.exempt) };
+  if (r.type === 'mandatory') return { label: 'Wajib', style: pill(THEME.blue) };
+  if (r.type === 'supporting') return { label: 'Pendukung', style: pill(THEME.none) };
+  return { label: 'Kondisional', style: pill(THEME.purple) };
+}
+function radioLook(sel) {
+  return {
+    style: sel ? 'background:#F5F9FF;border:2px solid #1677FF' : 'background:#FFFFFF;border:1px solid #D5DDE7',
+    ring: 'border:2px solid ' + (sel ? '#1677FF' : '#CBD5E1'),
+    inner: sel ? 'background:#1677FF' : 'background:transparent'
+  };
+}
+
+// Workflow utama VIU – 11 tahap (urutan baku, dipakai semua artboard)
+var VIU_STEP_NAMES = ['Ringkasan','Perusahaan & Legalitas','Lokasi','Merek & Hubungan Importir','Rencana Impor','Stok Terkini','Uji Mutu','Pernyataan Label','Modal Kerja','Review & Submit','Generate Laporan'];
+var VIU_STEP_HREFS = { 1: 'Main.dc.html', 2: 'Legalitas.dc.html', 3: 'Lokasi.dc.html', 4: 'Merek.dc.html', 5: 'RencanaImpor.dc.html', 6: 'Stok.dc.html', 7: 'UjiMutu.dc.html', 8: 'Label.dc.html', 9: 'ModalKerja.dc.html' };
+function viuSteps(current, lock) {
+  return VIU_STEP_NAMES.map(function (label, i) {
+    var num = i + 1, active = num === current, done = num < current;
+    var href = VIU_STEP_HREFS[num], link = !!href && !active && !lock;
+    return {
+      num: num, label: label, href: href || '#', isLink: link, notLink: !link, done: done, showNum: !done,
+      hasLine: num < VIU_STEP_NAMES.length,
+      title: href ? label : label + ' – belum tersedia',
+      ariaLabel: 'Tahap ' + num + ': ' + label + (done ? ' (selesai)' : active ? ' (aktif)' : href ? '' : ' (belum tersedia)'),
+      ariaCurrent: active ? 'step' : undefined,
+      circleStyle: active ? 'background:#1677FF;color:#FFFFFF;border:2px solid #1677FF;box-shadow:0 0 0 4px #E8F1FF'
+        : done ? 'background:#E8F1FF;color:#0958D9;border:2px solid #1677FF'
+        : href ? 'background:#FFFFFF;color:#64748B;border:2px solid #CBD5E1'
+        : 'background:#F5F7FA;color:#94A3B8;border:2px dashed #CBD5E1',
+      lineStyle: done ? 'background:#1677FF' : 'background:#E5EAF0',
+      kickerStyle: active || done ? 'color:#0958D9' : 'color:#64748B',
+      labelStyle: active ? 'color:#10233F;font-weight:600' : done ? 'color:#10233F;font-weight:500' : href ? 'color:#64748B;font-weight:500' : 'color:#94A3B8;font-weight:500'
+    };
+  });
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      profileOpen: false, aksiOpen: false, toast: '', navHint: '',
+      brands: [
+        { id: 'BR001', name: 'ABC', owner: 'ABC Group Co., Ltd.', ownerCountry: 'China',
+          trademark: { type: 'certificate', number: 'CN12345678', issueDate: '2023-01-01', expiryDate: '2033-12-31' },
+          relationship: { type: 'official_representative', appointedBy: null, prEntityId: null },
+          docs: { tm: 'Sertifikat ABC.pdf', pr_appoint: 'Akta Penunjukan ABC.pdf', license: 'Lisensi ABC.pdf', license_rec: 'Pencatatan Lisensi ABC.pdf' } },
+        { id: 'BR002', name: 'XYZ', owner: 'XYZ Fashion Co., Ltd.', ownerCountry: 'Vietnam',
+          trademark: { type: 'certificate', number: 'VN98765432', issueDate: '2022-03-15', expiryDate: '2032-03-14' },
+          relationship: { type: 'appointed_importer', appointedBy: 'brand_owner', prEntityId: null },
+          docs: { tm: 'Sertifikat XYZ.pdf', import_appoint: 'Penunjukan XYZ.pdf' } },
+        { id: 'BR003', name: 'FASHION PRO', owner: 'Fashion Pro Limited', ownerCountry: 'China',
+          trademark: { type: 'registration', number: 'REG-2025-1234', registrationDate: '2025-01-10' },
+          relationship: { type: 'appointed_importer', appointedBy: 'official_representative', prEntityId: 'ENT01' },
+          docs: { tm: 'Registration Fashion Pro.pdf', import_appoint: 'Surat Penunjukan Fashion Pro.pdf' } }
+      ],
+      entities: {
+        ENT01: { id: 'ENT01', name: 'PT Fashion Pro Indonesia', nib: '1234567890123', alamat: 'Jakarta, Indonesia', akta: 'AHU-0012345',
+          docs: { pr_deed: 'Akta PT Fashion Pro Indonesia.pdf', pr_license: null } }
+      },
+      checks: {
+        'BR001:tm': { status: 'Terverifikasi', note: 'Nomor dan kelas merek sesuai data PDKI.', by: USER, at: '25 Jul 2025 13:05' },
+        'BR001:pr_appoint': { status: 'Sesuai', note: '', by: USER, at: '25 Jul 2025 13:08' },
+        'BR001:license': { status: 'Sesuai', note: 'Perjanjian lisensi sesuai dengan pemilik merek dan Perwakilan Resmi yang tercantum dalam dokumen penunjukan.', by: USER, at: '25 Jul 2025 14:32' },
+        'BR001:license_rec': { status: 'Sesuai', note: '', by: USER, at: '25 Jul 2025 13:18' },
+        'BR002:tm': { status: 'Sesuai', note: '', by: USER, at: '25 Jul 2025 13:40' },
+        'BR002:import_appoint': { status: 'Sesuai', note: '', by: USER, at: '25 Jul 2025 13:44' },
+        'BR003:tm': { status: 'Perlu Klarifikasi', note: 'Sisa masa penggunaan tanda pendaftaran kurang dari 3 bulan; konfirmasi rencana penerbitan sertifikat.', by: USER, at: '25 Jul 2025 14:05' },
+        'BR003:import_appoint': { status: 'Sesuai', note: '', by: USER, at: '25 Jul 2025 14:08' },
+        'BR003:pr_deed': { status: 'Sesuai', note: '', by: USER, at: '25 Jul 2025 14:10' }
+      },
+      audit: [
+        { brand: 'ABC', at: '25 Jul 2025 13:10', text: USER + ' mengubah hubungan merek ABC menjadi Perwakilan Resmi.' },
+        { brand: 'ABC', at: '25 Jul 2025 13:15', text: 'Lisensi ABC.pdf diverifikasi.' },
+        { brand: 'ABC', at: '25 Jul 2025 13:22', text: 'Status pemeriksaan Perjanjian Lisensi / Sublisensi – ABC berubah menjadi Sesuai.' },
+        { brand: 'XYZ', at: '25 Jul 2025 13:38', text: USER + ' mengubah hubungan merek XYZ menjadi Importir yang Ditunjuk oleh Pemilik Merek.' },
+        { brand: 'FASHION PRO', at: '25 Jul 2025 13:55', text: USER + ' mengubah hubungan merek FASHION PRO menjadi Importir yang Ditunjuk oleh Perwakilan Resmi.' },
+        { brand: 'FASHION PRO', at: '25 Jul 2025 14:05', text: 'Status pemeriksaan Tanda Pendaftaran Merek – FASHION PRO berubah menjadi Perlu Klarifikasi.' }
+      ],
+      search: '', brandFilter: '', relFilter: '', statusFilter: '', typeFilter: '', problemOnly: false,
+      bd: null, bdTab: 'rel', bdErr: {},
+      ck: null, cd: { status: '', note: '' },
+      bk: null, bkError: '',
+      auOpen: false, pv: ''
+    };
+    this.toastTimer = null;
+  }
+
+  componentWillUnmount() { if (this.toastTimer) clearTimeout(this.toastTimer); }
+
+  flash(t) { var self = this; if (this.toastTimer) clearTimeout(this.toastTimer); this.setState({ toast: t }); this.toastTimer = setTimeout(function () { self.setState({ toast: '' }); }, 3600); }
+
+  rowsFor(brand, s) {
+    var self = this;
+    var ent = brand.relationship && brand.relationship.prEntityId ? s.entities[brand.relationship.prEntityId] : null;
+    var reg = brand.trademark.type !== 'certificate' ? regInfoOf(brand.trademark) : null;
+    return getRequiredDocuments(brand).map(function (r) {
+      var id = brand.id + ':' + r.key;
+      var ck = s.checks[id] || { status: 'Belum Diverifikasi', note: '', by: '', at: '' };
+      var file = r.scope === 'entity' ? (ent && ent.docs[r.key]) : brand.docs[r.key];
+      var users = [];
+      if (r.scope === 'entity' && ent) s.brands.forEach(function (b) { if (b.relationship && b.relationship.prEntityId === ent.id) users.push(b.name); });
+      var eff = !r.applicable ? 'Dikecualikan' : (r.key === 'tm' && reg && reg.expired) ? 'Tidak Berlaku' : ck.status;
+      var missing = r.applicable && !file;
+      var warning = '';
+      if (r.key === 'tm' && missing && brand.trademark.type === 'certificate') warning = 'Dokumen sertifikat merek belum tersedia.';
+      else if (r.key === 'tm' && reg && reg.expired) warning = 'Tanda pendaftaran telah melewati batas penggunaan 9 bulan.';
+      else if (r.key === 'tm' && reg && reg.soon) warning = 'Sisa masa penggunaan ' + reg.remain + '.';
+      else if (missing) warning = 'Dokumen belum tersedia.';
+      var isian = '—';
+      var rel = brand.relationship;
+      if (r.key === 'tm') isian = brand.trademark.number || '—';
+      else if (r.key === 'import_appoint') isian = rel.appointedBy === 'brand_owner' ? 'Ditunjuk Pemilik Merek' : 'Ditunjuk Perwakilan Resmi' + (ent ? ' (' + ent.name + ')' : '');
+      else if (r.key === 'pr_appoint') isian = rel.type === 'official_representative' ? 'Akta autentik penunjukan API-U' : (ent ? ent.name : '—');
+      else if (r.key === 'pr_deed') isian = ent ? ent.name + ' · ' + (ent.akta || '—') : '—';
+      else if (r.key === 'pr_license') isian = ent ? ent.name + ' · NIB ' + ent.nib : '—';
+      else if (!r.applicable) isian = 'Tidak diperlukan';
+      else isian = 'Lisensi atas merek ' + brand.name;
+      return {
+        id: id, req: r, brand: brand, ent: ent, check: ck, eff: eff, file: file, missing: missing, users: users,
+        warning: warning, isian: isian,
+        problem: missing || ['Belum Diverifikasi', 'Perlu Klarifikasi', 'Tidak Sesuai', 'Tidak Berlaku'].indexOf(eff) !== -1
+      };
+    });
+  }
+
+  brandAgg(rows) {
+    var app = rows.filter(function (r) { return r.req.applicable; });
+    var avail = app.filter(function (r) { return !r.missing; }).length;
+    var done = app.filter(function (r) { return r.eff === 'Sesuai' || r.eff === 'Terverifikasi'; }).length;
+    var st = 'Sesuai';
+    if (app.some(function (r) { return r.eff === 'Tidak Sesuai' || r.eff === 'Tidak Berlaku'; })) st = 'Tidak Sesuai';
+    else if (app.some(function (r) { return r.eff === 'Perlu Klarifikasi' || r.missing; })) st = 'Perlu Klarifikasi';
+    else if (app.some(function (r) { return r.eff === 'Belum Diverifikasi'; })) st = 'Belum Diverifikasi';
+    return { total: app.length, avail: avail, done: done, status: st };
+  }
+
+  log(events) { this.setState(function (p) { return { audit: p.audit.concat(events) }; }); }
+
+  draftFrom(b) {
+    var tm = b ? b.trademark : {};
+    var rel = b ? b.relationship : {};
+    return {
+      id: b ? b.id : null, isNew: !b,
+      name: b ? b.name : '', owner: b ? b.owner : '', ownerCountry: b ? b.ownerCountry : '',
+      tmType: tm.type || 'certificate', tmNumber: tm.number || '', issueDate: tm.issueDate || '', expiryDate: tm.expiryDate || '', regDate: tm.registrationDate || '',
+      relType: rel.type || '', appointedBy: rel.appointedBy || '', prMode: rel.prEntityId || '',
+      prName: '', prNib: '', prAlamat: '', prAkta: ''
+    };
+  }
+
+  draftToBrand(d, s) {
+    var tm = d.tmType === 'certificate'
+      ? { type: 'certificate', number: d.tmNumber, issueDate: d.issueDate, expiryDate: d.expiryDate }
+      : { type: d.tmType, number: d.tmNumber, registrationDate: d.regDate };
+    var existing = d.id ? s.brands.filter(function (b) { return b.id === d.id; })[0] : null;
+    return {
+      id: d.id || 'NEW', name: d.name || 'Merek baru', owner: d.owner, ownerCountry: d.ownerCountry, trademark: tm,
+      relationship: { type: d.relType || null, appointedBy: d.relType === 'appointed_importer' ? (d.appointedBy || null) : null, prEntityId: d.relType === 'appointed_importer' && d.appointedBy === 'official_representative' && d.prMode && d.prMode !== 'new' ? d.prMode : null },
+      docs: existing ? existing.docs : {}
+    };
+  }
+
+  validateDraft(d) {
+    var e = {};
+    if (!d.name.trim()) e.name = 'Nama merek wajib diisi.';
+    if (!d.owner.trim()) e.owner = 'Pemilik merek wajib diisi.';
+    if (!d.ownerCountry.trim()) e.ownerCountry = 'Negara pemilik wajib diisi.';
+    if (!d.tmNumber.trim()) e.tmNumber = d.tmType === 'certificate' ? 'Nomor sertifikat wajib diisi.' : 'Nomor registrasi wajib diisi.';
+    if (d.tmType !== 'certificate' && !d.regDate) e.regDate = 'Tanggal registrasi / notifikasi wajib diisi.';
+    if (!d.relType) e.relType = 'Hubungan API-U wajib dipilih sebelum merek disimpan.';
+    if (d.relType === 'appointed_importer' && !d.appointedBy) e.appointedBy = 'Pilih pihak yang menunjuk API-U.';
+    if (d.relType === 'appointed_importer' && d.appointedBy === 'official_representative') {
+      if (!d.prMode) e.prEntity = 'Pilih Perwakilan Resmi atau isi identitas Perwakilan Resmi baru.';
+      if (d.prMode === 'new') {
+        if (!d.prName.trim()) e.prName = 'Nama Perwakilan Resmi wajib diisi.';
+        if (!/^\d{13}$/.test(d.prNib.trim())) e.prNib = 'NIB terdiri dari 13 digit.';
+        if (!d.prAlamat.trim()) e.prAlamat = 'Alamat wajib diisi.';
+      }
+    }
+    return e;
+  }
+
+  setBd(key) { var self = this; return function (e) { var v = e.target.value; self.setState(function (p) { var d = Object.assign({}, p.bd); d[key] = v; var er = Object.assign({}, p.bdErr); er[key] = ''; return { bd: d, bdErr: er }; }); }; }
+  setBdVal(patch) { this.setState(function (p) { var er = Object.assign({}, p.bdErr); Object.keys(patch).forEach(function (k) { er[k] = ''; }); er.prEntity = ''; return { bd: Object.assign({}, p.bd, patch), bdErr: er }; }); }
+
+  renderVals() {
+    var self = this;
+    var s = this.state;
+
+    // Steps
+    var steps = viuSteps(4, false);
+
+    // Rows per brand
+    var perBrand = s.brands.map(function (b) { var rows = self.rowsFor(b, s); return { b: b, rows: rows, agg: self.brandAgg(rows) }; });
+    var allRows = [];
+    perBrand.forEach(function (pb) { allRows = allRows.concat(pb.rows); });
+
+    var openBd = function (b, tab) { return function () { self.setState({ bd: self.draftFrom(b), bdTab: tab, bdErr: {}, aksiOpen: false }); }; };
+
+    // Stats
+    var nPR = s.brands.filter(function (b) { return b.relationship.type === 'official_representative'; }).length;
+    var nImp = s.brands.filter(function (b) { return b.relationship.type === 'appointed_importer'; }).length;
+    var nOk = perBrand.filter(function (p) { return p.agg.status === 'Sesuai'; }).length;
+    var nWarn = perBrand.filter(function (p) { return p.agg.status === 'Perlu Klarifikasi'; }).length;
+    var nBad = perBrand.filter(function (p) { return p.agg.status === 'Tidak Sesuai'; }).length;
+    var stats = [
+      { value: s.brands.length, label: 'Merek', bar: 'background:#10233F' },
+      { value: nPR, label: 'Perwakilan Resmi', bar: 'background:#1677FF' },
+      { value: nImp, label: 'Importir Ditunjuk', bar: 'background:#7C3AED' },
+      { value: nOk, label: 'Sesuai', bar: 'background:#16A34A' },
+      { value: nWarn, label: 'Perlu Klarifikasi', bar: 'background:#F59E0B' }
+    ];
+    if (nBad) stats.push({ value: nBad, label: 'Tidak Sesuai', bar: 'background:#DC2626' });
+
+    var relRows = perBrand.map(function (pb) {
+      var b = pb.b, t = statusTone(pb.agg.status);
+      return {
+        name: b.name, owner: b.owner, country: b.ownerCountry,
+        rel: relLabel(b.relationship), relStyle: pill(relTone(b.relationship)), by: byLabel(b.relationship),
+        kel: pb.agg.avail + ' / ' + pb.agg.total, kelStyle: pb.agg.avail < pb.agg.total ? 'color:#B45309' : 'color:#15803D',
+        status: pb.agg.status, statusStyle: pill(t), statusDot: 'background:' + t.dot,
+        open: openBd(b, 'rel')
+      };
+    });
+
+    var brandRows = perBrand.map(function (pb, i) {
+      var b = pb.b, tm = b.trademark, isCert = tm.type === 'certificate';
+      var reg = isCert ? null : regInfoOf(tm);
+      var docStatus, docTone, docSub = '';
+      if (isCert) {
+        var exp = parseISO(tm.expiryDate);
+        if (!pb.b.docs.tm) { docStatus = 'Dokumen belum tersedia'; docTone = THEME.warn; }
+        else if (exp && exp < REF_DATE) { docStatus = 'Kedaluwarsa'; docTone = THEME.bad; }
+        else { docStatus = 'Valid'; docTone = THEME.ok; }
+      } else if (!reg) { docStatus = 'Tanggal belum diisi'; docTone = THEME.none; }
+      else if (reg.expired) { docStatus = 'Tidak Berlaku'; docTone = THEME.bad; docSub = 'Melewati batas 9 bulan'; }
+      else if (reg.soon) { docStatus = 'Perlu Pemeriksaan Masa Berlaku'; docTone = THEME.warn; docSub = 'Valid · sisa ' + reg.remain; }
+      else { docStatus = 'Valid'; docTone = THEME.ok; docSub = 'Sisa ' + reg.remain; }
+      var tmRow = pb.rows.filter(function (r) { return r.req.key === 'tm'; })[0];
+      var vt = statusTone(tmRow.eff);
+      return {
+        no: i + 1, name: b.name, owner: b.owner, country: b.ownerCountry,
+        tmType: tmRow.req.name, number: tm.number || '—',
+        date: isCert ? fmtDate(tm.issueDate) : fmtDate(tm.registrationDate),
+        expiry: isCert ? fmtDate(tm.expiryDate) : (reg ? 's.d. ' + reg.deadline : '—'),
+        docStatus: docStatus, docStyle: pill(docTone), docDot: 'background:' + docTone.dot, docSub: docSub,
+        vStatus: tmRow.eff, vStyle: pill(vt), vDot: 'background:' + vt.dot,
+        edit: openBd(b, 'brand')
+      };
+    });
+
+    // Matrix filtering
+    var q = s.search.trim().toLowerCase();
+    var filtered = allRows.filter(function (r) {
+      var typeL = typeBadge(r.req).label;
+      if (s.brandFilter && r.brand.id !== s.brandFilter) return false;
+      if (s.relFilter && relLabel(r.brand.relationship) !== s.relFilter) return false;
+      if (s.statusFilter && r.eff !== s.statusFilter) return false;
+      if (s.typeFilter && typeL !== s.typeFilter) return false;
+      if (s.problemOnly && !r.problem) return false;
+      if (q) {
+        var hay = (r.req.name + ' ' + r.brand.name + ' ' + (r.file || '') + ' ' + r.req.regulation + ' ' + r.isian).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+    var mxRows = filtered.map(function (r, i) {
+      var t = statusTone(r.eff), tb = typeBadge(r.req);
+      var warnBad = r.eff === 'Tidak Berlaku' || r.warning.indexOf('belum tersedia') !== -1;
+      return {
+        id: r.id.replace(/[^A-Za-z0-9_-]/g, '_'), no: i + 1, param: r.req.name, brand: r.brand.name,
+        rel: relLabel(r.brand.relationship), relStyle: pill(relTone(r.brand.relationship)),
+        isian: r.isian,
+        hasDoc: !!r.file && r.req.applicable, doc: r.file, missing: r.missing, notNeeded: !r.req.applicable,
+        entityNote: r.req.scope === 'entity' && r.file ? 'Dokumen entitas · dipakai ' + r.users.length + ' merek' : '',
+        status: r.eff, statusStyle: pill(t), statusDot: 'background:' + t.dot,
+        type: tb.label, typeStyle: tb.style,
+        regulation: r.req.applicable ? r.req.regulation : r.req.regulation + ' jo. ayat (8)',
+        regText: r.req.applicable ? REG_TEXT[r.req.regKey] : EXEMPT_NOTE,
+        warning: r.warning, warnStyle: warnBad ? 'color:#B91C1C' : 'color:#B45309',
+        rowStyle: r.eff === 'Tidak Berlaku' || r.eff === 'Tidak Sesuai' ? 'background:#FFFAFA' : '',
+        open: function () { self.setState({ ck: { id: r.id, brandId: r.brand.id, key: r.req.key }, cd: { status: r.eff === 'Tidak Berlaku' ? r.check.status : r.eff, note: r.check.note || '' } }); }
+      };
+    });
+
+    var cnt = function (fn) { return allRows.filter(fn).length; };
+    var mxSummary = [
+      { label: 'Parameter', count: allRows.length, style: 'background:#F8FAFC;color:#10233F;border:1px solid #E5EAF0' },
+      { label: 'Sesuai', count: cnt(function (r) { return r.eff === 'Sesuai' || r.eff === 'Terverifikasi'; }), style: pill(THEME.ok) },
+      { label: 'Kondisional', count: cnt(function (r) { return r.req.applicable && r.req.type === 'conditional'; }), style: pill(THEME.purple) },
+      { label: 'Perlu Klarifikasi', count: cnt(function (r) { return r.eff === 'Perlu Klarifikasi'; }), style: pill(THEME.warn) },
+      { label: 'Belum Diverifikasi', count: cnt(function (r) { return r.eff === 'Belum Diverifikasi'; }), style: pill(THEME.none) },
+      { label: 'Tidak Sesuai / Berlaku', count: cnt(function (r) { return r.eff === 'Tidak Sesuai' || r.eff === 'Tidak Berlaku'; }), style: pill(THEME.bad) },
+      { label: 'Dikecualikan', count: cnt(function (r) { return !r.req.applicable; }), style: pill(THEME.exempt) }
+    ].filter(function (x, i) { return i < 4 || x.count > 0; });
+
+    var brandFilters = [{ id: '', label: 'Semua Merek' }].concat(s.brands.map(function (b) { return { id: b.id, label: b.name }; })).map(function (f) {
+      var active = s.brandFilter === f.id;
+      return { label: f.label, active: active, style: active ? 'background:#10233F;color:#FFFFFF;border:1px solid #10233F' : 'background:#FFFFFF;color:#334155;border:1px solid #D5DDE7', pick: function () { self.setState({ brandFilter: f.id }); } };
+    });
+
+    // Brand drawer
+    var d = s.bd, bdVals = {};
+    if (d) {
+      var draftBrand = this.draftToBrand(d, s);
+      var draftRows = this.rowsFor(draftBrand, Object.assign({}, s, { brands: s.brands.map(function (b) { return b.id === draftBrand.id ? draftBrand : b; }) }));
+      var reg = d.tmType !== 'certificate' ? regInfoOf({ registrationDate: d.regDate }) : null;
+      var genReqs = draftRows.map(function (r, i) {
+        var tb = typeBadge(r.req);
+        var docText = !r.req.applicable ? 'Tidak diperlukan' : r.file ? (r.req.scope === 'entity' ? 'Direferensikan' : 'Tersedia') : 'Belum tersedia';
+        return {
+          no: i + 1, name: r.req.name, regulation: r.req.regulation,
+          scope: r.req.scope === 'entity' ? 'dokumen entitas (dapat dipakai ulang)' : 'dokumen relationship merek ini',
+          exemptNote: r.req.applicable ? '' : EXEMPT_NOTE,
+          type: tb.label, typeStyle: tb.style, docText: docText,
+          docStyle: !r.req.applicable ? 'color:#46597A' : r.file ? 'color:#15803D' : 'color:#B91C1C',
+          rowStyle: r.req.applicable ? '' : 'background:#F8FAFC'
+        };
+      });
+      var nApp = draftRows.filter(function (r) { return r.req.applicable; }).length;
+      var nEx = draftRows.length - nApp;
+      var relCards = [
+        { v: 'official_representative', title: 'Perwakilan Resmi', desc: 'API-U bertindak sebagai Perwakilan Resmi untuk merek ini.', hint: 'Menambah: bukti penunjukan, perjanjian lisensi, bukti pencatatan lisensi · Pasal 37 ayat (3)' },
+        { v: 'appointed_importer', title: 'Importir yang Ditunjuk', desc: 'API-U hanya bertindak sebagai importir untuk merek ini.', hint: 'Menambah: surat penunjukan impor · Pasal 37 ayat (4)' }
+      ].map(function (c) { var sel = d.relType === c.v; return Object.assign({ selected: sel, pick: function () { self.setBdVal({ relType: c.v }); } }, c, radioLook(sel)); });
+      var appCards = [{ v: 'brand_owner', label: 'Pemilik Merek' }, { v: 'official_representative', label: 'Perwakilan Resmi' }].map(function (c) {
+        var sel = d.appointedBy === c.v; return Object.assign({ label: c.label, selected: sel, pick: function () { self.setBdVal({ appointedBy: c.v }); } }, radioLook(sel));
+      });
+      var prChoices = Object.keys(s.entities).map(function (eid) {
+        var e = s.entities[eid];
+        var used = s.brands.filter(function (b) { return b.relationship.prEntityId === eid && b.id !== d.id; }).map(function (b) { return b.name; });
+        var sel = d.prMode === eid;
+        return Object.assign({ label: e.name, sub: used.length ? 'digunakan pada ' + used.join(', ') : 'NIB ' + e.nib, selected: sel, pick: function () { self.setBdVal({ prMode: eid }); } }, radioLook(sel));
+      });
+      var selNew = d.prMode === 'new';
+      prChoices.push(Object.assign({ label: 'Perwakilan Resmi baru', sub: 'Isi identitas entitas yang belum terdaftar', selected: selNew, pick: function () { self.setBdVal({ prMode: 'new' }); } }, radioLook(selNew)));
+      var prEnt = d.prMode && d.prMode !== 'new' ? s.entities[d.prMode] : null;
+
+      var warnings = [];
+      if (reg && reg.expired) warnings.push({ text: 'Tanda pendaftaran telah melewati batas penggunaan 9 bulan.', style: pill(THEME.bad) });
+      var tmDraftRow = draftRows[0];
+      if (d.tmType === 'certificate' && tmDraftRow && tmDraftRow.missing) warnings.push({ text: 'Dokumen sertifikat merek belum tersedia.', style: pill(THEME.warn) });
+
+      var errKeys = Object.keys(s.bdErr).filter(function (k) { return s.bdErr[k]; });
+      var relErr = errKeys.some(function (k) { return ['relType', 'appointedBy', 'prEntity', 'prName', 'prNib', 'prAlamat'].indexOf(k) !== -1; });
+      var brandErr = errKeys.some(function (k) { return ['name', 'owner', 'ownerCountry', 'tmNumber', 'regDate'].indexOf(k) !== -1; });
+      var bdTabs = [{ k: 'rel', label: 'Hubungan API-U', err: relErr }, { k: 'brand', label: 'Data Merek', err: brandErr }].map(function (t) {
+        var a = s.bdTab === t.k;
+        return { label: t.label, active: a, hasError: t.err, style: a ? 'color:#0958D9;border-bottom-color:#1677FF' : 'color:#64748B', pick: function () { self.setState({ bdTab: t.k }); } };
+      });
+
+      var existingAgg = null;
+      if (!d.isNew) { var pbx = perBrand.filter(function (p) { return p.b.id === d.id; })[0]; existingAgg = pbx ? pbx.agg : null; }
+      var tmLabel = d.tmType === 'certificate' ? 'Sertifikat Merek' : d.tmType === 'registration' ? 'Tanda Pendaftaran Merek' : 'Tanda Pendaftaran Merek Internasional';
+      var prName = d.relType === 'official_representative' ? 'PT Maju Tekstil Indonesia (API-U)' : d.relType === 'appointed_importer' && d.appointedBy === 'official_representative' ? (prEnt ? prEnt.name : (d.prName || '—')) : 'Tidak relevan';
+
+      bdVals = {
+        bdOpen: true, bd: d, bdErr: s.bdErr,
+        bdTitle: d.isNew ? 'Tambah Merek' : 'Hubungan Importir — ' + (d.name || 'Merek'),
+        bdSum: { name: d.name || '—', owner: d.owner || '—', country: d.ownerCountry || '—', tm: tmLabel },
+        bdTabs: bdTabs, tabRel: s.bdTab === 'rel', tabBrand: s.bdTab === 'brand',
+        relCards: relCards, showAppointedBy: d.relType === 'appointed_importer', appCards: appCards,
+        showPR: d.relType === 'appointed_importer' && d.appointedBy === 'official_representative',
+        prChoices: prChoices, prIsNew: selNew, prSelected: !!prEnt, prEnt: prEnt || {},
+        genReqs: genReqs, genEmpty: !d.relType,
+        genSummary: draftRows.length + ' requirement · ' + nApp + ' berlaku' + (nEx ? ' · ' + nEx + ' dikecualikan' : ''),
+        tmIsCert: d.tmType === 'certificate', tmIsReg: d.tmType !== 'certificate',
+        regInfo: reg ? {
+          age: reg.age, remain: reg.remain, status: reg.expired ? 'Tidak Berlaku' : 'Valid',
+          boxStyle: reg.expired ? 'border:1px solid #FECACA;background:#FEF2F2' : reg.soon ? 'border:1px solid #FDE68A;background:#FFFBEB' : 'border:1px solid #BBF7D0;background:#ECFDF3',
+          textStyle: reg.expired ? 'color:#B91C1C' : reg.soon ? 'color:#B45309' : 'color:#15803D'
+        } : { age: '—', remain: '—', status: 'Isi tanggal', boxStyle: 'border:1px solid #E5EAF0;background:#F8FAFC', textStyle: 'color:#475569' },
+        lhviu: { brand: d.name || '—', owner: (d.owner || '—') + (d.ownerCountry ? ' · ' + d.ownerCountry : ''), pr: prName },
+        bdWarnings: warnings,
+        bdShowScore: !!existingAgg,
+        bdScore: existingAgg ? {
+          text: existingAgg.done + ' / ' + existingAgg.total + ' Requirement ' + (existingAgg.done === existingAgg.total ? 'Sesuai' : 'Selesai'),
+          total: existingAgg.total, done: existingAgg.done,
+          bar: 'width:' + (existingAgg.total ? Math.round(existingAgg.done / existingAgg.total * 100) : 0) + '%;background:' + (existingAgg.done === existingAgg.total ? '#16A34A' : '#F59E0B')
+        } : { text: '', total: 0, done: 0, bar: '' },
+        bdAudit: s.audit.filter(function (e) { return e.brand === d.name; }).slice(-3).reverse(),
+        bdFootText: errKeys.length ? errKeys.length + ' isian perlu diperbaiki.' : 'Relationship disimpan khusus untuk merek ini.',
+        bdFootStyle: errKeys.length ? 'color:#B91C1C;font-weight:600' : 'color:#64748B'
+      };
+    } else {
+      bdVals = { bdOpen: false, bd: {}, bdErr: {}, bdSum: {}, bdTabs: [], relCards: [], appCards: [], prChoices: [], prEnt: {}, genReqs: [], regInfo: {}, lhviu: {}, bdWarnings: [], bdScore: {}, bdAudit: [] };
+    }
+
+    // Check drawer
+    var ckVals = { ckOpen: false, ck: {}, cd: s.cd, ckAudit: [] };
+    if (s.ck) {
+      var row = allRows.filter(function (r) { return r.id === s.ck.id; })[0];
+      if (row) {
+        var tb2 = typeBadge(row.req);
+        var exemptRow = !row.req.applicable;
+        var expiredRow = row.eff === 'Tidak Berlaku';
+        ckVals = {
+          ckOpen: true, cd: s.cd,
+          ck: {
+            param: row.req.name, brand: row.brand.name, owner: row.brand.owner,
+            rel: relFull(row.brand.relationship), relStyle: pill(relTone(row.brand.relationship)),
+            type: tb2.label, typeStyle: tb2.style,
+            reqStatus: exemptRow ? 'Dikecualikan' : 'Aktif', reqStyle: exemptRow ? 'color:#46597A' : 'color:#15803D',
+            regulation: row.req.regulation, regText: REG_TEXT[row.req.regKey],
+            exemptNote: exemptRow ? EXEMPT_NOTE : (expiredRow ? 'Tanda pendaftaran telah melewati batas penggunaan 9 bulan, sehingga status otomatis Tidak Berlaku.' : ''),
+            hasDoc: !!row.file && !exemptRow, doc: row.file, missing: row.missing, notNeeded: exemptRow,
+            entityNote: row.req.scope === 'entity' && row.ent ? 'Dokumen entitas ' + row.ent.name + (row.users.length ? ', direferensikan oleh: ' + row.users.join(', ') : '') + '. Penggantian berlaku untuk semua merek yang mereferensikan entitas ini.' : '',
+            locked: exemptRow || expiredRow,
+            lockReason: exemptRow ? 'Status dikunci oleh rule Pasal 37 ayat (8). Requirement tetap tercatat untuk audit trail.' : expiredRow ? 'Status dikunci oleh rule Pasal 37 ayat (7).' : '',
+            by: row.check.by || '—', at: row.check.at || '—'
+          },
+          ckAudit: s.audit.filter(function (e) { return e.brand === row.brand.name; }).slice(-3).reverse()
+        };
+        ckVals.onReplace = function (e) {
+          var f = e.target.files && e.target.files[0];
+          if (!f) return;
+          var fname = f.name;
+          self.setState(function (p) {
+            if (row.req.scope === 'entity' && row.ent) {
+              var ents = Object.assign({}, p.entities);
+              var en = Object.assign({}, ents[row.ent.id]); en.docs = Object.assign({}, en.docs); en.docs[row.req.key] = fname; ents[row.ent.id] = en;
+              return { entities: ents, audit: p.audit.concat([{ brand: row.brand.name, at: nowText(), text: USER + ' mengunggah ' + fname + ' untuk entitas ' + row.ent.name + '.' }]) };
+            }
+            var bs = p.brands.map(function (b) { if (b.id !== row.brand.id) return b; var nb = Object.assign({}, b); nb.docs = Object.assign({}, b.docs); nb.docs[row.req.key] = fname; return nb; });
+            return { brands: bs, audit: p.audit.concat([{ brand: row.brand.name, at: nowText(), text: USER + ' mengunggah ' + fname + ' untuk ' + row.req.name + ' – ' + row.brand.name + '.' }]) };
+          });
+        };
+        ckVals.saveCk = function () {
+          var prev = row.check;
+          var newStatus = exemptRow || expiredRow ? prev.status : s.cd.status;
+          var at = nowText();
+          var events = [];
+          if (newStatus !== prev.status) events.push({ brand: row.brand.name, at: at, text: 'Status pemeriksaan ' + row.req.name + ' – ' + row.brand.name + ' berubah menjadi ' + newStatus + '.' });
+          if ((s.cd.note || '') !== (prev.note || '')) events.push({ brand: row.brand.name, at: at, text: USER + ' memperbarui catatan pemeriksaan ' + row.req.name + ' – ' + row.brand.name + '.' });
+          if (!events.length) events.push({ brand: row.brand.name, at: at, text: (row.file || row.req.name) + ' diverifikasi.' });
+          self.setState(function (p) {
+            var c = Object.assign({}, p.checks);
+            c[row.id] = { status: newStatus, note: s.cd.note, by: USER, at: at };
+            return { checks: c, audit: p.audit.concat(events), ck: null };
+          });
+          self.flash('Pemeriksaan ' + row.req.name + ' – ' + row.brand.name + ' disimpan.');
+        };
+      }
+    }
+
+    // Bulk modal
+    var bkVals = { bkOpen: false, bkBrands: [], bkRelCards: [], bkAppCards: [], bkPrChoices: [] };
+    if (s.bk) {
+      var bk = s.bk;
+      var setBk = function (patch) { self.setState(function (p) { return { bk: Object.assign({}, p.bk, patch), bkError: '' }; }); };
+      bkVals = {
+        bkOpen: true,
+        bkBrands: s.brands.map(function (b) {
+          return { name: b.name, current: 'Saat ini: ' + relFull(b.relationship), checked: bk.selected.indexOf(b.id) !== -1,
+            toggle: function (e) { var on = e.target.checked; self.setState(function (p) { var sel = p.bk.selected.filter(function (x) { return x !== b.id; }); if (on) sel.push(b.id); return { bk: Object.assign({}, p.bk, { selected: sel }), bkError: '' }; }); } };
+        }),
+        bkRelCards: [{ v: 'official_representative', title: 'Perwakilan Resmi' }, { v: 'appointed_importer', title: 'Importir Ditunjuk' }].map(function (c) { var sel = bk.relType === c.v; return Object.assign({ title: c.title, selected: sel, pick: function () { setBk({ relType: c.v }); } }, radioLook(sel)); }),
+        bkShowApp: bk.relType === 'appointed_importer',
+        bkAppCards: [{ v: 'brand_owner', label: 'Pemilik Merek' }, { v: 'official_representative', label: 'Perwakilan Resmi' }].map(function (c) { var sel = bk.appointedBy === c.v; return Object.assign({ label: c.label, selected: sel, pick: function () { setBk({ appointedBy: c.v }); } }, radioLook(sel)); }),
+        bkShowPR: bk.relType === 'appointed_importer' && bk.appointedBy === 'official_representative',
+        bkPrChoices: Object.keys(s.entities).map(function (eid) {
+          var e = s.entities[eid]; var used = s.brands.filter(function (b) { return b.relationship.prEntityId === eid; }).map(function (b) { return b.name; });
+          var sel = bk.prEntityId === eid;
+          return Object.assign({ label: e.name, sub: used.length ? 'digunakan pada ' + used.join(', ') : 'NIB ' + e.nib, selected: sel, pick: function () { setBk({ prEntityId: eid }); } }, radioLook(sel));
+        })
+      };
+    }
+
+    return Object.assign({
+      steps: steps, profileOpen: s.profileOpen, aksiOpen: s.aksiOpen, toast: s.toast, navHint: s.navHint,
+      stats: stats, relRows: relRows, brandRows: brandRows,
+      search: s.search, relFilter: s.relFilter, statusFilter: s.statusFilter, typeFilter: s.typeFilter,
+      problemOnly: s.problemOnly, problemStyle: s.problemOnly ? 'background:#FFFBEB;border:1px solid #FDE68A;color:#B45309' : 'background:#FFFFFF;border:1px solid #D5DDE7;color:#334155',
+      mxSummary: mxSummary, mxRows: mxRows, brandFilters: brandFilters,
+      shownText: 'Menampilkan ' + filtered.length + ' dari ' + allRows.length + ' parameter',
+      noRows: filtered.length === 0,
+      bkError: s.bkError, auOpen: s.auOpen, pvOpen: !!s.pv, pvDoc: s.pv,
+      auEvents: s.audit.slice().reverse(),
+
+      toggleProfile: function () { self.setState({ profileOpen: !s.profileOpen, aksiOpen: false }); },
+      closeProfile: function () { self.setState({ profileOpen: false }); },
+      toggleAksi: function () { self.setState({ aksiOpen: !s.aksiOpen, profileOpen: false }); },
+      goPrev: function () { self.setState({ navHint: 'Tahap 3 – Produk, HS & Stok belum dibuat.' }); },
+      addBrand: openBd(null, 'brand'),
+      openBulk: function () { self.setState({ bk: { selected: s.brands.filter(function (b) { return b.name !== 'FASHION PRO'; }).map(function (b) { return b.id; }), relType: 'official_representative', appointedBy: '', prEntityId: '' }, bkError: '', aksiOpen: false }); },
+      closeBulk: function () { self.setState({ bk: null }); },
+      applyBulk: function () {
+        var bk = s.bk;
+        if (!bk.selected.length) { self.setState({ bkError: 'Pilih minimal satu merek.' }); return; }
+        if (bk.relType === 'appointed_importer' && !bk.appointedBy) { self.setState({ bkError: 'Pilih pihak yang menunjuk API-U.' }); return; }
+        if (bk.relType === 'appointed_importer' && bk.appointedBy === 'official_representative' && !bk.prEntityId) { self.setState({ bkError: 'Pilih Perwakilan Resmi.' }); return; }
+        var at = nowText(), events = [];
+        var brands = s.brands.map(function (b) {
+          if (bk.selected.indexOf(b.id) === -1) return b;
+          var rel = { type: bk.relType, appointedBy: bk.relType === 'appointed_importer' ? bk.appointedBy : null, prEntityId: bk.relType === 'appointed_importer' && bk.appointedBy === 'official_representative' ? bk.prEntityId : null };
+          events.push({ brand: b.name, at: at, text: USER + ' mengubah hubungan merek ' + b.name + ' menjadi ' + relFull(rel) + ' (atur massal).' });
+          return Object.assign({}, b, { relationship: rel });
+        });
+        self.setState(function (p) { return { brands: brands, audit: p.audit.concat(events), bk: null }; });
+        self.flash('Hubungan diterapkan ke ' + bk.selected.length + ' merek; tiap merek tetap memiliki record sendiri.');
+      },
+      openAudit: function () { self.setState({ auOpen: true, aksiOpen: false }); },
+      closeAudit: function () { self.setState({ auOpen: false }); },
+      openPreview: function () { var r = allRows.filter(function (x) { return s.ck && x.id === s.ck.id; })[0]; if (r && r.file) self.setState({ pv: r.file }); },
+      closePreview: function () { self.setState({ pv: '' }); },
+      closeCk: function () { self.setState({ ck: null }); },
+      onCdStatus: function (e) { var v = e.target.value; self.setState(function (p) { return { cd: Object.assign({}, p.cd, { status: v }) }; }); },
+      onCdNote: function (e) { var v = e.target.value; self.setState(function (p) { return { cd: Object.assign({}, p.cd, { note: v }) }; }); },
+      onSearch: function (e) { self.setState({ search: e.target.value }); },
+      onRelFilter: function (e) { self.setState({ relFilter: e.target.value }); },
+      onStatusFilter: function (e) { self.setState({ statusFilter: e.target.value }); },
+      onTypeFilter: function (e) { self.setState({ typeFilter: e.target.value }); },
+      toggleProblem: function (e) { self.setState({ problemOnly: e.target.checked }); },
+      resetFilters: function () { self.setState({ search: '', brandFilter: '', relFilter: '', statusFilter: '', typeFilter: '', problemOnly: false }); },
+
+      closeBd: function () { self.setState({ bd: null, bdErr: {} }); },
+      onBdName: this.setBd('name'), onBdOwner: this.setBd('owner'), onBdCountry: this.setBd('ownerCountry'),
+      onBdTmType: this.setBd('tmType'), onBdNumber: this.setBd('tmNumber'), onBdIssue: this.setBd('issueDate'),
+      onBdExpiry: this.setBd('expiryDate'), onBdRegDate: this.setBd('regDate'),
+      onPrName: this.setBd('prName'), onPrNib: this.setBd('prNib'), onPrAlamat: this.setBd('prAlamat'), onPrAkta: this.setBd('prAkta'),
+      saveBd: function () {
+        var dd = s.bd;
+        var er = self.validateDraft(dd);
+        if (Object.keys(er).length) {
+          var relKeys = ['relType', 'appointedBy', 'prEntity', 'prName', 'prNib', 'prAlamat'];
+          var firstRel = Object.keys(er).some(function (k) { return relKeys.indexOf(k) !== -1; });
+          var firstBrand = Object.keys(er).some(function (k) { return relKeys.indexOf(k) === -1; });
+          self.setState({ bdErr: er, bdTab: firstBrand && !firstRel ? 'brand' : (firstRel && !firstBrand ? 'rel' : s.bdTab) });
+          return;
+        }
+        var at = nowText();
+        var entities = s.entities, entityId = dd.prMode;
+        var events = [];
+        if (dd.relType === 'appointed_importer' && dd.appointedBy === 'official_representative' && dd.prMode === 'new') {
+          entityId = 'ENT' + Date.now();
+          entities = Object.assign({}, s.entities);
+          entities[entityId] = { id: entityId, name: dd.prName.trim(), nib: dd.prNib.trim(), alamat: dd.prAlamat.trim(), akta: dd.prAkta.trim() || '—', docs: { pr_deed: null, pr_license: null } };
+        }
+        var built = self.draftToBrand(Object.assign({}, dd, { prMode: entityId }), Object.assign({}, s, { entities: entities }));
+        built.name = dd.name.trim(); built.owner = dd.owner.trim(); built.ownerCountry = dd.ownerCountry.trim();
+        var brands;
+        if (dd.isNew) {
+          built.id = 'BR' + String(s.brands.length + 1).padStart(3, '0') + '-' + Date.now().toString().slice(-4);
+          built.docs = {};
+          brands = s.brands.concat([built]);
+          events.push({ brand: built.name, at: at, text: USER + ' menambahkan merek ' + built.name + ' dengan hubungan ' + relFull(built.relationship) + '.' });
+        } else {
+          var old = s.brands.filter(function (b) { return b.id === dd.id; })[0];
+          brands = s.brands.map(function (b) { return b.id === dd.id ? built : b; });
+          if (relFull(old.relationship) !== relFull(built.relationship) || old.relationship.prEntityId !== built.relationship.prEntityId) events.push({ brand: built.name, at: at, text: USER + ' mengubah hubungan merek ' + built.name + ' menjadi ' + relFull(built.relationship) + '.' });
+          if (old.trademark.type !== built.trademark.type || old.trademark.number !== built.trademark.number) events.push({ brand: built.name, at: at, text: USER + ' memperbarui dokumen merek ' + built.name + '.' });
+          if (!events.length) events.push({ brand: built.name, at: at, text: USER + ' menyimpan data merek ' + built.name + '.' });
+        }
+        self.setState(function (p) { return { brands: brands, entities: entities, audit: p.audit.concat(events), bd: null, bdErr: {} }; });
+        self.flash('Merek ' + built.name + ' disimpan. Requirement dihitung ulang sesuai hubungan.');
+      }
+    }, bdVals, ckVals);
+  }
+}
+</script>
+</body>
+</html>

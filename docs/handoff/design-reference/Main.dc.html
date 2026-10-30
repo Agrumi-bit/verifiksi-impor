@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>VIU Ringkasan Permohonan</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F7FA}
+a{color:#64748B;text-decoration:none}a:hover{color:#10233F}
+.vf-input:focus{outline:none;border-color:#1677FF !important;box-shadow:0 0 0 3px rgba(22,119,255,0.15)}
+.vf-btn:focus-visible,.vf-nav:focus-visible{outline:2px solid #1677FF;outline-offset:2px}
+.vf-nav:hover{background:rgba(255,255,255,0.06) !important;color:#FFFFFF !important}
+.vf-ghost:hover{background:#F1F5F9 !important}
+.vf-primary:hover:not(:disabled){background:#0958D9 !important}
+</style>
+</helmet>
+
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; color: #10233F; background: #F5F7FA; font-size: 14px; line-height: 1.5">
+
+  <!-- SIDEBAR -->
+  <aside aria-label="Navigasi utama" style="flex: 1 1 240px; max-width: 100%; background: #102A43; color: #C3CFDD; display: flex; flex-direction: column; padding: 20px 14px 24px; box-sizing: border-box; gap: 4px">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 4px 10px 22px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px">
+      <div aria-hidden="true" style="width: 36px; height: 36px; border-radius: 10px; background: #1677FF; display: flex; align-items: center; justify-content: center; color: #FFFFFF">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"></path><path d="M9 12l2 2 4-4"></path></svg>
+      </div>
+      <div style="display: flex; flex-direction: column">
+        <span style="color: #FFFFFF; font-weight: 700; font-size: 16px; letter-spacing: 0.02em">LPV TPT</span>
+        <span style="font-size: 12px; color: #9FB3C8">Workspace Compliance</span>
+      </div>
+    </div>
+
+    <nav style="display: flex; flex-direction: column; gap: 2px">
+      <button type="button" class="vf-nav" style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; font-weight: 500; text-align: left; cursor: pointer">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>
+        Dashboard
+      </button>
+
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 6px 10px; color: #E2E8F0; font-weight: 600">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+          Permohonan
+        </div>
+        <button type="button" aria-current="page" class="vf-btn" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: rgba(22,119,255,0.22); color: #FFFFFF; font: inherit; font-weight: 600; text-align: left; cursor: pointer; position: relative">
+          <span aria-hidden="true" style="position: absolute; left: 22px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: #69B1FF"></span>
+          Daftar Permohonan
+        </button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Penugasan</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Kalender Verifikasi</button>
+      </div>
+
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 6px 10px; color: #E2E8F0; font-weight: 600">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"></path><path d="M9 12l2 2 4-4"></path></svg>
+          Verifikasi
+        </div>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">VKI</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">VIU</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Kunjungan Lapangan</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Upload Temuan</button>
+      </div>
+
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 6px 10px; color: #E2E8F0; font-weight: 600">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"></path><path d="M10 20V4"></path><path d="M16 20v-7"></path><path d="M21 20H3"></path></svg>
+          Laporan
+        </div>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">LHVKI / LHVIU</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Rekapitulasi</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Audit Trail</button>
+      </div>
+
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 6px 10px; color: #E2E8F0; font-weight: 600">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"></path><path d="M4 19a2 2 0 0 1 2-2h13"></path></svg>
+          Referensi
+        </div>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">HS Code</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">KBLI</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Instansi</button>
+      </div>
+
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 6px 10px; color: #E2E8F0; font-weight: 600">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10"></path><path d="M18 6h2"></path><path d="M4 12h4"></path><path d="M12 12h8"></path><path d="M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>
+          Pengaturan
+        </div>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">User &amp; Akses</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Parameter</button>
+        <button type="button" class="vf-nav" style="width: 100%; padding: 8px 10px 8px 40px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; text-align: left; cursor: pointer">Template Dokumen</button>
+      </div>
+    </nav>
+
+    <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08)">
+      <button type="button" class="vf-nav" style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: #C3CFDD; font: inherit; font-weight: 500; text-align: left; cursor: pointer">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17h.01"></path></svg>
+        Bantuan
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN COLUMN -->
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+
+    <!-- TOP BAR -->
+    <header style="background: #FFFFFF; border-bottom: 1px solid #E5EAF0; padding: 12px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; min-height: 64px; box-sizing: border-box">
+      <nav aria-label="Breadcrumb">
+        <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: #64748B">
+          <li><a href="#">Beranda</a></li>
+          <li aria-hidden="true" style="display: flex; color: #94A3B8"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></li>
+          <li><a href="#">Daftar Permohonan</a></li>
+          <li aria-hidden="true" style="display: flex; color: #94A3B8"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></li>
+          <li><a href="#">VIU - Barang Konsumsi</a></li>
+          <li aria-hidden="true" style="display: flex; color: #94A3B8"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></li>
+          <li><a href="#">VIU-2025-000123</a></li>
+          <li aria-hidden="true" style="display: flex; color: #94A3B8"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></li>
+          <li aria-current="page" style="color: #10233F; font-weight: 600">{{crumbLast}}</li>
+        </ol>
+      </nav>
+
+      <div style="display: flex; align-items: center; gap: 16px">
+        <button type="button" aria-label="Notifikasi, 3 belum dibaca" class="vf-btn vf-ghost" style="position: relative; width: 40px; height: 40px; border-radius: 10px; border: 1px solid #E5EAF0; background: #FFFFFF; color: #475569; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg>
+          <span aria-hidden="true" style="position: absolute; top: 9px; right: 10px; width: 7px; height: 7px; border-radius: 50%; background: #1677FF; border: 2px solid #FFFFFF"></span>
+        </button>
+        <div style="width: 1px; height: 28px; background: #E5EAF0"></div>
+        <div style="position: relative">
+          <button type="button" class="vf-btn vf-ghost" aria-haspopup="menu" aria-expanded="{{profileOpen}}" onClick="{{toggleProfile}}" style="display: flex; align-items: center; gap: 10px; padding: 4px 8px 4px 4px; border: 0; border-radius: 10px; background: transparent; font: inherit; color: #10233F; cursor: pointer; text-align: left">
+            <span aria-hidden="true" style="width: 36px; height: 36px; border-radius: 50%; background: #E8F1FF; color: #0958D9; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">VR</span>
+            <span style="display: flex; flex-direction: column; line-height: 1.25">
+              <span style="font-weight: 600; font-size: 13px">Verifikator</span>
+              <span style="font-size: 12px; color: #64748B">LPV TPT</span>
+            </span>
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+          </button>
+          <sc-if value="{{profileOpen}}" hint-placeholder-val="{{ false }}">
+            <div role="menu" style="position: absolute; right: 0; top: 48px; width: 200px; background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; box-shadow: 0 10px 30px rgba(16,42,67,0.12); padding: 6px; z-index: 20; display: flex; flex-direction: column">
+              <button type="button" role="menuitem" class="vf-btn vf-ghost" onClick="{{closeProfile}}" style="padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; font: inherit; color: #10233F; text-align: left; cursor: pointer">Profil Saya</button>
+              <button type="button" role="menuitem" class="vf-btn vf-ghost" onClick="{{closeProfile}}" style="padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; font: inherit; color: #10233F; text-align: left; cursor: pointer">Ganti Peran</button>
+              <div style="height: 1px; background: #E5EAF0; margin: 4px 0"></div>
+              <button type="button" role="menuitem" class="vf-btn vf-ghost" onClick="{{closeProfile}}" style="padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; font: inherit; color: #B42318; text-align: left; cursor: pointer">Keluar</button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <main style="flex: 1; padding: 28px 32px 48px; box-sizing: border-box">
+      <div style="max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px">
+
+        <!-- CASE HEADER -->
+        <section aria-labelledby="case-title" style="background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,35,63,0.04); padding: 24px 28px; display: flex; flex-direction: column; gap: 14px">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px">
+            <h1 id="case-title" style="margin: 0; font-size: 22px; line-height: 1.3; font-weight: 700; letter-spacing: -0.01em; color: #10233F">VIU – Produk Tekstil sebagai Barang Konsumsi</h1>
+            <span style="display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 6px; background: #F1F5F9; border: 1px solid #E5EAF0; color: #334155; font-size: 12px; font-weight: 600; font-family: ui-monospace, 'SF Mono', Menlo, monospace">VIU-2025-000123</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #E8F1FF; color: #0958D9; font-size: 12px; font-weight: 600">
+              <span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #1677FF"></span>
+              Draft Verifikasi
+            </span>
+          </div>
+          <dl style="margin: 0; display: flex; flex-wrap: wrap; gap: 8px 32px; font-size: 13px">
+            <div style="display: flex; gap: 6px"><dt style="color: #64748B">Tanggal Permohonan :</dt><dd style="margin: 0; font-weight: 500; color: #10233F">{{tanggalLabel}}</dd></div>
+            <div style="display: flex; gap: 6px"><dt style="color: #64748B">Pemohon :</dt><dd style="margin: 0; font-weight: 500; color: #10233F">PT Maju Tekstil Indonesia</dd></div>
+            <div style="display: flex; gap: 6px"><dt style="color: #64748B">NIB :</dt><dd style="margin: 0; font-weight: 500; color: #10233F">8123456789012</dd></div>
+          </dl>
+        </section>
+
+        <!-- STEP NAVIGATION -->
+        <nav aria-label="Tahapan verifikasi" style="background: #FFFFFF; border: 1px solid #E5EAF0; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,35,63,0.04); padding: 20px 24px; overflow-x: auto">
+          <ol style="list-style: none; margin: 0; padding: 0; display: flex; min-width: 1380px">
+            <sc-for list="{{steps}}" as="item" hint-placeholder-count="11">
+              <li style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+                <div style="display: flex; align-items: center">
+                  <sc-if value="{{item.isLink}}" hint-placeholder-val="{{ false }}">
+                    <a href="{{item.href}}" class="vf-btn" aria-label="{{item.ariaLabel}}" title="{{item.label}}" style="width: 32px; height: 32px; flex: none; box-sizing: border-box; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; text-decoration: none; {{item.circleStyle}}">
+                      <sc-if value="{{item.done}}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg></sc-if>
+                      <sc-if value="{{item.showNum}}" hint-placeholder-val="{{ false }}"><span>{{item.num}}</span></sc-if>
+                    </a>
+                  </sc-if>
+                  <sc-if value="{{item.notLink}}" hint-placeholder-val="{{ true }}">
+                    <span aria-label="{{item.ariaLabel}}" aria-current="{{item.ariaCurrent}}" title="{{item.title}}" style="width: 32px; height: 32px; flex: none; box-sizing: border-box; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; {{item.circleStyle}}">{{item.num}}</span>
+                  </sc-if>
+                  <sc-if value="{{item.hasLine}}" hint-placeholder-val="{{ true }}">
+                    <div aria-hidden="true" style="flex: 1; height: 2px; margin: 0 8px; border-radius: 2px; {{item.lineStyle}}"></div>
+                  </sc-if>
+                </div>
+                <div style="padding-right: 10px; display: flex; flex-direction: column; gap: 2px">
+                  <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; {{item.kickerStyle}}">Tahap {{item.num}}</span>
+                  <span style="font-size: 12.5px; line-height: 1.35; {{item.labelStyle}}">{{item.label}}</span>
+                </div>
+              </li>
+            </sc-for>
+          </ol>
+        </nav>
+
+        <!-- STEP 1: INFORMASI PERMOHONAN -->
+        <sc-if value="{{isStep1}}" hint-placeholder-val="{{ true }}">
+          <section aria-labelledby="info-title" style="background: #FFFFFF; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,35,63,0.04); {{cardBorder}}">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 22px 28px; border-bottom: 1px solid #E5EAF0">
+              <div style="display: flex; flex-direction: column; gap: 2px">
+                <h2 id="info-title" style="margin: 0; font-size: 17px; font-weight: 700; color: #10233F">Informasi Permohonan</h2>
+                <p style="margin: 0; font-size: 13px; color: #64748B">{{cardSubtitle}}</p>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px">
+                <sc-if value="{{saved}}" hint-placeholder-val="{{ false }}">
+                  <span role="status" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #067647; font-weight: 500">
+                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg>
+                    Perubahan disimpan
+                  </span>
+                </sc-if>
+                <sc-if value="{{viewMode}}" hint-placeholder-val="{{ true }}">
+                  <button type="button" class="vf-btn vf-ghost" onClick="{{startEdit}}" style="display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 600; cursor: pointer">
+                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"></path><path d="M13.5 6.5l4 4"></path></svg>
+                    Edit
+                  </button>
+                </sc-if>
+                <sc-if value="{{editing}}" hint-placeholder-val="{{ false }}">
+                  <button type="button" class="vf-btn vf-ghost" onClick="{{cancelEdit}}" style="height: 38px; padding: 0 16px; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 600; cursor: pointer">Batal</button>
+                  <button type="button" class="vf-btn vf-primary" onClick="{{saveEdit}}" style="display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 18px; border: 1px solid #1677FF; border-radius: 10px; background: #1677FF; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">
+                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg>
+                    Simpan
+                  </button>
+                </sc-if>
+              </div>
+            </div>
+
+            <div style="padding: 28px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px 48px">
+
+              <!-- LEFT COLUMN -->
+              <div style="display: flex; flex-direction: column; gap: 22px">
+                <div style="display: flex; flex-direction: column; gap: 8px">
+                  <span id="lbl-nomor" style="font-size: 13px; font-weight: 500; color: #64748B">Nomor Permohonan</span>
+                  <div aria-labelledby="lbl-nomor" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid #E5EAF0; border-radius: 10px; background: #F8FAFC; color: #10233F; font-weight: 500; box-sizing: border-box">
+                    <span>VIU-2025-000123</span>
+                    <sc-if value="{{editing}}" hint-placeholder-val="{{ false }}"><svg role="img" aria-label="Tidak dapat diubah" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg></sc-if>
+                  </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px">
+                  <label for="f-tanggal" style="font-size: 13px; font-weight: 500; color: #64748B">Tanggal Permohonan</label>
+                  <sc-if value="{{viewMode}}" hint-placeholder-val="{{ true }}">
+                    <div style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 14px; border: 1px solid #E5EAF0; border-radius: 10px; background: #F8FAFC; color: #10233F; font-weight: 500; box-sizing: border-box">
+                      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg>
+                      <span>{{tanggalLabel}}</span>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{editing}}" hint-placeholder-val="{{ false }}">
+                    <input id="f-tanggal" class="vf-input" type="datetime-local" value="{{draft.tanggal}}" onChange="{{onTanggal}}" style="height: 44px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 500; box-sizing: border-box; width: 100%" />
+                    <sc-if value="{{errors.tanggal}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B42318">{{errors.tanggal}}</span></sc-if>
+                  </sc-if>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px">
+                  <span id="lbl-jenis" style="font-size: 13px; font-weight: 500; color: #64748B">Jenis VIU</span>
+                  <div aria-labelledby="lbl-jenis" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid #E5EAF0; border-radius: 10px; background: #F8FAFC; color: #10233F; font-weight: 500; box-sizing: border-box">
+                    <span>Produk Tekstil sebagai Barang Konsumsi</span>
+                    <sc-if value="{{editing}}" hint-placeholder-val="{{ false }}"><svg role="img" aria-label="Tidak dapat diubah" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg></sc-if>
+                  </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px">
+                  <span style="font-size: 13px; font-weight: 500; color: #64748B">Status</span>
+                  <div>
+                    <span style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: #E8F1FF; color: #0958D9; font-size: 13px; font-weight: 600">
+                      <span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 50%; background: #1677FF"></span>
+                      Draft Verifikasi
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RIGHT COLUMN -->
+              <div style="display: flex; flex-direction: column; gap: 22px">
+                <div style="display: flex; flex-direction: column; gap: 8px">
+                  <span id="lbl-nama" style="font-size: 13px; font-weight: 500; color: #64748B">Nama Pemohon</span>
+                  <div aria-labelledby="lbl-nama" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid #E5EAF0; border-radius: 10px; background: #F8FAFC; color: #10233F; font-weight: 500; box-sizing: border-box">
+                    <span>PT Maju Tekstil Indonesia</span>
+                    <sc-if value="{{editing}}" hint-placeholder-val="{{ false }}"><svg role="img" aria-label="Tidak dapat diubah" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg></sc-if>
+                  </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px">
+                  <span id="lbl-nib" style="font-size: 13px; font-weight: 500; color: #64748B">NIB</span>
+                  <div aria-labelledby="lbl-nib" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid #E5EAF0; border-radius: 10px; background: #F8FAFC; color: #10233F; font-weight: 500; box-sizing: border-box; font-variant-numeric: tabular-nums">
+                    <span>8123456789012</span>
+                    <sc-if value="{{editing}}" hint-placeholder-val="{{ false }}"><svg role="img" aria-label="Tidak dapat diubah" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg></sc-if>
+                  </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px">
+                  <label for="f-pic" style="font-size: 13px; font-weight: 500; color: #64748B">PIC</label>
+                  <sc-if value="{{viewMode}}" hint-placeholder-val="{{ true }}">
+                    <div style="display: flex; align-items: center; min-height: 44px; padding: 0 14px; border: 1px solid #E5EAF0; border-radius: 10px; background: #F8FAFC; color: #10233F; font-weight: 500; box-sizing: border-box">{{data.pic}}</div>
+                  </sc-if>
+                  <sc-if value="{{editing}}" hint-placeholder-val="{{ false }}">
+                    <input id="f-pic" class="vf-input" type="text" value="{{draft.pic}}" onChange="{{onPic}}" placeholder="Nama PIC" style="height: 44px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 500; box-sizing: border-box; width: 100%" />
+                    <sc-if value="{{errors.pic}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B42318">{{errors.pic}}</span></sc-if>
+                  </sc-if>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px">
+                  <span style="font-size: 13px; font-weight: 500; color: #64748B">Kontak</span>
+                  <sc-if value="{{viewMode}}" hint-placeholder-val="{{ true }}">
+                    <div style="display: flex; flex-direction: column; border: 1px solid #E5EAF0; border-radius: 10px; background: #F8FAFC">
+                      <div style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 14px; color: #10233F; font-weight: 500; border-bottom: 1px solid #E5EAF0">
+                        <svg role="img" aria-label="Telepon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"></path></svg>
+                        <span style="font-variant-numeric: tabular-nums">{{data.phone}}</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 14px; color: #10233F; font-weight: 500; min-width: 0">
+                        <svg role="img" aria-label="Email" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path></svg>
+                        <span style="overflow-wrap: anywhere">{{data.email}}</span>
+                      </div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{editing}}" hint-placeholder-val="{{ false }}">
+                    <div style="display: flex; flex-direction: column; gap: 10px">
+                      <div style="position: relative">
+                        <label for="f-phone" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Nomor Telepon</label>
+                        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 14px; top: 14px"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"></path></svg>
+                        <input id="f-phone" class="vf-input" type="tel" value="{{draft.phone}}" onChange="{{onPhone}}" placeholder="Nomor telepon" style="height: 44px; padding: 0 14px 0 40px; border: 1px solid #CBD5E1; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 500; box-sizing: border-box; width: 100%" />
+                      </div>
+                      <sc-if value="{{errors.phone}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B42318">{{errors.phone}}</span></sc-if>
+                      <div style="position: relative">
+                        <label for="f-email" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Email</label>
+                        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 14px; top: 14px"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path></svg>
+                        <input id="f-email" class="vf-input" type="email" value="{{draft.email}}" onChange="{{onEmail}}" placeholder="nama@perusahaan.co.id" style="height: 44px; padding: 0 14px 0 40px; border: 1px solid #CBD5E1; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 500; box-sizing: border-box; width: 100%" />
+                      </div>
+                      <sc-if value="{{errors.email}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #B42318">{{errors.email}}</span></sc-if>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- BOTTOM NAVIGATION -->
+          <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 4px">
+            <button type="button" class="vf-btn vf-ghost" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border: 1px solid #D5DDE7; border-radius: 10px; background: #FFFFFF; color: #10233F; font: inherit; font-weight: 600; cursor: pointer">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg>
+              Kembali
+            </button>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px">
+              <sc-if value="{{editing}}" hint-placeholder-val="{{ false }}">
+                <span style="font-size: 13px; color: #64748B">Simpan atau batalkan perubahan terlebih dahulu</span>
+              </sc-if>
+              <sc-if value="{{viewMode}}" hint-placeholder-val="{{ true }}">
+                <a href="Legalitas.dc.html" class="vf-btn vf-primary" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 20px; box-sizing: border-box; border: 1px solid #1677FF; border-radius: 10px; background: #1677FF; color: #FFFFFF; font-weight: 600; text-decoration: none">
+                  Lanjut ke Perusahaan &amp; Legalitas
+                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+                </a>
+              </sc-if>
+              <sc-if value="{{editing}}" hint-placeholder-val="{{ false }}">
+                <button type="button" disabled="{{ true }}" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 20px; border: 1px solid #1677FF; border-radius: 10px; background: #1677FF; color: #FFFFFF; font: inherit; font-weight: 600; opacity: 0.45; cursor: not-allowed">
+                  Lanjut ke Perusahaan &amp; Legalitas
+                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+                </button>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":980}}'>
+// Workflow utama VIU – 11 tahap (urutan baku, dipakai semua artboard)
+var VIU_STEP_NAMES = ['Ringkasan','Perusahaan & Legalitas','Lokasi','Merek & Hubungan Importir','Rencana Impor','Stok Terkini','Uji Mutu','Pernyataan Label','Modal Kerja','Review & Submit','Generate Laporan'];
+var VIU_STEP_HREFS = { 1: 'Main.dc.html', 2: 'Legalitas.dc.html', 3: 'Lokasi.dc.html', 4: 'Merek.dc.html', 5: 'RencanaImpor.dc.html', 6: 'Stok.dc.html', 7: 'UjiMutu.dc.html', 8: 'Label.dc.html', 9: 'ModalKerja.dc.html' };
+function viuSteps(current, lock) {
+  return VIU_STEP_NAMES.map(function (label, i) {
+    var num = i + 1, active = num === current, done = num < current;
+    var href = VIU_STEP_HREFS[num], link = !!href && !active && !lock;
+    return {
+      num: num, label: label, href: href || '#', isLink: link, notLink: !link, done: done, showNum: !done,
+      hasLine: num < VIU_STEP_NAMES.length,
+      title: href ? label : label + ' – belum tersedia',
+      ariaLabel: 'Tahap ' + num + ': ' + label + (done ? ' (selesai)' : active ? ' (aktif)' : href ? '' : ' (belum tersedia)'),
+      ariaCurrent: active ? 'step' : undefined,
+      circleStyle: active ? 'background:#1677FF;color:#FFFFFF;border:2px solid #1677FF;box-shadow:0 0 0 4px #E8F1FF'
+        : done ? 'background:#E8F1FF;color:#0958D9;border:2px solid #1677FF'
+        : href ? 'background:#FFFFFF;color:#64748B;border:2px solid #CBD5E1'
+        : 'background:#F5F7FA;color:#94A3B8;border:2px dashed #CBD5E1',
+      lineStyle: done ? 'background:#1677FF' : 'background:#E5EAF0',
+      kickerStyle: active || done ? 'color:#0958D9' : 'color:#64748B',
+      labelStyle: active ? 'color:#10233F;font-weight:600' : done ? 'color:#10233F;font-weight:500' : href ? 'color:#64748B;font-weight:500' : 'color:#94A3B8;font-weight:500'
+    };
+  });
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    var init = {
+      tanggal: '2025-07-25T10:24',
+      pic: 'Budi Santoso',
+      phone: '0812-3456-7890',
+      email: 'budi.santoso@majutekstil.co.id'
+    };
+    this.state = { step: 1, editing: false, data: init, draft: init, errors: {}, saved: false, profileOpen: false };
+    this.timer = null;
+  }
+
+  componentWillUnmount() {
+    if (this.timer) clearTimeout(this.timer);
+  }
+
+  fmt(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(iso || '');
+    if (!m) return iso || '-';
+    var bulan = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    return parseInt(m[3], 10) + ' ' + bulan[parseInt(m[2], 10) - 1] + ' ' + m[1] + ' ' + m[4] + ':' + m[5];
+  }
+
+  setField(key) {
+    var self = this;
+    return function (e) {
+      var v = e.target.value;
+      self.setState(function (s) {
+        var d = Object.assign({}, s.draft); d[key] = v;
+        var er = Object.assign({}, s.errors); er[key] = '';
+        return { draft: d, errors: er };
+      });
+    };
+  }
+
+  validate(d) {
+    var er = {};
+    if (!d.tanggal) er.tanggal = 'Tanggal permohonan wajib diisi.';
+    if (!d.pic || !d.pic.trim()) er.pic = 'Nama PIC wajib diisi.';
+    if (!d.phone || !/^[0-9+\-\s()]{8,}$/.test(d.phone.trim())) er.phone = 'Nomor telepon tidak valid.';
+    if (!d.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email.trim())) er.email = 'Format email tidak valid.';
+    return er;
+  }
+
+  renderVals() {
+    var self = this;
+    var s = this.state;
+    var steps = viuSteps(1, s.editing);
+
+    return {
+      steps: steps,
+      isStep1: s.step === 1,
+      isStep2: s.step === 2,
+      crumbLast: s.step === 1 ? 'Ringkasan' : VIU_STEP_NAMES[s.step - 1],
+      editing: s.editing,
+      viewMode: !s.editing,
+      saved: s.saved,
+      data: s.data,
+      draft: s.draft,
+      errors: s.errors,
+      profileOpen: s.profileOpen,
+      tanggalLabel: this.fmt(s.data.tanggal),
+      cardSubtitle: s.editing ? 'Mode edit — field dengan ikon gembok tidak dapat diubah.' : 'Data dasar permohonan VIU sebelum pemeriksaan dimulai.',
+      cardBorder: s.editing ? 'border:1px solid #91CAFF' : 'border:1px solid #E5EAF0',
+      nextStyle: s.editing ? 'opacity:0.45;cursor:not-allowed' : 'cursor:pointer',
+      toggleProfile: function () { self.setState({ profileOpen: !s.profileOpen }); },
+      closeProfile: function () { self.setState({ profileOpen: false }); },
+      startEdit: function () { self.setState({ editing: true, draft: Object.assign({}, s.data), errors: {}, saved: false }); },
+      cancelEdit: function () { self.setState({ editing: false, draft: Object.assign({}, s.data), errors: {} }); },
+      saveEdit: function () {
+        var er = self.validate(s.draft);
+        if (Object.keys(er).length) { self.setState({ errors: er }); return; }
+        var clean = {
+          tanggal: s.draft.tanggal,
+          pic: s.draft.pic.trim(),
+          phone: s.draft.phone.trim(),
+          email: s.draft.email.trim()
+        };
+        self.setState({ data: clean, draft: clean, editing: false, errors: {}, saved: true });
+        if (self.timer) clearTimeout(self.timer);
+        self.timer = setTimeout(function () { self.setState({ saved: false }); }, 2800);
+      },
+      onTanggal: this.setField('tanggal'),
+      onPic: this.setField('pic'),
+      onPhone: this.setField('phone'),
+      onEmail: this.setField('email'),
+      goNext: function () { if (!s.editing) { self.setState({ step: 2, profileOpen: false }); if (typeof window !== 'undefined') window.scrollTo(0, 0); } },
+      goSummary: function () { self.setState({ step: 1 }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
