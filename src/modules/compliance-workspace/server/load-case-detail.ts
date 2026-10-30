@@ -8,7 +8,8 @@ import { lhviuIsIssued } from "@/modules/project-manager-workspace/lhviu-complet
 import { applicationMatchesViuScheme } from "@/modules/project-manager-workspace/viu-schemes";
 import { composeLocationAddress, REQUIRED_LOCATION_TYPE_LABELS, type LocationType } from "@/modules/shared/schema";
 import { collectApplicationVisits, groupVisitsByLocation, type SurveyPayloadLocation } from "@/modules/shared/survey-visit-scope";
-import type { CaseDetailInput, Evidence } from "../case-detail";
+import type { Evidence } from "../case-detail";
+import type { DossierInput, WorkspaceOutput } from "../dossier";
 import { buildCaseRow } from "../case-list";
 import { KONSUMSI_SCHEME } from "./load-cases";
 
@@ -106,8 +107,8 @@ function lhviuDocument(value: unknown): { path: string | null; number: string | 
   };
 }
 
-/** One VIU Konsumsi case, read only, ready for buildCaseSteps. Null when not found or out of scope. */
-export async function loadCaseDetail(applicationId: string): Promise<CaseDetailInput | null> {
+/** One VIU Konsumsi case, read only, ready for buildCaseSteps / buildMatrix / buildDossier. Null when not found or out of scope. */
+export async function loadCaseDetail(applicationId: string): Promise<DossierInput | null> {
   const app = await db.application.findUnique({
     where: { id: applicationId },
     select: {
@@ -132,6 +133,7 @@ export async function loadCaseDetail(applicationId: string): Promise<CaseDetailI
           pmReviewStatus: true,
           pmReviewedAt: true,
           pmReviewedByName: true,
+          validatedAt: true,
           updatedAt: true,
           surveyor: { select: { name: true } },
           verifikator: { select: { name: true } },
@@ -186,6 +188,19 @@ export async function loadCaseDetail(applicationId: string): Promise<CaseDetailI
   const surveyAssignments = app.assignments.filter((a) => a.scheduleType === "survey");
   const { groups } = groupVisitsByLocation(collectApplicationVisits(surveyAssignments), locations);
   const visitStatusByKey = new Map(groups.map((group) => [group.location, group.active?.status ?? null]));
+
+  type LoadedAssignment = (typeof app.assignments)[number];
+  const outputOf = (scheduleType: string, nameOf: (a: LoadedAssignment) => string | null | undefined): WorkspaceOutput => {
+    const assignments = app.assignments.filter((a) => a.scheduleType === scheduleType);
+    const times = assignments.map((a) => (a.validatedAt ?? a.pmReviewedAt ?? a.updatedAt).getTime());
+    const reviews = assignments.map((a) => (a.pmReviewStatus ? (PM_REVIEW_LABELS[a.pmReviewStatus] ?? a.pmReviewStatus) : null)).filter(present);
+    return {
+      doneAt: times.length ? new Date(Math.max(...times)).toISOString() : null,
+      names: [...new Set(assignments.map(nameOf).filter(present))],
+      pmReview: reviews.length ? [...new Set(reviews)].join(", ") : null,
+    };
+  };
+  const pmTimes = app.assignments.map((a) => a.pmReviewedAt?.getTime()).filter(present);
 
   return {
     row,
@@ -279,6 +294,17 @@ export async function loadCaseDetail(applicationId: string): Promise<CaseDetailI
       file: evidence(lhviu.number ? `LHVIU ${lhviu.number}` : "LHVIU", lhviu.path),
     },
     findings: app.complianceIssues,
+    administrative: {
+      finalReview: { done: complianceCase?.finalReviewDone ?? false, at: complianceCase?.finalReviewAt?.toISOString() ?? null, byName: complianceCase?.finalReviewByName ?? null },
+      dossier: { done: complianceCase?.dossierComplete ?? false, at: complianceCase?.dossierCompleteAt?.toISOString() ?? null, byName: complianceCase?.dossierCompleteByName ?? null },
+    },
+    outputs: {
+      CR: { approvedLetters: app.assignments.filter((a) => a.letterStatus === "APPROVED").length, letters: app.assignments.length },
+      SV: outputOf("survey", (a) => a.surveyor?.name),
+      VF: outputOf("dokumen", (a) => a.verifikator?.name),
+      TA: outputOf("technical", (a) => a.technicalReviewer?.name),
+      PM: { at: pmTimes.length ? new Date(Math.max(...pmTimes)).toISOString() : null, names: [...new Set(app.assignments.map((a) => a.pmReviewedByName).filter(present))] },
+    },
     assignees: {
       SV: [...new Set(surveyAssignments.map((a) => a.surveyor?.name).filter(present))],
       VF: [...new Set(app.assignments.filter((a) => a.scheduleType === "dokumen").map((a) => a.verifikator?.name).filter(present))],
