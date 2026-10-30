@@ -7,10 +7,9 @@ import { cn } from "@/lib/utils";
 import { CASE_CATEGORIES, CASE_CATEGORY_LABELS } from "../../consolidation";
 import type { QuickChip, SortKey } from "../../case-list";
 import { WORKSPACE_KEYS, WORKSPACE_LABELS, WORKSPACE_STATE_LABELS, type WorkspaceState } from "../../workspace-status";
+import { INPUT_CLASS } from "../styles";
 import { ADVANCED_KEYS, type CaseFilters as Filters } from "./use-case-list";
 
-export const INPUT_CLASS =
-  "h-9 rounded-lg border border-[#E5EAF0] bg-white px-2.5 text-[13px] text-[#10233F] outline-none focus-visible:border-[#1677FF] focus-visible:ring-2 focus-visible:ring-[#1677FF]/25";
 const STATES: WorkspaceState[] = ["COMPLETED", "IN_PROGRESS", "NOT_STARTED", "ISSUE"];
 const CHIPS: (QuickChip | "")[] = ["", ...CASE_CATEGORIES, "LH", "REVIEW"];
 const CHIP_LABELS: Record<QuickChip, string> = { ...CASE_CATEGORY_LABELS, LH: "LHVIU Terbit", REVIEW: "Ditandai Review" };

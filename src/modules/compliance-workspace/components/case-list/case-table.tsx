@@ -91,6 +91,7 @@ function RowMenu({ row, pics, onOpen, onAssignPic, onToggleReview }: { row: Case
         >
           Lihat Issue{row.activeFindings.length > 0 ? ` (${row.activeFindings.length})` : ""}
         </DropdownMenuItem>
+        <DropdownMenuItem render={<Link href={`${COMPLIANCE_HOME}/matrix?case=${row.applicationId}`} />}>Lihat Compliance Matrix</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>Assign PIC Compliance</DropdownMenuSubTrigger>

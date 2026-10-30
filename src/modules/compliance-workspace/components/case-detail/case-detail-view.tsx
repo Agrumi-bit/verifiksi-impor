@@ -65,6 +65,12 @@ export function CaseDetailView({ row, steps, current }: { row: CaseRow; steps: C
             Lihat Issue ({row.activeFindings.length} aktif)
           </Link>
           <Link
+            href={`${COMPLIANCE_HOME}/matrix?case=${row.applicationId}`}
+            className="inline-flex h-8 items-center rounded-lg border border-[#E5EAF0] px-3 text-[12.5px] font-medium hover:bg-[#F5F7FA]"
+          >
+            Compliance Matrix
+          </Link>
+          <Link
             href={`${COMPLIANCE_HOME}/temuan?case=${row.applicationId}&new=1`}
             className="inline-flex h-8 items-center rounded-lg bg-[#1677FF] px-3 text-[12.5px] font-medium text-white hover:bg-[#0F62D6]"
           >

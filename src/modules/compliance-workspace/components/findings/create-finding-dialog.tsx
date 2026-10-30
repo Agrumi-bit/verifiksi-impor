@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { FINDING_KIND_LABELS, FINDING_SEVERITIES, FINDING_SEVERITY_LABELS } from "../../finding-rules";
 import { REQUIREMENTS } from "../../requirements";
 import { WORKSPACE_KEYS, WORKSPACE_LABELS } from "../../workspace-status";
-import { INPUT_CLASS } from "../case-list/case-filters";
+import { INPUT_CLASS } from "../styles";
 import type { CaseListResponse } from "../case-list/use-case-list";
 import { useCreateFinding, type NewFinding } from "./use-findings";
 

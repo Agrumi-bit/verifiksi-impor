@@ -12,7 +12,7 @@ import { COMPLIANCE_HOME } from "../../navigation";
 import { REQUIREMENTS, stepOfRequirement } from "../../requirements";
 import { WORKSPACE_LABELS, type WorkspaceKey } from "../../workspace-status";
 import { Pill } from "../case-list/badges";
-import { INPUT_CLASS } from "../case-list/case-filters";
+import { INPUT_CLASS } from "../styles";
 import { formatDateTime } from "../case-list/format";
 import { useFinding, useFollowUp, type FindingRow } from "./use-findings";
 

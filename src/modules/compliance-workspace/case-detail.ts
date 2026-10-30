@@ -35,6 +35,8 @@ export type CaseDetailInput = {
   pmReviews: { report: string; status: string | null; by: string | null; at: string | null }[];
   lhviu: { number: string | null; issuedAt: string | null; validUntil: string | null; file: Evidence | null };
   findings: DetailFinding[];
+  /** Who did the work per workspace (Compliance Matrix "Verified By"). */
+  assignees?: Partial<Record<WorkspaceKey, string[]>>;
 };
 
 export type StepStatus = "Menunggu Handover" | "Conflict" | "Open Issue" | "Perlu Klarifikasi" | "Sesuai" | "Completed";

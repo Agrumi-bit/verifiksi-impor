@@ -134,6 +134,8 @@ export async function loadCaseDetail(applicationId: string): Promise<CaseDetailI
           pmReviewedByName: true,
           updatedAt: true,
           surveyor: { select: { name: true } },
+          verifikator: { select: { name: true } },
+          technicalReviewer: { select: { name: true } },
           locationVisits: { select: { id: true, status: true, locationType: true, address: true, companyLocationId: true, submittedAt: true, updatedAt: true, createdAt: true } },
         },
       },
@@ -277,5 +279,11 @@ export async function loadCaseDetail(applicationId: string): Promise<CaseDetailI
       file: evidence(lhviu.number ? `LHVIU ${lhviu.number}` : "LHVIU", lhviu.path),
     },
     findings: app.complianceIssues,
+    assignees: {
+      SV: [...new Set(surveyAssignments.map((a) => a.surveyor?.name).filter(present))],
+      VF: [...new Set(app.assignments.filter((a) => a.scheduleType === "dokumen").map((a) => a.verifikator?.name).filter(present))],
+      TA: [...new Set(app.assignments.filter((a) => a.scheduleType === "technical").map((a) => a.technicalReviewer?.name).filter(present))],
+      PM: [...new Set(app.assignments.map((a) => a.pmReviewedByName).filter(present))],
+    },
   };
 }

@@ -16,7 +16,7 @@ export const COMPLIANCE_NAV: ComplianceNavItem[] = [
   { label: "Dashboard", href: COMPLIANCE_HOME, icon: LayoutDashboard, available: true },
   { label: "Daftar Permohonan", href: `${COMPLIANCE_HOME}/permohonan`, icon: ClipboardCheck, available: true },
   { label: "Workspace Results", href: `${COMPLIANCE_HOME}/workspace-results`, icon: Layers, available: false },
-  { label: "Compliance Matrix", href: `${COMPLIANCE_HOME}/matrix`, icon: Grid3x3, available: false },
+  { label: "Compliance Matrix", href: `${COMPLIANCE_HOME}/matrix`, icon: Grid3x3, available: true },
   { label: "Temuan & Exception", href: `${COMPLIANCE_HOME}/temuan`, icon: TriangleAlert, available: true },
   { label: "Compliance Dossier", href: `${COMPLIANCE_HOME}/dossier`, icon: FolderOpen, available: false },
   { label: "LHVIU & Final Output", href: `${COMPLIANCE_HOME}/lhviu`, icon: FileCheck2, available: false },

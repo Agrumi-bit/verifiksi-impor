@@ -11,7 +11,7 @@ import { FINDING_KINDS, FINDING_KIND_LABELS, FINDING_SEVERITY_LABELS } from "../
 import { COMPLIANCE_HOME } from "../../navigation";
 import { WORKSPACE_LABELS, type WorkspaceKey } from "../../workspace-status";
 import { Pill } from "../case-list/badges";
-import { INPUT_CLASS } from "../case-list/case-filters";
+import { INPUT_CLASS } from "../styles";
 import { formatDateTime } from "../case-list/format";
 import { CreateFindingDialog } from "./create-finding-dialog";
 import { FindingDrawer, KIND_TONE } from "./finding-drawer";
