@@ -44,12 +44,6 @@ export function stepOfRequirement(key: string): number {
   return REQUIREMENTS.find((requirement) => requirement.key === key)?.step ?? 1;
 }
 
-/** Where "Lihat Issue" lands for a case: the stage of its first active finding, by stage order. */
-export function firstIssueStep(findings: { requirementKey: string }[]): number | null {
-  if (findings.length === 0) return null;
-  return Math.min(...findings.map((finding) => stepOfRequirement(finding.requirementKey)));
-}
-
 export function requirementsOfStep(step: number): RequirementKey[] {
   return REQUIREMENTS.filter((requirement) => requirement.step === step).map((requirement) => requirement.key);
 }

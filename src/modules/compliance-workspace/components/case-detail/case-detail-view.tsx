@@ -57,6 +57,20 @@ export function CaseDetailView({ row, steps, current }: { row: CaseRow; steps: C
             Read-only
           </span>
         </div>
+        <div className="flex w-full flex-wrap gap-2 border-t border-[#E5EAF0] pt-3">
+          <Link
+            href={`${COMPLIANCE_HOME}/temuan?case=${row.applicationId}`}
+            className="inline-flex h-8 items-center rounded-lg border border-[#E5EAF0] px-3 text-[12.5px] font-medium hover:bg-[#F5F7FA]"
+          >
+            Lihat Issue ({row.activeFindings.length} aktif)
+          </Link>
+          <Link
+            href={`${COMPLIANCE_HOME}/temuan?case=${row.applicationId}&new=1`}
+            className="inline-flex h-8 items-center rounded-lg bg-[#1677FF] px-3 text-[12.5px] font-medium text-white hover:bg-[#0F62D6]"
+          >
+            Catat Temuan
+          </Link>
+        </div>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-[260px_1fr]">

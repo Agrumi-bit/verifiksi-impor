@@ -17,7 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { CaseRow, SortKey } from "../../case-list";
 import { COMPLIANCE_HOME } from "../../navigation";
-import { firstIssueStep } from "../../requirements";
+import { issueTabFor } from "../../finding-rules";
 import { CategoryBadge, HandoverBadge, LhviuBadge, ReadinessText, WorkspaceProgress } from "./badges";
 import { formatDate, formatDateTime } from "./format";
 
@@ -87,8 +87,7 @@ function RowMenu({ row, pics, onOpen, onAssignPic, onToggleReview }: { row: Case
         <DropdownMenuItem onClick={() => onOpen(row)}>Ringkasan Case</DropdownMenuItem>
         <DropdownMenuItem render={<Link href={`${COMPLIANCE_HOME}/permohonan/${row.applicationId}?step=1`} />}>Buka Compliance Case</DropdownMenuItem>
         <DropdownMenuItem
-          disabled={row.activeFindings.length === 0}
-          render={<Link href={`${COMPLIANCE_HOME}/permohonan/${row.applicationId}?step=${firstIssueStep(row.activeFindings) ?? 1}`} />}
+          render={<Link href={`${COMPLIANCE_HOME}/temuan?case=${row.applicationId}&tab=${issueTabFor(row.activeFindings.map((finding) => finding.kind))}`} />}
         >
           Lihat Issue{row.activeFindings.length > 0 ? ` (${row.activeFindings.length})` : ""}
         </DropdownMenuItem>

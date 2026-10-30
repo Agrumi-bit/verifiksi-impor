@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 import { COMPLIANCE_STATUS_LABELS, READINESS_LABELS } from "../../consolidation";
 import type { CaseRow } from "../../case-list";
 import { COMPLIANCE_HOME } from "../../navigation";
-import { REQUIREMENTS, firstIssueStep } from "../../requirements";
+import { issueTabFor } from "../../finding-rules";
+import { REQUIREMENTS } from "../../requirements";
 import { WORKSPACE_KEYS, WORKSPACE_LABELS } from "../../workspace-status";
 import { CategoryBadge, HandoverBadge, LhviuBadge, Pill, WorkspaceStateBadge } from "./badges";
 import { formatCalendarDate, formatDate } from "./format";
@@ -130,18 +131,12 @@ export function CaseQuickDrawer({ row, onClose }: { row: CaseRow | null; onClose
               </section>
             </SheetBody>
             <SheetFooter className="border-[#E5EAF0] bg-white">
-              {(() => {
-                const issueStep = firstIssueStep(row.activeFindings);
-                return issueStep ? (
-                  <Link href={caseHref(row.applicationId, issueStep)} className={cn(FOOTER_BUTTON, "border border-[#E5EAF0] text-[#10233F] hover:bg-[#F5F7FA]")}>
-                    Lihat Issue ({row.activeFindings.length})
-                  </Link>
-                ) : (
-                  <span aria-disabled="true" title="Tidak ada issue aktif" className={cn(FOOTER_BUTTON, "cursor-not-allowed border border-[#E5EAF0] text-[#94A3B8]")}>
-                    Lihat Issue
-                  </span>
-                );
-              })()}
+              <Link
+                href={`${COMPLIANCE_HOME}/temuan?case=${row.applicationId}&tab=${issueTabFor(row.activeFindings.map((finding) => finding.kind))}`}
+                className={cn(FOOTER_BUTTON, "border border-[#E5EAF0] text-[#10233F] hover:bg-[#F5F7FA]")}
+              >
+                Lihat Issue{row.activeFindings.length > 0 ? ` (${row.activeFindings.length})` : ""}
+              </Link>
               <Link href={caseHref(row.applicationId)} className={cn(FOOTER_BUTTON, "bg-[#1677FF] text-white hover:bg-[#0F62D6]")}>
                 Buka Compliance Case
               </Link>

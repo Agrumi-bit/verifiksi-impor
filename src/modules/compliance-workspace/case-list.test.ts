@@ -113,11 +113,11 @@ describe("chipCounts", () => {
   });
 });
 
-describe("firstIssueStep", () => {
-  it("lands on the earliest stage that has an active finding", async () => {
-    const { firstIssueStep } = await import("./requirements");
-    assert.equal(firstIssueStep([]), null);
-    assert.equal(firstIssueStep([{ requirementKey: "modal" }, { requirementKey: "gudang" }]), 3);
-    assert.equal(firstIssueStep([{ requirementKey: "unknown" }]), 1);
+describe("stepOfRequirement", () => {
+  it("maps a requirement to its stage, unknown keys to Ringkasan", async () => {
+    const { stepOfRequirement } = await import("./requirements");
+    assert.equal(stepOfRequirement("gudang"), 3);
+    assert.equal(stepOfRequirement("modal"), 9);
+    assert.equal(stepOfRequirement("unknown"), 1);
   });
 });
