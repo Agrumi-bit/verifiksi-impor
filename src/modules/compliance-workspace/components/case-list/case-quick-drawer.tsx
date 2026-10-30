@@ -1,8 +1,11 @@
 "use client";
 
+import Link from "next/link";
+
 import { Sheet, SheetBody, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { COMPLIANCE_STATUS_LABELS, READINESS_LABELS } from "../../consolidation";
 import type { CaseRow } from "../../case-list";
+import { COMPLIANCE_HOME } from "../../navigation";
 import { WORKSPACE_KEYS, WORKSPACE_LABELS } from "../../workspace-status";
 import { CategoryBadge, HandoverBadge, LhviuBadge, WorkspaceStateBadge } from "./badges";
 import { formatCalendarDate, formatDate } from "./format";
@@ -94,6 +97,13 @@ export function CaseQuickDrawer({ row, onClose }: { row: CaseRow | null; onClose
                 </div>
                 <p className="text-[12px] text-[#64748B]">Diterbitkan oleh Project Manager. Compliance hanya melihat.</p>
               </section>
+
+              <Link
+                href={`${COMPLIANCE_HOME}/permohonan/${row.applicationId}`}
+                className="inline-flex h-9 w-fit items-center rounded-lg bg-[#1677FF] px-3.5 text-[13px] font-medium text-white outline-none hover:bg-[#0F62D6] focus-visible:ring-2 focus-visible:ring-[#1677FF]/40"
+              >
+                Buka Detail Case (11 tahap)
+              </Link>
             </SheetBody>
           </>
         )}

@@ -8,15 +8,21 @@ const DATE_TIME = new Intl.DateTimeFormat("id-ID", {
   timeZone: "Asia/Jakarta",
 });
 
+/** Formats a date, or shows the raw text when it isn't a valid date (Intl throws on Invalid Date). */
+function safeFormat(format: Intl.DateTimeFormat, raw: string, date: Date): string {
+  return Number.isNaN(date.getTime()) ? raw : format.format(date);
+}
+
 export function formatDate(iso: string | null | undefined): string {
-  return iso ? DATE.format(new Date(iso)) : "—";
+  return iso ? safeFormat(DATE, iso, new Date(iso)) : "—";
 }
 
 export function formatDateTime(iso: string | null | undefined): string {
-  return iso ? DATE_TIME.format(new Date(iso)).replace(".", ":") : "—";
+  return iso ? safeFormat(DATE_TIME, iso, new Date(iso)).replace(".", ":") : "—";
 }
 
-/** LHVIU tanggal terbit is a calendar date (YYYY-MM-DD) — formatted without a timezone shift. */
+/** A calendar date (YYYY-MM-DD, e.g. LHVIU tanggal terbit) — formatted without a timezone shift. */
 export function formatCalendarDate(day: string | null | undefined): string {
-  return day ? DATE.format(new Date(`${day}T00:00:00+07:00`)) : "—";
+  if (!day) return "—";
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) ? safeFormat(DATE, day, new Date(`${day}T00:00:00+07:00`)) : day;
 }

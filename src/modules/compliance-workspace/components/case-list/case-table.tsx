@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { AlertTriangle, MoreHorizontal, SearchX } from "lucide-react";
 
 import {
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import type { CaseRow, SortKey } from "../../case-list";
+import { COMPLIANCE_HOME } from "../../navigation";
 import { CategoryBadge, HandoverBadge, LhviuBadge, ReadinessText, WorkspaceProgress } from "./badges";
 import { formatDate, formatDateTime } from "./format";
 
@@ -82,7 +84,7 @@ function RowMenu({ row, pics, onOpen, onAssignPic, onToggleReview }: { row: Case
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[220px] rounded-xl border border-[#E5EAF0] bg-white p-1.5">
         <DropdownMenuItem onClick={() => onOpen(row)}>Ringkasan Case</DropdownMenuItem>
-        <DropdownMenuItem disabled>Detail Case (segera)</DropdownMenuItem>
+        <DropdownMenuItem render={<Link href={`${COMPLIANCE_HOME}/permohonan/${row.applicationId}`} />}>Detail Case</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>Assign PIC Compliance</DropdownMenuSubTrigger>
