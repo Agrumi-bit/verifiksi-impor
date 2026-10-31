@@ -20,7 +20,6 @@ const SOURCE_TONE: Record<TrailSource, string> = {
   CR: "bg-[#EAF2FF] text-[#1D4ED8]",
   SV: "bg-[#ECFDF3] text-[#15803D]",
   VF: "bg-[#F3EEFF] text-[#6D28D9]",
-  TA: "bg-[#E6FFFA] text-[#0F766E]",
   PM: "bg-[#FFF7E6] text-[#B45309]",
   CMP: "bg-[#10233F] text-white",
   COMPANY: "bg-[#F1F5F9] text-[#475569]",

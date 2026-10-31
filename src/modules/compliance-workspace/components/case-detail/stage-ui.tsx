@@ -29,6 +29,16 @@ export function StageCard({ title, description, aside, children }: { title: stri
   );
 }
 
+/** A read-only labelled value, styled like the Verifikator design's locked input. */
+export function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[12.5px] text-[#64748B]">{label}</span>
+      <div className="min-h-11 rounded-lg border border-[#E5EAF0] bg-[#F8FAFC] px-3.5 py-2.5 text-[13.5px]">{children}</div>
+    </div>
+  );
+}
+
 export function DataTable({ caption, headers, minWidth = 1000, empty, children }: { caption: string; headers: string[]; minWidth?: number; empty?: string | false; children: React.ReactNode }) {
   return (
     <div className="overflow-x-auto border-t border-[#EEF2F6]">

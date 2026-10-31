@@ -130,7 +130,7 @@ export function CaseFilters({ filters, onChange, onReset, pics, counts, sort, di
 
         {advancedOpen && (
           <div className="mt-3 grid gap-3 border-t border-[#E5EAF0] pt-3 sm:grid-cols-2 lg:grid-cols-4">
-            {(["SV", "VF", "TA", "PM"] as const).map((key) => (
+            {(["SV", "VF", "PM"] as const).map((key) => (
               <AdvancedField key={key} label={WORKSPACE_LABELS[key]}>
                 <Select label={WORKSPACE_LABELS[key]} value={filters[`ws${key}`]} onChange={(value) => onChange({ [`ws${key}`]: value as WorkspaceState | "" })}>
                   <option value="">Semua</option>

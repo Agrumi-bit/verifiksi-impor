@@ -87,7 +87,7 @@ export function CaseQuickDrawer({ row, onClose }: { row: CaseRow | null; onClose
                     ["Menunggu", row.summary.pending],
                     ["Sesuai", row.summary.sesuai],
                     ["Temuan aktif", row.summary.activeFindings],
-                    ["Administratif", `${row.summary.administrative}/2`],
+                    ["Administratif", row.summary.administrativeTotal ? `${row.summary.administrative}/${row.summary.administrativeTotal}` : "Tidak berlaku"],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-lg bg-[#F5F7FA] px-2.5 py-2">
                       <dt className="text-[11px] text-[#64748B]">{label}</dt>

@@ -1,3 +1,4 @@
+import { STATUS_LABELS, type ApplicationStatusValue } from "@/modules/company-workspace/status";
 import type { CaseRow } from "./case-list";
 import { formatCalendarDate, formatDate, formatDateTime } from "./components/case-list/format";
 import type { FindingKind } from "./consolidation";
@@ -17,7 +18,12 @@ export type DetailFinding = { id: string; issueNumber: string; kind: FindingKind
 export type CaseDetailInput = {
   row: CaseRow;
   applicationCategory: string;
-  contact: { name: string; email: string } | null;
+  /** Application.status (APPLICATION_STATUSES). */
+  applicationStatus: string;
+  /** Process dates for the report timeline: the Verifikator's report date and the first Surat Tugas date. */
+  milestones?: { verificationDate: string | null; firstScheduledDate: string | null };
+  /** The applicant's PIC as entered on the application form. */
+  contact: { name: string; designation: string | null; phone: string | null; email: string | null } | null;
   legal: {
     npwp: string | null;
     nib: string | null;
@@ -32,8 +38,10 @@ export type CaseDetailInput = {
   certificates: { brandName: string; commodityName: string; certificateNumber: string; laboratoryName: string; issueDate: string; file: Evidence | null; brandId: string; commodityGroupId: string }[];
   label: { statement: Evidence | null; documentation: Evidence | null };
   workingCapital: { amount: string | null; statement: Evidence | null; supporting: Evidence[] };
-  pmReviews: { report: string; status: string | null; by: string | null; at: string | null }[];
-  lhviu: { number: string | null; issuedAt: string | null; validUntil: string | null; file: Evidence | null };
+  /** One per survey/dokumen assignment: `title` names the report ("Laporan Survey Lokasi Kantor"), `report` adds its assignment number. */
+  pmReviews: { source: "SV" | "VF"; title: string; report: string; status: string | null; by: string | null; at: string | null }[];
+  /** issuedBy: the Project Manager who uploaded the signed LHVIU. */
+  lhviu: { number: string | null; issuedAt: string | null; validUntil: string | null; issuedBy: string | null; file: Evidence | null };
   findings: DetailFinding[];
   /** Who did the work per workspace (Compliance Matrix "Verified By"). */
   assignees?: Partial<Record<WorkspaceKey, string[]>>;
@@ -99,7 +107,7 @@ function stepContent(num: number, input: CaseDetailInput): Pick<CaseStep, "keyDa
           ["NIB", row.nib],
           ["Modul", "VIU – Produk Tekstil sebagai Barang Konsumsi"],
           ["Kategori", input.applicationCategory || DASH],
-          ["Kontak Pemohon", input.contact ? `${input.contact.name} · ${input.contact.email}` : DASH],
+          ["Kontak Pemohon", input.contact ? [input.contact.name, input.contact.phone, input.contact.email].filter(Boolean).join(" · ") : DASH],
         ],
         evidence: [],
       };
@@ -208,13 +216,45 @@ function stepContent(num: number, input: CaseDetailInput): Pick<CaseStep, "keyDa
           ["Nomor LHVIU", input.lhviu.number ?? DASH],
           ["Tanggal terbit", input.lhviu.issuedAt ? formatCalendarDate(input.lhviu.issuedAt) : DASH],
           ["Berlaku sampai", input.lhviu.validUntil ? formatCalendarDate(input.lhviu.validUntil) : DASH],
-          ["Diterbitkan oleh", "Project Manager Workspace"],
+          ["Diterbitkan oleh", input.lhviu.issuedBy ? `${input.lhviu.issuedBy} (Project Manager)` : DASH],
         ],
         evidence: input.lhviu.file ? [input.lhviu.file] : [],
       };
     default:
       return { keyData: [], evidence: [] };
   }
+}
+
+const CATEGORY_LABELS: Record<string, string> = { NEW: "Permohonan Baru", RENEWAL: "Perpanjangan", AMENDMENT: "Perubahan" };
+
+export type CaseSummary = {
+  applicationNumber: string;
+  submittedAt: string;
+  jenis: string;
+  category: string;
+  status: string;
+  companyName: string;
+  nib: string;
+  pic: string;
+  phone: string;
+  email: string;
+};
+
+/** Tahap 1 "Ringkasan — Informasi Permohonan": the application's own data, as the applicant submitted it. */
+export function buildSummary(input: CaseDetailInput): CaseSummary {
+  const { row, contact } = input;
+  return {
+    applicationNumber: row.applicationNumber,
+    submittedAt: `${formatDate(row.submittedAt)}${row.submittedIsSystemDate ? " (tanggal input sistem)" : ""}`,
+    jenis: "Produk Tekstil sebagai Barang Konsumsi",
+    category: CATEGORY_LABELS[input.applicationCategory] ?? (input.applicationCategory || DASH),
+    status: STATUS_LABELS[input.applicationStatus as ApplicationStatusValue] ?? input.applicationStatus,
+    companyName: row.companyName,
+    nib: row.nib,
+    pic: contact ? [contact.name, contact.designation].filter(Boolean).join(" · ") : DASH,
+    phone: contact?.phone || DASH,
+    email: contact?.email || DASH,
+  };
 }
 
 export function buildCaseSteps(input: CaseDetailInput): CaseStep[] {

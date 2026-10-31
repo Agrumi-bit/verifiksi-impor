@@ -3,13 +3,13 @@ import "server-only";
 import { db } from "@/lib/db";
 import { applicationMatchesViuScheme } from "@/modules/project-manager-workspace/viu-schemes";
 import { actionLabel, historyRows, sortTrail, trailSourceOf, type HistoryRow, type TrailEvent } from "../traceability";
-import { KONSUMSI_SCHEME } from "./load-cases";
+import { KONSUMSI_SCHEME, NOT_TECHNICAL } from "./load-cases";
 
 /** Without a case filter the trail shows the latest events only. */
 export const TRAIL_LIMIT = 300;
 
-const SCHEDULE_LABELS: Record<string, string> = { survey: "survey", dokumen: "verifikasi dokumen", technical: "analisis teknis" };
-const SCHEDULE_SOURCE = { survey: "SV", dokumen: "VF", technical: "TA" } as const;
+// VIU Konsumsi has no Technical Analyst step — "technical" assignments are left out of the trail.
+const SCHEDULE_LABELS: Record<string, string> = { survey: "survey", dokumen: "verifikasi dokumen" };
 const PM_REVIEW_LABELS: Record<string, string> = { PENDING: "menunggu review", APPROVED: "disetujui", REJECTED: "ditolak" };
 
 async function konsumsiApplicationIds(applicationId?: string): Promise<Map<string, string>> {
@@ -37,6 +37,7 @@ export async function loadTrail(applicationId?: string): Promise<TrailEvent[]> {
       submissionDate: true,
       createdAt: true,
       assignments: {
+        where: NOT_TECHNICAL,
         select: {
           id: true,
           assignmentNumber: true,
@@ -49,7 +50,6 @@ export async function loadTrail(applicationId?: string): Promise<TrailEvent[]> {
           pmReviewedByName: true,
           surveyor: { select: { name: true } },
           verifikator: { select: { name: true } },
-          technicalReviewer: { select: { name: true } },
           locationVisits: { select: { id: true, locationType: true, submittedAt: true } },
         },
       },
@@ -69,14 +69,14 @@ export async function loadTrail(applicationId?: string): Promise<TrailEvent[]> {
       const type = a.scheduleType ?? "";
       const label = SCHEDULE_LABELS[type] ?? type;
       events.push({ ...base, id: `${a.id}-scheduled`, at: a.createdAt.toISOString(), source: "CR", text: `Penugasan ${label} dibuat (${a.assignmentNumber})`, by: null });
-      if (a.validatedAt && (type === "dokumen" || type === "technical")) {
+      if (a.validatedAt && type === "dokumen") {
         events.push({
           ...base,
           id: `${a.id}-decided`,
           at: a.validatedAt.toISOString(),
-          source: SCHEDULE_SOURCE[type],
+          source: "VF",
           text: `Keputusan ${label} dicatat (${a.status})`,
-          by: (type === "dokumen" ? a.verifikator?.name : a.technicalReviewer?.name) ?? null,
+          by: a.verifikator?.name ?? null,
         });
       }
       for (const visit of a.locationVisits) {

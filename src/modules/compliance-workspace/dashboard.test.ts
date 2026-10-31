@@ -27,7 +27,8 @@ describe("summarizeDashboard", () => {
     assert.equal(summary.resolvedFindings, 1);
     assert.equal(summary.lhviuIssued, 3);
     assert.equal(summary.reviewFlagged, 1);
-    assert.equal(summary.averageScore, Math.round((95 + 93 + 95) / 3));
+    // The fixtures' LHVIU (25 Jul 2026) predates the administrative checks: scored over 40 requirements.
+    assert.equal(summary.averageScore, Math.round((100 + 98 + 100) / 3));
   });
 
   it("has no average score without handed-over cases", () => {

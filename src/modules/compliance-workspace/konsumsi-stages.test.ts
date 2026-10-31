@@ -67,7 +67,6 @@ function input(overrides: Partial<KonsumsiStageInput> = {}): KonsumsiStageInput 
     products: [product()],
     certificates: [],
     productStatuses: {},
-    modules: {},
     documents: [],
     warehouses: [],
     ...overrides,
@@ -125,18 +124,12 @@ describe("buildRencanaImporStage", () => {
       { currency: "IDR", total: 3000 },
     ]);
   });
-  it("reads product status from the Verifikator and module status from the Technical Analyst", () => {
-    const stage = buildRencanaImporStage(
-      input({
-        productStatuses: { P1: { status: "VERIFIED", note: null } },
-        modules: { stokKonsumsi: { status: "TIDAK_SESUAI", keterangan: null, kesimpulan: "Stok melebihi" } },
-      }),
-    );
+  it("reads product status from the Verifikator and has no technical-analysis row", () => {
+    const stage = buildRencanaImporStage(input({ productStatuses: { P1: { status: "VERIFIED", note: null } } }));
     assert.equal(stage.rows[0].verdict.label, "Verified");
+    assert.equal(stage.checks.length, 1);
     assert.equal(stage.checks[0].verdict.label, "Sesuai");
-    assert.equal(stage.checks[1].verdict.label, "Tidak Sesuai");
-    assert.equal(stage.checks[1].result, "Stok melebihi");
-    assert.equal(stage.checks[2].verdict.label, "Belum Dianalisis");
+    assert.equal(stage.checks[0].result, "1 dari 1 produk Verified oleh Verifikator");
   });
   it("shows the worst product status when not every product is verified", () => {
     const stage = buildRencanaImporStage(
@@ -159,6 +152,11 @@ describe("buildStokStage", () => {
     assert.equal(stage.stocked, 1);
     assert.equal(stage.rows.length, 2);
     assert.deepEqual(stage.warehouses, ["Gudang A"]);
+  });
+  it("judges the stock data on the Verifikator's per-product status", () => {
+    const stage = buildStokStage(input({ products: [product(), product({ id: "P2" })], productStatuses: { P1: { status: "VERIFIED", note: null } } }));
+    assert.equal(stage.check.verdict.label, "Belum Diperiksa");
+    assert.equal(stage.check.result, "1 dari 2 produk Verified oleh Verifikator");
   });
 });
 

@@ -26,9 +26,9 @@ type Job = {
 const jobs = new Map<string, Job>();
 const TTL_MS = 10 * 60 * 1000;
 
-/** Report pages "Unduh PDF" may print: workspace report / document-report / technical-report / LHVIU pages. */
+/** Report pages "Unduh PDF" may print: workspace report / document-report / technical-report / LHVIU / compliance report pages. */
 export const REPORT_PAGE =
-  /^\/(verifikator-workspace|project-manager-workspace|technical-analyst-workspace|company-workspace|surveyor-workspace)\/[A-Za-z0-9/_-]*(report|lhviu)[A-Za-z0-9/_-]*(\?[A-Za-z0-9=&%._~+-]*)?$/;
+  /^\/(verifikator-workspace|project-manager-workspace|technical-analyst-workspace|company-workspace|surveyor-workspace|compliance-workspace)\/[A-Za-z0-9/_-]*(report|lhviu)[A-Za-z0-9/_-]*(\?[A-Za-z0-9=&%._~+-]*)?$/;
 
 const PENDING_PATTERN = "Memuat laporan|Memuat\\.\\.\\.|Memuat dokumen PDF|Memuat Laporan|Menyusun halaman A4";
 

@@ -7,14 +7,14 @@ import { WORKSPACE_LABELS, type WorkspaceKey } from "./workspace-status";
  * and the two administrative LPV checks Compliance marks itself (Final Review, Dossier lengkap).
  */
 
-/** What one schedule type (survey/dokumen/technical) handed over, per the assignments of the case. */
+/** What one schedule type (survey/dokumen) handed over, per the assignments of the case. */
 export type WorkspaceOutput = { doneAt: string | null; names: string[]; pmReview: string | null };
 
 export type AdministrativeRecord = { done: boolean; at: string | null; byName: string | null };
 
 export type DossierInput = CaseDetailInput & {
   administrative?: { finalReview: AdministrativeRecord; dossier: AdministrativeRecord };
-  outputs: { CR: { approvedLetters: number; letters: number }; SV: WorkspaceOutput; VF: WorkspaceOutput; TA: WorkspaceOutput; PM: { at: string | null; names: string[] } };
+  outputs: { CR: { approvedLetters: number; letters: number; doneAt?: string | null; names?: string[] }; SV: WorkspaceOutput; VF: WorkspaceOutput; PM: { at: string | null; names: string[] } };
 };
 
 export type DossierSection = {
@@ -35,7 +35,6 @@ const DONE_LABELS: Record<WorkspaceKey, string> = {
   CR: "Dokumen Lengkap",
   SV: "Survey Selesai",
   VF: "Verification Completed",
-  TA: "Technical Analysis Completed",
   PM: "Approved",
 };
 const WAITING_LABELS = { IN_PROGRESS: "Dalam Proses", ISSUE: "Ada Issue", NOT_STARTED: "Belum Mulai", COMPLETED: "Completed" } as const;
@@ -63,10 +62,9 @@ export function buildDossier(input: DossierInput): DossierSection[] {
   };
   const pmApproved = input.pmReviews.filter((review) => review.status === "Disetujui").length;
   return [
-    section("CR", "Customer Relation Result", 1, null, [], `${outputs.CR.approvedLetters} dari ${outputs.CR.letters} Surat Tugas disetujui`),
+    section("CR", "Customer Relation Result", 1, outputs.CR.doneAt ?? null, outputs.CR.names ?? [], `${outputs.CR.approvedLetters} dari ${outputs.CR.letters} Surat Tugas disetujui`),
     section("SV", "Survey Report", 3, outputs.SV.doneAt, outputs.SV.names, outputs.SV.pmReview ?? "—"),
     section("VF", "Verification Report", 2, outputs.VF.doneAt, outputs.VF.names, outputs.VF.pmReview ?? "—", input.legal.documents),
-    section("TA", "Technical Analysis Report", 5, outputs.TA.doneAt, outputs.TA.names, outputs.TA.pmReview ?? "—"),
     section("PM", "Project Manager Approval", 10, outputs.PM.at, outputs.PM.names, `${pmApproved} dari ${input.pmReviews.length} laporan disetujui`),
     {
       key: "LH",
@@ -75,7 +73,7 @@ export function buildDossier(input: DossierInput): DossierSection[] {
       ready: row.lhviuIssued,
       status: row.lhviuIssued ? "Diterbitkan" : "Belum Terbit",
       completedAt: row.lhviuIssued ? input.lhviu.issuedAt : null,
-      completedBy: row.lhviuIssued ? names(outputs.PM.names) : "—",
+      completedBy: row.lhviuIssued ? (input.lhviu.issuedBy ?? names(outputs.PM.names)) : "—",
       result: row.lhviuIssued ? `LHVIU ${input.lhviu.number ?? ""}`.trim() : "—",
       documents: row.lhviuIssued && input.lhviu.file ? [input.lhviu.file] : [],
       step: 11,

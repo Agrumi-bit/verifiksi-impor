@@ -5,7 +5,7 @@ type Check = ReturnType<typeof buildRencanaImporStage>["checks"][number];
 
 function CheckMatrix({ title, checks }: { title: string; checks: Check[] }) {
   return (
-    <StageCard title={title} description="Status dari Verifikator (data produk) dan Technical Analyst (analisis). Compliance hanya menampilkan.">
+    <StageCard title={title} description="Status yang dicatat Verifikator per produk. Compliance hanya menampilkan.">
       <DataTable caption={title} minWidth={1050} headers={["Parameter Pemeriksaan", "Objek", "Hasil / Keterangan", "Status Compliance", "Tipe", "Note Regulasi"]}>
         {checks.map((check) => (
           <tr key={check.parameter}>
@@ -80,7 +80,7 @@ export function RencanaImporStage({ data, handedOver }: { data: KonsumsiStageInp
   );
 }
 
-/** Tahap 6 "Stok Terkini" — on-hand stock per product as declared, and the Technical Analyst's stock analysis. */
+/** Tahap 6 "Stok Terkini" — on-hand stock per product as declared, with the Verifikator's per-product status. */
 export function StokStage({ data, handedOver }: { data: KonsumsiStageInput; handedOver: boolean }) {
   const { rows, warehouses, stocked, check } = buildStokStage(data);
   return (
@@ -100,11 +100,14 @@ export function StokStage({ data, handedOver }: { data: KonsumsiStageInput; hand
         >
           {rows.map(({ product, verdict }) => (
             <tr key={product.id}>
-              <th scope="row" className={`${TD} text-left font-semibold`}>{product.brandName}</th>
+              <th scope="row" className={`${TD} text-left font-semibold`}>
+                {product.brandName}
+                <span className="block text-[11.5px] font-normal text-[#64748B]">{product.productName}</span>
+              </th>
               <td className={TD}>{product.kelompok ?? "—"}</td>
               <td className={TD}>{product.subKelompok ?? "—"}</td>
               <td className={`${TD} font-mono text-[12.5px]`}>{product.hsCode}</td>
-              <td className={`${TD} max-w-[220px]`}>{product.hsDescription ?? product.productName}</td>
+              <td className={`${TD} max-w-[220px]`}>{product.hsDescription ?? "—"}</td>
               <td className={`${TD} text-right tabular-nums`}>{formatNumber(product.stock)}</td>
               <td className={TD}>{product.unit ?? "—"}</td>
               <td className={TD}><VerdictPill verdict={verdict} /></td>

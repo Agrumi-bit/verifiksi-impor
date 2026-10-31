@@ -27,8 +27,8 @@ export const VERIFICATION_STATUS_TONES: Record<VerificationStatusValue, Verifica
   NOT_APPLICABLE: "slate",
   EXPIRED: "red",
 };
-/** Summary chip order, as on the design. */
-export const VERIFICATION_SUMMARY_ORDER: VerificationStatusValue[] = ["VERIFIED", "NEED_REVISION", "REJECTED", "EXPIRED", "NOT_YET_VERIFIED", "NOT_APPLICABLE"];
+/** Summary chip order, as on the design. "Tidak Berlaku" rows are never built, so it has no chip. */
+export const VERIFICATION_SUMMARY_ORDER: VerificationStatusValue[] = ["VERIFIED", "NEED_REVISION", "REJECTED", "EXPIRED", "NOT_YET_VERIFIED"];
 
 export type ChecklistInput = { key: string; label: string; category: string; documentPath: string | null };
 export type DocumentStatusInput = {
@@ -66,6 +66,8 @@ export function buildDocumentRows(
       if (!item.documentPath && requirement.sifat !== "WAJIB") return [];
       const def = requirement.bySchemes[0]?.def;
       const status = statuses[item.key];
+      // The Verifikator declared it "Tidak Berlaku" for this case — nothing left to show.
+      if (status?.verificationStatus === "NOT_APPLICABLE") return [];
       const by = status?.verifiedByName
         ? `${status.verifiedByName}${status.verifiedByRole === "CR" ? " (Customer Relation)" : status.verifiedByRole === "VERIFIKATOR" ? " (Verifikator)" : ""}`
         : null;

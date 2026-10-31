@@ -39,7 +39,8 @@ export function detailInput(overrides: Partial<CaseDetailInput> = {}): CaseDetai
   return {
     row: caseRow(),
     applicationCategory: "NEW",
-    contact: { name: "Budi", email: "budi@majutekstil.co.id" },
+    applicationStatus: "VERIFICATION",
+    contact: { name: "Budi", designation: "Direktur", phone: "0812-3456-7890", email: "budi@majutekstil.co.id" },
     legal: { npwp: "12.345.678.9-012.000", nib: "8123456789012", kbli: [{ code: "46412", description: "Perdagangan Besar Pakaian" }], notarialDeedNumber: "12", documents: [{ label: "NIB", path: "documents/nib.pdf" }] },
     locations: [{ type: "Kantor", address: "Jl. Industri No. 10", buildingStatus: "Milik Sendiri", surveyStatus: "Selesai", documents: [] }],
     surveyorNames: ["Rizky"],
@@ -53,8 +54,11 @@ export function detailInput(overrides: Partial<CaseDetailInput> = {}): CaseDetai
     ],
     label: { statement: { label: "SP Label", path: "documents/label.pdf" }, documentation: null },
     workingCapital: { amount: "Rp 5.000.000.000", statement: { label: "SP Modal Kerja", path: "documents/modal.pdf" }, supporting: [] },
-    pmReviews: [{ report: "Laporan Survey", status: "Disetujui", by: "Hendra", at: null }],
-    lhviu: { number: "3/LHVIU/TBI/III/2026", issuedAt: "2026-07-25", validUntil: "2027-07-25", file: { label: "LHVIU", path: "lhviu/x.pdf" } },
+    pmReviews: [
+      { source: "SV", title: "Laporan Survey Lokasi Kantor", report: "Laporan Survey", status: "Disetujui", by: "Hendra", at: null },
+      { source: "VF", title: "Laporan Verifikasi Dokumen", report: "Laporan Verifikasi Dokumen", status: null, by: null, at: null },
+    ],
+    lhviu: { number: "3/LHVIU/TBI/III/2026", issuedAt: "2026-07-25", validUntil: "2027-07-25", issuedBy: "Hendra", file: { label: "LHVIU", path: "lhviu/x.pdf" } },
     findings: [],
     ...overrides,
   };

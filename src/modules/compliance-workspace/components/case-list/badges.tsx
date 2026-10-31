@@ -64,7 +64,7 @@ export function LhviuBadge({ issued }: { issued: boolean }) {
   return issued ? <Pill tone="green">Terbit</Pill> : <Pill tone="slate">Belum Terbit</Pill>;
 }
 
-/** Five dots, CR → PM, with the state in the tooltip and in screen-reader text. */
+/** One dot per workspace, CR → PM, with the state in the tooltip and in screen-reader text. */
 export function WorkspaceProgress({ workspaces, completed }: { workspaces: WorkspaceStatuses; completed: number }) {
   const description = WORKSPACE_KEYS.map((key) => `${WORKSPACE_LABELS[key]}: ${WORKSPACE_STATE_LABELS[workspaces[key]]}`).join(", ");
   return (
@@ -77,7 +77,7 @@ export function WorkspaceProgress({ workspaces, completed }: { workspaces: Works
           </span>
         ))}
       </span>
-      <span className="text-[11.5px] tabular-nums text-[#64748B]">{completed}/5</span>
+      <span className="text-[11.5px] tabular-nums text-[#64748B]">{completed}/{WORKSPACE_KEYS.length}</span>
     </div>
   );
 }

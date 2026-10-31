@@ -6,8 +6,11 @@ import { WORKSPACE_KEYS, type WorkspaceKey, type WorkspaceStatuses } from "./wor
  * findings; nothing here is stored.
  */
 
-/** 42 requirements = 40 from the workspaces + 2 administrative LPV checks (Final Review, Dossier). */
-export const REQUIREMENTS_PER_WORKSPACE: Record<WorkspaceKey, number> = { CR: 6, SV: 6, VF: 20, TA: 6, PM: 2 };
+/**
+ * 42 requirements = 40 from the workspaces + 2 administrative LPV checks (Final Review, Dossier).
+ * VIU Konsumsi has no Technical Analyst: the 6 product-plan requirements are the Verifikator's.
+ */
+export const REQUIREMENTS_PER_WORKSPACE: Record<WorkspaceKey, number> = { CR: 6, SV: 6, VF: 26, PM: 2 };
 export const ADMINISTRATIVE_REQUIREMENTS = 2;
 export const TOTAL_REQUIREMENTS =
   WORKSPACE_KEYS.reduce((sum, key) => sum + REQUIREMENTS_PER_WORKSPACE[key], 0) + ADMINISTRATIVE_REQUIREMENTS;
@@ -60,8 +63,20 @@ export function readiness(statuses: WorkspaceStatuses, findings: { kind: Finding
   return findings.some(isActiveFinding) ? "needs_follow_up" : "ready";
 }
 
+/**
+ * The administrative LPV checks (Final Review, Dossier) started on 5 Oct 2026. A case whose LHVIU was
+ * issued before then never had them, so they are not counted for it at all.
+ */
+export const ADMINISTRATIVE_CHECKS_SINCE = "2026-10-05";
+
+export function administrativeApplies(lhviuIssuedAt: string | null | undefined): boolean {
+  return !lhviuIssuedAt || lhviuIssuedAt >= ADMINISTRATIVE_CHECKS_SINCE;
+}
+
 export type ComplianceSummary = {
   total: number;
+  /** 2, or 0 when the administrative checks do not apply to the case (administrativeApplies). */
+  administrativeTotal: number;
   /** Requirements whose workspace has handed over (completed, or completed with an issue). */
   available: number;
   /** Requirements still waiting for their workspace. */
@@ -78,7 +93,7 @@ export type ComplianceSummary = {
 export function complianceSummary(
   statuses: WorkspaceStatuses,
   findings: { kind: FindingKind }[],
-  administrative: { finalReviewDone: boolean; dossierComplete: boolean },
+  administrative: { finalReviewDone: boolean; dossierComplete: boolean; lhviuIssuedAt?: string | null },
 ): ComplianceSummary {
   let available = 0;
   let pending = 0;
@@ -89,15 +104,18 @@ export function complianceSummary(
   }
   const activeFindings = findings.filter(isActiveFinding).length;
   const sesuai = Math.max(0, available - activeFindings);
-  const adminDone = Number(administrative.finalReviewDone) + Number(administrative.dossierComplete);
+  const applies = administrativeApplies(administrative.lhviuIssuedAt);
+  const adminDone = applies ? Number(administrative.finalReviewDone) + Number(administrative.dossierComplete) : 0;
+  const total = applies ? TOTAL_REQUIREMENTS : TOTAL_REQUIREMENTS - ADMINISTRATIVE_REQUIREMENTS;
   return {
-    total: TOTAL_REQUIREMENTS,
+    total,
+    administrativeTotal: applies ? ADMINISTRATIVE_REQUIREMENTS : 0,
     available,
     pending,
     activeFindings,
     sesuai,
     administrative: adminDone,
-    score: Math.round(((sesuai + adminDone) / TOTAL_REQUIREMENTS) * 100),
+    score: Math.round(((sesuai + adminDone) / total) * 100),
   };
 }
 
@@ -151,9 +169,9 @@ export function caseCategory(
 }
 
 /**
- * The workspace a case is currently at: the first one, in CR → SV → VF → TA → PM order, that has
+ * The workspace a case is currently at: the first one, in CR → SV → VF → PM order, that has
  * not completed yet; PM once everything is completed. Workspaces don't run in a strict order here
- * (CR schedules survey, dokumen and technical independently, and the PM reviews each report as it
+ * (CR schedules survey and dokumen independently, and the PM reviews each report as it
  * comes), so the earliest unfinished one is where the case is held up.
  */
 export function lastWorkspace(statuses: WorkspaceStatuses): WorkspaceKey {

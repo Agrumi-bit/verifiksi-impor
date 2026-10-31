@@ -1,0 +1,35 @@
+/*
+ * Laporan Hasil Compliance — every sheet is one A4 landscape page (297 × 210 mm). The sheet width
+ * and the named `landscape` print page come from .rd-sheet-landscape (office-report-preview.css);
+ * the content is packed into 210 mm sheets by A4Pages (pageHeight="210mm").
+ */
+.report-doc .rd-sheet.rd-lhc-page,
+.report-doc .rd-sheet.rd-lhc-cover {
+  height: 210mm;
+  min-height: 210mm;
+}
+
+/* The shared cover is laid out for portrait — tighten it for a 210 mm tall sheet. */
+.report-doc .rd-lhc-cover .rd-cover-inner {
+  padding: 40px 56px 0;
+}
+.report-doc .rd-lhc-cover .rd-cover-title-block {
+  padding-top: 28px;
+}
+.report-doc .rd-lhc-cover .rd-cover-meta {
+  margin-top: 28px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media print {
+  .report-doc .rd-a4-measure {
+    display: none !important;
+  }
+  .report-doc .rd-sheet.rd-lhc-page,
+  .report-doc .rd-sheet.rd-lhc-cover {
+    width: 297mm;
+    height: 210mm;
+    min-height: 210mm;
+    overflow: hidden;
+  }
+}

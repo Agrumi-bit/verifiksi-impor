@@ -2,15 +2,14 @@ import { computeTrademarkEvidenceValidity, trademarkEvidenceAsOf } from "@/modul
 import { qualityTestSubmissionWindow } from "@/modules/applications/viu-schemes/konsumsi/quality-test-window";
 import type { MerkEvidenceType } from "@/modules/merk/schema";
 import { PRODUCT_VERIFICATION_STATUS_LABELS, type ProductVerificationStatusValue } from "@/modules/verifikator-workspace/status";
-import { TECHNICAL_MODULE_LABELS, TECHNICAL_MODULE_STATUS_LABELS, type TechnicalModuleStatusValue } from "@/modules/technical-analyst-workspace/status";
 import type { DocumentRow } from "./document-matrix";
 
 /**
  * Tahap 4–8 of the Compliance case view for VIU Konsumsi (pure): Merek & Hubungan Importir, Rencana
  * Impor, Stok Terkini, Uji Mutu and Pernyataan Label. Every verdict shown is one the source workspace
- * recorded (Verifikator product/document status, Technical Analyst module status) or one the
- * production rules already compute (9-month trademark evidence rule, 6-month quality-test window).
- * Compliance adds no rule of its own.
+ * recorded (Verifikator product/document status) or one the production rules already compute
+ * (9-month trademark evidence rule, 6-month quality-test window). VIU Konsumsi has no Technical
+ * Analyst step, so no technical-analysis module appears here. Compliance adds no rule of its own.
  */
 
 export const MEREK_CATEGORIES = ["Dokumen Merek"];
@@ -64,21 +63,17 @@ export type CertificateInput = {
   filePath: string | null;
 };
 
-export type ModuleDecisionInput = { status: TechnicalModuleStatusValue; keterangan: string | null; kesimpulan: string | null };
-
 export type KonsumsiStageInput = {
   submittedAt: string | null;
   brands: BrandInput[];
   products: ProductInput[];
   certificates: CertificateInput[];
   productStatuses: Record<string, { status: ProductVerificationStatusValue; note: string | null } | undefined>;
-  modules: Partial<Record<"stokKonsumsi" | "penyimpanan" | "modal", ModuleDecisionInput>>;
   documents: DocumentRow[];
   warehouses: string[];
 };
 
 const PRODUCT_TONES: Record<ProductVerificationStatusValue, Tone> = { PENDING: "slate", VERIFIED: "green", NEED_REVISION: "orange", REJECTED: "red" };
-const MODULE_TONES: Record<TechnicalModuleStatusValue, Tone> = { PENDING: "slate", SESUAI: "green", SESUAI_CATATAN: "orange", TIDAK_SESUAI: "red" };
 
 export type Verdict = { label: string; tone: Tone };
 
@@ -86,11 +81,6 @@ export function productVerdict(input: KonsumsiStageInput, productId: string): Ve
   const entry = input.productStatuses[productId];
   const status = entry?.status ?? "PENDING";
   return { label: PRODUCT_VERIFICATION_STATUS_LABELS[status], tone: PRODUCT_TONES[status], note: entry?.note ?? null };
-}
-
-export function moduleVerdict(decision: ModuleDecisionInput | undefined): Verdict {
-  const status = decision?.status ?? "PENDING";
-  return { label: TECHNICAL_MODULE_STATUS_LABELS[status], tone: MODULE_TONES[status] };
 }
 
 /** Matrix rows of one checklist category, in checklist order. */
@@ -176,23 +166,11 @@ export function totalsByCurrency(products: ProductInput[], amount: (product: Pro
 
 export function buildRencanaImporStage(input: KonsumsiStageInput) {
   const rows = input.products.map((product) => ({ product, total: product.quantity * product.unitPrice, verdict: productVerdict(input, product.id) }));
-  const verified = rows.filter((row) => row.verdict.tone === "green").length;
   return {
     rows,
     totals: totalsByCurrency(input.products, (product) => product.quantity * product.unitPrice),
     hsCount: new Set(input.products.map((product) => product.hsCode)).size,
-    checks: [
-      {
-        parameter: "Data produk per HS (merek, HS Code, jumlah, harga)",
-        object: `${input.products.length} produk`,
-        result: `${verified} dari ${input.products.length} produk Verified oleh Verifikator`,
-        verdict: rows.length === 0 ? { label: "Tidak ada produk", tone: "slate" as Tone } : verified === rows.length ? { label: "Sesuai", tone: "green" as Tone } : productsWorst(rows.map((row) => row.verdict)),
-        type: "Wajib",
-        regulation: "Pasal 37 ayat (2) huruf c angka 2",
-      },
-      moduleCheck(input, "stokKonsumsi", "Pasal 39 ayat (5) huruf d–f"),
-      moduleCheck(input, "penyimpanan", "—"),
-    ],
+    checks: [productDataCheck(rows, "Data produk per HS (merek, HS Code, jumlah, harga)", "Pasal 37 ayat (2) huruf c angka 2")],
   };
 }
 
@@ -200,14 +178,15 @@ function productsWorst(verdicts: Verdict[]): Verdict {
   return verdicts.find((v) => v.tone === "red") ?? verdicts.find((v) => v.tone === "orange") ?? { label: "Belum Diperiksa", tone: "slate" };
 }
 
-function moduleCheck(input: KonsumsiStageInput, key: "stokKonsumsi" | "penyimpanan" | "modal", regulation: string) {
-  const decision = input.modules[key];
+/** One matrix row summarising the Verifikator's per-product status. */
+function productDataCheck(rows: { verdict: Verdict }[], parameter: string, regulation: string) {
+  const verified = rows.filter((row) => row.verdict.tone === "green").length;
   return {
-    parameter: TECHNICAL_MODULE_LABELS[key],
-    object: "Analisis Teknis",
-    result: decision?.kesimpulan || decision?.keterangan || "Belum dianalisis",
-    verdict: moduleVerdict(decision),
-    type: "Analisis Teknis",
+    parameter,
+    object: `${rows.length} produk`,
+    result: `${verified} dari ${rows.length} produk Verified oleh Verifikator`,
+    verdict: rows.length === 0 ? { label: "Tidak ada produk", tone: "slate" as Tone } : verified === rows.length ? { label: "Sesuai", tone: "green" as Tone } : productsWorst(rows.map((row) => row.verdict)),
+    type: "Wajib",
     regulation,
   };
 }
@@ -216,11 +195,12 @@ function moduleCheck(input: KonsumsiStageInput, key: "stokKonsumsi" | "penyimpan
 
 export function buildStokStage(input: KonsumsiStageInput) {
   const stocked = input.products.filter((product) => product.stock > 0).length;
+  const rows = input.products.map((product) => ({ product, verdict: productVerdict(input, product.id) }));
   return {
-    rows: input.products.map((product) => ({ product, verdict: productVerdict(input, product.id) })),
+    rows,
     warehouses: input.warehouses,
     stocked,
-    check: moduleCheck(input, "stokKonsumsi", "Pasal 39 ayat (5) huruf d–f"),
+    check: productDataCheck(rows, "Data stok terkini per produk", "—"),
   };
 }
 

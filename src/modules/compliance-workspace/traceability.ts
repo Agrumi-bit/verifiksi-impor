@@ -14,13 +14,12 @@ export const TRAIL_SOURCE_LABELS: Record<TrailSource, string> = {
   ADMIN: "Admin",
   SYSTEM: "Sistem",
 };
-export const TRAIL_SOURCES: TrailSource[] = ["CR", "SV", "VF", "TA", "PM", "CMP", "COMPANY", "ADMIN", "SYSTEM"];
+export const TRAIL_SOURCES: TrailSource[] = ["CR", "SV", "VF", "PM", "CMP", "COMPANY", "ADMIN", "SYSTEM"];
 
 const ROLE_SOURCE: Record<string, TrailSource> = {
   CUSTOMER_RELATIONSHIP: "CR",
   SURVEYOR: "SV",
   VERIFIKATOR: "VF",
-  TECHNICAL_ANALYST: "TA",
   PROJECT_MANAGER: "PM",
   COMPLIANCE: "CMP",
   PERUSAHAAN: "COMPANY",
@@ -141,7 +140,7 @@ export function buildLineage(input: CaseDetailInput): LineageRow[] {
     entry("Alamat Kantor", "SV", "Survey Report", locations("Kantor").map((location) => location.address).join("; "), locations("Kantor")[0]?.documents[0] ?? null, 3),
     entry("Alamat Gudang", "SV", "Survey Report", locations("Gudang").map((location) => location.address).join("; "), locations("Gudang")[0]?.documents[0] ?? null, 3),
     entry("Merek", "VF", "Verification Report", input.brands.map((brand) => brand.name).join(", "), input.brands.flatMap((brand) => brand.documents)[0] ?? null, 4),
-    entry("HS Code", "TA", "Technical Analysis Report", hsCodes.length ? `${hsCodes.length} HS: ${hsCodes.join(", ")}` : "", null, 5),
+    entry("HS Code", "VF", "Verification Report", hsCodes.length ? `${hsCodes.length} HS: ${hsCodes.join(", ")}` : "", null, 5),
     entry("Modal Kerja", "VF", "Surat Pernyataan Modal Kerja", input.workingCapital.amount ?? "", input.workingCapital.statement, 9),
     entry("Approval", "PM", "Approval Record", input.pmReviews.map((review) => `${review.report}: ${review.status ?? "belum direview"}`).join("; "), null, 10),
     entry("Nomor LHVIU", "PM", "LHVIU", input.lhviu.number ?? "", input.lhviu.file, 11),

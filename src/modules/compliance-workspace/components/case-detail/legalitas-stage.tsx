@@ -3,16 +3,7 @@ import { Check, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LegalitasStage as LegalitasStageData } from "../../server/load-legalitas";
 import { Pill } from "../case-list/badges";
-import { DocumentChip, DocumentStatus, RequirementTag, SummaryChips } from "./stage-ui";
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-[12.5px] text-[#64748B]">{label}</span>
-      <div className="min-h-11 rounded-lg border border-[#E5EAF0] bg-[#F8FAFC] px-3.5 py-2.5 text-[13.5px]">{children}</div>
-    </div>
-  );
-}
+import { DocumentChip, DocumentStatus, Field, RequirementTag, SummaryChips } from "./stage-ui";
 
 /**
  * Tahap 2 "Perusahaan & Legalitas" — the Verifikator design's layout, read only: no Edit, and the
@@ -20,7 +11,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
  */
 export function LegalitasStage({ data, handedOver }: { data: LegalitasStageData; handedOver: boolean }) {
   const { company, kbli, rows } = data;
-  const settled = rows.filter((row) => row.status === "VERIFIED" || row.status === "NOT_APPLICABLE").length;
+  const verified = rows.filter((row) => row.status === "VERIFIED").length;
 
   return (
     <>
@@ -126,7 +117,7 @@ export function LegalitasStage({ data, handedOver }: { data: LegalitasStageData;
           </table>
         </div>
         <div className="flex flex-wrap justify-between gap-2 px-6 py-4 text-[12.5px] text-[#64748B]">
-          <span>{settled} dari {rows.length} dokumen berstatus Terverifikasi atau Tidak Berlaku.</span>
+          <span>{verified} dari {rows.length} dokumen berstatus Terverifikasi. Dokumen yang dinyatakan Tidak Berlaku oleh Verifikator tidak ditampilkan.</span>
           <span>Status berasal dari Verifikator / Customer Relation.</span>
         </div>
       </section>

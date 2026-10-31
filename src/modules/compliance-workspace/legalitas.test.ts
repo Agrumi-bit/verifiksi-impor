@@ -65,6 +65,15 @@ describe("buildLegalitasRows", () => {
     assert.equal(byKey.nib.document?.path, "documents/nib.pdf");
   });
 
+  it("leaves out a document the Verifikator declared Tidak Berlaku", () => {
+    const statuses = {
+      "kbli-utama": { verificationStatus: "NOT_APPLICABLE" as const, verifiedByName: "Vera", verifiedByRole: "VERIFIKATOR" as const, verifiedAt: null, rejectionNote: null },
+    };
+    const keys = buildLegalitasRows(CHECKLIST, statuses, VALUES).map((row) => row.key);
+    assert.equal(keys.includes("kbli-utama"), false);
+    assert.equal(keys.includes("nib"), true);
+  });
+
   it("summarises per status", () => {
     assert.deepEqual(legalitasSummary(rows), [
       { status: "VERIFIED", count: 1 },

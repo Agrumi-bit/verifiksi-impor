@@ -16,7 +16,7 @@ const allDone = [
 describe("deriveWorkspaceStatuses", () => {
   it("marks nothing as started on a draft", () => {
     const result = deriveWorkspaceStatuses({ applicationStatus: "DRAFT", returnedByRole: null, assignments: [], lhviuIssued: false });
-    assert.deepEqual(result, { CR: "NOT_STARTED", SV: "NOT_STARTED", VF: "NOT_STARTED", TA: "NOT_STARTED", PM: "NOT_STARTED" });
+    assert.deepEqual(result, { CR: "NOT_STARTED", SV: "NOT_STARTED", VF: "NOT_STARTED", PM: "NOT_STARTED" });
   });
 
   it("puts a submitted application with no assignment at Customer Relation", () => {
@@ -37,6 +37,16 @@ describe("deriveWorkspaceStatuses", () => {
     assert.equal(approved.CR, "COMPLETED");
   });
 
+  it("completes Customer Relation once the LHVIU is issued, even with Surat Tugas still in draft", () => {
+    const result = deriveWorkspaceStatuses({
+      applicationStatus: "COMPLETED",
+      returnedByRole: null,
+      assignments: [assignment({ letterStatus: "DRAFT", status: "COMPLETED" })],
+      lhviuIssued: true,
+    });
+    assert.equal(result.CR, "COMPLETED");
+  });
+
   it("flags Customer Relation when it returned the application for revision", () => {
     const result = deriveWorkspaceStatuses({
       applicationStatus: "RETURNED",
@@ -51,7 +61,16 @@ describe("deriveWorkspaceStatuses", () => {
     const result = deriveWorkspaceStatuses({ applicationStatus: "SUBMITTED", returnedByRole: null, assignments: allDone, lhviuIssued: false });
     assert.equal(result.SV, "COMPLETED");
     assert.equal(result.VF, "COMPLETED");
-    assert.equal(result.TA, "COMPLETED");
+  });
+
+  it("ignores a technical assignment — VIU Konsumsi has no Technical Analyst step", () => {
+    const result = deriveWorkspaceStatuses({
+      applicationStatus: "SUBMITTED",
+      returnedByRole: null,
+      assignments: [...allDone, assignment({ scheduleType: "technical", status: "SUBMITTED", letterStatus: "PENDING", pmReviewStatus: "REJECTED" })],
+      lhviuIssued: true,
+    });
+    assert.deepEqual(result, { CR: "COMPLETED", SV: "COMPLETED", VF: "COMPLETED", PM: "COMPLETED" });
   });
 
   it("needs every survey assignment of an application (one per location) to be done", () => {
@@ -78,7 +97,6 @@ describe("deriveWorkspaceStatuses", () => {
       lhviuIssued: false,
     });
     assert.equal(result.VF, "ISSUE");
-    assert.equal(result.TA, "ISSUE");
   });
 
   it("starts the PM once a report is under review or every workspace is done, and completes it on LHVIU", () => {

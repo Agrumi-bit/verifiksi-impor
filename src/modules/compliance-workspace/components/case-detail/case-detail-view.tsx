@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, Check, ExternalLink, FileText, Lock } from "luci
 
 import { fileHref } from "@/lib/file-href";
 import { cn } from "@/lib/utils";
-import type { CaseStep, StepStatus } from "../../case-detail";
+import type { CaseStep, CaseSummary, StepStatus } from "../../case-detail";
 import type { CaseRow } from "../../case-list";
 import { REQUIREMENTS } from "../../requirements";
 import { COMPLIANCE_HOME } from "../../navigation";
@@ -17,6 +17,7 @@ import { LokasiStage } from "./lokasi-stage";
 import { MerekStage } from "./merek-stage";
 import { LabelStage, UjiMutuStage } from "./mutu-label-stages";
 import { RencanaImporStage, StokStage } from "./produk-stages";
+import { SummaryStage } from "./summary-stage";
 
 const KONSUMSI_STAGES: Partial<Record<number, typeof MerekStage>> = { 4: MerekStage, 5: RencanaImporStage, 6: StokStage, 7: UjiMutuStage, 8: LabelStage };
 
@@ -71,6 +72,7 @@ function CaseHeader({ row }: { row: CaseRow }) {
         <Link href={`${COMPLIANCE_HOME}/temuan?case=${row.applicationId}`} className={LINK_BUTTON}>Lihat Issue ({row.activeFindings.length} aktif)</Link>
         <Link href={`${COMPLIANCE_HOME}/matrix?case=${row.applicationId}`} className={LINK_BUTTON}>Compliance Matrix</Link>
         <Link href={`${COMPLIANCE_HOME}/dossier?case=${row.applicationId}`} className={LINK_BUTTON}>Dossier</Link>
+        <Link href={`${COMPLIANCE_HOME}/permohonan/${row.applicationId}/report`} className={LINK_BUTTON}>Laporan Compliance</Link>
         <Link
           href={`${COMPLIANCE_HOME}/temuan?case=${row.applicationId}&new=1`}
           className="inline-flex h-8 items-center rounded-lg bg-[#1677FF] px-3 text-[12.5px] font-medium text-white hover:bg-[#0F62D6]"
@@ -196,6 +198,7 @@ export function CaseDetailView({
   row,
   steps,
   current,
+  summary,
   legalitas,
   lokasi,
   konsumsi,
@@ -203,6 +206,7 @@ export function CaseDetailView({
   row: CaseRow;
   steps: CaseStep[];
   current: number;
+  summary: CaseSummary;
   legalitas: LegalitasStageData | null;
   lokasi: LokasiInput | null;
   konsumsi: KonsumsiStageInput | null;
@@ -230,7 +234,9 @@ export function CaseDetailView({
         <Pill tone={STATUS_TONE[step.status]}>{step.status}</Pill>
       </div>
 
-      {step.num === 2 && legalitas ? (
+      {step.num === 1 ? (
+        <SummaryStage data={summary} />
+      ) : step.num === 2 && legalitas ? (
         <LegalitasStage data={legalitas} handedOver={handedOver} />
       ) : step.num === 3 && lokasi ? (
         <LokasiStage data={lokasi} />

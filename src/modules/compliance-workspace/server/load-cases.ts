@@ -9,6 +9,9 @@ import { buildCaseRow, type CaseRow, type CaseSource } from "../case-list";
 /** Compliance covers VIU – Barang Konsumsi only (for now). */
 export const KONSUMSI_SCHEME = PM_VIU_SCHEMES.find((scheme) => scheme.slug === "konsumsi")!;
 
+/** VIU Konsumsi has no Technical Analyst step — Prisma `where` for its assignments (NULL = legacy row, kept). */
+export const NOT_TECHNICAL = { OR: [{ scheduleType: null }, { scheduleType: { not: "technical" } }] };
+
 /** Drafts were never submitted and withdrawn applications left the process — neither reaches Compliance. */
 const EXCLUDED_STATUSES = ["DRAFT", "WITHDRAWN"] as const;
 
@@ -42,7 +45,7 @@ export async function loadComplianceCases(): Promise<CaseRow[]> {
       lhviuDocument: true,
       returnedByRole: true,
       company: { select: { companyName: true, nibNumber: true } },
-      assignments: { select: { scheduleType: true, status: true, letterStatus: true, pmReviewStatus: true, updatedAt: true } },
+      assignments: { where: NOT_TECHNICAL, select: { scheduleType: true, status: true, letterStatus: true, pmReviewStatus: true, updatedAt: true } },
       complianceCase: { include: { picUser: { select: { name: true } } } },
       complianceIssues: { select: { id: true, issueNumber: true, kind: true, title: true, sourceWorkspace: true, requirementKey: true, updatedAt: true } },
     },

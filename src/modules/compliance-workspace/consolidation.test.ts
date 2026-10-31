@@ -14,9 +14,9 @@ import {
 } from "./consolidation";
 import type { WorkspaceStatuses } from "./workspace-status";
 
-const COMPLETE: WorkspaceStatuses = { CR: "COMPLETED", SV: "COMPLETED", VF: "COMPLETED", TA: "COMPLETED", PM: "COMPLETED" };
-const AT_TA: WorkspaceStatuses = { CR: "COMPLETED", SV: "COMPLETED", VF: "COMPLETED", TA: "IN_PROGRESS", PM: "NOT_STARTED" };
-const VF_ISSUE: WorkspaceStatuses = { CR: "COMPLETED", SV: "COMPLETED", VF: "ISSUE", TA: "NOT_STARTED", PM: "NOT_STARTED" };
+const COMPLETE: WorkspaceStatuses = { CR: "COMPLETED", SV: "COMPLETED", VF: "COMPLETED", PM: "COMPLETED" };
+const AT_PM: WorkspaceStatuses = { CR: "COMPLETED", SV: "COMPLETED", VF: "COMPLETED", PM: "IN_PROGRESS" };
+const VF_ISSUE: WorkspaceStatuses = { CR: "COMPLETED", SV: "COMPLETED", VF: "ISSUE", PM: "NOT_STARTED" };
 const NO_ADMIN = { finalReviewDone: false, dossierComplete: false };
 
 describe("handover", () => {
@@ -24,27 +24,27 @@ describe("handover", () => {
     assert.equal(TOTAL_REQUIREMENTS, 42);
   });
 
-  it("is ready for consolidation only when all five workspaces are completed", () => {
+  it("is ready for consolidation only when all four workspaces are completed", () => {
     assert.equal(allWorkspaceCompleted(COMPLETE), true);
-    assert.equal(allWorkspaceCompleted(AT_TA), false);
+    assert.equal(allWorkspaceCompleted(AT_PM), false);
     assert.equal(handoverStatus(COMPLETE, "BELUM_DIREVIEW"), "SIAP_KONSOLIDASI");
   });
 
   it("waits for handover, or reports a partial one when a workspace has an issue", () => {
-    assert.equal(handoverStatus(AT_TA, "BELUM_DIREVIEW"), "MENUNGGU_HANDOVER");
+    assert.equal(handoverStatus(AT_PM, "BELUM_DIREVIEW"), "MENUNGGU_HANDOVER");
     assert.equal(handoverStatus(VF_ISSUE, "BELUM_DIREVIEW"), "HANDOVER_SEBAGIAN");
   });
 
   it("is complete once the case is finished", () => {
     assert.equal(handoverStatus(COMPLETE, "SELESAI"), "HANDOVER_LENGKAP");
     // Not before every workspace has handed over, whatever the compliance status says.
-    assert.equal(handoverStatus(AT_TA, "SELESAI"), "MENUNGGU_HANDOVER");
+    assert.equal(handoverStatus(AT_PM, "SELESAI"), "MENUNGGU_HANDOVER");
   });
 });
 
 describe("readiness", () => {
   it("waits for handover while a workspace is unfinished", () => {
-    assert.equal(readiness(AT_TA, []), "waiting_handover");
+    assert.equal(readiness(AT_PM, []), "waiting_handover");
   });
 
   it("needs follow-up while any finding is open, awaiting clarification or in conflict", () => {
@@ -61,14 +61,14 @@ describe("readiness", () => {
 
 describe("complianceSummary", () => {
   it("counts only handed-over workspaces as available", () => {
-    const summary = complianceSummary(AT_TA, [], NO_ADMIN);
-    assert.equal(summary.available, 6 + 6 + 20);
-    assert.equal(summary.pending, 6 + 2);
-    assert.equal(summary.score, Math.round((32 / 42) * 100));
+    const summary = complianceSummary(AT_PM, [], NO_ADMIN);
+    assert.equal(summary.available, 6 + 6 + 26);
+    assert.equal(summary.pending, 2);
+    assert.equal(summary.score, Math.round((38 / 42) * 100));
   });
 
   it("counts a workspace with an issue as handed over", () => {
-    assert.equal(complianceSummary(VF_ISSUE, [], NO_ADMIN).available, 6 + 6 + 20);
+    assert.equal(complianceSummary(VF_ISSUE, [], NO_ADMIN).available, 6 + 6 + 26);
   });
 
   it("subtracts active findings and adds the administrative checks", () => {
@@ -83,6 +83,16 @@ describe("complianceSummary", () => {
   it("reaches 100 with everything handed over, no active finding and both administrative checks", () => {
     const summary = complianceSummary(COMPLETE, [], { finalReviewDone: true, dossierComplete: true });
     assert.equal(summary.score, 100);
+  });
+
+  it("leaves the administrative checks out for an LHVIU issued before they started (5 Oct 2026)", () => {
+    const legacy = complianceSummary(COMPLETE, [], { finalReviewDone: false, dossierComplete: false, lhviuIssuedAt: "2026-10-04" });
+    assert.equal(legacy.total, 40);
+    assert.equal(legacy.administrativeTotal, 0);
+    assert.equal(legacy.score, 100);
+    const current = complianceSummary(COMPLETE, [], { finalReviewDone: false, dossierComplete: false, lhviuIssuedAt: "2026-10-05" });
+    assert.equal(current.total, 42);
+    assert.equal(current.administrativeTotal, 2);
   });
 
   it("never goes below zero", () => {
@@ -101,7 +111,7 @@ describe("validateResolutionNote", () => {
 
 describe("caseCategory", () => {
   it("keeps every unfinished handover in Menunggu Handover, whatever else is recorded", () => {
-    assert.equal(caseCategory(AT_TA, "SELESAI", [{ kind: "OPEN" }]), "MH");
+    assert.equal(caseCategory(AT_PM, "SELESAI", [{ kind: "OPEN" }]), "MH");
   });
 
   it("puts a handed-over case with nothing recorded in Siap Konsolidasi", () => {
@@ -123,10 +133,10 @@ describe("caseCategory", () => {
 
 describe("lastWorkspace / completedWorkspaceCount", () => {
   it("points at the workspace currently working on the case", () => {
-    assert.equal(lastWorkspace(AT_TA), "TA");
+    assert.equal(lastWorkspace(AT_PM), "PM");
     assert.equal(lastWorkspace(VF_ISSUE), "VF");
-    assert.equal(lastWorkspace({ CR: "COMPLETED", SV: "NOT_STARTED", VF: "NOT_STARTED", TA: "NOT_STARTED", PM: "NOT_STARTED" }), "SV");
+    assert.equal(lastWorkspace({ CR: "COMPLETED", SV: "NOT_STARTED", VF: "NOT_STARTED", PM: "NOT_STARTED" }), "SV");
     assert.equal(lastWorkspace(COMPLETE), "PM");
-    assert.equal(completedWorkspaceCount(AT_TA), 3);
+    assert.equal(completedWorkspaceCount(AT_PM), 3);
   });
 });

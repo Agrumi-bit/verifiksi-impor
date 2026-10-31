@@ -11,7 +11,6 @@ function dossierInput(overrides: Partial<DossierInput> = {}): DossierInput {
       CR: { approvedLetters: 3, letters: 3 },
       SV: { doneAt: "2026-07-20T00:00:00.000Z", names: ["Rizky"], pmReview: "Disetujui" },
       VF: { doneAt: "2026-07-21T00:00:00.000Z", names: ["Vera"], pmReview: "Disetujui" },
-      TA: { doneAt: "2026-07-22T00:00:00.000Z", names: ["Tomi"], pmReview: "Disetujui" },
       PM: { at: "2026-07-23T00:00:00.000Z", names: ["Hendra"] },
     },
     ...overrides,
@@ -19,13 +18,13 @@ function dossierInput(overrides: Partial<DossierInput> = {}): DossierInput {
 }
 
 describe("buildDossier", () => {
-  it("has the six sections of the final case file, all ready on a finished case", () => {
+  it("has the five sections of the final case file, all ready on a finished case", () => {
     const sections = buildDossier(dossierInput());
-    assert.deepEqual(sections.map((section) => section.key), ["CR", "SV", "VF", "TA", "PM", "LH"]);
-    assert.equal(readySections(sections), 6);
+    assert.deepEqual(sections.map((section) => section.key), ["CR", "SV", "VF", "PM", "LH"]);
+    assert.equal(readySections(sections), 5);
     assert.equal(sections[1].completedBy, "Rizky");
-    assert.equal(sections[5].result, "LHVIU 3/LHVIU/TBI/III/2026");
-    assert.equal(sections[5].documents[0].path, "lhviu/x.pdf");
+    assert.equal(sections[4].result, "LHVIU 3/LHVIU/TBI/III/2026");
+    assert.equal(sections[4].documents[0].path, "lhviu/x.pdf");
   });
 
   it("keeps a section empty until its workspace hands over", () => {

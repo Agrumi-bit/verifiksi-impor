@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { buildCaseSteps, stepStatus } from "./case-detail";
+import { buildCaseSteps, buildSummary, stepStatus } from "./case-detail";
 import { detailInput } from "./test-fixtures";
 import type { WorkspaceStatuses } from "./workspace-status";
 
-const COMPLETE: WorkspaceStatuses = { CR: "COMPLETED", SV: "COMPLETED", VF: "COMPLETED", TA: "COMPLETED", PM: "COMPLETED" };
+const COMPLETE: WorkspaceStatuses = { CR: "COMPLETED", SV: "COMPLETED", VF: "COMPLETED", PM: "COMPLETED" };
 
 describe("stepStatus", () => {
   it("waits for the source workspace before judging anything", () => {
@@ -19,11 +19,27 @@ describe("stepStatus", () => {
   });
 });
 
+describe("buildSummary", () => {
+  it("shows the application's own data for Tahap 1", () => {
+    const summary = buildSummary(detailInput());
+    assert.equal(summary.status, "Verification");
+    assert.equal(summary.category, "Permohonan Baru");
+    assert.equal(summary.pic, "Budi · Direktur");
+    assert.equal(summary.phone, "0812-3456-7890");
+  });
+
+  it("falls back to a dash when the applicant left the PIC empty", () => {
+    const summary = buildSummary({ ...detailInput(), contact: null });
+    assert.equal(summary.pic, "—");
+    assert.equal(summary.email, "—");
+  });
+});
+
 describe("buildCaseSteps", () => {
   it("returns the 11 stages with their source workspace", () => {
     const steps = buildCaseSteps(detailInput());
     assert.equal(steps.length, 11);
-    assert.deepEqual(steps.map((step) => step.source), ["CR", "VF", "SV", "VF", "TA", "VF", "VF", "VF", "VF", "PM", "PM"]);
+    assert.deepEqual(steps.map((step) => step.source), ["CR", "VF", "SV", "VF", "VF", "VF", "VF", "VF", "VF", "PM", "PM"]);
   });
 
   it("puts a finding on the stage of its requirement only", () => {

@@ -21,7 +21,6 @@ export type CaseFilters = {
   to: string;
   wsSV: WorkspaceState | "";
   wsVF: WorkspaceState | "";
-  wsTA: WorkspaceState | "";
   wsPM: WorkspaceState | "";
   openIssue: "ya" | "tidak" | "";
   conflict: "ya" | "tidak" | "";
@@ -38,7 +37,6 @@ export const EMPTY_FILTERS: CaseFilters = {
   to: "",
   wsSV: "",
   wsVF: "",
-  wsTA: "",
   wsPM: "",
   openIssue: "",
   conflict: "",
@@ -46,7 +44,7 @@ export const EMPTY_FILTERS: CaseFilters = {
   score: "",
 };
 
-export const ADVANCED_KEYS = ["wsSV", "wsVF", "wsTA", "wsPM", "openIssue", "conflict", "lhviu", "score"] as const;
+export const ADVANCED_KEYS = ["wsSV", "wsVF", "wsPM", "openIssue", "conflict", "lhviu", "score"] as const;
 export const QUERY_KEY = ["compliance-workspace", "applications"] as const;
 
 export function toSearchParams(filters: CaseFilters, extra: Record<string, string>): URLSearchParams {

@@ -11,7 +11,7 @@ import { collectApplicationVisits, groupVisitsByLocation, type SurveyPayloadLoca
 import type { Evidence } from "../case-detail";
 import type { DossierInput, WorkspaceOutput } from "../dossier";
 import { buildCaseRow } from "../case-list";
-import { KONSUMSI_SCHEME } from "./load-cases";
+import { KONSUMSI_SCHEME, NOT_TECHNICAL } from "./load-cases";
 
 /* The application payload is JSON — every field is read defensively (older payloads miss some). */
 type Doc = { filePath?: string; fileName?: string } | null | undefined;
@@ -20,6 +20,8 @@ type Payload = {
   companyName?: string;
   contactFullName?: string;
   contactEmail?: string;
+  contactPhone?: string;
+  contactDesignation?: string;
   npwpNumber?: string;
   nibNumber?: string;
   notarialDeedNumber?: string;
@@ -71,7 +73,7 @@ type Payload = {
 const BUILDING_STATUS_LABELS: Record<string, string> = { MILIK_SENDIRI: "Milik Sendiri", SEWA: "Sewa" };
 const VISIT_STATUS_LABELS: Record<string, string> = { NOT_STARTED: "Belum dimulai", IN_PROGRESS: "Sedang berjalan", COMPLETED: "Selesai" };
 const PM_REVIEW_LABELS: Record<string, string> = { PENDING: "Menunggu review PM", APPROVED: "Disetujui", REJECTED: "Ditolak" };
-const REPORT_LABELS: Record<string, string> = { survey: "Laporan Survey", dokumen: "Laporan Verifikasi Dokumen", technical: "Laporan Teknis" };
+const REPORT_LABELS: Record<string, string> = { survey: "Laporan Survey", dokumen: "Laporan Verifikasi Dokumen" };
 const FINANCIAL_LABELS = new Map([MODAL_STATEMENT_LETTER_DOC_DEF, ...NON_INDUSTRI_SUPPORT_DOC_DEFS].map((def) => [def.key, def.title]));
 
 function evidence(label: string, path: string | null | undefined): Evidence | null {
@@ -97,13 +99,15 @@ function addOneYear(day: string): string {
   return `${year + 1}-${String(month).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
 }
 
-function lhviuDocument(value: unknown): { path: string | null; number: string | null; issuedAt: string | null } {
-  if (!value || typeof value !== "object") return { path: null, number: null, issuedAt: null };
-  const raw = value as { path?: unknown; number?: unknown; issuedAt?: unknown };
+function lhviuDocument(value: unknown): { path: string | null; number: string | null; issuedAt: string | null; issuedBy: string | null } {
+  if (!value || typeof value !== "object") return { path: null, number: null, issuedAt: null, issuedBy: null };
+  const raw = value as { path?: unknown; number?: unknown; issuedAt?: unknown; uploadedByName?: unknown };
   return {
     path: typeof raw.path === "string" && raw.path ? raw.path : null,
     number: typeof raw.number === "string" && raw.number.trim() ? raw.number.trim() : null,
     issuedAt: typeof raw.issuedAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw.issuedAt) ? raw.issuedAt : null,
+    // The Project Manager who uploaded the signed LHVIU.
+    issuedBy: typeof raw.uploadedByName === "string" && raw.uploadedByName.trim() ? raw.uploadedByName.trim() : null,
   };
 }
 
@@ -124,20 +128,24 @@ export async function loadCaseDetail(applicationId: string): Promise<DossierInpu
       lhviuDocument: true,
       returnedByRole: true,
       company: { select: { companyName: true, nibNumber: true } },
+      // VIU Konsumsi has no Technical Analyst step — a "technical" assignment is never shown.
       assignments: {
+        where: NOT_TECHNICAL,
         select: {
           assignmentNumber: true,
           scheduleType: true,
           status: true,
           letterStatus: true,
+          scheduledDate: true,
+          locationId: true,
           pmReviewStatus: true,
           pmReviewedAt: true,
           pmReviewedByName: true,
           validatedAt: true,
+          signatureDate: true,
           updatedAt: true,
           surveyor: { select: { name: true } },
           verifikator: { select: { name: true } },
-          technicalReviewer: { select: { name: true } },
           locationVisits: { select: { id: true, status: true, locationType: true, address: true, companyLocationId: true, submittedAt: true, updatedAt: true, createdAt: true } },
         },
       },
@@ -201,11 +209,37 @@ export async function loadCaseDetail(applicationId: string): Promise<DossierInpu
     };
   };
   const pmTimes = app.assignments.map((a) => a.pmReviewedAt?.getTime()).filter(present);
+  // CR's part is done with the last Surat Tugas it scheduled. An assignment does not record which CR
+  // scheduled it, so the CR account(s) of the system stand in for the name.
+  const scheduledDates = app.assignments.map((a) => a.scheduledDate?.getTime()).filter(present);
+  // "Laporan Survey Lokasi Kantor": the location(s) a survey assignment covers — its visits, else the
+  // payload location it was scheduled for.
+  const reportTitle = (a: LoadedAssignment): string => {
+    if (a.scheduleType !== "survey") return REPORT_LABELS[a.scheduleType ?? ""] ?? "Laporan";
+    const types = new Set<string>(a.locationVisits.map((visit) => visit.locationType));
+    const scheduled = locations.find((location) => location.id && location.id === a.locationId);
+    if (types.size === 0 && scheduled) types.add(scheduled.locationType);
+    const labels = [...types].map((type) => REQUIRED_LOCATION_TYPE_LABELS[type as LocationType] ?? type);
+    return labels.length ? `Laporan Survey Lokasi ${labels.join(" & ")}` : "Laporan Survey";
+  };
+  const crNames = (await db.user.findMany({ where: { role: "CUSTOMER_RELATIONSHIP", banned: { not: true } }, select: { name: true }, orderBy: { name: "asc" } })).map((user) => user.name);
 
   return {
     row,
     applicationCategory: app.applicationCategory,
-    contact: payload.contactFullName ? { name: payload.contactFullName, email: payload.contactEmail ?? "" } : null,
+    applicationStatus: app.status,
+    milestones: {
+      // The Verifikator's report date: the date printed under "Disusun Oleh", else when it was decided.
+      verificationDate: (() => {
+        const dokumen = app.assignments.filter((a) => a.scheduleType === "dokumen");
+        const dates = dokumen.map((a) => (a.signatureDate ?? a.validatedAt)?.getTime()).filter(present);
+        return dates.length ? new Date(Math.max(...dates)).toISOString() : null;
+      })(),
+      firstScheduledDate: scheduledDates.length ? new Date(Math.min(...scheduledDates)).toISOString() : null,
+    },
+    contact: payload.contactFullName
+      ? { name: payload.contactFullName, designation: payload.contactDesignation || null, phone: payload.contactPhone || null, email: payload.contactEmail || null }
+      : null,
     legal: {
       npwp: payload.npwpNumber || null,
       nib: payload.nibNumber || null,
@@ -282,6 +316,8 @@ export async function loadCaseDetail(applicationId: string): Promise<DossierInpu
     pmReviews: app.assignments
       .filter((a) => a.scheduleType && REPORT_LABELS[a.scheduleType])
       .map((a) => ({
+        source: a.scheduleType === "survey" ? ("SV" as const) : ("VF" as const),
+        title: reportTitle(a),
         report: `${REPORT_LABELS[a.scheduleType!]} (${a.assignmentNumber})`,
         status: a.pmReviewStatus ? (PM_REVIEW_LABELS[a.pmReviewStatus] ?? a.pmReviewStatus) : null,
         by: a.pmReviewedByName,
@@ -291,6 +327,7 @@ export async function loadCaseDetail(applicationId: string): Promise<DossierInpu
       number: lhviu.number,
       issuedAt: lhviu.issuedAt,
       validUntil: lhviu.issuedAt ? addOneYear(lhviu.issuedAt) : null,
+      issuedBy: lhviu.issuedBy,
       file: evidence(lhviu.number ? `LHVIU ${lhviu.number}` : "LHVIU", lhviu.path),
     },
     findings: app.complianceIssues,
@@ -299,16 +336,20 @@ export async function loadCaseDetail(applicationId: string): Promise<DossierInpu
       dossier: { done: complianceCase?.dossierComplete ?? false, at: complianceCase?.dossierCompleteAt?.toISOString() ?? null, byName: complianceCase?.dossierCompleteByName ?? null },
     },
     outputs: {
-      CR: { approvedLetters: app.assignments.filter((a) => a.letterStatus === "APPROVED").length, letters: app.assignments.length },
+      CR: {
+        // An issued LHVIU closes CR's part (workspace-status.ts), so every Surat Tugas counts as approved.
+        approvedLetters: row.lhviuIssued ? app.assignments.length : app.assignments.filter((a) => a.letterStatus === "APPROVED").length,
+        letters: app.assignments.length,
+        doneAt: scheduledDates.length ? new Date(Math.max(...scheduledDates)).toISOString() : null,
+        names: crNames,
+      },
       SV: outputOf("survey", (a) => a.surveyor?.name),
       VF: outputOf("dokumen", (a) => a.verifikator?.name),
-      TA: outputOf("technical", (a) => a.technicalReviewer?.name),
       PM: { at: pmTimes.length ? new Date(Math.max(...pmTimes)).toISOString() : null, names: [...new Set(app.assignments.map((a) => a.pmReviewedByName).filter(present))] },
     },
     assignees: {
       SV: [...new Set(surveyAssignments.map((a) => a.surveyor?.name).filter(present))],
       VF: [...new Set(app.assignments.filter((a) => a.scheduleType === "dokumen").map((a) => a.verifikator?.name).filter(present))],
-      TA: [...new Set(app.assignments.filter((a) => a.scheduleType === "technical").map((a) => a.technicalReviewer?.name).filter(present))],
       PM: [...new Set(app.assignments.map((a) => a.pmReviewedByName).filter(present))],
     },
   };

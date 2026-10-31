@@ -10,7 +10,6 @@ import type {
 } from "@/modules/applications/viu-schemes/konsumsi/schema";
 import { MERK_EVIDENCE_TYPE_LABELS, type MerkEvidenceType } from "@/modules/merk/schema";
 import { composeLocationAddress } from "@/modules/shared/schema";
-import { technicalAnalysisDataSchema } from "@/modules/technical-analyst-workspace/schema";
 import { resolveKonsumsiBrandContexts } from "@/modules/verifikator-workspace/konsumsi-brand-context";
 import { productVerificationsSchema } from "@/modules/verifikator-workspace/schema";
 import { buildDocumentRows } from "../document-matrix";
@@ -39,7 +38,7 @@ function latest<T extends { scheduleType: string | null; updatedAt: Date }>(assi
 /**
  * Tahap 4–8 data for one VIU Konsumsi case: brands (Merek Management + the entry's declared
  * relationship), products, quality-test certificates, the Verifikator's per-product and per-document
- * status and the Technical Analyst's module decisions. Read only.
+ * status. Read only.
  */
 export async function loadKonsumsiStage(applicationId: string): Promise<KonsumsiStageInput | null> {
   const documents = await loadCaseDocuments(applicationId, KONSUMSI_STAGE_CATEGORIES);
@@ -49,7 +48,7 @@ export async function loadKonsumsiStage(applicationId: string): Promise<Konsumsi
     select: {
       submissionDate: true,
       createdAt: true,
-      assignments: { select: { scheduleType: true, updatedAt: true, productVerifications: true, technicalAnalysisData: true } },
+      assignments: { select: { scheduleType: true, updatedAt: true, productVerifications: true } },
     },
   });
   if (!application) return null;
@@ -103,13 +102,7 @@ export async function loadKonsumsiStage(applicationId: string): Promise<Konsumsi
   }));
 
   const dokumen = latest(application.assignments, "dokumen");
-  const technical = latest(application.assignments, "technical");
   const verifications = productVerificationsSchema.safeParse(dokumen?.productVerifications ?? {});
-  const analysis = technicalAnalysisDataSchema.safeParse(technical?.technicalAnalysisData ?? {});
-  const moduleOf = (key: "stokKonsumsi" | "penyimpanan" | "modal") => {
-    const decision = analysis.success ? analysis.data[key] : undefined;
-    return decision ? { status: decision.status, keterangan: decision.keterangan || null, kesimpulan: decision.kesimpulan || null } : undefined;
-  };
 
   return {
     submittedAt: effectiveSubmissionDate(application).value,
@@ -128,7 +121,6 @@ export async function loadKonsumsiStage(applicationId: string): Promise<Konsumsi
     productStatuses: verifications.success
       ? Object.fromEntries(Object.entries(verifications.data).map(([id, entry]) => [id, { status: entry.status, note: entry.note || null }]))
       : {},
-    modules: { stokKonsumsi: moduleOf("stokKonsumsi"), penyimpanan: moduleOf("penyimpanan"), modal: moduleOf("modal") },
     documents: buildDocumentRows(documents.checklist, documents.statuses, { categories: KONSUMSI_STAGE_CATEGORIES }),
     warehouses: (payload.locations ?? [])
       .filter((location) => location.locationType === "GUDANG")

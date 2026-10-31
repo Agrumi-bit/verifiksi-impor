@@ -219,10 +219,13 @@ const SAFETY_PX = 6;
 export function A4Pages({
   items,
   renderPage,
+  pageHeight = "297mm",
 }: {
   items: readonly FlowItem[];
   /** One A4 sheet: page chrome around `children` (the page's content). */
   renderPage: (pageNo: number, total: number, children: ReactNode) => ReactNode;
+  /** Sheet height the content is packed into — "210mm" for landscape sheets. */
+  pageHeight?: string;
 }) {
   const { units, tables, notes } = useMemo(() => buildUnits(items), [items]);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -328,7 +331,7 @@ export function A4Pages({
           pointerEvents: "none",
         }}
       >
-        <div data-a4 style={{ height: "297mm", width: 1 }} />
+        <div data-a4 style={{ height: pageHeight, width: 1 }} />
         {renderPage(
           1,
           1,
