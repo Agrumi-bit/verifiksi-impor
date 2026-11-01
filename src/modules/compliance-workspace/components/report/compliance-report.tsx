@@ -181,7 +181,7 @@ function blockItems(section: ReportSection, block: ReportBlock, index: number): 
         },
       ];
     case "cards":
-      return [{ kind: "node", key, node: <Cards title={block.title} columns={block.columns} items={block.items} /> }];
+      return [{ kind: "node", key, breakBefore: block.breakBefore, node: <Cards title={block.title} columns={block.columns} items={block.items} /> }];
     case "findings":
       return [
         {

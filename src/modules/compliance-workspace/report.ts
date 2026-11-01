@@ -84,7 +84,8 @@ export type ReportBlock =
   | { kind: "infographic"; data: Infographic }
   | { kind: "lhviu"; data: LhviuFigure }
   | { kind: "fields"; items: [string, string][]; layout?: "grid"; title?: string }
-  | { kind: "cards"; title?: string; columns: number; items: ReportCard[] }
+  /** breakBefore: starts a fresh sheet (e.g. each Analisis Teknis sub-stage). */
+  | { kind: "cards"; title?: string; columns: number; items: ReportCard[]; breakBefore?: boolean }
   /** A long plain text (e.g. an analyst's Kesimpulan) that may continue over several sheets, paragraph by paragraph. */
   | { kind: "note"; label: string; text: string }
   | { kind: "findings"; items: { issueNumber: string; status: string; tone: ReportTone; requirement: string; title: string }[] }
@@ -762,8 +763,9 @@ function vkiStageSections(input: ReportInput): ReportSection[] {
       title: "Analisis Teknis",
       blocks: [
         { kind: "text", text: "Perhitungan dan keputusan Technical Analyst dalam tiga sub-tahap. Compliance hanya menampilkan." },
-        ...buildAnalisisStage(vki).flatMap((module): ReportBlock[] => [
-          { kind: "cards", columns: 1, items: [{ title: `${module.number} ${module.label}`, badge: { text: module.verdict.label, tone: module.verdict.tone } }] },
+        ...buildAnalisisStage(vki).flatMap((module, index): ReportBlock[] => [
+          // 14.1 opens the Tahap's own sheet; 14.2 and 14.3 each start on a fresh one.
+          { kind: "cards", columns: 1, breakBefore: index > 0, items: [{ title: `${module.number} ${module.label}`, badge: { text: module.verdict.label, tone: module.verdict.tone } }] },
           ...module.parts.flatMap((part): ReportBlock[] => [
             // The part's letter and title head its first block: its figures, else its first table.
             ...(part.stats.length ? [{ kind: "fields" as const, layout: "grid" as const, title: part.title, items: part.stats }] : []),
