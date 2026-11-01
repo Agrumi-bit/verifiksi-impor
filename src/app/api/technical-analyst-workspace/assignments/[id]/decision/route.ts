@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+
+import { notifyReportSubmitted } from "@/modules/notifications/server/events";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
@@ -69,6 +71,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       reason: parsed.data.notes,
     });
   }
+
+  if (parsed.data.decision === "COMPLETED") await notifyReportSubmitted(assignment.id, null, technicalAnalystId);
 
   return NextResponse.json({ data: updated });
 }

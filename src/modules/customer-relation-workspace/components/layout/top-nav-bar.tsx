@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { authClient, useSession } from "@/lib/auth-client";
+import { NotificationBell } from "@/modules/notifications/components/notification-bell";
 
 function initialsFromName(name?: string | null): string {
   if (!name) return "?";
@@ -34,9 +35,7 @@ export function TopNavBar() {
 
   return (
     <header className="fixed top-0 z-50 flex h-[60px] w-full items-center justify-end gap-4 border-b border-[#f0ded0] bg-[#fffaf6] px-6 md:pl-[244px]">
-      <button type="button" className="text-[#a68f80]" aria-label="Notifications">
-        <MaterialIcon name="notifications" />
-      </button>
+      <NotificationBell className="text-[#a68f80] hover:text-[#2b2420]" />
 
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-2.5 rounded-lg px-1.5 py-1 outline-none hover:bg-[#fbeee5]">

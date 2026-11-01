@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import { setReportVerificationDecision } from "@/modules/verifikator-workspace/report-verification";
 import { resetPmReview } from "@/modules/project-manager-workspace/server/reset-pm-review";
+import { notifyReportReturned, notifyReviewReset } from "@/modules/notifications/server/events";
 
 const LOCATION_TYPE_LABEL: Record<string, string> = { KANTOR: "Kantor", GUDANG: "Gudang", PABRIK: "Pabrik" };
 
@@ -51,10 +52,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   );
 
   // A new verifikator review of the survey report: the PM's earlier Approve/Tolak no longer covers it.
-  await resetPmReview(
-    visit.assignmentId,
-    `Persetujuan PM atas Laporan Survey dibatalkan otomatis karena verifikator memperbarui review laporan lokasi ${LOCATION_TYPE_LABEL[visit.locationType] ?? visit.locationType} — perlu direview ulang oleh Project Manager.`,
-  );
+  const resetReason = `Persetujuan PM atas Laporan Survey dibatalkan otomatis karena verifikator memperbarui review laporan lokasi ${LOCATION_TYPE_LABEL[visit.locationType] ?? visit.locationType} — perlu direview ulang oleh Project Manager.`;
+  if (await resetPmReview(visit.assignmentId, resetReason)) await notifyReviewReset(visit.assignmentId, resetReason);
+  if (parsed.data.decision === "REVISION") {
+    await notifyReportReturned(visit.assignmentId, verifikator?.name ?? "Verifikator", parsed.data.note, verifikatorId);
+  }
 
   if (parsed.data.decision === "REVISION") {
     const locationLabel = LOCATION_TYPE_LABEL[visit.locationType] ?? visit.locationType;

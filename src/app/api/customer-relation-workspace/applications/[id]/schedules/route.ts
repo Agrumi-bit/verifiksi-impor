@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 
 import { NextResponse } from "next/server";
+
+import { notifyAssignmentScheduled } from "@/modules/notifications/server/events";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
@@ -21,7 +23,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { error } = await requireCustomerRelationSession();
+  const { session, error } = await requireCustomerRelationSession();
   if (error) return error;
 
   const { id } = await params;
@@ -94,6 +96,8 @@ export async function POST(
   await db.applicationMessage.create({
     data: { applicationId: id, direction: "SYSTEM", text: messageText },
   });
+
+  await notifyAssignmentScheduled(assignment.id, session.user.id);
 
   return NextResponse.json({ data: assignment }, { status: 201 });
 }

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { notifyLetterSubmitted } from "@/modules/notifications/server/events";
+
 import { db } from "@/lib/db";
 import { requireCustomerRelationSession } from "@/lib/require-customer-relation-session";
 
@@ -7,7 +9,7 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string; assignmentId: string }> },
 ) {
-  const { error } = await requireCustomerRelationSession();
+  const { session, error } = await requireCustomerRelationSession();
   if (error) return error;
 
   const { id, assignmentId } = await params;
@@ -32,6 +34,8 @@ export async function POST(
       text: `Surat Tugas ${letterNumber} diajukan untuk persetujuan Project Manager`,
     },
   });
+
+  await notifyLetterSubmitted(assignmentId, session.user.id);
 
   return NextResponse.json({ data: updated });
 }

@@ -1,5 +1,6 @@
 import { writePmReviewedByName } from "@/modules/verifikator-workspace/report-signoff";
 import { NextResponse } from "next/server";
+import { notifyReportReturned } from "@/modules/notifications/server/events";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
@@ -131,6 +132,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       },
     });
     await writePmReviewedByName(ctx.dokumen.id, null);
+    await notifyReportReturned(ctx.dokumen.id, session.user.name ?? "Technical Analyst", body.note, session.user.id);
   }
   return NextResponse.json({ data: review });
 }

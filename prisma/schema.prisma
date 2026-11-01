@@ -43,6 +43,7 @@ model User {
   applicationDocumentVerifications ApplicationDocumentVersion[] @relation("ApplicationDocumentVerifiedBy")
   compliancePicCases               ComplianceCase[]             @relation("CompliancePic")
   complianceIssuesOwned            ComplianceIssue[]            @relation("ComplianceIssueOwner")
+  notifications                    Notification[]
 
   @@unique([email])
   @@map("user")
@@ -1563,4 +1564,23 @@ model ComplianceIssueFollowUp {
 
   @@index([issueId])
   @@map("compliance_issue_follow_up")
+}
+
+/// In-app notification (the bell in each workspace): one row per recipient. `href` opens the
+/// assignment or application it is about; `readAt` is set when the recipient opens or dismisses it.
+model Notification {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applicationId String?
+  kind          String
+  title         String
+  body          String?
+  href          String?
+  readAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@map("notification")
 }

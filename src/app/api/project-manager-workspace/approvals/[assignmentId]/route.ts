@@ -1,6 +1,7 @@
 import { writePmReviewedByName } from "@/modules/verifikator-workspace/report-signoff";
 import { resetPmReview } from "@/modules/project-manager-workspace/server/reset-pm-review";
 import { NextResponse } from "next/server";
+import { notifyLetterDecided, notifyReportDecided } from "@/modules/notifications/server/events";
 import { z } from "zod";
 
 import { assignmentDateFromInput, assignmentDateKey } from "@/lib/assignment-date";
@@ -91,6 +92,7 @@ export async function PATCH(
         reason: `${label} ${assignment.assignmentNumber} direview ulang (keputusan sebelumnya: ${assignment.pmReviewStatus})${note?.trim() ? `: ${note.trim()}` : ""}`,
       },
     });
+    await notifyReportDecided(assignmentId, "REREVIEW", note, session.user.id);
     return NextResponse.json({ data: { pmReviewStatus: null } });
   }
 
@@ -109,6 +111,7 @@ export async function PATCH(
           ? { letterStatus: "APPROVED", letterNumber, letterReviewNote: null }
           : { letterStatus: "DRAFT", letterReviewNote: note },
     });
+    await notifyLetterDecided(assignmentId, decision === "APPROVED", note, session.user.id);
     return NextResponse.json({ data: { letterStatus: updated.letterStatus, letterNumber: updated.letterNumber, letterReviewNote: updated.letterReviewNote } });
   }
 
@@ -151,6 +154,7 @@ export async function PATCH(
       }),
     ]);
     await writePmReviewedByName(assignmentId, session.user.name ?? null);
+    await notifyReportDecided(assignmentId, "REVISION", note, session.user.id);
     return NextResponse.json({ data: { pmReviewStatus: null, pmReviewNote: note!.trim(), status: "SUBMITTED" } });
   }
   if (assignment.pmReviewStatus) {
@@ -188,6 +192,7 @@ export async function PATCH(
   });
 
   await writePmReviewedByName(assignmentId, session.user.name ?? null);
+  await notifyReportDecided(assignmentId, decision, note, session.user.id);
 
   return NextResponse.json({ data: { pmReviewStatus: updated.pmReviewStatus, pmReviewNote: updated.pmReviewNote } });
 }

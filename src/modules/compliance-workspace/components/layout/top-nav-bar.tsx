@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { authClient, useSession } from "@/lib/auth-client";
+import { NotificationBell } from "@/modules/notifications/components/notification-bell";
 import { ROLE_LABELS, type Role } from "@/modules/users/roles";
 import { COMPLIANCE_HOME, activeNavItem } from "../../navigation";
 
@@ -47,6 +48,8 @@ export function TopNavBar() {
         <span aria-hidden>/</span>
         <span className="truncate font-semibold text-[#10233F]">{crumb}</span>
       </nav>
+
+      <NotificationBell className="text-[#64748B] hover:text-[#10233F]" />
 
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-2.5 rounded-lg px-1.5 py-1 outline-none hover:bg-[#F5F7FA] focus-visible:ring-2 focus-visible:ring-[#1677FF]">
