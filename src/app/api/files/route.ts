@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { storage } from "@/lib/storage";
 import type { StorageFileStat } from "@/lib/storage";
 import { getServerSession } from "@/lib/get-session";
+import { verifyFilePathSignature } from "@/lib/signed-file-link";
 import { resolvePdfPreview } from "@/lib/pdf-preview";
 import { resolveImageCopy } from "@/lib/image-thumb";
 
@@ -41,12 +42,18 @@ type ResolvedFile = {
 type Resolution = { ok: true; file: ResolvedFile } | { ok: false; response: NextResponse };
 
 async function resolveFile(request: Request): Promise<Resolution> {
-  const session = await getServerSession();
-  if (!session?.user) {
-    return { ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+  const params = new URL(request.url).searchParams;
+  const path = params.get("path");
+  // A link printed in a downloaded report carries its own signature for exactly this path
+  // (lib/signed-file-link.ts) — it opens without a session; everything else needs a login.
+  const signed = path ? verifyFilePathSignature(path, params.get("exp"), params.get("sig")) : false;
+  if (!signed) {
+    const session = await getServerSession();
+    if (!session?.user) {
+      return { ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+    }
   }
 
-  const path = new URL(request.url).searchParams.get("path");
   if (!path) {
     return { ok: false, response: NextResponse.json({ error: "Path wajib diisi" }, { status: 400 }) };
   }

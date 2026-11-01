@@ -5,6 +5,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import { publicReportHref } from "@/lib/signed-file-link";
+
 /*
  * Prints a page of this app to PDF with headless Chromium, driven over the DevTools protocol
  * (Node's built-in WebSocket, no extra npm dependency). Used by "Unduh PDF" so the report
@@ -169,6 +171,19 @@ async function render(pagePath: string, { cookie, readySelector, errorText, pend
       await sleep(500);
     }
     await sleep(800); // charts settle (layout effects, late images)
+
+    // The page was loaded from the internal address and its document links need a login; point them
+    // at the public address, /api/files links signed, so they open from the downloaded PDF.
+    const internalOrigin = `http://127.0.0.1:${port}`;
+    const { result: hrefResult } = await send<{ result: { value?: string[] } }>("Runtime.evaluate", {
+      expression: `[...new Set([...document.querySelectorAll("a[href]")].map((a) => a.getAttribute("href")).filter((h) => h && !h.startsWith("#")))]`,
+      returnByValue: true,
+    });
+    const hrefMap = Object.fromEntries((hrefResult.value ?? []).map((href) => [href, publicReportHref(href, internalOrigin)]));
+    await send("Runtime.evaluate", {
+      expression: `(() => { const map = ${JSON.stringify(hrefMap)}; for (const a of document.querySelectorAll("a[href]")) { const h = a.getAttribute("href"); if (h && map[h]) a.setAttribute("href", map[h]); } })()`,
+    });
+
     onProgress?.({ phase: "printing" });
 
     const { data } = await send<{ data: string }>("Page.printToPDF", {
