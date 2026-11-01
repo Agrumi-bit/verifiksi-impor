@@ -12,6 +12,7 @@ import { decodeLhviuItems, finalReportLabels, type LhviuDocumentInfo, type Lhviu
 import { LhviuPdfPages } from "./lhviu-pdf-pages";
 import { ReportLoadProgress } from "@/modules/surveyor-workspace/components/report/report-load-progress";
 import { CurrentPagePdfButton } from "@/modules/technical-analyst-workspace/components/report/pdf-download-button";
+import { printWithSignedLinks } from "@/lib/print-with-signed-links";
 
 const BASE = "/api/project-manager-workspace" as const;
 
@@ -85,7 +86,7 @@ export function LhviuCombinedReport({
             </div>
           </div>
           <div className="rd-topbar-actions">
-            <button type="button" className="rd-btn" onClick={() => window.print()}>
+            <button type="button" className="rd-btn" onClick={() => void printWithSignedLinks()}>
               Cetak
             </button>
             <CurrentPagePdfButton name={`${mode === "laporan-lengkap" ? "Laporan-Lengkap" : "Laporan-Verifikasi"}-${applicationNumber}`} />

@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
+import { printWithSignedLinks } from "@/lib/print-with-signed-links";
 
 type LetterStatus = "DRAFT" | "PENDING" | "APPROVED";
 
@@ -49,7 +50,7 @@ export function SuratTugasViewModal({ roleLabel, personName, date, letterNumber,
             {isApproved && (
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => void printWithSignedLinks()}
                 className="rounded-md bg-[#e0662e] px-3.5 py-1.75 text-[12px] font-bold text-white"
               >
                 Cetak

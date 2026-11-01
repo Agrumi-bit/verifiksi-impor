@@ -38,6 +38,7 @@ import { formatAssignmentDate } from "@/lib/assignment-date";
 import { LEASE_DOCUMENT_TYPE_LABELS, OWNERSHIP_DOCUMENT_TYPE_LABELS } from "@/modules/shared/schema";
 import { resolveReportPreparedDate } from "../../report-prepared-date";
 import { reportFamilyLabel, reportVerificationName } from "../../report-scheme-text";
+import { printWithSignedLinks } from "@/lib/print-with-signed-links";
 
 type PayloadLocation = {
   buildingStatus?: "MILIK_SENDIRI" | "SEWA" | null;
@@ -376,7 +377,7 @@ export function FieldReportPreview({ kind, assignmentId, locationId, basePath = 
           </div>
         </div>
         <div className="rd-topbar-actions">
-          <button type="button" className="rd-btn" onClick={() => window.print()}>
+          <button type="button" className="rd-btn" onClick={() => void printWithSignedLinks()}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 9V2h12v7" />
               <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />

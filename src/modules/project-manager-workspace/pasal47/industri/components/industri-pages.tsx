@@ -16,6 +16,7 @@ import type { Materiality, P47Finding, P47Report, ReportStatus } from "../../typ
 import { buildIndustriSections, industriAlerts, industriConclusion, industriHsRows, industriKpis, INDUSTRI_PARTS } from "../report";
 import type { IndustriDataset } from "../types";
 import { kbliRows } from "../company-chapter";
+import { printWithSignedLinks } from "@/lib/print-with-signed-links";
 
 export type IndustriPageProps = {
   ds: IndustriDataset;
@@ -290,7 +291,7 @@ export function ExportPage({ ds, report, period }: IndustriPageProps) {
 
   function run() {
     if (!sections.length) return toast.error("Pilih minimal satu bagian laporan.");
-    if (fmt === "pdf") return window.print();
+    if (fmt === "pdf") return void printWithSignedLinks();
     const book = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([[TITLE], [meta], [], ["Bagian", "Judul"], ...sections.map((s) => [s.no, s.title])]), "Sampul");
     for (const s of sections) {

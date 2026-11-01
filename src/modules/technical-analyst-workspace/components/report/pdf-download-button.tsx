@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { printWithSignedLinks } from "@/lib/print-with-signed-links";
 
 /**
  * "Unduh PDF": the server prints the report page (headless Chromium, with this user's session) as a
@@ -66,7 +67,7 @@ export function PdfDownloadButton({ page, name }: { page: string | (() => string
       setProgress({ percent: 100, label: "Selesai" });
       await sleep(1500);
     } catch {
-      if (window.confirm("PDF belum bisa dibuat otomatis. Buka dialog cetak untuk menyimpan sebagai PDF?")) window.print();
+      if (window.confirm("PDF belum bisa dibuat otomatis. Buka dialog cetak untuk menyimpan sebagai PDF?")) void printWithSignedLinks();
     } finally {
       setProgress(null);
     }

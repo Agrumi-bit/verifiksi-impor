@@ -8,6 +8,7 @@ import { X } from "lucide-react";
 import { SCHEDULE_TYPE_DEFS } from "../status";
 import { useSuratTugasTemplate } from "@/modules/surat-tugas-template/use-template";
 import { formatAssignmentDate } from "@/lib/assignment-date";
+import { printWithSignedLinks } from "@/lib/print-with-signed-links";
 
 function fileHref(path: string): string {
   return `/api/files?path=${encodeURIComponent(path)}`;
@@ -107,7 +108,7 @@ export function SuratTugasModal({ applicationId, schedule, onClose, onChanged }:
             {isApproved && (
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => void printWithSignedLinks()}
                 className="rounded-md bg-[#e0662e] px-3.5 py-1.75 text-[12px] font-bold text-white"
               >
                 Cetak

@@ -14,6 +14,7 @@ import type { P47Report } from "../../types";
 import { buildIndustriSections, industriAlerts, industriConclusion, industriIntroduction, industriKpis, INDUSTRI_PARTS, INDUSTRI_SECTION_INTRO } from "../report";
 import type { IndustriDataset } from "../types";
 import "@/modules/surveyor-workspace/components/report/office-report-preview.css";
+import { printWithSignedLinks } from "@/lib/print-with-signed-links";
 
 const TITLE = "Laporan Pelaksanaan VIU – Bahan Baku/Penolong Perusahaan Industri";
 const STATUS_LABEL = { DRAFT: "Draf", REVIEWED: "Ditelaah", APPROVED: "Disetujui" } as const;
@@ -271,7 +272,7 @@ export function IndustriReport({ periodKey }: { periodKey: string | null }) {
           <div className="rd-topbar-title">Laporan Pelaksanaan VIU <span className="rd-topbar-sub">&middot; Industri &middot; {period.label} &middot; {STATUS_LABEL[report.status]}</span></div>
         </div>
         <div className="rd-topbar-actions">
-          <button type="button" className="rd-btn" onClick={() => window.print()}><MaterialIcon name="print" className="text-[16px]" />Cetak</button>
+          <button type="button" className="rd-btn" onClick={() => void printWithSignedLinks()}><MaterialIcon name="print" className="text-[16px]" />Cetak</button>
           <PdfDownloadButton scheme="industri" periodKey={period.key} />
         </div>
       </div>

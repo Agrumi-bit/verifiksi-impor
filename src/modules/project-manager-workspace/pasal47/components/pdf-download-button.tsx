@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { MaterialIcon } from "../../components/material-icon";
+import { printWithSignedLinks } from "@/lib/print-with-signed-links";
 
 /**
  * "Unduh PDF" for the Laporan Pelaksanaan VIU: asks the server to print the report and downloads
@@ -27,7 +28,7 @@ export function PdfDownloadButton({ scheme, periodKey }: { scheme: "konsumsi" | 
       a.remove();
       setTimeout(() => URL.revokeObjectURL(href), 10_000);
     } catch {
-      if (window.confirm("PDF belum bisa dibuat otomatis. Buka dialog cetak untuk menyimpan sebagai PDF?")) window.print();
+      if (window.confirm("PDF belum bisa dibuat otomatis. Buka dialog cetak untuk menyimpan sebagai PDF?")) void printWithSignedLinks();
     } finally {
       setBusy(false);
     }

@@ -12,6 +12,7 @@ import type { ComplianceReport, ReportBlock, ReportCard, ReportCell, ReportChip,
 import "./compliance-report.css";
 import { ExecutiveInfographic } from "./executive-infographic";
 import { LhviuFigure } from "./lhviu-figure";
+import { printWithSignedLinks } from "@/lib/print-with-signed-links";
 
 const TONE_STYLE: Record<ReportTone, { background: string; color: string }> = {
   green: { background: "#ECFDF3", color: "#15803D" },
@@ -345,7 +346,7 @@ export function ComplianceReportView({ report }: { report: ComplianceReport }) {
           </div>
         </div>
         <div className="rd-topbar-actions">
-          <button type="button" className="rd-btn" onClick={() => window.print()}>
+          <button type="button" className="rd-btn" onClick={() => void printWithSignedLinks()}>
             Cetak
           </button>
           <CurrentPagePdfButton name={`Laporan-Hasil-Compliance-${report.applicationNumber}`} />

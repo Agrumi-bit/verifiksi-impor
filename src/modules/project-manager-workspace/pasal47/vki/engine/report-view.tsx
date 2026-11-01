@@ -14,6 +14,7 @@ import { fdLong, nf } from "../../format";
 import type { P47Report } from "../../types";
 import type { Block, Chapter, ChapterReportModel, Fig, Seg } from "./model";
 import "@/modules/surveyor-workspace/components/report/office-report-preview.css";
+import { printWithSignedLinks } from "@/lib/print-with-signed-links";
 
 /** What differs between the chapter reports: names on the cover, footer and approval page, PDF scheme and appendix. */
 export type ChapterReportMeta = {
@@ -379,7 +380,7 @@ export function ChapterReportView({ model, report, period, backHref, generatedAt
           </div>
         </div>
         <div className="rd-topbar-actions">
-          <button type="button" className="rd-btn" onClick={() => window.print()}><MaterialIcon name="print" className="text-[16px]" />Cetak</button>
+          <button type="button" className="rd-btn" onClick={() => void printWithSignedLinks()}><MaterialIcon name="print" className="text-[16px]" />Cetak</button>
           <PdfDownloadButton scheme={meta.pdfScheme} periodKey={period.key} />
         </div>
       </div>

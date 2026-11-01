@@ -27,6 +27,7 @@ import { introductionParagraphs, kpis } from "../summary";
 import type { P47Dataset, P47Report } from "../types";
 import { C, ColumnChart, ColumnPanels, ScatterLog, DividerBody, Donut, Figure, HBarList, Ikhtisar, KpiTiles, LineSeries, Limits, Para, ProfileCards, RankColumns, SERIES_COLORS, StackBars, SubHead, TableCaption, WorldMap } from "./report-figures";
 import "@/modules/surveyor-workspace/components/report/office-report-preview.css";
+import { printWithSignedLinks } from "@/lib/print-with-signed-links";
 
 const TITLE = "Laporan Pelaksanaan VIU – Produk Tekstil sebagai Barang Konsumsi";
 const STATUS_LABEL = { DRAFT: "Draf", REVIEWED: "Ditelaah", APPROVED: "Disetujui" } as const;
@@ -1607,7 +1608,7 @@ export function Pasal47Report({ periodKey }: { periodKey: string | null }) {
           </div>
         </div>
         <div className="rd-topbar-actions">
-          <button type="button" className="rd-btn" onClick={() => window.print()}><MaterialIcon name="print" className="text-[16px]" />Cetak</button>
+          <button type="button" className="rd-btn" onClick={() => void printWithSignedLinks()}><MaterialIcon name="print" className="text-[16px]" />Cetak</button>
           <PdfDownloadButton scheme="konsumsi" periodKey={period.key} />
         </div>
       </div>

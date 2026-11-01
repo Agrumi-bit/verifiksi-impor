@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { buildExportSections, EXPORT_PARTS, type ExportSection } from "../export-sections";
 import { usePasal47 } from "./context";
 import { H2, Seg } from "./ui";
+import { printWithSignedLinks } from "@/lib/print-with-signed-links";
 
 const TYPES: [string, string, string, string[]][] = [
   ["full", "Full Report", "Seluruh bagian 8.2–8.14", EXPORT_PARTS.map(([no]) => no)],
@@ -53,7 +54,7 @@ export function ExportPage() {
   function run() {
     if (!sections.length) return toast.error("Pilih minimal satu bagian laporan.");
     if (fmt === "pdf") {
-      window.print();
+      void printWithSignedLinks();
       return;
     }
     const book = XLSX.utils.book_new();

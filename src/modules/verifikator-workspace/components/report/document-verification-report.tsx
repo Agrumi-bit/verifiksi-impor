@@ -33,6 +33,7 @@ import { useHsCodeOptions } from "@/modules/applications/hooks/use-hs-code-optio
 import { useBranding, BRANDING_REPORT_LOGO_URL } from "@/modules/branding/use-branding";
 import { ProductionCapabilityChapter, PRODUCTION_CAPABILITY_CHAPTER_PAGE_COUNT } from "./production-capability-chapter";
 import "@/modules/surveyor-workspace/components/report/office-report-preview.css";
+import { printWithSignedLinks } from "@/lib/print-with-signed-links";
 
 export const INK = "#1a1a1a";
 export const CREAM = "#f9f3eb";
@@ -1316,7 +1317,7 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
           </div>
         </div>
         <div className="rd-topbar-actions">
-          <button type="button" className="rd-btn" onClick={() => window.print()}>
+          <button type="button" className="rd-btn" onClick={() => void printWithSignedLinks()}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 9V2h12v7" />
               <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />

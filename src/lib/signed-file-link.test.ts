@@ -31,4 +31,11 @@ describe("signed file links in downloaded reports", () => {
     assert.equal(publicReportHref("mailto:a@b.c", internal), "mailto:a@b.c");
     assert.equal(publicReportHref("#modul-2", internal), "#modul-2");
   });
+
+  it("signs a relative page link (Cetak) resolved against the request origin", () => {
+    const file = new URL(publicReportHref("/api/files?path=documents%2Fnib.pdf&variant=preview", "http://app:3000"));
+    assert.equal(file.origin, "https://verifikasiimpor.online");
+    assert.equal(file.searchParams.get("variant"), "preview");
+    assert.ok(verifyFilePathSignature("documents/nib.pdf", file.searchParams.get("exp"), file.searchParams.get("sig")));
+  });
 });

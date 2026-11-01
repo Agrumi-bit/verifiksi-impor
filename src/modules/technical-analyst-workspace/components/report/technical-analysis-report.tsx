@@ -26,6 +26,7 @@ import {
   type TechnicalModuleStatusValue,
 } from "../../status";
 import { DOCUMENT_REPORT_REVIEW_DECISION_LABELS, type DocumentReportReview } from "../../document-report-review";
+import { printWithSignedLinks } from "@/lib/print-with-signed-links";
 
 type ModuleData = {
   status?: TechnicalModuleStatusValue;
@@ -819,7 +820,7 @@ export function TechnicalAnalysisReport({
           </div>
         </div>
         <div className="rd-topbar-actions">
-          <button type="button" className="rd-btn" onClick={() => window.print()}>
+          <button type="button" className="rd-btn" onClick={() => void printWithSignedLinks()}>
             Cetak
           </button>
           <CurrentPagePdfButton name={`Laporan-Analisis-Teknis-${assignmentId}`} />

@@ -5,6 +5,7 @@ import { SCHEDULE_TYPE_DEFS, type ScheduleType } from "@/modules/customer-relati
 import { LETTER_STATUS_BADGE, LETTER_STATUS_LABELS } from "../../status";
 import { useSuratTugasTemplate } from "@/modules/surat-tugas-template/use-template";
 import { formatAssignmentDate } from "@/lib/assignment-date";
+import { printWithSignedLinks } from "@/lib/print-with-signed-links";
 
 type LetterInfo = {
   letterNumber: string | null;
@@ -86,7 +87,7 @@ export function SuratTugasView({
               </>
             )}
             {isApproved && (
-              <button type="button" onClick={() => window.print()} className="rounded-md bg-[#e0662e] px-3.5 py-1.75 text-[12px] font-bold text-white">
+              <button type="button" onClick={() => void printWithSignedLinks()} className="rounded-md bg-[#e0662e] px-3.5 py-1.75 text-[12px] font-bold text-white">
                 Cetak
               </button>
             )}
