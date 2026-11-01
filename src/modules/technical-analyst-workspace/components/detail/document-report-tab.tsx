@@ -24,7 +24,18 @@ type DocumentReportTabProps = {
   dokumen: { assignmentNumber: string; status: string } | null;
 };
 
-type ReviewResponse = { review: DocumentReportReview; reportAvailable: boolean; canEdit: boolean };
+type ReviewResponse = { review: DocumentReportReview; reportAvailable: boolean; canEdit: boolean; resubmitted?: boolean; assignmentStatus: string };
+
+/**
+ * Why the review is locked — same rule as the analysis and the decision (isAssignmentReviewable): it
+ * can change only while the technical assignment is Submitted or back in revision. After the decision a
+ * Revisi/Reject would reopen the Verifikator's report on a finished case.
+ */
+function lockedReason(status: string): string {
+  if (status === "COMPLETED") return "Review terkunci karena analisis teknis sudah disetujui (Completed). Review hanya dapat diubah selama penugasan berstatus Submitted atau dalam revisi.";
+  if (status === "RETURNED") return "Review terkunci karena penugasan dikembalikan untuk revisi dan menunggu dikirim ulang.";
+  return "Review dapat dilakukan setelah penugasan Technical Analyst berstatus Submitted.";
+}
 
 function todayInputValue(): string {
   const now = new Date();
@@ -101,6 +112,12 @@ export function DocumentReportTab({ assignmentNumber, dokumen }: DocumentReportT
           </div>
         )}
 
+        {data?.resubmitted && (
+          <div className="flex items-start gap-2 rounded-[9px] bg-[#e8f0fd] px-3.5 py-2.5 text-[12px] font-semibold text-[#2f5fb3]">
+            <MaterialIcon name="update" className="mt-px text-[16px]" />
+            Verifikator telah mensubmit ulang Laporan Verifikasi Dokumen setelah review terakhir Anda — silakan review ulang.
+          </div>
+        )}
         <button
           type="button"
           disabled={!data?.canEdit}
@@ -110,6 +127,12 @@ export function DocumentReportTab({ assignmentNumber, dokumen }: DocumentReportT
           <MaterialIcon name={decision ? "replay" : "play_circle"} className="text-[18px]" />
           {decision ? "Review Ulang Laporan Verifikasi Dokumen" : "Mulai Review Laporan Verifikasi Dokumen"}
         </button>
+        {data && !data.canEdit && (
+          <div className="flex items-start gap-2 text-[12px] text-[#8a7565]">
+            <MaterialIcon name="lock" className="mt-px text-[15px]" />
+            <span>{lockedReason(data.assignmentStatus)}</span>
+          </div>
+        )}
       </div>
 
       {reviewOpen && review && (

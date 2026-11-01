@@ -19,9 +19,22 @@ async function loadContext(assignmentNumber: string, technicalAnalystId: string)
   // completed one is the real report.
   const dokumen = await db.assignment.findFirst({
     where: { applicationId: assignment.applicationId, verifikatorId: { not: null }, status: "COMPLETED" },
-    select: { id: true, assignmentNumber: true },
+    select: { id: true, assignmentNumber: true, validatedAt: true },
   });
   return { assignment, dokumen };
+}
+
+/**
+ * The analyst may (re)review the Laporan Verifikasi Dokumen while the technical assignment is
+ * reviewable — and also whenever the verifikator has (re)submitted the report after the analyst's
+ * last review (e.g. after a PM revision), even if the analysis itself is already decided. Otherwise
+ * a resubmitted report could never be reviewed again.
+ */
+function reviewState(ctx: NonNullable<Awaited<ReturnType<typeof loadContext>>>, review: DocumentReportReview | null) {
+  const submittedAt = ctx.dokumen?.validatedAt ?? null;
+  const reviewedAt = review?.decidedAt ? new Date(review.decidedAt) : null;
+  const resubmitted = Boolean(ctx.dokumen && submittedAt && (!review?.decision || !reviewedAt || submittedAt > reviewedAt));
+  return { resubmitted, canEdit: Boolean(ctx.dokumen) && (isAssignmentReviewable(ctx.assignment) || resubmitted) };
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -31,11 +44,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const ctx = await loadContext(id, session.user.id);
   if (!ctx) return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
 
+  const review = await readDocumentReportReview(ctx.assignment.id);
+  const state = reviewState(ctx, review);
   return NextResponse.json({
     data: {
-      review: await readDocumentReportReview(ctx.assignment.id),
+      review,
       reportAvailable: Boolean(ctx.dokumen),
-      canEdit: isAssignmentReviewable(ctx.assignment),
+      canEdit: state.canEdit,
+      /** The verifikator (re)submitted the report after the analyst's last review. */
+      resubmitted: state.resubmitted && Boolean(review?.decision),
+      assignmentStatus: ctx.assignment.status,
     },
   });
 }
@@ -60,11 +78,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { id } = await params;
   const ctx = await loadContext(id, session.user.id);
   if (!ctx) return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
-  if (!isAssignmentReviewable(ctx.assignment)) {
-    return NextResponse.json({ error: "Review hanya dapat dilakukan saat assignment berstatus Submitted." }, { status: 400 });
-  }
   if (!ctx.dokumen) {
     return NextResponse.json({ error: "Laporan Verifikasi Dokumen belum disubmit verifikator." }, { status: 400 });
+  }
+  if (!reviewState(ctx, await readDocumentReportReview(ctx.assignment.id)).canEdit) {
+    return NextResponse.json(
+      { error: "Review hanya dapat dilakukan saat assignment berstatus Submitted, atau setelah verifikator mensubmit ulang laporan." },
+      { status: 400 },
+    );
   }
 
   const parsed = patchSchema.safeParse(await request.json().catch(() => null));
