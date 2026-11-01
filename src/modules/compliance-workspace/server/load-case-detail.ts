@@ -10,6 +10,7 @@ import { collectApplicationVisits, groupVisitsByLocation, type SurveyPayloadLoca
 import type { Evidence } from "../case-detail";
 import type { DossierInput, WorkspaceOutput } from "../dossier";
 import { buildCaseRow } from "../case-list";
+import { SCHEME_META } from "../scheme";
 import { withoutTechnical } from "../workspace-status";
 import { schemeOfCase } from "./load-cases";
 import { loadVkiStage } from "./load-vki";
@@ -96,9 +97,9 @@ function rupiah(amount: string | undefined): string | null {
   return value > 0 ? `Rp ${value.toLocaleString("id-ID")}` : null;
 }
 
-function addOneYear(day: string): string {
+function addYears(day: string, years: number): string {
   const [year, month, date] = day.split("-").map(Number);
-  return `${year + 1}-${String(month).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
+  return `${year + years}-${String(month).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
 }
 
 function lhviuDocument(value: unknown): { path: string | null; number: string | null; issuedAt: string | null; issuedBy: string | null } {
@@ -333,7 +334,7 @@ export async function loadCaseDetail(applicationId: string): Promise<DossierInpu
     lhviu: {
       number: lhviu.number,
       issuedAt: lhviu.issuedAt,
-      validUntil: lhviu.issuedAt ? addOneYear(lhviu.issuedAt) : null,
+      validUntil: lhviu.issuedAt ? addYears(lhviu.issuedAt, SCHEME_META[scheme].validityYears) : null,
       issuedBy: lhviu.issuedBy,
       file: evidence(lhviu.number ? `LHVIU ${lhviu.number}` : "LHVIU", lhviu.path),
     },

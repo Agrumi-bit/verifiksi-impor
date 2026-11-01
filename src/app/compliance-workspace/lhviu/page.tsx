@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { LhviuView } from "@/modules/compliance-workspace/components/lhviu/lhviu-view";
 import { lhviuValidity } from "@/modules/compliance-workspace/dossier";
+import { SCHEME_META } from "@/modules/compliance-workspace/scheme";
 import { loadIssuedLhviu } from "@/modules/compliance-workspace/server/load-lhviu";
 
 // Reads the database on every request — never prerendered at build time.
@@ -23,7 +24,7 @@ export default async function ComplianceLhviuPage({ searchParams }: { searchPara
   const rows = (await loadIssuedLhviu())
     .filter((item) => !query || `${item.number} ${item.applicationNumber} ${item.companyName} ${item.nib}`.toLowerCase().includes(query))
     .sort((a, b) => b.issuedAt.localeCompare(a.issuedAt))
-    .map((item) => ({ ...item, ...lhviuValidity(item.issuedAt, today) }));
+    .map((item) => ({ ...item, ...lhviuValidity(item.issuedAt, today, SCHEME_META[item.scheme].validityYears) }));
 
   return <LhviuView rows={rows} q={q} />;
 }

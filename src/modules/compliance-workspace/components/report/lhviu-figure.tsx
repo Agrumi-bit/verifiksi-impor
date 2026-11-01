@@ -49,7 +49,7 @@ function Timeline({ data }: { data: LhviuFigureData }) {
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 8.5, color: TEXT.muted }}>
             <span>Terbit</span>
-            <span>1 tahun</span>
+            <span>{data.validityYears} tahun</span>
           </div>
         </>
       )}

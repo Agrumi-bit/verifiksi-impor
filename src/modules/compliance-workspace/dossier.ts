@@ -113,9 +113,12 @@ export function nextComplianceStatus(current: ComplianceStatusValue, checks: Adm
   return current;
 }
 
-/** LHVIU validity — berlaku 1 tahun sejak tanggal terbit (Pasal 39 ayat (6)). */
-export function lhviuValidity(issuedAt: string, today: string): { validUntil: string; status: "Berlaku" | "Kedaluwarsa" } {
+/**
+ * Validity of the final output from its issue date — LHVIU 1 tahun (Pasal 39 ayat (6)), LHVKI 3 tahun
+ * (Pasal 32 ayat (4)); see SCHEME_META.validityYears.
+ */
+export function lhviuValidity(issuedAt: string, today: string, years = 1): { validUntil: string; status: "Berlaku" | "Kedaluwarsa" } {
   const [year, month, day] = issuedAt.split("-").map(Number);
-  const validUntil = `${year + 1}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const validUntil = `${year + years}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   return { validUntil, status: today <= validUntil ? "Berlaku" : "Kedaluwarsa" };
 }

@@ -51,6 +51,8 @@ export type Infographic = {
 export type LhviuFigure = {
   /** "LHVIU" or "LHVKI". */
   output: string;
+  /** Years the output stays valid (LHVIU 1, LHVKI 3). */
+  validityYears: number;
   issued: boolean;
   number: string;
   /** Stored path of the signed LHVIU PDF — its first page is shown as the cover. */
@@ -59,7 +61,7 @@ export type LhviuFigure = {
   issuedBy: string;
   /** Terbit → Berlaku sampai, as calendar labels. */
   timeline: { label: string; date: string }[];
-  /** Share of the one-year validity elapsed at the report date (0–1), null before issue. */
+  /** Share of the validity (1 year LHVIU, 3 years LHVKI) elapsed at the report date (0–1), null before issue. */
   elapsed: number | null;
   remaining: string;
   /** Timeline Verifikasi, shown on the same page as the cover. */
@@ -296,7 +298,7 @@ function processTimeline(detail: DossierInput, lokasi: LokasiInput | null): Proc
 function lhviuFigure(detail: DossierInput, generatedAt: string, process: ProcessTimeline): LhviuFigure {
   const { lhviu, row } = detail;
   const today = generatedAt.slice(0, 10);
-  const base = { output: SCHEME_META[row.scheme].output, process, coverPath: lhviu.file?.path ?? null, issuedBy: lhviu.issuedBy ? `${lhviu.issuedBy} (Project Manager)` : DASH };
+  const base = { output: SCHEME_META[row.scheme].output, validityYears: SCHEME_META[row.scheme].validityYears, process, coverPath: lhviu.file?.path ?? null, issuedBy: lhviu.issuedBy ? `${lhviu.issuedBy} (Project Manager)` : DASH };
   if (!row.lhviuIssued || !lhviu.issuedAt) {
     return {
       ...base,
@@ -308,7 +310,7 @@ function lhviuFigure(detail: DossierInput, generatedAt: string, process: Process
       remaining: `${SCHEME_META[row.scheme].output} belum diterbitkan Project Manager.`,
     };
   }
-  const { validUntil, status } = lhviuValidity(lhviu.issuedAt, today);
+  const { validUntil, status } = lhviuValidity(lhviu.issuedAt, today, SCHEME_META[row.scheme].validityYears);
   const start = new Date(`${lhviu.issuedAt}T00:00:00Z`).getTime();
   const end = new Date(`${validUntil}T00:00:00Z`).getTime();
   const now = new Date(`${today}T00:00:00Z`).getTime();
@@ -363,14 +365,15 @@ function vkiStageTiles(input: ReportInput): Infographic["stages"] {
     });
     const kapasitas = buildKapasitasStage(vki);
     const production = [...kapasitas.previous.rows, ...kapasitas.plan.rows];
+    // As its Matriks Pemeriksaan: a section's Verifikator conclusion counts over its unreviewed rows.
     tile(9, "Kapasitas Produksi", {
-      tone: production.length ? worst(production.map((row) => row.verdict.tone)) : "slate",
+      tone: production.length ? worst(kapasitas.checks.map((item) => item.verdict.tone)) : "slate",
       metric: production.length ? `Tahun sebelumnya ${kapasitas.previous.total} · rencana ${kapasitas.plan.total}` : "Jumlah produksi belum diisi",
     });
     const bahan = buildBahanBakuStage(vki);
     const materials = [...bahan.usage.rows, ...bahan.stock.rows, ...bahan.plan.rows];
     tile(10, "Kebutuhan Bahan Baku", {
-      tone: materials.length ? worst(materials.map((row) => row.verdict.tone)) : "slate",
+      tone: materials.length ? worst(bahan.checks.map((item) => item.verdict.tone)) : "slate",
       metric: materials.length ? `Penggunaan ${bahan.usage.total} · rencana ${bahan.plan.total}` : "Data bahan baku belum diisi",
     });
     const penjualan = buildPenjualanStage(vki);

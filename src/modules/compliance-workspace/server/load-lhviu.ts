@@ -2,6 +2,7 @@ import "server-only";
 
 import { db } from "@/lib/db";
 import { lhviuIsIssued } from "@/modules/project-manager-workspace/lhviu-completion";
+import type { ComplianceScheme } from "../scheme";
 import { COMPLIANCE_APPLICATIONS, schemeOfCase } from "./load-cases";
 
 export type IssuedLhviu = {
@@ -9,6 +10,7 @@ export type IssuedLhviu = {
   applicationNumber: string;
   companyName: string;
   nib: string;
+  scheme: ComplianceScheme;
   number: string;
   issuedAt: string;
   uploadedByName: string | null;
@@ -16,7 +18,7 @@ export type IssuedLhviu = {
   fileName: string;
 };
 
-/** Every LHVIU the Project Manager has issued for a VIU Konsumsi application — read only. */
+/** Every LHVIU (VIU Konsumsi) and LHVKI (VKI) the Project Manager has issued — read only. */
 export async function loadIssuedLhviu(): Promise<IssuedLhviu[]> {
   const applications = await db.application.findMany({
     where: COMPLIANCE_APPLICATIONS,
@@ -31,7 +33,8 @@ export async function loadIssuedLhviu(): Promise<IssuedLhviu[]> {
   });
   return applications.flatMap((app) => {
     const payload = app.payload as { importTypes?: string[]; companyName?: string; nibNumber?: string } | null;
-    if (!schemeOfCase(app)) return [];
+    const scheme = schemeOfCase(app);
+    if (!scheme) return [];
     const document = app.lhviuDocument as { path?: string; fileName?: string; number?: string; issuedAt?: string; uploadedByName?: string } | null;
     if (!document?.path || !lhviuIsIssued(document)) return [];
     return [
@@ -40,6 +43,7 @@ export async function loadIssuedLhviu(): Promise<IssuedLhviu[]> {
         applicationNumber: app.applicationNumber,
         companyName: app.company?.companyName ?? payload?.companyName ?? "—",
         nib: app.company?.nibNumber ?? payload?.nibNumber ?? "—",
+        scheme,
         number: document.number!.trim(),
         issuedAt: document.issuedAt!,
         uploadedByName: document.uploadedByName ?? null,

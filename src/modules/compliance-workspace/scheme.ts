@@ -20,10 +20,13 @@ export const SCHEME_META: Record<
     schemeId: SchemeId;
     /** The final output issued by the Project Manager. */
     output: "LHVIU" | "LHVKI";
+    /** Years the output stays valid from its issue date, and the article that says so (Permenperin 27/2025). */
+    validityYears: number;
+    validityBasis: string;
   }
 > = {
-  konsumsi: { label: "VIU – Barang Konsumsi", title: "VIU – Produk Tekstil sebagai Barang Konsumsi", schemeId: "VIU_KONSUMSI", output: "LHVIU" },
-  vki: { label: "VKI", title: "VKI – Verifikasi Kemampuan Industri", schemeId: "VKI", output: "LHVKI" },
+  konsumsi: { label: "VIU – Barang Konsumsi", title: "VIU – Produk Tekstil sebagai Barang Konsumsi", schemeId: "VIU_KONSUMSI", output: "LHVIU", validityYears: 1, validityBasis: "Pasal 39 ayat (6)" },
+  vki: { label: "VKI", title: "VKI – Verifikasi Kemampuan Industri", schemeId: "VKI", output: "LHVKI", validityYears: 3, validityBasis: "Pasal 32 ayat (4)" },
 };
 
 export function isComplianceScheme(value: unknown): value is ComplianceScheme {

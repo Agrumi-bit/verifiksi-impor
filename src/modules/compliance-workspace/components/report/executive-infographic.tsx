@@ -141,12 +141,13 @@ function StageGrid({ data }: { data: Infographic }) {
   return (
     <div>
       <div style={{ ...LABEL, marginBottom: 6 }}>Hasil pemeriksaan per tahap</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8 }}>
+      {/* VKI's 13 stage tiles take five columns so the summary stays on one sheet. */}
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${data.stages.length > 8 ? 5 : 4}, minmax(0, 1fr))`, gap: data.stages.length > 8 ? 6 : 8 }}>
         {data.stages.map((stage) => (
-          <div key={stage.num} style={{ ...CARD, padding: "9px 12px", borderTop: `3px solid ${STATUS[stage.tone].fill}` }}>
+          <div key={stage.num} style={{ ...CARD, padding: data.stages.length > 8 ? "6px 10px" : "9px 12px", borderTop: `3px solid ${STATUS[stage.tone].fill}` }}>
             <div style={{ fontSize: 8.5, fontWeight: 700, color: TEXT.muted }}>TAHAP {stage.num}</div>
             <div style={{ fontSize: 11, fontWeight: 600, color: TEXT.primary }}>{stage.label}</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 5, fontSize: 9.5, fontWeight: 600, color: TEXT.secondary }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, fontSize: 9.5, fontWeight: 600, color: TEXT.secondary }}>
               <StatusIcon tone={stage.tone} size={12} />
               {stage.verdict}
             </div>

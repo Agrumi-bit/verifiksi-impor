@@ -301,11 +301,18 @@ export function A4Pages({
     const padTop = body ? parseFloat(getComputedStyle(body).paddingTop) || 0 : 0;
     const budget = sheet - head - foot - padTop - SAFETY_PX;
 
+    // A "rows" table's rows are measured inside the whole table, so they wrap at its real column widths.
+    const rowHeights = new Map<string, number[]>();
+    for (const b of blocks) {
+      const whole = root.querySelector<HTMLElement>(`[data-mid="${CSS.escape(`ra:${b.key}`)}"]`);
+      const rows = whole ? [...whole.querySelectorAll<HTMLElement>("tbody > tr")].map((tr) => tr.offsetHeight) : [];
+      if (rows.length === b.count) rowHeights.set(b.key, rows);
+    }
     // A row is measured as a one-row table: its own height is that minus the header-only table.
     const cost = (u: Unit, note: string | null, table: string | null) => {
       if (u.t === "trow") {
         const key = u.block.key;
-        const own = Math.max(0, h(u.id) - h(`rh:${key}`));
+        const own = rowHeights.get(key)?.[u.index] ?? Math.max(0, h(u.id) - h(`rh:${key}`));
         // Opening the table on this sheet: its header — with the lead on its first rows, "continued" after.
         return table === key ? own : own + h(u.index === 0 ? `rl:${key}` : `rc:${key}`);
       }
@@ -360,7 +367,7 @@ export function A4Pages({
     }
     if (cur.length || out.length === 0) out.push(cur);
     setPages(out);
-  }, [units, version]);
+  }, [units, blocks, version]);
 
   const measureWrap = (id: string, node: ReactNode) => (
     <div key={id} data-mid={id} style={{ display: "flow-root" }}>
@@ -413,6 +420,13 @@ export function A4Pages({
             )}
             {tables.map((t) => measureWrap(`th:${t.key}`, measureHtml(tableHtml(t, []))))}
             {blocks.flatMap((b) => [
+              measureWrap(
+                `ra:${b.key}`,
+                b.render(
+                  Array.from({ length: b.count }, (_, index) => index),
+                  false,
+                ),
+              ),
               measureWrap(`rh:${b.key}`, b.render([], false)),
               measureWrap(
                 `rl:${b.key}`,

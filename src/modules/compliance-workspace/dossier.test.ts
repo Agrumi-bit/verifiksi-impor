@@ -71,5 +71,8 @@ describe("lhviuValidity", () => {
   it("is valid for one year from the issue date", () => {
     assert.deepEqual(lhviuValidity("2026-10-20", "2027-10-20"), { validUntil: "2027-10-20", status: "Berlaku" });
     assert.deepEqual(lhviuValidity("2026-10-20", "2027-10-21"), { validUntil: "2027-10-20", status: "Kedaluwarsa" });
+    // LHVKI: 3 tahun (Pasal 32 ayat (4)).
+    assert.deepEqual(lhviuValidity("2026-10-20", "2029-10-20", 3), { validUntil: "2029-10-20", status: "Berlaku" });
+    assert.deepEqual(lhviuValidity("2026-10-20", "2029-10-21", 3), { validUntil: "2029-10-20", status: "Kedaluwarsa" });
   });
 });

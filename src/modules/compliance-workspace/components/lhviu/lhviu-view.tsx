@@ -41,7 +41,7 @@ export function LhviuView({ rows, q }: { rows: Row[]; q: string }) {
 
       <div className="max-h-[calc(100vh-260px)] overflow-auto rounded-xl border border-[#E5EAF0] bg-white shadow-sm">
         <table className="w-full min-w-[1180px] border-separate border-spacing-0 text-[13px]">
-          <caption className="sr-only">Daftar LHVIU VIU Barang Konsumsi</caption>
+          <caption className="sr-only">Daftar LHVIU dan LHVKI</caption>
           <thead>
             <tr>
               {["Nomor LHVIU", "No. Permohonan", "Perusahaan", "NIB", "Tanggal Terbit", "Berlaku Sampai", "Diterbitkan oleh", "Status"].map((label) => (
@@ -98,7 +98,7 @@ export function LhviuView({ rows, q }: { rows: Row[]; q: string }) {
         </table>
       </div>
       <p className="text-[12px] text-[#64748B]">
-        Tanggal terbit berasal dari Project Manager Workspace; masa berlaku 1 tahun sejak tanggal terbit. Compliance Workspace hanya menampilkannya.
+        Tanggal terbit berasal dari Project Manager Workspace; masa berlaku sejak tanggal terbit: LHVIU 1 tahun (Pasal 39 ayat (6)), LHVKI 3 tahun (Pasal 32 ayat (4)). Compliance Workspace hanya menampilkannya.
       </p>
     </div>
   );
