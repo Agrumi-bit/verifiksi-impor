@@ -74,6 +74,16 @@ describe("VKI requirements and stages", () => {
     assert.equal(totalRequirements("vki"), requirementsOf("vki").length + 2);
   });
 
+  it("leaves Lokasi Gudang out of a VKI case without a gudang, never out of VIU Konsumsi", () => {
+    const keys = (scheme: "vki" | "konsumsi", hasGudang?: boolean) => requirementsOf(scheme, { hasGudang }).map((r) => r.key);
+    assert.ok(keys("vki").includes("gudang"));
+    assert.ok(keys("vki", true).includes("gudang"));
+    assert.ok(!keys("vki", false).includes("gudang"));
+    assert.ok(keys("konsumsi", false).includes("gudang"));
+    assert.equal(requirementWeights("vki", { hasGudang: false }).SV, (requirementWeights("vki").SV ?? 0) - 1);
+    assert.equal(totalRequirements("vki", { hasGudang: false }), totalRequirements("vki") - 1);
+  });
+
   it("scores a VKI case over its own requirements", () => {
     const statuses = deriveWorkspaceStatuses({ applicationStatus: "COMPLETED", returnedByRole: null, assignments: DONE, lhviuIssued: true, scheme: "vki" });
     const summary = complianceSummary(statuses, [], { finalReviewDone: false, dossierComplete: false, lhviuIssuedAt: "2026-08-26", scheme: "vki" });

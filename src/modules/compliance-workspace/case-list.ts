@@ -33,6 +33,8 @@ export type CaseSource = WorkspaceStatusInput & {
   submittedIsSystemDate: boolean;
   /** Latest change across the application, its assignments and Compliance's own records. */
   updatedAt: string;
+  /** Whether the application declares a Gudang location (VKI: Lokasi Gudang applies only then). */
+  hasGudang?: boolean;
   lhviuNumber: string | null;
   lhviuIssuedAt: string | null;
   complianceStatus: ComplianceStatusValue;
@@ -54,6 +56,8 @@ export type CaseRow = {
   submittedIsSystemDate: boolean;
   updatedAt: string;
   workspaces: WorkspaceStatuses;
+  /** See CaseSource.hasGudang. */
+  hasGudang?: boolean;
   completedWorkspaces: number;
   lastWorkspace: WorkspaceKey;
   handover: HandoverStatus;
@@ -84,6 +88,7 @@ export function buildCaseRow(source: CaseSource): CaseRow {
     submittedIsSystemDate: source.submittedIsSystemDate,
     updatedAt: source.updatedAt,
     workspaces,
+    hasGudang: source.hasGudang,
     completedWorkspaces: completedWorkspaceCount(workspaces),
     lastWorkspace: lastWorkspace(workspaces),
     handover: handoverStatus(workspaces, source.complianceStatus),

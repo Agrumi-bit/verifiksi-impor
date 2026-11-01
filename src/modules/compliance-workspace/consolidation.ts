@@ -1,4 +1,4 @@
-import { requirementWeights } from "./requirements";
+import { requirementWeights, type RequirementScope } from "./requirements";
 import type { ComplianceScheme } from "./scheme";
 import { workspaceKeysOf, type WorkspaceKey, type WorkspaceStatuses } from "./workspace-status";
 
@@ -12,8 +12,8 @@ import { workspaceKeysOf, type WorkspaceKey, type WorkspaceStatuses } from "./wo
 export const ADMINISTRATIVE_REQUIREMENTS = 2;
 
 /** All requirements of a scheme: its workspace requirements (requirements.ts) + the administrative checks. */
-export function totalRequirements(scheme: ComplianceScheme = "konsumsi"): number {
-  return Object.values(requirementWeights(scheme)).reduce((sum, count) => sum + (count ?? 0), 0) + ADMINISTRATIVE_REQUIREMENTS;
+export function totalRequirements(scheme: ComplianceScheme = "konsumsi", scope?: RequirementScope): number {
+  return Object.values(requirementWeights(scheme, scope)).reduce((sum, count) => sum + (count ?? 0), 0) + ADMINISTRATIVE_REQUIREMENTS;
 }
 
 /** VIU Konsumsi: 42 requirements = 40 from the workspaces + 2 administrative checks. */
@@ -97,10 +97,11 @@ export type ComplianceSummary = {
 export function complianceSummary(
   statuses: WorkspaceStatuses,
   findings: { kind: FindingKind }[],
-  administrative: { finalReviewDone: boolean; dossierComplete: boolean; lhviuIssuedAt?: string | null; scheme?: ComplianceScheme },
+  administrative: { finalReviewDone: boolean; dossierComplete: boolean; lhviuIssuedAt?: string | null; scheme?: ComplianceScheme; hasGudang?: boolean },
 ): ComplianceSummary {
   const scheme = administrative.scheme ?? "konsumsi";
-  const weights = requirementWeights(scheme);
+  const scope = { hasGudang: administrative.hasGudang };
+  const weights = requirementWeights(scheme, scope);
   let available = 0;
   let pending = 0;
   for (const key of workspaceKeysOf(statuses)) {
@@ -112,7 +113,7 @@ export function complianceSummary(
   const sesuai = Math.max(0, available - activeFindings);
   const applies = administrativeApplies(administrative.lhviuIssuedAt);
   const adminDone = applies ? Number(administrative.finalReviewDone) + Number(administrative.dossierComplete) : 0;
-  const total = totalRequirements(scheme) - (applies ? 0 : ADMINISTRATIVE_REQUIREMENTS);
+  const total = totalRequirements(scheme, scope) - (applies ? 0 : ADMINISTRATIVE_REQUIREMENTS);
   return {
     total,
     administrativeTotal: applies ? ADMINISTRATIVE_REQUIREMENTS : 0,

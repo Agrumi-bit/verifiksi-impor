@@ -477,7 +477,8 @@ function vkiStageSections(input: ReportInput): ReportSection[] {
     });
   }
   if (lokasi) {
-    sections.push({ key: "lokasi", eyebrow: "5.3 · TAHAP 4", title: "Lokasi Kantor, Pabrik & Gudang", blocks: [...lokasiBlocks(lokasi), stageFindings(detail, 4)] });
+    const lokasiTitle = detail.row.hasGudang === false ? "Lokasi Kantor & Pabrik" : "Lokasi Kantor, Pabrik & Gudang";
+    sections.push({ key: "lokasi", eyebrow: "5.3 · TAHAP 4", title: lokasiTitle, blocks: [...lokasiBlocks(lokasi), stageFindings(detail, 4)] });
   }
   if (vki) {
     const produk = buildProdukStage(vki);

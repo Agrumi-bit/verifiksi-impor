@@ -59,8 +59,19 @@ export const REQUIREMENT_LABELS: Record<string, string> = Object.fromEntries(
   [...VKI_REQUIREMENTS, ...KONSUMSI_REQUIREMENTS].map((requirement) => [requirement.key, requirement.label]),
 );
 
-export function requirementsOf(scheme: ComplianceScheme = "konsumsi"): readonly (Requirement & { key: RequirementKey })[] {
-  return REQUIREMENTS_BY_SCHEME[scheme];
+/**
+ * Case-specific applicability. VKI: Lokasi Gudang is only a requirement when the application declares a
+ * gudang (Pasal 30 ayat (2) huruf b angka 6 jo. ayat (3)); without one the row is left out of the matrix
+ * and the score. VIU Konsumsi always keeps it — an importer without a gudang is a gap to flag, not hide.
+ */
+export type RequirementScope = { hasGudang?: boolean };
+
+function applies(scheme: ComplianceScheme, key: string, scope: RequirementScope | undefined): boolean {
+  return !(scheme === "vki" && key === "gudang" && scope?.hasGudang === false);
+}
+
+export function requirementsOf(scheme: ComplianceScheme = "konsumsi", scope?: RequirementScope): readonly (Requirement & { key: RequirementKey })[] {
+  return REQUIREMENTS_BY_SCHEME[scheme].filter((requirement) => applies(scheme, requirement.key, scope));
 }
 
 /**
@@ -68,10 +79,10 @@ export function requirementsOf(scheme: ComplianceScheme = "konsumsi"): readonly 
  * handoff's weights (42 = 40 + 2 administrative; no Technical Analyst, so its 6 product-plan
  * requirements are the Verifikator's); VKI counts one per row of its matrix.
  */
-export function requirementWeights(scheme: ComplianceScheme = "konsumsi"): Partial<Record<WorkspaceKey, number>> {
+export function requirementWeights(scheme: ComplianceScheme = "konsumsi", scope?: RequirementScope): Partial<Record<WorkspaceKey, number>> {
   if (scheme === "konsumsi") return { CR: 6, SV: 6, VF: 26, PM: 2 };
   const weights: Partial<Record<WorkspaceKey, number>> = {};
-  for (const requirement of VKI_REQUIREMENTS) weights[requirement.source] = (weights[requirement.source] ?? 0) + 1;
+  for (const requirement of requirementsOf("vki", scope)) weights[requirement.source] = (weights[requirement.source] ?? 0) + 1;
   return weights;
 }
 
@@ -124,6 +135,6 @@ export function stepOfRequirement(key: string, scheme: ComplianceScheme = "konsu
   return requirementsOf(scheme).find((requirement) => requirement.key === key)?.step ?? 1;
 }
 
-export function requirementsOfStep(step: number, scheme: ComplianceScheme = "konsumsi"): RequirementKey[] {
-  return requirementsOf(scheme).filter((requirement) => requirement.step === step).map((requirement) => requirement.key);
+export function requirementsOfStep(step: number, scheme: ComplianceScheme = "konsumsi", scope?: RequirementScope): RequirementKey[] {
+  return requirementsOf(scheme, scope).filter((requirement) => requirement.step === step).map((requirement) => requirement.key);
 }

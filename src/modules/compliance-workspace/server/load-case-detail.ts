@@ -12,7 +12,7 @@ import type { DossierInput, WorkspaceOutput } from "../dossier";
 import { buildCaseRow } from "../case-list";
 import { SCHEME_META } from "../scheme";
 import { withoutTechnical } from "../workspace-status";
-import { schemeOfCase } from "./load-cases";
+import { hasGudangLocation, schemeOfCase } from "./load-cases";
 import { loadVkiStage } from "./load-vki";
 
 /* The application payload is JSON — every field is read defensively (older payloads miss some). */
@@ -173,6 +173,7 @@ export async function loadCaseDetail(applicationId: string): Promise<DossierInpu
     submittedAt: submitted.value,
     submittedIsSystemDate: submitted.isFallback,
     updatedAt: new Date(Math.max(app.updatedAt.getTime(), ...assignments.map((a) => a.updatedAt.getTime()))).toISOString(),
+    hasGudang: hasGudangLocation(app.payload),
     applicationStatus: app.status,
     returnedByRole: app.returnedByRole,
     scheme,

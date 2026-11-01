@@ -192,7 +192,7 @@ function vkiResult(key: RequirementKey, input: CaseDetailInput): { result: strin
 const KIND_RANK = { CONFLICT: 3, OPEN: 2, KLARIFIKASI: 1, RESOLVED: 0 } as const;
 
 export function buildMatrix(input: CaseDetailInput, assignees: Partial<Record<WorkspaceKey, string[]>>): MatrixRow[] {
-  return requirementsOf(input.row.scheme).map((requirement) => {
+  return requirementsOf(input.row.scheme, { hasGudang: input.row.hasGudang }).map((requirement) => {
     const findings = input.findings.filter((finding) => finding.requirementKey === requirement.key);
     const finding = [...findings].sort((a, b) => KIND_RANK[b.kind] - KIND_RANK[a.kind])[0] ?? null;
     const handedOver = stateOf(input.row.workspaces, requirement.source) === "COMPLETED";
