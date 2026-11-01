@@ -297,6 +297,8 @@ function processTimeline(detail: DossierInput, lokasi: LokasiInput | null): Proc
   const submitted = row.submittedIsSystemDate ? null : dayOf(row.submittedAt);
   const surveyDays = (lokasi?.locations ?? []).map((location) => dayOf(location.visit?.actualVisitDate)).filter((day): day is string => day !== null).sort();
   const verified = dayOf(detail.milestones?.verificationDate);
+  // VKI: the Technical Analyst's signed analysis (Pasal 31 ayat (2) huruf b) sits between the documents and the LHVKI.
+  const analysed = row.scheme === "vki" ? dayOf(detail.milestones?.technicalDate) : null;
   const issued = row.lhviuIssued ? dayOf(detail.lhviu.issuedAt) : null;
   const scheduled = dayOf(detail.milestones?.firstScheduledDate);
 
@@ -310,6 +312,7 @@ function processTimeline(detail: DossierInput, lokasi: LokasiInput | null): Proc
     },
     { label: "Survey Lokasi", date: surveyLabel, reached: surveyDays.length > 0 },
     { label: "Verifikasi Dokumen", date: verified ? formatCalendarDate(verified) : DASH, reached: verified !== null },
+    ...(row.scheme === "vki" ? [{ label: "Laporan Analisis Teknis", date: analysed ? formatCalendarDate(analysed) : DASH, reached: analysed !== null }] : []),
     { label: `Terbit ${output}`, date: issued ? formatCalendarDate(issued) : "Belum terbit", reached: issued !== null },
   ];
 
@@ -1050,13 +1053,14 @@ function infographic(input: ReportInput, notes: { tone: ReportTone }[]): Infogra
 
 /**
  * "Hasil" of one workspace in Status Workspace Sumber, one line per output: CR's Surat Tugas and the
- * application documents, and every Surveyor / Verifikator report with the PM's decision on it.
+ * application documents, and every Surveyor / Verifikator / Technical Analyst (VKI) report with the PM's
+ * decision on it.
  */
 function workspaceResult(key: string, detail: DossierInput, fallback: string): string {
   if (key === "CR") {
     return detail.row.workspaces.CR === "COMPLETED" ? `${fallback}\nDokumen permohonan lengkap` : fallback;
   }
-  if (key === "SV" || key === "VF") {
+  if (key === "SV" || key === "VF" || key === "TA") {
     // Kantor before Gudang, as the stages list them.
     const rank = (title: string) => (/Kantor/.test(title) ? 0 : /Gudang/.test(title) ? 1 : 2);
     const reports = detail.pmReviews.filter((review) => review.source === key).sort((a, b) => rank(a.title) - rank(b.title));

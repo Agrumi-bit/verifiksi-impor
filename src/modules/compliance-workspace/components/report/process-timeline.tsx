@@ -1,8 +1,9 @@
 import type { ProcessTimeline as ProcessTimelineData } from "../../report";
 
 /*
- * Timeline Verifikasi for print: Tanggal Permohonan → Survey Lokasi → Verifikasi Dokumen → Terbit
- * LHVIU on one axis, with the total in working days (Mon–Fri) as the headline figure.
+ * Timeline Verifikasi for print: Tanggal Permohonan → Survey Lokasi → Verifikasi Dokumen (→ Laporan
+ * Analisis Teknis for VKI) → Terbit LHVIU/LHVKI on one axis, with the total in working days (Mon–Fri) as
+ * the headline figure.
  */
 
 const TEXT = { primary: "#1f1d1a", secondary: "#55524c", muted: "#6f6b64" };
