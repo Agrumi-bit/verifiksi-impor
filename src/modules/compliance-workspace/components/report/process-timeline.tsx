@@ -11,9 +11,24 @@ const HAIRLINE = "#e1e0d9";
 const ACCENT = "#0ca30c";
 const PENDING = "#c3c2b7";
 
+/** The total's panel: red when a period runs over its limit, yellow while it cannot be counted, green within. */
+const TOTAL_TONES = {
+  green: { background: "#ECFDF3", border: "#86EFAC" },
+  yellow: { background: "#FEFCE8", border: "#FDE047" },
+  red: { background: "#FEF2F2", border: "#FCA5A5" },
+} as const;
+
+function totalTone(data: ProcessTimelineData): keyof typeof TOTAL_TONES {
+  const deadlines = data.deadlines ?? [];
+  if (deadlines.some((entry) => entry.days !== null && entry.days > entry.limit)) return "red";
+  if (data.workingDays === null || deadlines.some((entry) => entry.days === null)) return "yellow";
+  return "green";
+}
+
 export function ProcessTimeline({ data }: { data: ProcessTimelineData }) {
+  const tone = TOTAL_TONES[totalTone(data)];
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 170px", gap: 12, background: "#fffdf9", border: `1px solid ${HAIRLINE}`, borderRadius: 10, padding: "12px 14px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 200px", gap: 12, background: "#fffdf9", border: `1px solid ${HAIRLINE}`, borderRadius: 10, padding: "12px 14px" }}>
       <div>
         <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: TEXT.muted }}>Timeline verifikasi</div>
         <ol style={{ display: "grid", gridTemplateColumns: `repeat(${data.steps.length}, minmax(0, 1fr))`, listStyle: "none", margin: "14px 0 0", padding: 0 }}>
@@ -39,7 +54,17 @@ export function ProcessTimeline({ data }: { data: ProcessTimelineData }) {
           })}
         </ol>
       </div>
-      <div style={{ borderLeft: `1px solid ${HAIRLINE}`, paddingLeft: 14, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+      <div
+        style={{
+          background: tone.background,
+          border: `1px solid ${tone.border}`,
+          borderRadius: 8,
+          padding: "7px 10px",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+        }}
+      >
         <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: TEXT.muted }}>Total hari verifikasi</div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 4 }}>
           <span style={{ fontSize: 34, fontWeight: 700, lineHeight: 1, color: TEXT.primary }}>{data.workingDays ?? "—"}</span>
