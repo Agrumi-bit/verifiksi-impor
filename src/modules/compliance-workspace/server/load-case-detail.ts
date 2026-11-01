@@ -242,6 +242,12 @@ export async function loadCaseDetail(applicationId: string): Promise<DossierInpu
         const dates = dokumen.map((a) => (a.signatureDate ?? a.validatedAt)?.getTime()).filter(present);
         return dates.length ? new Date(Math.max(...dates)).toISOString() : null;
       })(),
+      // The Technical Analyst's signed/validated analysis (VKI) — never updatedAt, which moves with every save.
+      technicalDate: (() => {
+        const technical = assignments.filter((a) => a.scheduleType === "technical");
+        const dates = technical.map((a) => (a.signatureDate ?? a.validatedAt)?.getTime()).filter(present);
+        return dates.length ? new Date(Math.max(...dates)).toISOString() : null;
+      })(),
       firstScheduledDate: scheduledDates.length ? new Date(Math.min(...scheduledDates)).toISOString() : null,
     },
     contact: payload.contactFullName

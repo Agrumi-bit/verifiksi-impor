@@ -36,14 +36,14 @@ const VKI_REQUIREMENTS = [
   { key: "produksi", label: "Alur Proses Produksi", type: "Alur Proses Produksi", regulation: "Pasal 30 ayat (2) huruf b angka 5", source: "VF", step: 6 },
   { key: "listrik", label: "Pemakaian Listrik", type: "Pemakaian Listrik", regulation: "Pasal 30 ayat (2) huruf b angka 8", source: "VF", step: 7 },
   { key: "mesin", label: "Data, Kapasitas & Daya Mesin", type: "Data Mesin", regulation: "Pasal 30 ayat (2) huruf a angka 1 dan huruf b angka 4", source: "VF", step: 8 },
-  { key: "jumlahProduksi", label: "Kapasitas & Jumlah Produksi", type: "Kapasitas Produksi", regulation: "Pasal 30 ayat (2) huruf a angka 1, 2 dan 4", source: "VF", step: 9 },
+  { key: "jumlahProduksi", label: "Kapasitas & Jumlah Produksi", type: "Kapasitas Produksi", regulation: "Pasal 30 ayat (2) huruf a angka 2 dan 4; Pasal 32 ayat (3) huruf c", source: "VF", step: 9 },
   { key: "kebutuhanBahanBaku", label: "Kebutuhan Bahan Baku", type: "Bahan Baku", regulation: "Pasal 30 ayat (2) huruf a angka 2, 4 dan 6", source: "VF", step: 10 },
   { key: "penjualan", label: "Penjualan Dalam Negeri & Ekspor", type: "Penjualan", regulation: "Pasal 30 ayat (2) huruf a angka 5", source: "VF", step: 11 },
   { key: "tenaga", label: "Tenaga Kerja", type: "Tenaga Kerja", regulation: "Pasal 30 ayat (2) huruf b angka 3", source: "VF", step: 12 },
   { key: "pernyataan", label: "Surat Pernyataan", type: "Surat Pernyataan", regulation: "Pasal 30 ayat (2) huruf b angka 6; Pasal 8 ayat (2) huruf a angka 2", source: "VF", step: 13 },
-  { key: "energi", label: "Analisis Kebutuhan dan Pemakaian Energi Listrik", type: "Analisis Teknis", regulation: "Requirement Matrix VKI – Analisis Teknis", source: "TA", step: 14 },
-  { key: "kapasitas", label: "Analisis Kapasitas Produksi", type: "Analisis Teknis", regulation: "Requirement Matrix VKI – Analisis Teknis", source: "TA", step: 14 },
-  { key: "bahanbaku", label: "Analisis Kapasitas Kebutuhan Bahan Baku", type: "Analisis Teknis", regulation: "Requirement Matrix VKI – Analisis Teknis", source: "TA", step: 14 },
+  { key: "energi", label: "Analisis Kebutuhan dan Pemakaian Energi Listrik", type: "Analisis Teknis", regulation: "Pasal 30 ayat (2) huruf b angka 8; Pasal 31 ayat (2) huruf b", source: "TA", step: 14 },
+  { key: "kapasitas", label: "Analisis Kapasitas Produksi", type: "Analisis Teknis", regulation: "Pasal 31 ayat (2) huruf b; Pasal 32 ayat (3) huruf c dan d", source: "TA", step: 14 },
+  { key: "bahanbaku", label: "Analisis Kapasitas Kebutuhan Bahan Baku", type: "Analisis Teknis", regulation: "Pasal 31 ayat (2) huruf b; Pasal 32 ayat (3) huruf e dan f", source: "TA", step: 14 },
   { key: "approval", label: "Approval", type: "Approval", regulation: "SOP LPV – Final Review", source: "PM", step: 15 },
 ] as const satisfies readonly Requirement[];
 

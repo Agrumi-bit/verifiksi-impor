@@ -30,6 +30,7 @@ import {
   ProdukStage,
   TenagaKerjaStage,
 } from "./vki-stages";
+import { OutputReview, type OutputReviewData } from "./output-review";
 import { SCHEME_META } from "../../scheme";
 import type { VkiStageInput } from "../../vki-stages";
 
@@ -259,6 +260,7 @@ export function CaseDetailView({
   lokasi,
   konsumsi,
   vki,
+  outputReview = null,
 }: {
   row: CaseRow;
   steps: CaseStep[];
@@ -268,6 +270,7 @@ export function CaseDetailView({
   lokasi: LokasiInput | null;
   konsumsi: KonsumsiStageInput | null;
   vki: VkiStageInput | null;
+  outputReview?: OutputReviewData | null;
 }) {
   const step = steps[current - 1];
   const KonsumsiStage = KONSUMSI_STAGES[step.num];
@@ -305,6 +308,7 @@ export function CaseDetailView({
       ) : (
         <GenericStage step={step} />
       )}
+      {outputReview && <OutputReview data={outputReview} />}
       <FindingsCard step={step} />
 
       <div className="flex items-center justify-between">

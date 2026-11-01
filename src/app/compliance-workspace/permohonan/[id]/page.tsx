@@ -7,6 +7,7 @@ import { caseStepsOf } from "@/modules/compliance-workspace/requirements";
 import { loadCaseDetail } from "@/modules/compliance-workspace/server/load-case-detail";
 import { loadKonsumsiStage } from "@/modules/compliance-workspace/server/load-konsumsi";
 import { loadLegalitasStage } from "@/modules/compliance-workspace/server/load-legalitas";
+import { outputContent, outputDeadlines } from "@/modules/compliance-workspace/output-review";
 import { loadLokasiStage } from "@/modules/compliance-workspace/server/load-lokasi";
 
 // Reads the database on every request — never prerendered at build time.
@@ -15,6 +16,11 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Case Detail — Compliance Workspace",
 };
+
+/** Today's calendar day in Jakarta (YYYY-MM-DD). */
+function todayInJakarta(): string {
+  return new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
+}
 
 export default async function ComplianceCaseDetailPage({
   params,
@@ -38,6 +44,18 @@ export default async function ComplianceCaseDetailPage({
     : current === 2 ? await loadLegalitasStage(id, "vki", ["Legalitas Perusahaan"]) : current === 3 ? await loadLegalitasStage(id, "vki", ["Perpajakan"]) : null;
   const lokasi = current === (isVki ? 4 : 3) ? await loadLokasiStage(id, scheme) : null;
   const konsumsi = !isVki && current >= 4 && current <= 8 ? await loadKonsumsiStage(id) : null;
+  // Last stage (LHVKI / LHVIU): the output's minimum content and the time limits of Permenperin 27/2025.
+  const outputReview =
+    current === caseStepsOf(scheme).length
+      ? await Promise.all([
+          isVki ? loadLegalitasStage(id, "vki", ["Legalitas Perusahaan"]) : loadLegalitasStage(id),
+          loadLokasiStage(id, scheme),
+          isVki ? null : loadKonsumsiStage(id),
+        ]).then(([company, locations, products]) => {
+          const review = { detail, company: company?.company ?? null, lokasi: locations, vki: detail.vki ?? null, konsumsi: products, today: todayInJakarta() };
+          return { content: outputContent(review), deadlines: outputDeadlines(review), scheme };
+        })
+      : null;
   return (
     <CaseDetailView
       row={detail.row}
@@ -48,6 +66,7 @@ export default async function ComplianceCaseDetailPage({
       lokasi={lokasi}
       konsumsi={konsumsi}
       vki={isVki ? (detail.vki ?? null) : null}
+      outputReview={outputReview}
     />
   );
 }

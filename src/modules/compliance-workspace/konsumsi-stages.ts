@@ -45,6 +45,8 @@ export type ProductInput = {
   commodityGroupId: string;
   hsCode: string;
   hsDescription: string | null;
+  /** Asal negara of the goods (Pasal 39 ayat (5) huruf e). */
+  originCountries?: string[];
   quantity: number;
   stock: number;
   unit: string | null;

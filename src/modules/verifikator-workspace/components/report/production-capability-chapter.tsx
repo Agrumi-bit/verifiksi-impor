@@ -307,14 +307,16 @@ export function ProductionCapabilityChapter({
     capacityOk && machinesOk && productionSebelumnyaOk && penggunaanOk && konversiOk && productionRencanaOk && rencanaKebutuhanOk && salesOk && stokOk;
 
   // Single source of truth for both the Kesimpulan Akhir recap table and the closing Ringkasan Visual page.
+  // Permenperin 27/2025: huruf a angka 1 is the machines' daily capability; the licensed capacity is
+  // the Perizinan Berusaha (huruf b angka 2) as the LHVKI must state it (Pasal 32 ayat (3) huruf c).
   const recapItems: { no: string; label: string; hasData: boolean; ok: boolean; data: string; angka: string }[] = [
-    { no: "1", label: "Kapasitas produksi berdasarkan perizinan", hasData: capacity.length > 0, ok: capacityOk, data: `${capacity.length} produk`, angka: "angka 1" },
-    { no: "2", label: "Kemampuan produksi mesin per hari", hasData: machines.length > 0, ok: machinesOk, data: `${machines.length} mesin`, angka: "angka 1" },
-    { no: "3", label: "Jumlah produksi & penggunaan bahan baku 1 tahun sebelumnya", hasData: productionSebelumnya.length > 0, ok: productionSebelumnyaOk && penggunaanOk, data: `${productionSebelumnya.length} produk`, angka: "angka 2" },
-    { no: "4", label: "Konversi penggunaan bahan baku per jenis produk", hasData: rawMaterialConversion.length > 0, ok: konversiOk, data: `${rawMaterialConversion.length} bahan baku`, angka: "angka 3" },
-    { no: "5", label: "Rencana produksi & kebutuhan bahan baku 1 tahun ke depan", hasData: productionRencana.length > 0, ok: productionRencanaOk && rencanaKebutuhanOk, data: `${productionRencana.length} produk`, angka: "angka 4" },
-    { no: "6", label: "Penjualan dalam negeri dan ekspor", hasData: sales.length > 0, ok: salesOk, data: `${sales.length} produk`, angka: "angka 5" },
-    { no: "7", label: "Stok terkini bahan baku", hasData: rawMaterialUsage.length > 0, ok: stokOk, data: `${rawMaterialUsage.length} pos tarif`, angka: "angka 6" },
+    { no: "1", label: "Kapasitas produksi berdasarkan perizinan", hasData: capacity.length > 0, ok: capacityOk, data: `${capacity.length} produk`, angka: "Pasal 30 ayat (2) huruf b angka 2 dan Pasal 32 ayat (3) huruf c" },
+    { no: "2", label: "Kemampuan produksi mesin per hari", hasData: machines.length > 0, ok: machinesOk, data: `${machines.length} mesin`, angka: "Pasal 30 ayat (2) huruf a angka 1" },
+    { no: "3", label: "Jumlah produksi & penggunaan bahan baku 1 tahun sebelumnya", hasData: productionSebelumnya.length > 0, ok: productionSebelumnyaOk && penggunaanOk, data: `${productionSebelumnya.length} produk`, angka: "Pasal 30 ayat (2) huruf a angka 2" },
+    { no: "4", label: "Konversi penggunaan bahan baku per jenis produk", hasData: rawMaterialConversion.length > 0, ok: konversiOk, data: `${rawMaterialConversion.length} bahan baku`, angka: "Pasal 30 ayat (2) huruf a angka 3" },
+    { no: "5", label: "Rencana produksi & kebutuhan bahan baku 1 tahun ke depan", hasData: productionRencana.length > 0, ok: productionRencanaOk && rencanaKebutuhanOk, data: `${productionRencana.length} produk`, angka: "Pasal 30 ayat (2) huruf a angka 4" },
+    { no: "6", label: "Penjualan dalam negeri dan ekspor", hasData: sales.length > 0, ok: salesOk, data: `${sales.length} produk`, angka: "Pasal 30 ayat (2) huruf a angka 5" },
+    { no: "7", label: "Stok terkini bahan baku", hasData: rawMaterialUsage.length > 0, ok: stokOk, data: `${rawMaterialUsage.length} pos tarif`, angka: "Pasal 30 ayat (2) huruf a angka 6" },
   ];
   const recapCompliant = recapItems.filter((item) => item.hasData && item.ok).length;
 
@@ -480,7 +482,7 @@ export function ProductionCapabilityChapter({
         <h1 style={{ fontSize: 19, fontWeight: 800, margin: "0 0 14px" }}>1. Kapasitas Produksi Berdasarkan Perizinan</h1>
         <p style={{ fontSize: 11, lineHeight: 1.6, color: "#1f2f26", margin: "0 0 16px", maxWidth: 900 }}>
           Verifikator melakukan pemeriksaan terhadap data kapasitas produksi perusahaan untuk memastikan bahwa kapasitas produksi yang diajukan
-          dalam permohonan sesuai dengan dokumen perizinan berusaha yang masih berlaku sesuai dengan Pasal 30 ayat (2) huruf a angka 1
+          dalam permohonan sesuai dengan dokumen perizinan berusaha yang masih berlaku sesuai dengan Pasal 30 ayat (2) huruf b angka 2 dan Pasal 32 ayat (3) huruf c
           Permenperin Nomor 27 Tahun 2025.
         </p>
         <TableCard title="Tabel Kapasitas Produksi Berdasarkan Perizinan">
@@ -527,8 +529,8 @@ export function ProductionCapabilityChapter({
             {capacity.length === 0
               ? "Data kapasitas produksi berdasarkan perizinan belum disampaikan oleh perusahaan."
               : capacityOk
-                ? <>Berdasarkan hasil pemeriksaan, kapasitas produksi terpasang tidak melebihi kapasitas produksi yang tercantum dalam dokumen perizinan berusaha, sehingga data kapasitas produksi perusahaan dinyatakan <strong>memenuhi</strong> persyaratan sebagaimana dimaksud dalam Pasal 30 ayat (2) huruf a angka 1 Permenperin Nomor 27 Tahun 2025.</>
-                : <>Berdasarkan hasil pemeriksaan, data kapasitas produksi perusahaan <strong>belum memenuhi</strong> persyaratan sebagaimana dimaksud dalam Pasal 30 ayat (2) huruf a angka 1 Permenperin Nomor 27 Tahun 2025.</>}
+                ? <>Berdasarkan hasil pemeriksaan, kapasitas produksi terpasang tidak melebihi kapasitas produksi yang tercantum dalam dokumen perizinan berusaha, sehingga data kapasitas produksi perusahaan dinyatakan <strong>memenuhi</strong> persyaratan sebagaimana dimaksud dalam Pasal 30 ayat (2) huruf b angka 2 dan Pasal 32 ayat (3) huruf c Permenperin Nomor 27 Tahun 2025.</>
+                : <>Berdasarkan hasil pemeriksaan, data kapasitas produksi perusahaan <strong>belum memenuhi</strong> persyaratan sebagaimana dimaksud dalam Pasal 30 ayat (2) huruf b angka 2 dan Pasal 32 ayat (3) huruf c Permenperin Nomor 27 Tahun 2025.</>}
           </p>
         </NoteBox>
       </DetailPage>
@@ -1087,7 +1089,7 @@ export function ProductionCapabilityChapter({
                   <td style={{ padding: 10, verticalAlign: "top" }}>
                     <RecapBadge hasData={item.hasData} ok={item.ok} />
                   </td>
-                  <td style={{ padding: 10, verticalAlign: "top", color: MUTED }}>Pasal 30 ayat (2) huruf a {item.angka}</td>
+                  <td style={{ padding: 10, verticalAlign: "top", color: MUTED }}>{item.angka}</td>
                 </tr>
               ))}
             </tbody>

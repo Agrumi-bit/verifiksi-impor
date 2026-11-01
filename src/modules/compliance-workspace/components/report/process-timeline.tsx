@@ -46,6 +46,39 @@ export function ProcessTimeline({ data }: { data: ProcessTimelineData }) {
         </div>
         <p style={{ margin: "6px 0 0", fontSize: 8.5, lineHeight: 1.4, color: TEXT.muted }}>{data.basis} Sabtu dan Minggu tidak dihitung.</p>
       </div>
+      {data.deadlines && <Deadlines data={data} />}
+    </div>
+  );
+}
+
+const TONES: Record<"green" | "orange" | "red" | "slate", { background: string; color: string }> = {
+  green: { background: "#ECFDF3", color: "#15803D" },
+  orange: { background: "#FFF7E6", color: "#B45309" },
+  red: { background: "#FEF2F2", color: "#B91C1C" },
+  slate: { background: "#F1F5F9", color: "#475569" },
+};
+
+/** Batas Waktu Proses — verification and issue against their limits, under the timeline they split. */
+function Deadlines({ data }: { data: ProcessTimelineData }) {
+  return (
+    <div style={{ gridColumn: "1 / -1", borderTop: `1px solid ${HAIRLINE}`, paddingTop: 8 }}>
+      <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: TEXT.muted }}>Batas waktu proses</div>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${data.deadlines!.length}, minmax(0, 1fr))`, gap: 10, marginTop: 4 }}>
+        {data.deadlines!.map((entry) => (
+          <div key={entry.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: TEXT.primary }}>{entry.label}</div>
+              <div style={{ fontSize: 9, color: TEXT.secondary }}>
+                {entry.days === null ? "—" : `${entry.days} ${entry.unit}`} · maks. {entry.limit} {entry.unit} · {entry.regulation}
+              </div>
+            </div>
+            <span className="rd-pill" style={TONES[entry.status.tone as keyof typeof TONES] ?? TONES.slate}>
+              {entry.status.text}
+            </span>
+          </div>
+        ))}
+      </div>
+      {data.deadlineNote && <p style={{ margin: "4px 0 0", fontSize: 8, lineHeight: 1.35, color: TEXT.muted }}>{data.deadlineNote}</p>}
     </div>
   );
 }

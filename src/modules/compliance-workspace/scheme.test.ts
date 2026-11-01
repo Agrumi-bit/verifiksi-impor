@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import { complianceSummary, totalRequirements } from "./consolidation";
 import { caseStepsOf, requirementWeights, requirementsOf, stepOfRequirement } from "./requirements";
+import { outputContent, outputDeadlines } from "./output-review";
 import { schemeOfApplication } from "./scheme";
 import { buildAnalisisStage, buildBahanBakuStage, buildListrikStage, buildKapasitasStage, buildMesinStage, buildPenjualanStage, buildProdukStage } from "./vki-stages";
 import { deriveWorkspaceStatuses, workspaceKeysOf, type AssignmentForWorkspaceStatus } from "./workspace-status";
@@ -127,7 +128,7 @@ describe("buildKapasitasStage", () => {
     assert.deepEqual(
       stage.checks.map((item) => [item.verdict.label, item.regulation]),
       [
-        ["Sesuai", "Pasal 30 ayat (2) huruf a angka 1"],
+        ["Sesuai", "Pasal 32 ayat (3) huruf c"],
         ["Belum Diperiksa", "Pasal 30 ayat (2) huruf a angka 2"],
         ["Memenuhi", "Pasal 30 ayat (2) huruf a angka 4"],
       ],
@@ -258,5 +259,49 @@ describe("buildAnalisisStage", () => {
     assert.deepEqual(stage[1].parts.map((part) => part.title.slice(0, 2)), ["A.", "B.", "C.", "D."]);
     assert.deepEqual(stage[1].parts[2].tables[0].rows[0].slice(3), ["1.000", "800", "900", "Pasang", "-10%"]);
     assert.equal(stage[2].parts[0].tables[0].rows.length, 0);
+  });
+});
+
+describe("LHVKI and LHVIU review", () => {
+  const row = { scheme: "vki", lhviuIssued: true, submittedAt: "2026-07-01T00:00:00.000Z", submittedIsSystemDate: false } as never;
+  const lhviu = { number: "2/LHVKI/TBI/VIII/2026", issuedAt: "2026-07-20", validUntil: null, issuedBy: "Fajar", file: null };
+
+  it("checks the time limits of Pasal 31 ayat (1) and Pasal 32 ayat (1) in hari kerja", () => {
+    const [verification, issue] = outputDeadlines({ detail: { row, lhviu, milestones: { verificationDate: "2026-07-15", firstScheduledDate: null } }, lokasi: null });
+    assert.equal(verification.days, 10);
+    assert.equal(verification.verdict.tone, "green");
+    assert.equal(issue.days, 3);
+    assert.equal(issue.verdict.tone, "green");
+    const [late] = outputDeadlines({ detail: { row, lhviu, milestones: { verificationDate: "2026-07-17", firstScheduledDate: null } }, lokasi: null });
+    assert.equal(late.verdict.label, "Melebihi 2 hari kerja");
+    // The Technical Analyst's analysis is part of the verification (Pasal 31 ayat (2) huruf b).
+    const [withTa] = outputDeadlines({ detail: { row, lhviu, milestones: { verificationDate: "2026-07-15", firstScheduledDate: null, technicalDate: "2026-07-16T03:00:00.000Z" } }, lokasi: null });
+    assert.equal(withTa.days, 11);
+  });
+
+  it("lists the LHVKI content of Pasal 32 ayat (3) and what is still missing", () => {
+    const content = outputContent({ detail: { row, lhviu, milestones: undefined }, company: null, lokasi: null, vki: null, today: "2026-08-01" });
+    assert.deepEqual(content.map((entry) => entry.letter), ["a", "b", "c", "d", "e", "f", "g", "h", "i"]);
+    assert.equal(content[0].verdict.tone, "green");
+    assert.equal(content[1].verdict.tone, "orange");
+    assert.equal(content[7].value, "s.d. 20 Jul 2029");
+  });
+
+  it("checks the LHVIU: verification within 10 hari kalender (Pasal 38 ayat (1)), issue within 5 hari kerja", () => {
+    const viu = { scheme: "konsumsi", lhviuIssued: true, submittedAt: "2026-07-01T00:00:00.000Z", submittedIsSystemDate: false } as never;
+    const [verification, issue] = outputDeadlines({ detail: { row: viu, lhviu, milestones: { verificationDate: "2026-07-13", firstScheduledDate: null } }, lokasi: null });
+    assert.equal(verification.unit, "hari");
+    assert.equal(verification.days, 12);
+    assert.equal(verification.verdict.label, "Melebihi 2 hari");
+    assert.equal(verification.regulation, "Pasal 38 ayat (1)");
+    assert.equal(issue.days, 5);
+    assert.equal(issue.regulation, "Pasal 39 ayat (1)");
+  });
+
+  it("lists the LHVIU barang konsumsi content of Pasal 39 ayat (5), valid 1 tahun", () => {
+    const viu = { scheme: "konsumsi", lhviuIssued: true, submittedAt: "2026-07-01T00:00:00.000Z", submittedIsSystemDate: false } as never;
+    const content = outputContent({ detail: { row: viu, lhviu, milestones: undefined }, company: null, lokasi: null, konsumsi: null, today: "2026-08-01" });
+    assert.deepEqual(content.map((entry) => entry.letter), ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]);
+    assert.equal(content[8].value, "s.d. 20 Jul 2027");
   });
 });

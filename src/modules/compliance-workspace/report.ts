@@ -17,6 +17,7 @@ import {
 import { answerLabel, buildLokasiStage, type LocationInput, type LokasiInput } from "./lokasi";
 import { buildMatrix } from "./matrix";
 import { REQUIREMENT_LABELS, requirementsOf, requirementsOfStep } from "./requirements";
+import { deadlineNote, outputContent, outputDeadlines } from "./output-review";
 import type { LegalitasStage } from "./server/load-legalitas";
 import { SCHEME_META, type ComplianceScheme } from "./scheme";
 import { buildAnalisisStage, buildBahanBakuStage, buildKapasitasStage, buildMesinStage, buildPenjualanStage, buildPernyataanStage, buildProdukStage, buildAlurProsesStage, buildListrikStage, buildTenagaKerjaStage, formatQuantity, type VkiCheck, type VkiStageInput } from "./vki-stages";
@@ -74,6 +75,9 @@ export type ProcessTimeline = {
   workingDays: number | null;
   /** How the count was taken ("Tanggal Permohonan → Terbit LHVIU", or the fallback start used). */
   basis: string;
+  /** Verification and issue against their time limits (VKI Pasal 31–32, VIU Pasal 38–39). */
+  deadlines?: { label: string; days: number | null; limit: number; unit: string; regulation: string; status: { text: string; tone: ReportTone } }[];
+  deadlineNote?: string;
 };
 
 export type ReportBlock =
@@ -210,6 +214,34 @@ function vkiCheckTable(title: string, checks: VkiCheck[]): ReportBlock {
   };
 }
 
+/**
+ * The output against Permenperin 27/2025: its minimum content (LHVKI Pasal 32 ayat (3), LHVIU barang
+ * konsumsi Pasal 39 ayat (5)); the time limits sit on the timeline.
+ */
+function outputBlocks(input: ReportInput): ReportBlock[] {
+  const { scheme } = input.detail.row;
+  const output = SCHEME_META[scheme].output;
+  const review = {
+    detail: input.detail,
+    company: input.legalitas?.company ?? null,
+    lokasi: input.lokasi,
+    vki: input.vki ?? null,
+    konsumsi: input.konsumsi ?? null,
+    today: input.generatedAt.slice(0, 10),
+  };
+  return [
+    {
+      kind: "table",
+      title: `Kelengkapan Isi ${output} (${scheme === "vki" ? "Pasal 32 ayat (3)" : "Pasal 39 ayat (5)"})`,
+      lede: `Ketersediaan data untuk setiap informasi yang paling sedikit dimuat ${output}.`,
+      headers: ["Huruf", "Informasi", "Data Tercatat", "Status"],
+      widths: ["7%", "38%", "40%", "15%"],
+      rows: outputContent(review).map((entry) => [entry.letter, entry.label, entry.value, { text: entry.verdict.label, tone: entry.verdict.tone }]),
+      empty: DASH,
+    },
+  ];
+}
+
 function chipsOf(rows: DocumentRow[]): ReportChip[] {
   return documentSummary(rows).map((item) => ({ label: VERIFICATION_STATUS_LABELS[item.status], count: item.count, tone: VERIFICATION_STATUS_TONES[item.status] }));
 }
@@ -282,8 +314,18 @@ function processTimeline(detail: DossierInput, lokasi: LokasiInput | null): Proc
 
   const useSubmitted = submitted !== null && issued !== null && submitted <= issued;
   const start = useSubmitted ? submitted : scheduled;
+  const deadlines = outputDeadlines({ detail, lokasi }).map((entry, index) => ({
+    label: index === 0 ? "Verifikasi" : `Penerbitan ${output}`,
+    days: entry.days,
+    limit: entry.limit,
+    unit: entry.unit,
+    regulation: entry.regulation,
+    status: { text: entry.verdict.label, tone: entry.verdict.tone },
+  }));
   return {
     steps,
+    deadlines,
+    deadlineNote: deadlineNote(row.scheme),
     workingDays: workingDaysBetween(start, issued),
     basis: !issued
       ? `Belum dapat dihitung — ${output} belum terbit.`
@@ -1434,7 +1476,10 @@ export function buildComplianceReport(input: ReportInput): ComplianceReport {
       key: "lhviu",
       eyebrow: "8",
       title: output,
-      blocks: [{ kind: "lhviu", data: lhviuFigure(detail, input.generatedAt, processTimeline(detail, input.lokasi)) }],
+      blocks: [
+        { kind: "lhviu", data: lhviuFigure(detail, input.generatedAt, processTimeline(detail, input.lokasi)) },
+        ...outputBlocks(input),
+      ],
     },
   ];
 

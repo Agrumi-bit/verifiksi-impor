@@ -414,7 +414,7 @@ export const PRODUCTION_CAPABILITY_COMPLIANCE_ROWS = [
     no: 1,
     jenisDokumen: "Data Kapasitas Produksi Perusahaan",
     persyaratan: "Wajib",
-    referensi: "Pasal 30 ayat (2) huruf a angka 1 Permenperin Nomor 27 Tahun 2025",
+    referensi: "Pasal 30 ayat (2) huruf b angka 2 dan Pasal 32 ayat (3) huruf c Permenperin Nomor 27 Tahun 2025",
     keterangan: "Kapasitas produksi perusahaan tercantum dalam dokumen perizinan berusaha yang masih berlaku.",
   },
   {

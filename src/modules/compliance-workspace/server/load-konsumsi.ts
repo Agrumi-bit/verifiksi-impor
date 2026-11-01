@@ -94,6 +94,7 @@ export async function loadKonsumsiStage(applicationId: string): Promise<Konsumsi
     commodityGroupId: item.commodityGroupId,
     hsCode: item.hsCode,
     hsDescription: item.hsDescription || null,
+    originCountries: item.originCountryNames ?? [],
     quantity: toNumber(item.quantity),
     stock: toNumber(item.stockQuantity),
     unit: item.unit || null,

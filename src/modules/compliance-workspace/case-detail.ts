@@ -23,7 +23,7 @@ export type CaseDetailInput = {
   /** Application.status (APPLICATION_STATUSES). */
   applicationStatus: string;
   /** Process dates for the report timeline: the Verifikator's report date and the first Surat Tugas date. */
-  milestones?: { verificationDate: string | null; firstScheduledDate: string | null };
+  milestones?: { verificationDate: string | null; firstScheduledDate: string | null; technicalDate?: string | null };
   /** VKI only: production, workforce, statements and technical analysis (server/load-vki.ts). */
   vki?: VkiStageInput;
   /** The applicant's PIC as entered on the application form. */

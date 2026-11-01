@@ -112,12 +112,14 @@ export function moduleVerdict(decision: VkiModuleDecision | undefined): Verdict 
 // ─── Matriks pemeriksaan (Tipe Regulasi / Note Regulasi) ───────────────────────────────
 
 /**
- * Permenperin 27/2025 Pasal 30 ayat (2) huruf a, per data item — the same angka the Verifikator's
- * "Rekapitulasi Hasil Pemeriksaan Kemampuan Produksi" cites; huruf b from the VKI legal basis.
+ * Permenperin 27/2025 per data item, checked against the regulation text: Pasal 30 ayat (2) huruf a
+ * (angka 1 is the machines' daily capability only), huruf b from the VKI legal basis, and Pasal 32
+ * ayat (3) huruf c for the licensed capacity the LHVKI must state.
  */
 export const VKI_DATA_REGULATION = {
   dataProduksi: formatLegalBasis(VKI_LEGAL_BASIS.dataProduksi),
   kapasitas: "Pasal 30 ayat (2) huruf a angka 1",
+  kapasitasIzin: "Pasal 32 ayat (3) huruf c",
   produksiSebelumnya: "Pasal 30 ayat (2) huruf a angka 2",
   konversi: "Pasal 30 ayat (2) huruf a angka 3",
   rencana: "Pasal 30 ayat (2) huruf a angka 4",
@@ -377,7 +379,7 @@ export function buildKapasitasStage(input: VkiStageInput) {
         `${stage.licensed.length} KBLI`,
         !input.capacity.length ? "—" : overLicence ? `${overLicence} kapasitas terpasang melebihi izin` : "Kapasitas terpasang tidak melebihi izin",
         licensedVerdict,
-        VKI_DATA_REGULATION.kapasitas,
+        VKI_DATA_REGULATION.kapasitasIzin,
       ),
       check("Jumlah produksi periode satu tahun sebelumnya", `${stage.previous.rows.length} produk`, sectionResult(stage.previous.rows, stage.previous.total), rowsVerdict(stage.previous.rows, stage.previous.verdict), VKI_DATA_REGULATION.produksiSebelumnya),
       check("Rencana produksi periode tahun berikutnya", `${stage.plan.rows.length} produk`, sectionResult(stage.plan.rows, stage.plan.total), rowsVerdict(stage.plan.rows, stage.plan.verdict), VKI_DATA_REGULATION.rencana),
