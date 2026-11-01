@@ -93,6 +93,8 @@ export type PmApplicationDetail = {
       pmReviewNote: string | null;
       pmReviewedAt: string | null;
       validatedAt: string | null;
+      /** Decision date the analyst chose with the signature (printed on the report); null on older data. */
+      signatureDate?: string | null;
       technicalAnalysisData: Record<string, { status?: string; keterangan?: string; kesimpulan?: string; inputs?: Record<string, string> }>;
       /** Technical Analyst's review of the Laporan Verifikasi Dokumen. */
       documentReportReview?: DocumentReportReview | null;

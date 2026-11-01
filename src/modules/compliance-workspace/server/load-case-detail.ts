@@ -329,6 +329,10 @@ export async function loadCaseDetail(applicationId: string): Promise<DossierInpu
     })(),
     pmReviews: assignments
       .filter((a) => a.scheduleType && REPORT_LABELS[a.scheduleType])
+      // A survey assignment with no location visit and no scheduled location has no report to review
+      // (e.g. an extra/rescheduled assignment whose locations were surveyed under another one) — the PM
+      // workspace doesn't list it either, so it must not show up here as "Belum direview PM".
+      .filter((a) => a.scheduleType !== "survey" || a.locationVisits.length > 0 || locations.some((l) => l.id && l.id === a.locationId))
       .map((a) => ({
         source: a.scheduleType === "survey" ? ("SV" as const) : a.scheduleType === "technical" ? ("TA" as const) : ("VF" as const),
         title: reportTitle(a),

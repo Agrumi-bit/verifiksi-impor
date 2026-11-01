@@ -274,6 +274,8 @@ export async function GET(
               pmReviewNote: technical.pmReviewNote,
               pmReviewedAt: technical.pmReviewedAt,
               validatedAt: technical.validatedAt,
+              /** Decision date the analyst chose with the signature (printed on the report). */
+              signatureDate: technical.signatureDate,
               technicalAnalysisData: technical.technicalAnalysisData ?? {},
               documentReportReview,
             }

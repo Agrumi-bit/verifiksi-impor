@@ -51,8 +51,11 @@ export function TechnicalReportApproval({ data, applicationNumber }: { data: PmA
         <Row icon="person" label="Technical Analyst">
           {ready ? (
             <>
-              Disubmit {formatAssignmentDate(technical.validatedAt)}
+              Disubmit {formatAssignmentDate(technical.signatureDate ?? technical.validatedAt)}
               {technical.technicalReviewerName ? ` oleh ${technical.technicalReviewerName}` : ""}
+              {technical.signatureDate && formatAssignmentDate(technical.signatureDate) !== formatAssignmentDate(technical.validatedAt) && (
+                <span className="block text-[11px] text-[#a68f80]">Tanggal pilihan analis (tercetak di laporan) · dikirim ke sistem {formatAssignmentDate(technical.validatedAt)}</span>
+              )}
             </>
           ) : (
             <span className="text-[#a68f80]">Belum disubmit Technical Analyst</span>
@@ -193,7 +196,7 @@ function ReviewModal({
               </div>
               <div className="mt-2.5 border-t border-[#f5ebe1] pt-2 text-[10.5px] text-[#8a7565]">
                 {ready
-                  ? `Disubmit ${formatAssignmentDate(technical.validatedAt)}${technical.technicalReviewerName ? ` oleh ${technical.technicalReviewerName}` : ""}`
+                  ? `Disubmit ${formatAssignmentDate(technical.signatureDate ?? technical.validatedAt)}${technical.technicalReviewerName ? ` oleh ${technical.technicalReviewerName}` : ""}`
                   : "Technical Analyst belum mensubmit laporan."}
               </div>
             </div>
