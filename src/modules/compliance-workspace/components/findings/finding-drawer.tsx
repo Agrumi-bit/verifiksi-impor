@@ -9,14 +9,13 @@ import { cn } from "@/lib/utils";
 import type { FindingKind } from "../../consolidation";
 import { FINDING_KINDS, FINDING_KIND_LABELS, FINDING_SEVERITY_LABELS, validateFollowUp } from "../../finding-rules";
 import { COMPLIANCE_HOME } from "../../navigation";
-import { REQUIREMENTS, stepOfRequirement } from "../../requirements";
+import { REQUIREMENT_LABELS, stepOfRequirement } from "../../requirements";
 import { WORKSPACE_LABELS, type WorkspaceKey } from "../../workspace-status";
 import { Pill } from "../case-list/badges";
 import { INPUT_CLASS } from "../styles";
 import { formatDateTime } from "../case-list/format";
 import { useFinding, useFollowUp, type FindingRow } from "./use-findings";
 
-const REQUIREMENT_LABELS = Object.fromEntries(REQUIREMENTS.map((requirement) => [requirement.key, requirement.label])) as Record<string, string>;
 export const KIND_TONE: Record<FindingKind, "red" | "orange" | "green"> = { OPEN: "red", CONFLICT: "red", KLARIFIKASI: "orange", RESOLVED: "green" };
 
 function sourceLabel(key: string): string {
@@ -157,7 +156,7 @@ export function FindingDrawer({ findingId, pics, onClose }: { findingId: string 
                 <dt className="text-[#64748B]">Case</dt>
                 <dd>
                   <Link
-                    href={`${COMPLIANCE_HOME}/permohonan/${finding.applicationId}?step=${stepOfRequirement(finding.requirementKey)}`}
+                    href={`${COMPLIANCE_HOME}/permohonan/${finding.applicationId}?step=${stepOfRequirement(finding.requirementKey, finding.scheme)}`}
                     className="font-mono text-[#1677FF] hover:underline"
                   >
                     {finding.applicationNumber}

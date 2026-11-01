@@ -7,11 +7,11 @@ import { Field, StageCard } from "./stage-ui";
  */
 export function SummaryStage({ data }: { data: CaseSummary }) {
   return (
-    <StageCard title="Informasi Permohonan" description="Data dasar permohonan VIU seperti yang diajukan pemohon.">
+    <StageCard title="Informasi Permohonan" description="Data dasar permohonan seperti yang diajukan pemohon.">
       <div className="grid gap-x-12 gap-y-4 border-t border-[#EEF2F6] px-6 py-5 md:grid-cols-2">
         <Field label="Nomor Permohonan"><span className="font-mono">{data.applicationNumber}</span></Field>
         <Field label="Tanggal Permohonan">{data.submittedAt}</Field>
-        <Field label="Jenis VIU">{data.jenis}</Field>
+        <Field label="Jenis Verifikasi">{data.jenis}</Field>
         <Field label="Jenis Permohonan">{data.category}</Field>
         <Field label="Status">{data.status}</Field>
         <Field label="Nama Pemohon">{data.companyName}</Field>

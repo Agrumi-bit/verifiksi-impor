@@ -1,13 +1,15 @@
 import "server-only";
 
 import { db } from "@/lib/db";
-import { applicationMatchesViuScheme } from "@/modules/project-manager-workspace/viu-schemes";
 import type { FindingKind } from "../consolidation";
 import type { FindingSeverity } from "../finding-rules";
-import { KONSUMSI_SCHEME } from "./load-cases";
+import type { ComplianceScheme } from "../scheme";
+import { schemeOfCase } from "./load-cases";
 
 export type FindingRow = {
   id: string;
+  /** The case's scheme — its stage numbers differ (VIU Konsumsi 11, VKI 10). */
+  scheme: ComplianceScheme;
   issueNumber: string;
   applicationId: string;
   applicationNumber: string;
@@ -44,7 +46,7 @@ const FINDING_SELECT = {
   createdAt: true,
   updatedAt: true,
   owner: { select: { name: true } },
-  application: { select: { applicationNumber: true, payload: true, company: { select: { companyName: true } } } },
+  application: { select: { applicationNumber: true, verificationType: true, payload: true, company: { select: { companyName: true } } } },
 } as const;
 
 type SelectedFinding = {
@@ -63,13 +65,14 @@ type SelectedFinding = {
   createdAt: Date;
   updatedAt: Date;
   owner: { name: string } | null;
-  application: { applicationNumber: string; payload: unknown; company: { companyName: string } | null };
+  application: { applicationNumber: string; verificationType: string; payload: unknown; company: { companyName: string } | null };
 };
 
 function toRow(finding: SelectedFinding): FindingRow {
   const payload = finding.application.payload as { companyName?: string } | null;
   return {
     id: finding.id,
+    scheme: schemeOfCase(finding.application) ?? "konsumsi",
     issueNumber: finding.issueNumber,
     applicationId: finding.applicationId,
     applicationNumber: finding.application.applicationNumber,
@@ -106,11 +109,14 @@ export async function loadFinding(id: string): Promise<(FindingRow & { followUps
   };
 }
 
-/** Findings are only recorded on submitted VIU Konsumsi applications (the workspace's scope). */
-export async function isKonsumsiCase(applicationId: string): Promise<boolean> {
+/**
+ * The scheme of a case a finding may be recorded on — submitted VIU Konsumsi and VKI applications
+ * (the workspace's scope) — or null when the application is outside it.
+ */
+export async function findingCaseScheme(applicationId: string): Promise<ComplianceScheme | null> {
   const app = await db.application.findUnique({ where: { id: applicationId }, select: { verificationType: true, status: true, payload: true } });
-  if (!app || app.status === "DRAFT" || app.status === "WITHDRAWN") return false;
-  return applicationMatchesViuScheme(app.verificationType, (app.payload as { importTypes?: string[] } | null)?.importTypes, KONSUMSI_SCHEME);
+  if (!app || app.status === "DRAFT" || app.status === "WITHDRAWN") return null;
+  return schemeOfCase(app);
 }
 
 /** An owner must be an active COMPLIANCE user; returns its name, or null when not allowed. */

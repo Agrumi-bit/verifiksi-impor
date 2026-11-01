@@ -14,12 +14,13 @@ export const TRAIL_SOURCE_LABELS: Record<TrailSource, string> = {
   ADMIN: "Admin",
   SYSTEM: "Sistem",
 };
-export const TRAIL_SOURCES: TrailSource[] = ["CR", "SV", "VF", "PM", "CMP", "COMPANY", "ADMIN", "SYSTEM"];
+export const TRAIL_SOURCES: TrailSource[] = ["CR", "SV", "VF", "TA", "PM", "CMP", "COMPANY", "ADMIN", "SYSTEM"];
 
 const ROLE_SOURCE: Record<string, TrailSource> = {
   CUSTOMER_RELATIONSHIP: "CR",
   SURVEYOR: "SV",
   VERIFIKATOR: "VF",
+  TECHNICAL_ANALYST: "TA",
   PROJECT_MANAGER: "PM",
   COMPLIANCE: "CMP",
   PERUSAHAAN: "COMPANY",

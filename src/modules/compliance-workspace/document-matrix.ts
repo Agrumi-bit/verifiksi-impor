@@ -1,14 +1,16 @@
 import { DOCUMENT_SIFAT_LABELS, formatLegalBasis, resolveDocumentRequirement } from "@/modules/schemes";
 import type { VerificationStatusValue } from "@/modules/company/document-versions";
+import type { SchemeId } from "@/modules/schemes/types";
 import type { Evidence } from "./case-detail";
 
 /**
  * A document matrix row as every Compliance stage shows it: the document from the shared checklist,
- * the status the reviewer recorded (Verifikator / Customer Relation), and the VIU Konsumsi scheme's
+ * the status the reviewer recorded (Verifikator / Customer Relation), and the case scheme's
  * requirement type and regulation (src/modules/schemes). Pure — Compliance re-judges nothing.
  */
 
-const SCHEME = "VIU_KONSUMSI" as const;
+/** The scheme whose document definitions apply when none is given. */
+const DEFAULT_SCHEME: SchemeId = "VIU_KONSUMSI";
 
 export type VerificationStatusTone = "green" | "orange" | "red" | "slate";
 export const VERIFICATION_STATUS_LABELS: Record<VerificationStatusValue, string> = {
@@ -54,12 +56,12 @@ export type DocumentRow = {
 export function buildDocumentRows(
   checklist: ChecklistInput[],
   statuses: Record<string, DocumentStatusInput | undefined>,
-  options: { categories: string[]; valueFor?: (key: string) => string },
+  options: { categories: string[]; valueFor?: (key: string) => string; schemeId?: SchemeId },
 ): DocumentRow[] {
   return checklist
     .filter((item) => options.categories.includes(item.category))
     .flatMap((item) => {
-      const requirement = resolveDocumentRequirement([SCHEME], item.key);
+      const requirement = resolveDocumentRequirement([options.schemeId ?? DEFAULT_SCHEME], item.key);
       if (!requirement.applicable) return [];
       // A supporting document the applicant didn't upload has nothing to check — only a required
       // one stays visible while missing.

@@ -7,6 +7,7 @@ import { collectApplicationVisits, groupVisitsByLocation, type SurveyPayloadLoca
 import { DOC_TYPE_DEFS } from "@/modules/surveyor-workspace/components/office-verification/schema";
 import { docTypeDefs } from "@/modules/surveyor-workspace/components/field-verification/schema";
 import type { FieldAnswer, LocationInput, LocationVisitResult, LokasiInput } from "../lokasi";
+import { SCHEME_META, type ComplianceScheme } from "../scheme";
 import { loadCaseDocuments } from "./document-statuses";
 
 const REGISTRATION_LABELS: Record<string, string> = { TANDA_DAFTAR_GUDANG: "TDG", PENETAPAN_GUDANG_BERIKAT: "Gudang Berikat", GUDANG_PENIMBUNAN_SEMENTARA: "TPS" };
@@ -75,7 +76,7 @@ function visitResult(
 }
 
 /** Tahap 3 data for one case: declared locations, their documents with status, and the surveyor's active visit per location. */
-export async function loadLokasiStage(applicationId: string): Promise<LokasiInput | null> {
+export async function loadLokasiStage(applicationId: string, scheme: ComplianceScheme = "konsumsi"): Promise<LokasiInput | null> {
   const documents = await loadCaseDocuments(applicationId, ["Dokumen Lokasi"]);
   if (!documents) return null;
   const application = await db.application.findUnique({
@@ -135,5 +136,5 @@ export async function loadLokasiStage(applicationId: string): Promise<LokasiInpu
       visit: visit ? visitResult(location, { ...visit, surveyorName: surveyorByVisit.get(visit.id) ?? null }) : null,
     };
   });
-  return { submittedAt: effectiveSubmissionDate(application).value, locations: result };
+  return { submittedAt: effectiveSubmissionDate(application).value, locations: result, schemeId: SCHEME_META[scheme].schemeId };
 }

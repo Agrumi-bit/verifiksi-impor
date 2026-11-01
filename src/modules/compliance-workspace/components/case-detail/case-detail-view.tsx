@@ -5,7 +5,7 @@ import { fileHref } from "@/lib/file-href";
 import { cn } from "@/lib/utils";
 import type { CaseStep, CaseSummary, StepStatus } from "../../case-detail";
 import type { CaseRow } from "../../case-list";
-import { REQUIREMENTS } from "../../requirements";
+import { REQUIREMENT_LABELS } from "../../requirements";
 import { COMPLIANCE_HOME } from "../../navigation";
 import type { KonsumsiStageInput } from "../../konsumsi-stages";
 import type { LokasiInput } from "../../lokasi";
@@ -18,8 +18,34 @@ import { MerekStage } from "./merek-stage";
 import { LabelStage, UjiMutuStage } from "./mutu-label-stages";
 import { RencanaImporStage, StokStage } from "./produk-stages";
 import { SummaryStage } from "./summary-stage";
+import {
+  AlurProsesStage,
+  AnalisisStage,
+  BahanBakuStage,
+  KapasitasStage,
+  ListrikStage,
+  MesinStage,
+  PenjualanStage,
+  PernyataanStage,
+  ProdukStage,
+  TenagaKerjaStage,
+} from "./vki-stages";
+import { SCHEME_META } from "../../scheme";
+import type { VkiStageInput } from "../../vki-stages";
 
 const KONSUMSI_STAGES: Partial<Record<number, typeof MerekStage>> = { 4: MerekStage, 5: RencanaImporStage, 6: StokStage, 7: UjiMutuStage, 8: LabelStage };
+const VKI_STAGES: Partial<Record<number, typeof AlurProsesStage>> = {
+  5: ProdukStage,
+  6: AlurProsesStage,
+  7: ListrikStage,
+  8: MesinStage,
+  9: KapasitasStage,
+  10: BahanBakuStage,
+  11: PenjualanStage,
+  12: TenagaKerjaStage,
+  13: PernyataanStage,
+  14: AnalisisStage,
+};
 
 const STATUS_TONE: Record<StepStatus, "green" | "orange" | "red" | "blue"> = {
   Sesuai: "green",
@@ -38,7 +64,6 @@ const STATUS_RING: Record<StepStatus, string> = {
   Conflict: "border-[#DC2626] text-[#DC2626]",
 };
 const KIND_LABELS = { OPEN: "Open Issue", KLARIFIKASI: "Perlu Klarifikasi", CONFLICT: "Conflict", RESOLVED: "Resolved" } as const;
-const REQUIREMENT_LABELS = Object.fromEntries(REQUIREMENTS.map((requirement) => [requirement.key, requirement.label])) as Record<string, string>;
 const LINK_BUTTON = "inline-flex h-8 items-center rounded-lg border border-[#E5EAF0] bg-white px-3 text-[12.5px] font-medium hover:bg-[#F5F7FA]";
 
 function stepHref(applicationId: string, num: number): string {
@@ -49,7 +74,7 @@ function CaseHeader({ row }: { row: CaseRow }) {
   return (
     <header className="flex flex-col gap-3 rounded-xl border border-[#E5EAF0] bg-white px-6 py-5 shadow-sm">
       <div className="flex flex-wrap items-center gap-2.5">
-        <h1 className="text-[20px] font-semibold">VIU – Produk Tekstil sebagai Barang Konsumsi</h1>
+        <h1 className="text-[20px] font-semibold">{SCHEME_META[row.scheme].title}</h1>
         <span className="rounded-md border border-[#E5EAF0] bg-[#F5F7FA] px-2 py-0.5 font-mono text-[12px] font-medium">{row.applicationNumber}</span>
         <CategoryBadge category={row.category} />
         <span className="inline-flex items-center gap-1 rounded-full bg-[#F1F5F9] px-2 py-0.5 text-[11.5px] font-medium text-[#475569]">
@@ -193,7 +218,38 @@ function GenericStage({ step }: { step: CaseStep }) {
   );
 }
 
-/** Read-only 11-stage view of one case; every value comes from its source workspace. */
+/** A VKI stage: Legalitas and Perpajakan share the legal view, Lokasi the location view, 5–14 their own. */
+function VkiStageBody({
+  step,
+  legalitas,
+  lokasi,
+  vki,
+  handedOver,
+}: {
+  step: CaseStep;
+  legalitas: LegalitasStageData | null;
+  lokasi: LokasiInput | null;
+  vki: VkiStageInput | null;
+  handedOver: boolean;
+}) {
+  if ((step.num === 2 || step.num === 3) && legalitas) {
+    return (
+      <LegalitasStage
+        data={legalitas}
+        handedOver={handedOver}
+        scheme="vki"
+        showCompany={step.num === 2}
+        matrixTitle={step.num === 2 ? "Matriks Pemeriksaan Perusahaan & Legalitas" : "Matriks Pemeriksaan Perpajakan"}
+      />
+    );
+  }
+  if (step.num === 4 && lokasi) return <LokasiStage data={lokasi} />;
+  const Stage = VKI_STAGES[step.num];
+  if (Stage && vki) return <Stage data={vki} handedOver={handedOver} />;
+  return <GenericStage step={step} />;
+}
+
+/** Read-only view of one case, stage by stage (11 for VIU Konsumsi, 16 for VKI); every value comes from its source workspace. */
 export function CaseDetailView({
   row,
   steps,
@@ -202,6 +258,7 @@ export function CaseDetailView({
   legalitas,
   lokasi,
   konsumsi,
+  vki,
 }: {
   row: CaseRow;
   steps: CaseStep[];
@@ -210,6 +267,7 @@ export function CaseDetailView({
   legalitas: LegalitasStageData | null;
   lokasi: LokasiInput | null;
   konsumsi: KonsumsiStageInput | null;
+  vki: VkiStageInput | null;
 }) {
   const step = steps[current - 1];
   const KonsumsiStage = KONSUMSI_STAGES[step.num];
@@ -236,6 +294,8 @@ export function CaseDetailView({
 
       {step.num === 1 ? (
         <SummaryStage data={summary} />
+      ) : row.scheme === "vki" ? (
+        <VkiStageBody step={step} legalitas={legalitas} lokasi={lokasi} vki={vki} handedOver={handedOver} />
       ) : step.num === 2 && legalitas ? (
         <LegalitasStage data={legalitas} handedOver={handedOver} />
       ) : step.num === 3 && lokasi ? (

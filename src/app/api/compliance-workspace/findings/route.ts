@@ -4,10 +4,10 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireComplianceSession } from "@/lib/require-compliance-session";
 import { FINDING_KINDS, FINDING_SEVERITIES, nextIssueNumber } from "@/modules/compliance-workspace/finding-rules";
-import { REQUIREMENTS } from "@/modules/compliance-workspace/requirements";
+import { requirementsOf } from "@/modules/compliance-workspace/requirements";
 import { loadCompliancePics } from "@/modules/compliance-workspace/server/load-cases";
-import { complianceUserName, isKonsumsiCase, loadFindings } from "@/modules/compliance-workspace/server/findings";
-import { WORKSPACE_KEYS } from "@/modules/compliance-workspace/workspace-status";
+import { complianceUserName, findingCaseScheme, loadFindings } from "@/modules/compliance-workspace/server/findings";
+import { WORKSPACE_KEYS, schemeWorkspaceKeys } from "@/modules/compliance-workspace/workspace-status";
 
 /** Temuan & Exception list — every finding with its case, plus counts per tab and the possible owners. */
 export async function GET() {
@@ -21,7 +21,8 @@ export async function GET() {
 
 const createSchema = z.object({
   applicationId: z.string().min(1, "Pilih permohonan."),
-  requirementKey: z.enum(REQUIREMENTS.map((requirement) => requirement.key) as [string, ...string[]], { message: "Pilih requirement." }),
+  // Checked against the case's own scheme below (VIU Konsumsi and VKI have different requirements).
+  requirementKey: z.string().min(1, "Pilih requirement."),
   kind: z.enum(["OPEN", "KLARIFIKASI", "CONFLICT"], { message: "Pilih jenis temuan." }),
   severity: z.enum(FINDING_SEVERITIES as [string, ...string[]], { message: "Pilih severity." }),
   sourceWorkspace: z.enum(WORKSPACE_KEYS, { message: "Pilih workspace sumber." }),
@@ -31,7 +32,7 @@ const createSchema = z.object({
   ownerId: z.string().min(1).nullable().optional(),
 });
 
-/** Catat Temuan — a finding recorded manually by Compliance on a VIU Konsumsi case. */
+/** Catat Temuan — a finding recorded manually by Compliance on a VIU Konsumsi or VKI case. */
 export async function POST(request: Request) {
   const { session, error } = await requireComplianceSession();
   if (error) return error;
@@ -40,8 +41,15 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Data tidak valid." }, { status: 400 });
   const input = parsed.data;
 
-  if (!(await isKonsumsiCase(input.applicationId))) {
-    return NextResponse.json({ error: "Permohonan tidak ditemukan atau bukan VIU Barang Konsumsi." }, { status: 400 });
+  const scheme = await findingCaseScheme(input.applicationId);
+  if (!scheme) {
+    return NextResponse.json({ error: "Permohonan tidak ditemukan atau bukan VIU Barang Konsumsi / VKI." }, { status: 400 });
+  }
+  if (!requirementsOf(scheme).some((requirement) => requirement.key === input.requirementKey)) {
+    return NextResponse.json({ error: "Pilih requirement." }, { status: 400 });
+  }
+  if (!schemeWorkspaceKeys(scheme).includes(input.sourceWorkspace)) {
+    return NextResponse.json({ error: "Pilih workspace sumber." }, { status: 400 });
   }
   const ownerName = input.ownerId ? await complianceUserName(input.ownerId) : null;
   if (input.ownerId && !ownerName) return NextResponse.json({ error: "Owner harus user Compliance yang aktif." }, { status: 400 });

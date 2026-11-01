@@ -7,14 +7,15 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { CASE_CATEGORY_LABELS, COMPLIANCE_STATUS_LABELS, HANDOVER_LABELS, READINESS_LABELS } from "../../consolidation";
 import { PAGE_SIZES, type CaseRow } from "../../case-list";
-import { WORKSPACE_KEYS, WORKSPACE_STATE_LABELS } from "../../workspace-status";
+import { WORKSPACE_KEYS, WORKSPACE_STATE_LABELS, stateOf, workspaceKeysOf } from "../../workspace-status";
 import { INPUT_CLASS } from "../styles";
 import { CaseFilters } from "./case-filters";
 import { CaseQuickDrawer } from "./case-quick-drawer";
 import { CaseTable } from "./case-table";
 import { formatCalendarDate, formatDate, formatDateTime } from "./format";
 import { SummaryCards } from "./summary-cards";
-import { useCaseList, useUpdateCompliance } from "./use-case-list";
+import { EMPTY_FILTERS, useCaseList, useUpdateCompliance } from "./use-case-list";
+import { COMPLIANCE_SCHEMES, SCHEME_META } from "../../scheme";
 
 function csvCell(value: string | number): string {
   const text = String(value);
@@ -22,13 +23,15 @@ function csvCell(value: string | number): string {
 }
 
 function downloadCsv(rows: CaseRow[], fileName: string) {
+  // One scheme per list: the workspaces of its rows (VKI adds the Technical Analyst).
+  const keys = rows[0] ? workspaceKeysOf(rows[0].workspaces) : WORKSPACE_KEYS.filter((key) => key !== "TA");
   const header = [
-    "No. Permohonan", "Pemohon", "NIB", "Tanggal Masuk", ...WORKSPACE_KEYS, "Status Handover", "Readiness",
+    "No. Permohonan", "Pemohon", "NIB", "Tanggal Masuk", ...keys, "Status Handover", "Readiness",
     "Kategori", "Compliance Status", "Skor", "Temuan Aktif", "LHVIU", "Nomor LHVIU", "Tanggal Terbit LHVIU", "PIC Compliance", "Last Update",
   ];
   const lines = rows.map((row) => [
     row.applicationNumber, row.companyName, row.nib, formatDate(row.submittedAt),
-    ...WORKSPACE_KEYS.map((key) => WORKSPACE_STATE_LABELS[row.workspaces[key]]),
+    ...keys.map((key) => WORKSPACE_STATE_LABELS[stateOf(row.workspaces, key)]),
     HANDOVER_LABELS[row.handover], READINESS_LABELS[row.readiness], CASE_CATEGORY_LABELS[row.category],
     COMPLIANCE_STATUS_LABELS[row.complianceStatus], `${row.summary.score}%`, row.activeFindings.length,
     row.lhviuIssued ? "Terbit" : "Belum Terbit", row.lhviuNumber ?? "", formatCalendarDate(row.lhviuIssuedAt),
@@ -110,7 +113,7 @@ export function CaseListPage() {
       <header className="flex flex-wrap items-end gap-3">
         <div className="flex-1">
           <h1 className="text-xl font-semibold">Daftar Permohonan</h1>
-          <p className="text-[13px] text-[#64748B]">VIU – Barang Konsumsi · status tiap workspace diambil langsung dari data sumber.</p>
+          <p className="text-[13px] text-[#64748B]">{SCHEME_META[list.filters.scheme].label} · status tiap workspace diambil langsung dari data sumber.</p>
         </div>
         <button
           type="button"
@@ -131,6 +134,30 @@ export function CaseListPage() {
           Refresh
         </button>
       </header>
+
+      <div role="tablist" aria-label="Jenis verifikasi" className="flex w-fit gap-1 rounded-lg border border-[#E5EAF0] bg-white p-1">
+        {COMPLIANCE_SCHEMES.map((scheme) => {
+          const active = list.filters.scheme === scheme;
+          return (
+            <button
+              key={scheme}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => {
+                setSelected(new Set());
+                list.updateFilters({ ...EMPTY_FILTERS, scheme });
+              }}
+              className={cn(
+                "h-8 rounded-md px-3 text-[13px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-[#1677FF]/40",
+                active ? "bg-[#1677FF] text-white" : "text-[#334155] hover:bg-[#F5F7FA]",
+              )}
+            >
+              {SCHEME_META[scheme].label}
+            </button>
+          );
+        })}
+      </div>
 
       {list.query.isError && (
         <div role="alert" className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-[13px] text-[#B91C1C]">

@@ -11,9 +11,21 @@ import DOMPurify from "dompurify";
  * top-level paragraphs/lists/tables, and a rich-text table into its rows, so a long analysis flows
  * over as many sheets as it needs ("… (lanjutan)" on the next sheet, table header repeated).
  * Every piece is measured in a hidden sheet of the same width, then packed greedily into pages.
+ *
+ * A "rows" item is a React table laid out row by row: it breaks only where a sheet is full, repeats
+ * its header ("continued") on the next sheet, and never leaves fewer than MIN_ROWS rows on either
+ * side of a break. `lead` (e.g. a section heading) travels with its first rows.
  */
 export type FlowItem =
   | { kind: "node"; key: string; node: ReactNode; breakBefore?: boolean }
+  | {
+      kind: "rows";
+      key: string;
+      count: number;
+      render: (indices: readonly number[], continued: boolean) => ReactNode;
+      lead?: ReactNode;
+      breakBefore?: boolean;
+    }
   | {
       kind: "note";
       key: string;
@@ -23,6 +35,7 @@ export type FlowItem =
     };
 
 type NoteInfo = { key: string; label: string };
+type RowsInfo = Omit<Extract<FlowItem, { kind: "rows" }>, "kind" | "breakBefore">;
 type TableInfo = {
   key: string;
   open: string;
@@ -32,6 +45,7 @@ type TableInfo = {
 };
 type Unit =
   | { t: "node"; id: string; node: ReactNode; breakBefore: boolean }
+  | { t: "trow"; id: string; block: RowsInfo; index: number; breakBefore: boolean }
   | {
       t: "html";
       id: string;
@@ -106,12 +120,22 @@ function buildUnits(items: readonly FlowItem[]): {
   units: Unit[];
   tables: TableInfo[];
   notes: NoteInfo[];
+  blocks: RowsInfo[];
 } {
   const units: Unit[] = [];
   const tables: TableInfo[] = [];
   const notes: NoteInfo[] = [];
+  const blocks: RowsInfo[] = [];
   for (const item of items) {
     const breakBefore = Boolean(item.breakBefore);
+    if (item.kind === "rows") {
+      const block: RowsInfo = { key: item.key, count: item.count, render: item.render, lead: item.lead };
+      blocks.push(block);
+      for (let index = 0; index < item.count; index++) {
+        units.push({ t: "trow", id: `tr:${item.key}:${index}`, block, index, breakBefore: breakBefore && index === 0 });
+      }
+      continue;
+    }
     if (item.kind === "node") {
       units.push({
         t: "node",
@@ -157,7 +181,7 @@ function buildUnits(items: readonly FlowItem[]): {
       });
     });
   }
-  return { units, tables, notes };
+  return { units, tables, notes, blocks };
 }
 
 function NoteBox({ label, html, continued }: { label: string; html: string; continued: boolean }) {
@@ -184,10 +208,26 @@ function renderUnits(units: readonly Unit[]): ReactNode[] {
       i++;
       continue;
     }
-    const group: Exclude<Unit, { t: "node" }>[] = [];
+    if (u.t === "trow") {
+      const indices: number[] = [];
+      while (i < units.length) {
+        const r = units[i];
+        if (r.t !== "trow" || r.block.key !== u.block.key) break;
+        indices.push(r.index);
+        i++;
+      }
+      out.push(
+        <Fragment key={u.id}>
+          {indices[0] === 0 && u.block.lead}
+          {u.block.render(indices, indices[0] > 0)}
+        </Fragment>,
+      );
+      continue;
+    }
+    const group: Exclude<Unit, { t: "node" | "trow" }>[] = [];
     while (i < units.length) {
       const g = units[i];
-      if (g.t === "node" || g.note.key !== u.note.key) break;
+      if (g.t === "node" || g.t === "trow" || g.note.key !== u.note.key) break;
       group.push(g);
       i++;
     }
@@ -215,6 +255,8 @@ function renderUnits(units: readonly Unit[]): ReactNode[] {
 }
 
 const SAFETY_PX = 6;
+/** A "rows" table never leaves fewer rows than this on either side of a sheet break. */
+const MIN_ROWS = 2;
 
 export function A4Pages({
   items,
@@ -227,7 +269,7 @@ export function A4Pages({
   /** Sheet height the content is packed into — "210mm" for landscape sheets. */
   pageHeight?: string;
 }) {
-  const { units, tables, notes } = useMemo(() => buildUnits(items), [items]);
+  const { units, tables, notes, blocks } = useMemo(() => buildUnits(items), [items]);
   const measureRef = useRef<HTMLDivElement>(null);
   const [version, setVersion] = useState(0);
   const [pages, setPages] = useState<Unit[][] | null>(null);
@@ -261,6 +303,12 @@ export function A4Pages({
 
     // A row is measured as a one-row table: its own height is that minus the header-only table.
     const cost = (u: Unit, note: string | null, table: string | null) => {
+      if (u.t === "trow") {
+        const key = u.block.key;
+        const own = Math.max(0, h(u.id) - h(`rh:${key}`));
+        // Opening the table on this sheet: its header — with the lead on its first rows, "continued" after.
+        return table === key ? own : own + h(u.index === 0 ? `rl:${key}` : `rc:${key}`);
+      }
       let c = u.t === "row" ? Math.max(0, h(u.id) - h(`th:${u.table.key}`)) : h(u.id);
       if (u.t !== "node") {
         if (note !== u.note.key) c += h(`nc:${u.note.key}`);
@@ -280,17 +328,35 @@ export function A4Pages({
       note = null;
       table = null;
     };
+    const place = (u: Unit) => {
+      used += cost(u, note, table);
+      cur.push(u);
+      note = u.t === "node" || u.t === "trow" ? null : u.note.key;
+      table = u.t === "row" ? u.table.key : u.t === "trow" ? u.block.key : null;
+    };
     for (const u of units) {
       if (u.breakBefore && cur.length) flush();
-      let c = cost(u, note, table);
-      if (used + c > budget && cur.length) {
+      if (used + cost(u, note, table) > budget && cur.length) {
+        let carry: Unit[] = [];
+        if (u.t === "trow") {
+          let onSheet = 0;
+          for (let k = cur.length - 1; k >= 0; k--) {
+            const prev = cur[k];
+            if (prev.t !== "trow" || prev.block.key !== u.block.key) break;
+            onSheet++;
+          }
+          const left = u.block.count - u.index;
+          // Orphan: too few rows would open the table at this sheet's foot — start it on the next one.
+          if (onSheet > 0 && onSheet < MIN_ROWS && onSheet < cur.length) carry = cur.splice(cur.length - onSheet);
+          // Widow: too few rows would follow the break — take some along from this sheet, or the
+          // whole table's part on it when that would leave it too few.
+          else if (left < MIN_ROWS && onSheet - (MIN_ROWS - left) >= MIN_ROWS) carry = cur.splice(cur.length - (MIN_ROWS - left));
+          else if (left < MIN_ROWS && onSheet > 0 && onSheet < cur.length) carry = cur.splice(cur.length - onSheet);
+        }
         flush();
-        c = cost(u, null, null);
+        carry.forEach(place);
       }
-      cur.push(u);
-      used += c;
-      note = u.t === "node" ? null : u.note.key;
-      table = u.t === "row" ? u.table.key : null;
+      place(u);
     }
     if (cur.length || out.length === 0) out.push(cur);
     setPages(out);
@@ -339,11 +405,24 @@ export function A4Pages({
             {units.map((u) =>
               u.t === "node"
                 ? measureWrap(u.id, u.node)
-                : u.t === "html"
-                  ? measureWrap(u.id, measureHtml(u.html))
-                  : measureWrap(u.id, measureHtml(tableHtml(u.table, [u.row]))),
+                : u.t === "trow"
+                  ? measureWrap(u.id, u.block.render([u.index], false))
+                  : u.t === "html"
+                    ? measureWrap(u.id, measureHtml(u.html))
+                    : measureWrap(u.id, measureHtml(tableHtml(u.table, [u.row]))),
             )}
             {tables.map((t) => measureWrap(`th:${t.key}`, measureHtml(tableHtml(t, []))))}
+            {blocks.flatMap((b) => [
+              measureWrap(`rh:${b.key}`, b.render([], false)),
+              measureWrap(
+                `rl:${b.key}`,
+                <>
+                  {b.lead}
+                  {b.render([], false)}
+                </>,
+              ),
+              measureWrap(`rc:${b.key}`, b.render([], true)),
+            ])}
             {notes.map((n) =>
               measureWrap(
                 `nc:${n.key}`,

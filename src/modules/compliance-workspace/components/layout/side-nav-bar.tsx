@@ -19,7 +19,7 @@ export function SideNavBar() {
         </div>
         <div className="min-w-0">
           <div className="text-[13px] font-semibold leading-tight">Compliance Workspace</div>
-          <div className="text-[11px] text-white/55">VIU – Barang Konsumsi</div>
+          <div className="text-[11px] text-white/55">VIU Barang Konsumsi · VKI</div>
         </div>
       </div>
 

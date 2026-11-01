@@ -1,6 +1,7 @@
 import "server-only";
 
 import { VIU_KONSUMSI_KBLI } from "@/modules/schemes/viu-konsumsi/terms";
+import { SCHEME_META, type ComplianceScheme } from "../scheme";
 import { splitKbliEntries, type KbliCategory } from "@/modules/shared/schema";
 import { LEGALITAS_CATEGORIES, buildLegalitasRows, kbliCheck, type LegalitasRow } from "../legalitas";
 import { loadCaseDocuments } from "./document-statuses";
@@ -16,7 +17,7 @@ export type LegalitasStage = {
     apiType: string;
     pic: string;
   };
-  kbli: ReturnType<typeof kbliCheck>;
+  kbli: ReturnType<typeof kbliCheck> | null;
   rows: LegalitasRow[];
 };
 
@@ -38,8 +39,13 @@ type LegalPayload = {
  * Tahap 2 data for one case — the same document checklist and verification statuses every other
  * workspace reads (loadCaseDocuments), read only.
  */
-export async function loadLegalitasStage(applicationId: string): Promise<LegalitasStage | null> {
-  const documents = await loadCaseDocuments(applicationId, LEGALITAS_CATEGORIES);
+export async function loadLegalitasStage(
+  applicationId: string,
+  scheme: ComplianceScheme = "konsumsi",
+  /** The document categories to show (VKI splits Legalitas and Perpajakan over two stages). */
+  categories: string[] = LEGALITAS_CATEGORIES,
+): Promise<LegalitasStage | null> {
+  const documents = await loadCaseDocuments(applicationId, categories);
   if (!documents) return null;
   const { company, checklist, statuses } = documents;
   const payload = documents.payload as unknown as LegalPayload;
@@ -56,7 +62,7 @@ export async function loadLegalitasStage(applicationId: string): Promise<Legalit
     skNumber: payload.skNumber || null,
     sktNumber: payload.sktNumber || null,
     taxProofYears: (payload.taxProofs ?? []).map((proof) => proof.year).filter((year): year is string => Boolean(year)),
-  });
+  }, { categories, schemeId: SCHEME_META[scheme].schemeId });
 
   const address = company
     ? [company.addressJalan, company.addressDesa, company.addressKecamatan, company.addressKota, company.addressProvinsi].filter(Boolean).join(", ")
@@ -72,7 +78,8 @@ export async function loadLegalitasStage(applicationId: string): Promise<Legalit
       apiType: company?.apiType ?? "—",
       pic: [payload.contactFullName ?? company?.contactFullName, payload.contactEmail ?? company?.contactEmail].filter(Boolean).join(" · ") || "—",
     },
-    kbli: kbliCheck(VIU_KONSUMSI_KBLI, utama.map((entry) => entry.code)),
+    // Only VIU Konsumsi restricts the KBLI Utama to a list.
+    kbli: scheme === "konsumsi" ? kbliCheck(VIU_KONSUMSI_KBLI, utama.map((entry) => entry.code)) : null,
     rows,
   };
 }

@@ -1,19 +1,23 @@
-import { WORKSPACE_KEYS, type WorkspaceKey, type WorkspaceStatuses } from "./workspace-status";
+import { requirementWeights } from "./requirements";
+import type { ComplianceScheme } from "./scheme";
+import { workspaceKeysOf, type WorkspaceKey, type WorkspaceStatuses } from "./workspace-status";
 
 /**
- * Compliance Workspace rules — handover, readiness and the compliance summary (VIU Konsumsi).
+ * Compliance Workspace rules — handover, readiness and the compliance summary (VIU Konsumsi, VKI).
  * Pure functions over the derived workspace statuses (workspace-status.ts) and Compliance's own
  * findings; nothing here is stored.
  */
 
-/**
- * 42 requirements = 40 from the workspaces + 2 administrative LPV checks (Final Review, Dossier).
- * VIU Konsumsi has no Technical Analyst: the 6 product-plan requirements are the Verifikator's.
- */
-export const REQUIREMENTS_PER_WORKSPACE: Record<WorkspaceKey, number> = { CR: 6, SV: 6, VF: 26, PM: 2 };
+/** The 2 administrative LPV checks (Final Review, Dossier), on top of each scheme's workspace requirements. */
 export const ADMINISTRATIVE_REQUIREMENTS = 2;
-export const TOTAL_REQUIREMENTS =
-  WORKSPACE_KEYS.reduce((sum, key) => sum + REQUIREMENTS_PER_WORKSPACE[key], 0) + ADMINISTRATIVE_REQUIREMENTS;
+
+/** All requirements of a scheme: its workspace requirements (requirements.ts) + the administrative checks. */
+export function totalRequirements(scheme: ComplianceScheme = "konsumsi"): number {
+  return Object.values(requirementWeights(scheme)).reduce((sum, count) => sum + (count ?? 0), 0) + ADMINISTRATIVE_REQUIREMENTS;
+}
+
+/** VIU Konsumsi: 42 requirements = 40 from the workspaces + 2 administrative checks. */
+export const TOTAL_REQUIREMENTS = totalRequirements("konsumsi");
 
 /** A resolved finding must say how it was resolved. */
 export const MIN_RESOLUTION_NOTE_LENGTH = 10;
@@ -44,12 +48,12 @@ export const READINESS_LABELS: Record<Readiness, string> = {
 };
 
 export function allWorkspaceCompleted(statuses: WorkspaceStatuses): boolean {
-  return WORKSPACE_KEYS.every((key) => statuses[key] === "COMPLETED");
+  return workspaceKeysOf(statuses).every((key) => statuses[key] === "COMPLETED");
 }
 
 export function handoverStatus(statuses: WorkspaceStatuses, complianceStatus: ComplianceStatusValue): HandoverStatus {
   if (!allWorkspaceCompleted(statuses)) {
-    return WORKSPACE_KEYS.some((key) => statuses[key] === "ISSUE") ? "HANDOVER_SEBAGIAN" : "MENUNGGU_HANDOVER";
+    return workspaceKeysOf(statuses).some((key) => statuses[key] === "ISSUE") ? "HANDOVER_SEBAGIAN" : "MENUNGGU_HANDOVER";
   }
   return complianceStatus === "SELESAI" ? "HANDOVER_LENGKAP" : "SIAP_KONSOLIDASI";
 }
@@ -93,20 +97,22 @@ export type ComplianceSummary = {
 export function complianceSummary(
   statuses: WorkspaceStatuses,
   findings: { kind: FindingKind }[],
-  administrative: { finalReviewDone: boolean; dossierComplete: boolean; lhviuIssuedAt?: string | null },
+  administrative: { finalReviewDone: boolean; dossierComplete: boolean; lhviuIssuedAt?: string | null; scheme?: ComplianceScheme },
 ): ComplianceSummary {
+  const scheme = administrative.scheme ?? "konsumsi";
+  const weights = requirementWeights(scheme);
   let available = 0;
   let pending = 0;
-  for (const key of WORKSPACE_KEYS) {
+  for (const key of workspaceKeysOf(statuses)) {
     const handedOver = statuses[key] === "COMPLETED" || statuses[key] === "ISSUE";
-    if (handedOver) available += REQUIREMENTS_PER_WORKSPACE[key];
-    else pending += REQUIREMENTS_PER_WORKSPACE[key];
+    if (handedOver) available += weights[key] ?? 0;
+    else pending += weights[key] ?? 0;
   }
   const activeFindings = findings.filter(isActiveFinding).length;
   const sesuai = Math.max(0, available - activeFindings);
   const applies = administrativeApplies(administrative.lhviuIssuedAt);
   const adminDone = applies ? Number(administrative.finalReviewDone) + Number(administrative.dossierComplete) : 0;
-  const total = applies ? TOTAL_REQUIREMENTS : TOTAL_REQUIREMENTS - ADMINISTRATIVE_REQUIREMENTS;
+  const total = totalRequirements(scheme) - (applies ? 0 : ADMINISTRATIVE_REQUIREMENTS);
   return {
     total,
     administrativeTotal: applies ? ADMINISTRATIVE_REQUIREMENTS : 0,
@@ -169,15 +175,15 @@ export function caseCategory(
 }
 
 /**
- * The workspace a case is currently at: the first one, in CR → SV → VF → PM order, that has
+ * The workspace a case is currently at: the first one, in CR → SV → VF (→ TA) → PM order, that has
  * not completed yet; PM once everything is completed. Workspaces don't run in a strict order here
  * (CR schedules survey and dokumen independently, and the PM reviews each report as it
  * comes), so the earliest unfinished one is where the case is held up.
  */
 export function lastWorkspace(statuses: WorkspaceStatuses): WorkspaceKey {
-  return WORKSPACE_KEYS.find((key) => statuses[key] !== "COMPLETED") ?? "PM";
+  return workspaceKeysOf(statuses).find((key) => statuses[key] !== "COMPLETED") ?? "PM";
 }
 
 export function completedWorkspaceCount(statuses: WorkspaceStatuses): number {
-  return WORKSPACE_KEYS.filter((key) => statuses[key] === "COMPLETED").length;
+  return workspaceKeysOf(statuses).filter((key) => statuses[key] === "COMPLETED").length;
 }

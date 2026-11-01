@@ -7,14 +7,14 @@ import { cn } from "@/lib/utils";
 import { COMPLIANCE_STATUS_LABELS, READINESS_LABELS } from "../../consolidation";
 import type { CaseRow } from "../../case-list";
 import { COMPLIANCE_HOME } from "../../navigation";
+import { SCHEME_META } from "../../scheme";
 import { issueTabFor } from "../../finding-rules";
-import { REQUIREMENTS } from "../../requirements";
-import { WORKSPACE_KEYS, WORKSPACE_LABELS } from "../../workspace-status";
+import { REQUIREMENT_LABELS } from "../../requirements";
+import { WORKSPACE_LABELS, stateOf, workspaceKeysOf } from "../../workspace-status";
 import { CategoryBadge, HandoverBadge, LhviuBadge, Pill, WorkspaceStateBadge } from "./badges";
 import { formatCalendarDate, formatDate } from "./format";
 
 const KIND_LABELS = { OPEN: "Open Issue", KLARIFIKASI: "Perlu Klarifikasi", CONFLICT: "Conflict", RESOLVED: "Resolved" } as const;
-const REQUIREMENT_LABELS = Object.fromEntries(REQUIREMENTS.map((requirement) => [requirement.key, requirement.label])) as Record<string, string>;
 const FOOTER_BUTTON =
   "inline-flex h-9 items-center rounded-lg px-3.5 text-[13px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-[#1677FF]/40";
 
@@ -52,7 +52,7 @@ export function CaseQuickDrawer({ row, onClose }: { row: CaseRow | null; onClose
                 <KeyValue label="No. Permohonan"><span className="font-mono">{row.applicationNumber}</span></KeyValue>
                 <KeyValue label="Pemohon">{row.companyName}</KeyValue>
                 <KeyValue label="NIB"><span className="font-mono">{row.nib}</span></KeyValue>
-                <KeyValue label="Jenis">VIU – Barang Konsumsi</KeyValue>
+                <KeyValue label="Jenis">{SCHEME_META[row.scheme].label}</KeyValue>
                 <KeyValue label="Tanggal Masuk">
                   {formatDate(row.submittedAt)}
                   {row.submittedIsSystemDate && <span className="text-[#64748B]"> (tanggal input sistem)</span>}
@@ -63,16 +63,16 @@ export function CaseQuickDrawer({ row, onClose }: { row: CaseRow | null; onClose
               <section className="flex flex-col gap-2">
                 <div className="flex items-baseline justify-between">
                   <h3 className="text-[13px] font-semibold">Status Workspace</h3>
-                  <span className="text-[12px] text-[#64748B] tabular-nums">Progress {row.completedWorkspaces} / 5</span>
+                  <span className="text-[12px] text-[#64748B] tabular-nums">Progress {row.completedWorkspaces} / {workspaceKeysOf(row.workspaces).length}</span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-[#EEF2F6]" aria-hidden>
-                  <div className="h-full rounded-full bg-[#16A34A]" style={{ width: `${(row.completedWorkspaces / 5) * 100}%` }} />
+                  <div className="h-full rounded-full bg-[#16A34A]" style={{ width: `${(row.completedWorkspaces / workspaceKeysOf(row.workspaces).length) * 100}%` }} />
                 </div>
                 <ul className="flex flex-col divide-y divide-[#EEF2F6]">
-                  {WORKSPACE_KEYS.map((key) => (
+                  {workspaceKeysOf(row.workspaces).map((key) => (
                     <li key={key} className="flex items-center justify-between py-1.5">
                       <span>{WORKSPACE_LABELS[key]}</span>
-                      <WorkspaceStateBadge state={row.workspaces[key]} />
+                      <WorkspaceStateBadge state={stateOf(row.workspaces, key)} />
                     </li>
                   ))}
                 </ul>
@@ -121,7 +121,7 @@ export function CaseQuickDrawer({ row, onClose }: { row: CaseRow | null; onClose
               </section>
 
               <section className="flex flex-col gap-2">
-                <h3 className="text-[13px] font-semibold">LHVIU</h3>
+                <h3 className="text-[13px] font-semibold">{SCHEME_META[row.scheme].output}</h3>
                 <div className="flex flex-wrap items-center gap-2">
                   <LhviuBadge issued={row.lhviuIssued} />
                   {row.lhviuNumber && <span className="font-mono text-[12px]">{row.lhviuNumber}</span>}

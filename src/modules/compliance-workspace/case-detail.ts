@@ -1,8 +1,10 @@
 import { STATUS_LABELS, type ApplicationStatusValue } from "@/modules/company-workspace/status";
 import type { CaseRow } from "./case-list";
+import type { VkiStageInput } from "./vki-stages";
 import { formatCalendarDate, formatDate, formatDateTime } from "./components/case-list/format";
 import type { FindingKind } from "./consolidation";
-import { CASE_STEPS, requirementsOfStep } from "./requirements";
+import { caseStepsOf, requirementsOfStep } from "./requirements";
+import { SCHEME_META } from "./scheme";
 import { WORKSPACE_LABELS, type WorkspaceKey, type WorkspaceStatuses } from "./workspace-status";
 
 /**
@@ -22,6 +24,8 @@ export type CaseDetailInput = {
   applicationStatus: string;
   /** Process dates for the report timeline: the Verifikator's report date and the first Surat Tugas date. */
   milestones?: { verificationDate: string | null; firstScheduledDate: string | null };
+  /** VKI only: production, workforce, statements and technical analysis (server/load-vki.ts). */
+  vki?: VkiStageInput;
   /** The applicant's PIC as entered on the application form. */
   contact: { name: string; designation: string | null; phone: string | null; email: string | null } | null;
   legal: {
@@ -39,7 +43,7 @@ export type CaseDetailInput = {
   label: { statement: Evidence | null; documentation: Evidence | null };
   workingCapital: { amount: string | null; statement: Evidence | null; supporting: Evidence[] };
   /** One per survey/dokumen assignment: `title` names the report ("Laporan Survey Lokasi Kantor"), `report` adds its assignment number. */
-  pmReviews: { source: "SV" | "VF"; title: string; report: string; status: string | null; by: string | null; at: string | null }[];
+  pmReviews: { source: "SV" | "VF" | "TA"; title: string; report: string; status: string | null; by: string | null; at: string | null }[];
   /** issuedBy: the Project Manager who uploaded the signed LHVIU. */
   lhviu: { number: string | null; issuedAt: string | null; validUntil: string | null; issuedBy: string | null; file: Evidence | null };
   findings: DetailFinding[];
@@ -213,7 +217,7 @@ function stepContent(num: number, input: CaseDetailInput): Pick<CaseStep, "keyDa
     case 11:
       return {
         keyData: [
-          ["Nomor LHVIU", input.lhviu.number ?? DASH],
+          [`Nomor ${SCHEME_META[input.row.scheme].output}`, input.lhviu.number ?? DASH],
           ["Tanggal terbit", input.lhviu.issuedAt ? formatCalendarDate(input.lhviu.issuedAt) : DASH],
           ["Berlaku sampai", input.lhviu.validUntil ? formatCalendarDate(input.lhviu.validUntil) : DASH],
           ["Diterbitkan oleh", input.lhviu.issuedBy ? `${input.lhviu.issuedBy} (Project Manager)` : DASH],
@@ -246,7 +250,7 @@ export function buildSummary(input: CaseDetailInput): CaseSummary {
   return {
     applicationNumber: row.applicationNumber,
     submittedAt: `${formatDate(row.submittedAt)}${row.submittedIsSystemDate ? " (tanggal input sistem)" : ""}`,
-    jenis: "Produk Tekstil sebagai Barang Konsumsi",
+    jenis: row.scheme === "vki" ? "Verifikasi Kemampuan Industri" : "Produk Tekstil sebagai Barang Konsumsi",
     category: CATEGORY_LABELS[input.applicationCategory] ?? (input.applicationCategory || DASH),
     status: STATUS_LABELS[input.applicationStatus as ApplicationStatusValue] ?? input.applicationStatus,
     companyName: row.companyName,
@@ -257,9 +261,16 @@ export function buildSummary(input: CaseDetailInput): CaseSummary {
   };
 }
 
+/**
+ * The generic panel content of a VKI stage: Ringkasan, Review & Approval and LHVKI share VIU
+ * Konsumsi's (stages 1, 10, 11 there; 1, 15, 16 in VKI); the VKI-specific stages have their own views.
+ */
+const VKI_GENERIC_CONTENT: Record<number, number> = { 1: 1, 15: 10, 16: 11 };
+
 export function buildCaseSteps(input: CaseDetailInput): CaseStep[] {
-  return CASE_STEPS.map((step) => {
-    const keys = new Set<string>(requirementsOfStep(step.num));
+  const scheme = input.row.scheme;
+  return caseStepsOf(scheme).map((step) => {
+    const keys = new Set<string>(requirementsOfStep(step.num, scheme));
     const findings = input.findings.filter((finding) => keys.has(finding.requirementKey));
     return {
       num: step.num,
@@ -268,7 +279,7 @@ export function buildCaseSteps(input: CaseDetailInput): CaseStep[] {
       sourceLabel: WORKSPACE_LABELS[step.source],
       status: stepStatus(step.source, input.row.workspaces, findings),
       findings,
-      ...stepContent(step.num, input),
+      ...stepContent(scheme === "vki" ? (VKI_GENERIC_CONTENT[step.num] ?? 0) : step.num, input),
     };
   });
 }

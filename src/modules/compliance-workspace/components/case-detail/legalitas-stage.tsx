@@ -1,6 +1,7 @@
 import { Check, Info } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import type { ComplianceScheme } from "../../scheme";
 import type { LegalitasStage as LegalitasStageData } from "../../server/load-legalitas";
 import { Pill } from "../case-list/badges";
 import { DocumentChip, DocumentStatus, Field, RequirementTag, SummaryChips } from "./stage-ui";
@@ -9,16 +10,32 @@ import { DocumentChip, DocumentStatus, Field, RequirementTag, SummaryChips } fro
  * Tahap 2 "Perusahaan & Legalitas" — the Verifikator design's layout, read only: no Edit, and the
  * verification status is shown as recorded instead of a dropdown.
  */
-export function LegalitasStage({ data, handedOver }: { data: LegalitasStageData; handedOver: boolean }) {
+export function LegalitasStage({
+  data,
+  handedOver,
+  scheme = "konsumsi",
+  showCompany = true,
+  matrixTitle = "Matriks Pemeriksaan Perusahaan & Legalitas",
+}: {
+  data: LegalitasStageData;
+  handedOver: boolean;
+  scheme?: ComplianceScheme;
+  /** VKI shows the company card on Perusahaan & Legalitas only, not again on Perpajakan. */
+  showCompany?: boolean;
+  matrixTitle?: string;
+}) {
   const { company, kbli, rows } = data;
   const verified = rows.filter((row) => row.status === "VERIFIED").length;
 
   return (
     <>
+      {showCompany && (
       <section className="rounded-xl border border-[#E5EAF0] bg-white shadow-sm">
         <div className="border-b border-[#EEF2F6] px-6 py-5">
-          <h3 className="text-[17px] font-semibold">Data Perusahaan (API-U)</h3>
-          <p className="text-[13px] text-[#64748B]">Identitas dan legalitas Angka Pengenal Importir Umum (API-U), seperti yang diajukan.</p>
+          <h3 className="text-[17px] font-semibold">{scheme === "vki" ? "Data Perusahaan" : "Data Perusahaan (API-U)"}</h3>
+          <p className="text-[13px] text-[#64748B]">
+            {scheme === "vki" ? "Identitas dan legalitas perusahaan industri, seperti yang diajukan." : "Identitas dan legalitas Angka Pengenal Importir Umum (API-U), seperti yang diajukan."}
+          </p>
         </div>
         <div className="flex flex-col gap-5 px-6 py-5">
           <div className="grid gap-x-12 gap-y-4 md:grid-cols-2">
@@ -37,6 +54,7 @@ export function LegalitasStage({ data, handedOver }: { data: LegalitasStageData;
             <Field label="PIC Perusahaan">{company.pic}</Field>
           </div>
 
+          {kbli && (
           <div className="flex gap-3 rounded-xl border border-[#BFD7FF] bg-[#F0F6FF] px-5 py-4">
             <Info className="mt-0.5 size-4.5 shrink-0 text-[#1677FF]" aria-hidden />
             <div className="flex flex-col gap-2">
@@ -67,12 +85,14 @@ export function LegalitasStage({ data, handedOver }: { data: LegalitasStageData;
               {kbli.regulation && <p className="text-[12px] text-[#64748B]">Note: Sesuai {kbli.regulation}</p>}
             </div>
           </div>
+          )}
         </div>
       </section>
+      )}
 
       <section className="rounded-xl border border-[#E5EAF0] bg-white shadow-sm">
         <div className="flex flex-col gap-2 px-6 py-5">
-          <h3 className="text-[17px] font-semibold">Matriks Pemeriksaan Perusahaan &amp; Legalitas</h3>
+          <h3 className="text-[17px] font-semibold">{matrixTitle}</h3>
           <p className="text-[13px] text-[#64748B]">
             Setiap dokumen dengan status yang dicatat workspace sumber, tipe wajib dan dasar regulasinya. Compliance hanya menampilkan.
           </p>

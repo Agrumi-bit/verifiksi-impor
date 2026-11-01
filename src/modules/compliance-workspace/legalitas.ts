@@ -1,4 +1,5 @@
 import { formatLegalBasis, resolveDocumentRequirement } from "@/modules/schemes";
+import type { SchemeId } from "@/modules/schemes/types";
 import { buildDocumentRows, documentSummary, type ChecklistInput, type DocumentRow, type DocumentStatusInput } from "./document-matrix";
 
 /**
@@ -63,8 +64,9 @@ export function buildLegalitasRows(
   checklist: ChecklistInput[],
   statuses: Record<string, DocumentStatusInput | undefined>,
   values: LegalitasValues,
+  options: { categories?: string[]; schemeId?: SchemeId } = {},
 ): LegalitasRow[] {
-  return buildDocumentRows(checklist, statuses, { categories: LEGALITAS_CATEGORIES, valueFor: (key) => valueOf(key, values) });
+  return buildDocumentRows(checklist, statuses, { categories: options.categories ?? LEGALITAS_CATEGORIES, valueFor: (key) => valueOf(key, values), schemeId: options.schemeId });
 }
 
 export const legalitasSummary = documentSummary;

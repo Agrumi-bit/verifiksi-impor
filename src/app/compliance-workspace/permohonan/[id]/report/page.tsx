@@ -19,7 +19,23 @@ export default async function ComplianceReportPage({ params }: { params: Promise
   const { id } = await params;
   const detail = await loadCaseDetail(id);
   if (!detail) notFound();
-  const [legalitas, lokasi, konsumsi] = await Promise.all([loadLegalitasStage(id), loadLokasiStage(id), loadKonsumsiStage(id)]);
-  const report = buildComplianceReport({ detail, legalitas, lokasi, konsumsi, generatedAt: new Date().toISOString() });
+  const scheme = detail.row.scheme;
+  const generatedAt = new Date().toISOString();
+  const report =
+    scheme === "vki"
+      ? buildComplianceReport({
+          detail,
+          legalitas: await loadLegalitasStage(id, "vki", ["Legalitas Perusahaan"]),
+          perpajakan: await loadLegalitasStage(id, "vki", ["Perpajakan"]),
+          lokasi: await loadLokasiStage(id, "vki"),
+          konsumsi: null,
+          vki: detail.vki ?? null,
+          generatedAt,
+        })
+      : buildComplianceReport({
+          detail,
+          ...(await Promise.all([loadLegalitasStage(id), loadLokasiStage(id), loadKonsumsiStage(id)]).then(([legalitas, lokasi, konsumsi]) => ({ legalitas, lokasi, konsumsi }))),
+          generatedAt,
+        });
   return <ComplianceReportView report={report} />;
 }

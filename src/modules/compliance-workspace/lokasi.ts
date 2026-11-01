@@ -1,5 +1,6 @@
 import { DOCUMENT_SIFAT_LABELS, formatLegalBasis, resolveDocumentRequirement } from "@/modules/schemes";
 import type { VerificationStatusValue } from "@/modules/company/document-versions";
+import type { SchemeId } from "@/modules/schemes/types";
 import type { Evidence } from "./case-detail";
 
 /**
@@ -9,7 +10,7 @@ import type { Evidence } from "./case-detail";
  * surveyor's own answer, the status is the reviewer's own decision.
  */
 
-const SCHEME = "VIU_KONSUMSI" as const;
+const DEFAULT_SCHEME: SchemeId = "VIU_KONSUMSI";
 
 export type FieldAnswer = "sesuai" | "tidak" | null;
 export type LocationDocument = Evidence & { key: string; status: VerificationStatusValue };
@@ -42,7 +43,8 @@ export type LocationInput = {
   visit: LocationVisitResult | null;
 };
 
-export type LokasiInput = { submittedAt: string; locations: LocationInput[] };
+/** schemeId: the scheme whose document definitions give the requirement type and regulation (VIU Konsumsi when absent). */
+export type LokasiInput = { submittedAt: string; locations: LocationInput[]; schemeId?: SchemeId };
 
 const ANSWER_LABELS: Record<"sesuai" | "tidak", string> = { sesuai: "Sesuai", tidak: "Tidak Sesuai" };
 const BUILDING_LABELS = { MILIK_SENDIRI: "Milik Sendiri", SEWA: "Sewa" } as const;
@@ -62,9 +64,9 @@ export function monthsUntil(fromIso: string, to: string): number | null {
   return months;
 }
 
-function regulationOf(document: LocationDocument | undefined): { requirement: string; regulation: string } {
+function regulationOf(document: LocationDocument | undefined, schemeId: SchemeId): { requirement: string; regulation: string } {
   if (!document) return { requirement: "—", regulation: "—" };
-  const requirement = resolveDocumentRequirement([SCHEME], document.key);
+  const requirement = resolveDocumentRequirement([schemeId], document.key);
   const def = requirement.bySchemes[0]?.def;
   return {
     requirement: requirement.sifat ? DOCUMENT_SIFAT_LABELS[requirement.sifat] : "—",
@@ -90,7 +92,7 @@ function fieldTone(answer: FieldAnswer): LokasiRow["fieldTone"] {
   return answer === "sesuai" ? "ok" : answer === "tidak" ? "bad" : "none";
 }
 
-function rowsOf(location: LocationInput, submittedAt: string): LokasiRow[] {
+function rowsOf(location: LocationInput, submittedAt: string, schemeId: SchemeId): LokasiRow[] {
   const visited = location.visit !== null;
   const tenure = location.documents.find((document) => /:(ownership|lease):/.test(document.key));
   const registration = location.documents.find((document) => document.key.endsWith(":warehouseRegistration"));
@@ -103,7 +105,7 @@ function rowsOf(location: LocationInput, submittedAt: string): LokasiRow[] {
       document: tenure ?? null,
       field: answerLabel(location.visit?.addressMatch ?? null, visited),
       fieldTone: fieldTone(location.visit?.addressMatch ?? null),
-      ...regulationOf(tenure),
+      ...regulationOf(tenure, schemeId),
     },
     {
       id: `${location.id}-tenure`,
@@ -113,7 +115,7 @@ function rowsOf(location: LocationInput, submittedAt: string): LokasiRow[] {
       document: tenure ?? null,
       field: answerLabel(location.visit?.ownershipMatch ?? null, visited),
       fieldTone: fieldTone(location.visit?.ownershipMatch ?? null),
-      ...regulationOf(tenure),
+      ...regulationOf(tenure, schemeId),
     },
   ];
   if (location.buildingStatus === "SEWA") {
@@ -126,7 +128,7 @@ function rowsOf(location: LocationInput, submittedAt: string): LokasiRow[] {
       document: tenure ?? null,
       field: answerLabel(location.visit?.leaseStillValid ?? null, visited),
       fieldTone: fieldTone(location.visit?.leaseStillValid ?? null),
-      ...regulationOf(tenure),
+      ...regulationOf(tenure, schemeId),
     });
   }
   if (location.type === "Gudang") {
@@ -138,7 +140,7 @@ function rowsOf(location: LocationInput, submittedAt: string): LokasiRow[] {
       document: registration ?? null,
       field: answerLabel(location.visit?.registrationMatch ?? null, visited),
       fieldTone: fieldTone(location.visit?.registrationMatch ?? null),
-      ...regulationOf(registration),
+      ...regulationOf(registration, schemeId),
     });
   }
   return rows;
@@ -153,7 +155,7 @@ export type LokasiStageView = {
 };
 
 export function buildLokasiStage(input: LokasiInput): LokasiStageView {
-  const groups = input.locations.map((location) => ({ location, rows: rowsOf(location, input.submittedAt) }));
+  const groups = input.locations.map((location) => ({ location, rows: rowsOf(location, input.submittedAt, input.schemeId ?? DEFAULT_SCHEME) }));
   const rows = groups.flatMap((group) => group.rows);
   const answered = rows.filter((row) => row.fieldTone !== "none");
   const matches = answered.filter((row) => row.fieldTone === "ok").length;

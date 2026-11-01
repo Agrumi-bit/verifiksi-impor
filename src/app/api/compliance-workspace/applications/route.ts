@@ -15,6 +15,7 @@ import {
 } from "@/modules/compliance-workspace/case-list";
 import { loadComplianceCases, loadCompliancePics } from "@/modules/compliance-workspace/server/load-cases";
 import { WORKSPACE_KEYS, type WorkspaceState } from "@/modules/compliance-workspace/workspace-status";
+import { isComplianceScheme, type ComplianceScheme } from "@/modules/compliance-workspace/scheme";
 
 const WORKSPACE_STATES: WorkspaceState[] = ["COMPLETED", "IN_PROGRESS", "ISSUE", "NOT_STARTED"];
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -29,6 +30,8 @@ function parseQuery(params: URLSearchParams): CaseQuery {
   for (const key of WORKSPACE_KEYS) workspaceState[key] = oneOf(params.get(`ws${key}`), WORKSPACE_STATES);
   const pageSize = Number(params.get("pageSize"));
   return {
+    // One scheme per list ("all" for pickers that need every case, e.g. Catat Temuan).
+    scheme: params.get("scheme") === "all" ? undefined : isComplianceScheme(params.get("scheme")) ? (params.get("scheme") as ComplianceScheme) : "konsumsi",
     q: params.get("q")?.slice(0, 100) ?? "",
     chip: oneOf(params.get("chip"), [...CASE_CATEGORIES, ...EXTRA_CHIPS]),
     lastWorkspace: oneOf(params.get("lastWorkspace"), WORKSPACE_KEYS),
@@ -48,12 +51,13 @@ function parseQuery(params: URLSearchParams): CaseQuery {
   };
 }
 
-/** Daftar Permohonan — VIU Konsumsi applications with their derived compliance state (read only). */
+/** Daftar Permohonan — VIU Konsumsi or VKI applications with their derived compliance state (read only). */
 export async function GET(request: Request) {
   const { error } = await requireComplianceSession();
   if (error) return error;
 
   const query = parseQuery(new URL(request.url).searchParams);
   const [rows, pics] = await Promise.all([loadComplianceCases(), loadCompliancePics()]);
-  return NextResponse.json({ data: { ...queryCases(rows, query), counts: chipCounts(rows), pics } });
+  // Counts and rows of the scheme on screen only.
+  return NextResponse.json({ data: { ...queryCases(rows, query), counts: chipCounts(query.scheme ? rows.filter((row) => row.scheme === query.scheme) : rows), pics } });
 }

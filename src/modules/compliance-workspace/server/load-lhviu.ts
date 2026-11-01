@@ -2,8 +2,7 @@ import "server-only";
 
 import { db } from "@/lib/db";
 import { lhviuIsIssued } from "@/modules/project-manager-workspace/lhviu-completion";
-import { applicationMatchesViuScheme } from "@/modules/project-manager-workspace/viu-schemes";
-import { KONSUMSI_SCHEME } from "./load-cases";
+import { COMPLIANCE_APPLICATIONS, schemeOfCase } from "./load-cases";
 
 export type IssuedLhviu = {
   applicationId: string;
@@ -20,7 +19,7 @@ export type IssuedLhviu = {
 /** Every LHVIU the Project Manager has issued for a VIU Konsumsi application — read only. */
 export async function loadIssuedLhviu(): Promise<IssuedLhviu[]> {
   const applications = await db.application.findMany({
-    where: { verificationType: "VIU", status: { notIn: ["DRAFT", "WITHDRAWN"] } },
+    where: COMPLIANCE_APPLICATIONS,
     select: {
       id: true,
       applicationNumber: true,
@@ -32,7 +31,7 @@ export async function loadIssuedLhviu(): Promise<IssuedLhviu[]> {
   });
   return applications.flatMap((app) => {
     const payload = app.payload as { importTypes?: string[]; companyName?: string; nibNumber?: string } | null;
-    if (!applicationMatchesViuScheme(app.verificationType, payload?.importTypes, KONSUMSI_SCHEME)) return [];
+    if (!schemeOfCase(app)) return [];
     const document = app.lhviuDocument as { path?: string; fileName?: string; number?: string; issuedAt?: string; uploadedByName?: string } | null;
     if (!document?.path || !lhviuIsIssued(document)) return [];
     return [

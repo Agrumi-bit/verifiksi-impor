@@ -3,7 +3,7 @@ import { buildLabelStage, buildUjiMutuStage, documentAgeMonths, type KonsumsiSta
 import { formatCalendarDate } from "../case-list/format";
 import { DataTable, DocumentChip, DocumentStatus, PendingHandover, RequirementTag, StageCard, SummaryChips, TD, VerdictPill } from "./stage-ui";
 
-function DocumentMatrix({ title, rows }: { title: string; rows: DocumentRow[] }) {
+export function DocumentMatrix({ title, rows }: { title: string; rows: DocumentRow[] }) {
   return (
     <StageCard title={title} description="Status yang dicatat Verifikator, tipe wajib dan dasar regulasinya. Compliance hanya menampilkan." aside={<SummaryChips rows={rows} />}>
       <DataTable

@@ -5,27 +5,48 @@
  * "Completed" (agreed rules):
  * - Customer Relation: the LHVIU is issued, or (before that) every Surat Tugas it scheduled is
  *   APPROVED by the Project Manager.
- * - Surveyor / Verifikator: every assignment of that schedule type is COMPLETED.
+ * - Surveyor / Verifikator / Technical Analyst: every assignment of that schedule type is COMPLETED.
  *   A survey assignment never reaches COMPLETED (it stops at SUBMITTED once every location is
  *   surveyed), so for a survey "done" is the PM approving its Laporan Survey — the same rule as
  *   project-manager-workspace/stage.ts.
  * - Project Manager: the LHVIU is issued.
  *
- * VIU Konsumsi has no Technical Analyst step: a "technical" assignment, if one exists, is ignored.
+ * The Technical Analyst is a workspace of VKI only. VIU Konsumsi has no Technical Analyst step: its
+ * statuses carry no TA entry and a "technical" assignment, if one exists, is ignored.
  */
 
-export const WORKSPACE_KEYS = ["CR", "SV", "VF", "PM"] as const;
+import type { ComplianceScheme } from "./scheme";
+
+/** Every workspace, in process order. A scheme uses the ones its statuses carry (workspaceKeysOf). */
+export const WORKSPACE_KEYS = ["CR", "SV", "VF", "TA", "PM"] as const;
 export type WorkspaceKey = (typeof WORKSPACE_KEYS)[number];
 
 export type WorkspaceState = "COMPLETED" | "IN_PROGRESS" | "ISSUE" | "NOT_STARTED";
-export type WorkspaceStatuses = Record<WorkspaceKey, WorkspaceState>;
+/** CR, SV, VF and PM always; TA only for a scheme with a Technical Analyst step (VKI). */
+export type WorkspaceStatuses = Record<Exclude<WorkspaceKey, "TA">, WorkspaceState> & { TA?: WorkspaceState };
 
 export const WORKSPACE_LABELS: Record<WorkspaceKey, string> = {
   CR: "Customer Relation",
   SV: "Surveyor",
   VF: "Verifikator",
+  TA: "Technical Analyst",
   PM: "Project Manager",
 };
+
+/** The workspaces of a case, in process order — the keys its statuses carry. */
+export function workspaceKeysOf(statuses: WorkspaceStatuses): WorkspaceKey[] {
+  return WORKSPACE_KEYS.filter((key) => statuses[key] !== undefined);
+}
+
+/** The workspaces of a scheme, in process order. */
+export function schemeWorkspaceKeys(scheme: ComplianceScheme): WorkspaceKey[] {
+  return scheme === "vki" ? [...WORKSPACE_KEYS] : WORKSPACE_KEYS.filter((key) => key !== "TA");
+}
+
+/** A case's state in one workspace (a workspace the scheme does not have counts as not started). */
+export function stateOf(statuses: WorkspaceStatuses, key: WorkspaceKey): WorkspaceState {
+  return statuses[key] ?? "NOT_STARTED";
+}
 
 export const WORKSPACE_STATE_LABELS: Record<WorkspaceState, string> = {
   COMPLETED: "Completed",
@@ -35,7 +56,7 @@ export const WORKSPACE_STATE_LABELS: Record<WorkspaceState, string> = {
 };
 
 export type AssignmentForWorkspaceStatus = {
-  /** 'survey' | 'dokumen' ('technical' is ignored) — null for legacy rows. */
+  /** 'survey' | 'dokumen' | 'technical' — null for legacy rows. */
   scheduleType: string | null;
   status: string;
   letterStatus: string;
@@ -48,9 +69,11 @@ export type WorkspaceStatusInput = {
   returnedByRole: string | null;
   assignments: AssignmentForWorkspaceStatus[];
   lhviuIssued: boolean;
+  /** Konsumsi when absent. */
+  scheme?: ComplianceScheme;
 };
 
-const SCHEDULE_TYPE_OF: Record<"SV" | "VF", string> = { SV: "survey", VF: "dokumen" };
+const SCHEDULE_TYPE_OF: Record<"SV" | "VF" | "TA", string> = { SV: "survey", VF: "dokumen", TA: "technical" };
 
 function isAssignmentDone(assignment: AssignmentForWorkspaceStatus): boolean {
   if (assignment.status === "COMPLETED") return true;
@@ -82,15 +105,17 @@ export function withoutTechnical<T extends { scheduleType: string | null }>(assi
 }
 
 export function deriveWorkspaceStatuses(raw: WorkspaceStatusInput): WorkspaceStatuses {
-  const input = { ...raw, assignments: withoutTechnical(raw.assignments) };
-  const ofType = (key: "SV" | "VF") => input.assignments.filter((a) => a.scheduleType === SCHEDULE_TYPE_OF[key]);
+  const withTechnical = raw.scheme === "vki";
+  const input = { ...raw, assignments: withTechnical ? raw.assignments : withoutTechnical(raw.assignments) };
+  const ofType = (key: "SV" | "VF" | "TA") => input.assignments.filter((a) => a.scheduleType === SCHEDULE_TYPE_OF[key]);
   const SV = scheduledWorkspaceState(ofType("SV"));
   const VF = scheduledWorkspaceState(ofType("VF"));
+  const TA = withTechnical ? scheduledWorkspaceState(ofType("TA")) : undefined;
 
   let PM: WorkspaceState;
   if (input.lhviuIssued) PM = "COMPLETED";
-  else if (input.assignments.some((a) => a.pmReviewStatus !== null) || [SV, VF].every((s) => s === "COMPLETED")) PM = "IN_PROGRESS";
+  else if (input.assignments.some((a) => a.pmReviewStatus !== null) || [SV, VF, ...(TA ? [TA] : [])].every((s) => s === "COMPLETED")) PM = "IN_PROGRESS";
   else PM = "NOT_STARTED";
 
-  return { CR: customerRelationState(input), SV, VF, PM };
+  return { CR: customerRelationState(input), SV, VF, ...(TA ? { TA } : {}), PM };
 }

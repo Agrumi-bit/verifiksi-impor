@@ -13,10 +13,11 @@ import {
   type HandoverStatus,
   type Readiness,
 } from "./consolidation";
+import type { ComplianceScheme } from "./scheme";
 import { WORKSPACE_KEYS, deriveWorkspaceStatuses, type WorkspaceKey, type WorkspaceState, type WorkspaceStatusInput, type WorkspaceStatuses } from "./workspace-status";
 
 /**
- * The Daftar Permohonan model: one row per VIU Konsumsi application, built from real data, and the
+ * The Daftar Permohonan model: one row per VIU Konsumsi or VKI application, built from real data, and the
  * pure filter/sort/paginate the API applies. No React, no database.
  */
 
@@ -44,6 +45,7 @@ export type CaseSource = WorkspaceStatusInput & {
 };
 
 export type CaseRow = {
+  scheme: ComplianceScheme;
   applicationId: string;
   applicationNumber: string;
   companyName: string;
@@ -73,6 +75,7 @@ export function buildCaseRow(source: CaseSource): CaseRow {
   const workspaces = deriveWorkspaceStatuses(source);
   const activeFindings = source.findings.filter((finding) => finding.kind !== "RESOLVED");
   return {
+    scheme: source.scheme ?? "konsumsi",
     applicationId: source.applicationId,
     applicationNumber: source.applicationNumber,
     companyName: source.companyName,
@@ -87,7 +90,7 @@ export function buildCaseRow(source: CaseSource): CaseRow {
     readiness: readiness(workspaces, source.findings),
     category: caseCategory(workspaces, source.complianceStatus, source.findings),
     complianceStatus: source.complianceStatus,
-    summary: complianceSummary(workspaces, source.findings, source),
+    summary: complianceSummary(workspaces, source.findings, { ...source, scheme: source.scheme }),
     lhviuIssued: source.lhviuIssued,
     lhviuNumber: source.lhviuNumber,
     lhviuIssuedAt: source.lhviuIssuedAt,
@@ -108,6 +111,8 @@ export const EXTRA_CHIPS = ["LH", "REVIEW"] as const;
 export type QuickChip = CaseCategory | (typeof EXTRA_CHIPS)[number];
 
 export type CaseQuery = {
+  /** One scheme per list (VIU Konsumsi or VKI); all when absent. */
+  scheme?: ComplianceScheme;
   q?: string;
   /** Status dropdown, summary card or quick chip. */
   chip?: QuickChip | "";
@@ -145,6 +150,7 @@ function matchesScore(score: number, filter: (typeof SCORE_FILTERS)[number]): bo
 }
 
 function matches(row: CaseRow, query: CaseQuery): boolean {
+  if (query.scheme && row.scheme !== query.scheme) return false;
   const q = query.q?.trim().toLowerCase();
   if (q && ![row.applicationNumber, row.companyName, row.nib].some((value) => value.toLowerCase().includes(q))) return false;
   if (query.chip && !matchesChip(row, query.chip)) return false;

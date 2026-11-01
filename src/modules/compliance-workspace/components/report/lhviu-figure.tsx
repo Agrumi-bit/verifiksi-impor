@@ -29,7 +29,7 @@ function Timeline({ data }: { data: LhviuFigureData }) {
   const status = STATUS[data.status.tone];
   return (
     <div style={CARD}>
-      <div style={LABEL}>Masa berlaku LHVIU</div>
+      <div style={LABEL}>Masa berlaku {data.output}</div>
       <ol style={{ display: "flex", justifyContent: "space-between", listStyle: "none", margin: "10px 0 6px", padding: 0 }}>
         {data.timeline.map((point) => (
           <li key={point.label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -67,22 +67,22 @@ export function LhviuFigure({ data }: { data: LhviuFigureData }) {
           // eslint-disable-next-line @next/next/no-img-element -- stored file rendered by /api/files/thumbnail
           <img
             src={coverSrc(data.coverPath)}
-            alt={`Halaman sampul LHVIU ${data.number}`}
+            alt={`Halaman sampul ${data.output} ${data.number}`}
             width={COVER.width}
             height={COVER.height}
             style={{ display: "block", width: COVER.width, height: COVER.height, objectFit: "contain", background: "#fff", border: `1px solid ${HAIRLINE}`, borderRadius: 6, boxShadow: "0 2px 8px rgba(31,29,26,0.08)" }}
           />
         ) : (
           <div style={{ width: COVER.width, height: COVER.height, display: "flex", alignItems: "center", justifyContent: "center", border: `1px dashed ${HAIRLINE}`, borderRadius: 6, fontSize: 10, color: TEXT.muted, background: "#fffdf9" }}>
-            Dokumen LHVIU belum diunggah
+            Dokumen {data.output} belum diunggah
           </div>
         )}
-        <figcaption style={{ marginTop: 6, fontSize: 9, color: TEXT.muted, textAlign: "center" }}>Halaman sampul LHVIU</figcaption>
+        <figcaption style={{ marginTop: 6, fontSize: 9, color: TEXT.muted, textAlign: "center" }}>Halaman sampul {data.output}</figcaption>
       </figure>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ ...CARD, background: status.soft, borderColor: status.fill }}>
-          <div style={LABEL}>Nomor LHVIU</div>
+          <div style={LABEL}>Nomor {data.output}</div>
           <div style={{ marginTop: 4, fontSize: 24, fontWeight: 700, color: TEXT.primary, overflowWrap: "anywhere" }}>{data.number}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, fontSize: 11, fontWeight: 600, color: TEXT.primary }}>
             <span aria-hidden style={{ width: 10, height: 10, borderRadius: 999, background: status.fill }} />

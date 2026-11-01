@@ -6,13 +6,13 @@ import { Search, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CASE_CATEGORIES, CASE_CATEGORY_LABELS } from "../../consolidation";
 import type { QuickChip, SortKey } from "../../case-list";
-import { WORKSPACE_KEYS, WORKSPACE_LABELS, WORKSPACE_STATE_LABELS, type WorkspaceState } from "../../workspace-status";
+import { WORKSPACE_LABELS, WORKSPACE_STATE_LABELS, schemeWorkspaceKeys, type WorkspaceState } from "../../workspace-status";
 import { INPUT_CLASS } from "../styles";
 import { ADVANCED_KEYS, type CaseFilters as Filters } from "./use-case-list";
 
 const STATES: WorkspaceState[] = ["COMPLETED", "IN_PROGRESS", "NOT_STARTED", "ISSUE"];
 const CHIPS: (QuickChip | "")[] = ["", ...CASE_CATEGORIES, "LH", "REVIEW"];
-const CHIP_LABELS: Record<QuickChip, string> = { ...CASE_CATEGORY_LABELS, LH: "LHVIU Terbit", REVIEW: "Ditandai Review" };
+const CHIP_LABELS: Record<QuickChip, string> = { ...CASE_CATEGORY_LABELS, LH: "LHVIU/LHVKI Terbit", REVIEW: "Ditandai Review" };
 const SORT_LABELS: Record<SortKey, string> = {
   updated: "Last Update",
   number: "No. Permohonan",
@@ -93,7 +93,7 @@ export function CaseFilters({ filters, onChange, onReset, pics, counts, sort, di
           </Select>
           <Select label="Workspace terakhir" value={filters.lastWorkspace} onChange={(value) => onChange({ lastWorkspace: value as Filters["lastWorkspace"] })}>
             <option value="">Semua Workspace Terakhir</option>
-            {WORKSPACE_KEYS.map((key) => (
+            {schemeWorkspaceKeys(filters.scheme).map((key) => (
               <option key={key} value={key}>{WORKSPACE_LABELS[key]}</option>
             ))}
           </Select>
@@ -130,7 +130,9 @@ export function CaseFilters({ filters, onChange, onReset, pics, counts, sort, di
 
         {advancedOpen && (
           <div className="mt-3 grid gap-3 border-t border-[#E5EAF0] pt-3 sm:grid-cols-2 lg:grid-cols-4">
-            {(["SV", "VF", "PM"] as const).map((key) => (
+            {schemeWorkspaceKeys(filters.scheme)
+              .filter((key): key is "SV" | "VF" | "TA" | "PM" => key !== "CR")
+              .map((key) => (
               <AdvancedField key={key} label={WORKSPACE_LABELS[key]}>
                 <Select label={WORKSPACE_LABELS[key]} value={filters[`ws${key}`]} onChange={(value) => onChange({ [`ws${key}`]: value as WorkspaceState | "" })}>
                   <option value="">Semua</option>

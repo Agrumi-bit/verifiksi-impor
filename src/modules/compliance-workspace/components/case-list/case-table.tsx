@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { CaseRow, SortKey } from "../../case-list";
 import { COMPLIANCE_HOME } from "../../navigation";
+import { SCHEME_META } from "../../scheme";
 import { issueTabFor } from "../../finding-rules";
 import { CategoryBadge, HandoverBadge, LhviuBadge, ReadinessText, WorkspaceProgress } from "./badges";
 import { formatDate, formatDateTime } from "./format";
@@ -143,7 +144,7 @@ export function CaseTable(props: Props) {
             {full && <th className={TH}>Status Handover</th>}
             <th className={TH}><SortHeader label={full ? "Compliance Status" : "Compliance"} sortKey="status" sort={sort} dir={dir} onSort={onSort} /></th>
             <th className={TH}><SortHeader label="Issue" sortKey="issues" sort={sort} dir={dir} onSort={onSort} /></th>
-            <th className={TH}>LHVIU</th>
+            <th className={TH}>LHVIU / LHVKI</th>
             {full && <th className={TH}>PIC Compliance</th>}
             <th className={TH}><SortHeader label={full ? "Last Update" : "Updated"} sortKey="updated" sort={sort} dir={dir} onSort={onSort} /></th>
             <th className={cn(TH, "w-12")}><span className="sr-only">Aksi</span></th>
@@ -202,7 +203,7 @@ export function CaseTable(props: Props) {
                 </th>
                 <td className={cn(TD, "min-w-[200px] max-w-[280px]")}><span className="line-clamp-2">{row.companyName}</span></td>
                 {full && <td className={cn(TD, "font-mono text-[12px]")}>{row.nib}</td>}
-                {full && <td className={cn(TD, "whitespace-nowrap")}>VIU – Barang Konsumsi</td>}
+                {full && <td className={cn(TD, "whitespace-nowrap")}>{SCHEME_META[row.scheme].label}</td>}
                 {full && (
                   <td className={cn(TD, "whitespace-nowrap tabular-nums")}>
                     {formatDate(row.submittedAt)}

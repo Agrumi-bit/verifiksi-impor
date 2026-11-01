@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useMemo, type ReactNode } from "react";
+import { Fragment, useMemo, useSyncExternalStore, type ReactNode } from "react";
 
 import { ReportBrandMark } from "@/modules/surveyor-workspace/components/report/report-brand-mark";
 import "@/modules/surveyor-workspace/components/report/office-report-preview.css";
@@ -12,9 +12,6 @@ import type { ComplianceReport, ReportBlock, ReportCard, ReportCell, ReportChip,
 import "./compliance-report.css";
 import { ExecutiveInfographic } from "./executive-infographic";
 import { LhviuFigure } from "./lhviu-figure";
-
-/** Rows per table piece — a long table continues on the next sheet with its header repeated. */
-const ROWS_PER_PIECE = 10;
 
 const TONE_STYLE: Record<ReportTone, { background: string; color: string }> = {
   green: { background: "#ECFDF3", color: "#15803D" },
@@ -151,15 +148,38 @@ function Fields({ items }: { items: [string, string][] }) {
   );
 }
 
+/** Plain text as one <p> per line, so a long note can continue on the next sheet between paragraphs. */
+function paragraphsHtml(text: string): string {
+  const esc = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return text
+    .split("\n")
+    .filter((line) => line.trim())
+    .map((line) => `<p>${esc(line)}</p>`)
+    .join("");
+}
+
 function blockItems(section: ReportSection, block: ReportBlock, index: number): FlowItem[] {
   const key = `${section.key}-${index}`;
   switch (block.kind) {
+    case "note":
+      return [{ kind: "note", key, label: block.label, html: paragraphsHtml(block.text) }];
     case "infographic":
       return [{ kind: "node", key, node: <ExecutiveInfographic data={block.data} /> }];
     case "lhviu":
       return [{ kind: "node", key, node: <LhviuFigure data={block.data} /> }];
     case "fields":
-      return [{ kind: "node", key, node: block.layout === "grid" ? <FieldGrid items={block.items} /> : <Fields items={block.items} /> }];
+      return [
+        {
+          kind: "node",
+          key,
+          node: (
+            <>
+              {block.title && <BlockTitle>{block.title}</BlockTitle>}
+              {block.layout === "grid" ? <FieldGrid items={block.items} /> : <Fields items={block.items} />}
+            </>
+          ),
+        },
+      ];
     case "cards":
       return [{ kind: "node", key, node: <Cards title={block.title} columns={block.columns} items={block.items} /> }];
     case "findings":
@@ -220,20 +240,17 @@ function blockItems(section: ReportSection, block: ReportBlock, index: number): 
           },
         ];
       }
-      const pieces: FlowItem[] = [];
-      const perPiece = block.rowsPerPiece ?? ROWS_PER_PIECE;
-      // The first piece also carries the lede/chips (and may carry the section heading): one row less.
-      const firstPiece = block.lede || block.chips ? Math.max(1, perPiece - 1) : perPiece;
-      for (let start = 0; start < block.rows.length; ) {
-        const size = start === 0 ? firstPiece : perPiece;
-        pieces.push({
-          kind: "node",
-          key: `${key}-${start}`,
-          node: <Table title={block.title} lede={block.lede} chips={block.chips} widths={block.widths} headers={block.headers} rows={block.rows.slice(start, start + size)} continued={start > 0} />,
-        });
-        start += size;
-      }
-      return pieces;
+      // Laid out row by row: the table breaks only where a sheet is full, its header repeated there.
+      return [
+        {
+          kind: "rows",
+          key,
+          count: block.rows.length,
+          render: (indices, continued) => (
+            <Table title={block.title} lede={block.lede} chips={block.chips} widths={block.widths} headers={block.headers} rows={indices.map((index) => block.rows[index])} continued={continued} />
+          ),
+        },
+      ];
     }
   }
 }
@@ -250,19 +267,25 @@ function flowItems(report: ComplianceReport): FlowItem[] {
       </div>
     );
     const [first, ...rest] = section.blocks.flatMap((block, index) => blockItems(section, block, index));
-    // The heading travels with the section's first piece, so it is never left alone at a page bottom.
-    items.push({
-      kind: "node",
-      key: `${section.key}-head`,
-      // Every Tahap (5.1–5.8) starts on a fresh page, as do the Ringkasan and Temuan sections.
-      breakBefore: section.eyebrow.includes("TAHAP") || section.key === "ringkasan" || section.key === "temuan",
-      node: (
-        <>
-          {heading}
-          {first?.kind === "node" && first.node}
-        </>
-      ),
-    });
+    // Every Tahap starts on a fresh page, as do the Ringkasan and Temuan sections.
+    const breakBefore = section.eyebrow.includes("TAHAP") || section.key === "ringkasan" || section.key === "temuan";
+    // The heading travels with the section's first piece (a table's first rows), so it is never left alone at a page bottom.
+    if (first?.kind === "rows") items.push({ ...first, lead: heading, breakBefore });
+    else
+      items.push(
+        {
+          kind: "node",
+          key: `${section.key}-head`,
+          breakBefore,
+          node: (
+            <>
+              {heading}
+              {first?.kind === "node" && first.node}
+            </>
+          ),
+        },
+        ...(first && first.kind === "note" ? [first] : []),
+      );
     items.push(...rest);
   }
   return items;
@@ -302,6 +325,11 @@ function Meta({ label, value, mono }: { label: string; value: string; mono?: boo
 export function ComplianceReportView({ report }: { report: ComplianceReport }) {
   // A4Pages re-measures whenever its items change identity — build them once per report.
   const items = useMemo(() => flowItems(report), [report]);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   return (
     <div className="report-doc" style={{ fontFamily: "var(--font-archivo), sans-serif" }}>
       <div className="rd-topbar">
@@ -342,7 +370,7 @@ export function ComplianceReportView({ report }: { report: ComplianceReport }) {
               <div className="rd-cover-subtitle">
                 {report.companyName}
                 <br />
-                VIU – Produk Tekstil sebagai Barang Konsumsi
+                {report.schemeTitle}
               </div>
             </div>
             <div className="rd-cover-meta">
@@ -355,20 +383,25 @@ export function ComplianceReportView({ report }: { report: ComplianceReport }) {
             </div>
           </div>
           <div className="rd-cover-foot">
-            <div>Lembaga Verifikasi &amp; Survey — VIU</div>
+            <div>Lembaga Verifikasi &amp; Survey — {report.scheme === "vki" ? "VKI" : "VIU"}</div>
             <div>Dokumen Rahasia — Distribusi Terbatas</div>
           </div>
         </section>
 
-        <A4Pages
-          items={items}
-          pageHeight="210mm"
-          renderPage={(pageNo, totalPages, children) => (
-            <PageShell pageNo={pageNo} total={totalPages} report={report}>
-              {children}
-            </PageShell>
-          )}
-        />
+        {/* A4Pages splits notes with the browser's DOMParser — lay the sheets out on the client only. */}
+        {mounted ? (
+          <A4Pages
+            items={items}
+            pageHeight="210mm"
+            renderPage={(pageNo, totalPages, children) => (
+              <PageShell pageNo={pageNo} total={totalPages} report={report}>
+                {children}
+              </PageShell>
+            )}
+          />
+        ) : (
+          <p style={{ fontSize: 12, color: "var(--ink-faint)" }}>Menyusun halaman A4…</p>
+        )}
       </main>
     </div>
   );

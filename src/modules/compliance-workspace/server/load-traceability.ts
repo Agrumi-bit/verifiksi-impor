@@ -1,33 +1,36 @@
 import "server-only";
 
 import { db } from "@/lib/db";
-import { applicationMatchesViuScheme } from "@/modules/project-manager-workspace/viu-schemes";
 import { actionLabel, historyRows, sortTrail, trailSourceOf, type HistoryRow, type TrailEvent } from "../traceability";
-import { KONSUMSI_SCHEME, NOT_TECHNICAL } from "./load-cases";
+import type { ComplianceScheme } from "../scheme";
+import { withoutTechnical } from "../workspace-status";
+import { COMPLIANCE_APPLICATIONS, schemeOfCase } from "./load-cases";
 
 /** Without a case filter the trail shows the latest events only. */
 export const TRAIL_LIMIT = 300;
 
-// VIU Konsumsi has no Technical Analyst step — "technical" assignments are left out of the trail.
-const SCHEDULE_LABELS: Record<string, string> = { survey: "survey", dokumen: "verifikasi dokumen" };
+// VIU Konsumsi has no Technical Analyst step — its "technical" assignments are left out of the trail.
+const SCHEDULE_LABELS: Record<string, string> = { survey: "survey", dokumen: "verifikasi dokumen", technical: "analisis teknis" };
 const PM_REVIEW_LABELS: Record<string, string> = { PENDING: "menunggu review", APPROVED: "disetujui", REJECTED: "ditolak" };
 
-async function konsumsiApplicationIds(applicationId?: string): Promise<Map<string, string>> {
+/** The cases Compliance covers: application id → its number and scheme. */
+async function caseApplications(applicationId?: string): Promise<Map<string, { number: string; scheme: ComplianceScheme }>> {
   const applications = await db.application.findMany({
-    where: { verificationType: "VIU", status: { notIn: ["DRAFT", "WITHDRAWN"] }, ...(applicationId ? { id: applicationId } : {}) },
+    where: { ...COMPLIANCE_APPLICATIONS, ...(applicationId ? { id: applicationId } : {}) },
     select: { id: true, applicationNumber: true, verificationType: true, payload: true },
   });
   return new Map(
-    applications
-      .filter((app) => applicationMatchesViuScheme(app.verificationType, (app.payload as { importTypes?: string[] } | null)?.importTypes, KONSUMSI_SCHEME))
-      .map((app) => [app.id, app.applicationNumber]),
+    applications.flatMap((app) => {
+      const scheme = schemeOfCase(app);
+      return scheme ? [[app.id, { number: app.applicationNumber, scheme }] as const] : [];
+    }),
   );
 }
 
 /** The cross-workspace timeline: submission, scheduling, decisions, PM reviews, survey submissions and every audit-log entry. */
 export async function loadTrail(applicationId?: string): Promise<TrailEvent[]> {
-  const numbers = await konsumsiApplicationIds(applicationId);
-  const ids = [...numbers.keys()];
+  const cases = await caseApplications(applicationId);
+  const ids = [...cases.keys()];
   if (ids.length === 0) return [];
 
   const applications = await db.application.findMany({
@@ -37,7 +40,6 @@ export async function loadTrail(applicationId?: string): Promise<TrailEvent[]> {
       submissionDate: true,
       createdAt: true,
       assignments: {
-        where: NOT_TECHNICAL,
         select: {
           id: true,
           assignmentNumber: true,
@@ -50,6 +52,7 @@ export async function loadTrail(applicationId?: string): Promise<TrailEvent[]> {
           pmReviewedByName: true,
           surveyor: { select: { name: true } },
           verifikator: { select: { name: true } },
+          technicalReviewer: { select: { name: true } },
           locationVisits: { select: { id: true, locationType: true, submittedAt: true } },
         },
       },
@@ -62,21 +65,21 @@ export async function loadTrail(applicationId?: string): Promise<TrailEvent[]> {
 
   const events: TrailEvent[] = [];
   for (const app of applications) {
-    const number = numbers.get(app.id)!;
+    const { number, scheme } = cases.get(app.id)!;
     const base = { applicationId: app.id, applicationNumber: number };
     events.push({ ...base, id: `${app.id}-submitted`, at: (app.submissionDate ?? app.createdAt).toISOString(), source: "COMPANY", text: "Permohonan diajukan", by: null });
-    for (const a of app.assignments) {
+    for (const a of scheme === "vki" ? app.assignments : withoutTechnical(app.assignments)) {
       const type = a.scheduleType ?? "";
       const label = SCHEDULE_LABELS[type] ?? type;
       events.push({ ...base, id: `${a.id}-scheduled`, at: a.createdAt.toISOString(), source: "CR", text: `Penugasan ${label} dibuat (${a.assignmentNumber})`, by: null });
-      if (a.validatedAt && type === "dokumen") {
+      if (a.validatedAt && (type === "dokumen" || type === "technical")) {
         events.push({
           ...base,
           id: `${a.id}-decided`,
           at: a.validatedAt.toISOString(),
-          source: "VF",
+          source: type === "dokumen" ? "VF" : "TA",
           text: `Keputusan ${label} dicatat (${a.status})`,
-          by: a.verifikator?.name ?? null,
+          by: (type === "dokumen" ? a.verifikator?.name : a.technicalReviewer?.name) ?? null,
         });
       }
       for (const visit of a.locationVisits) {
@@ -100,7 +103,7 @@ export async function loadTrail(applicationId?: string): Promise<TrailEvent[]> {
       id: log.id,
       at: log.createdAt.toISOString(),
       applicationId: log.applicationId,
-      applicationNumber: numbers.get(log.applicationId)!,
+      applicationNumber: cases.get(log.applicationId)!.number,
       source: trailSourceOf(log.action, log.actorRole),
       text: log.reason ? `${actionLabel(log.action)} — ${log.reason}` : actionLabel(log.action),
       by: log.actorName,
@@ -112,8 +115,8 @@ export async function loadTrail(applicationId?: string): Promise<TrailEvent[]> {
 
 /** Field-level changes recorded in the audit log (Compliance's own changes and Admin edits). */
 export async function loadHistory(applicationId?: string): Promise<HistoryRow[]> {
-  const numbers = await konsumsiApplicationIds(applicationId);
-  const ids = [...numbers.keys()];
+  const cases = await caseApplications(applicationId);
+  const ids = [...cases.keys()];
   if (ids.length === 0) return [];
   const logs = await db.applicationAuditLog.findMany({
     where: { applicationId: { in: ids } },
@@ -122,6 +125,6 @@ export async function loadHistory(applicationId?: string): Promise<HistoryRow[]>
     take: 500,
   });
   return historyRows(
-    logs.map((log) => ({ ...log, createdAt: log.createdAt.toISOString(), applicationNumber: numbers.get(log.applicationId)! })),
+    logs.map((log) => ({ ...log, createdAt: log.createdAt.toISOString(), applicationNumber: cases.get(log.applicationId)!.number })),
   );
 }

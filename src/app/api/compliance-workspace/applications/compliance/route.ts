@@ -3,8 +3,7 @@ import { z } from "zod";
 
 import { db } from "@/lib/db";
 import { requireComplianceSession } from "@/lib/require-compliance-session";
-import { KONSUMSI_SCHEME } from "@/modules/compliance-workspace/server/load-cases";
-import { applicationMatchesViuScheme } from "@/modules/project-manager-workspace/viu-schemes";
+import { schemeOfCase } from "@/modules/compliance-workspace/server/load-cases";
 
 /** Bulk actions are capped so one request can't touch an unbounded number of cases. */
 const MAX_APPLICATIONS = 200;
@@ -47,11 +46,9 @@ export async function PATCH(request: Request) {
       complianceCase: { select: { picUserId: true, reviewFlag: true, picUser: { select: { name: true } } } },
     },
   });
-  const inScope = applications.filter((app) =>
-    applicationMatchesViuScheme(app.verificationType, (app.payload as { importTypes?: string[] } | null)?.importTypes, KONSUMSI_SCHEME),
-  );
+  const inScope = applications.filter((app) => schemeOfCase(app) !== null);
   if (inScope.length !== new Set(applicationIds).size) {
-    return NextResponse.json({ error: "Sebagian permohonan tidak ditemukan atau bukan VIU Barang Konsumsi." }, { status: 400 });
+    return NextResponse.json({ error: "Sebagian permohonan tidak ditemukan atau bukan VIU Barang Konsumsi / VKI." }, { status: 400 });
   }
 
   const now = new Date();

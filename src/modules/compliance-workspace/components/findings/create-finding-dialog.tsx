@@ -6,8 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { FINDING_KIND_LABELS, FINDING_SEVERITIES, FINDING_SEVERITY_LABELS } from "../../finding-rules";
-import { REQUIREMENTS } from "../../requirements";
-import { WORKSPACE_KEYS, WORKSPACE_LABELS } from "../../workspace-status";
+import { requirementsOf } from "../../requirements";
+import { WORKSPACE_LABELS, schemeWorkspaceKeys } from "../../workspace-status";
 import { INPUT_CLASS } from "../styles";
 import type { CaseListResponse } from "../case-list/use-case-list";
 import { useCreateFinding, type NewFinding } from "./use-findings";
@@ -48,11 +48,15 @@ export function CreateFindingDialog({
     queryKey: ["compliance-workspace", "applications", "case-options"],
     enabled: open,
     queryFn: async () => {
-      const response = await fetch("/api/compliance-workspace/applications?pageSize=all&sort=number&dir=asc");
+      const response = await fetch("/api/compliance-workspace/applications?scheme=all&pageSize=all&sort=number&dir=asc");
       if (!response.ok) throw new Error("Gagal memuat permohonan.");
       return ((await response.json()) as { data: CaseListResponse }).data.rows;
     },
   });
+
+  // Requirements and workspaces follow the scheme of the chosen case (VKI adds the Technical Analyst).
+  const scheme = cases.data?.find((row) => row.applicationId === form.applicationId)?.scheme ?? "konsumsi";
+  const requirements = requirementsOf(scheme);
 
   function update(patch: Partial<NewFinding>) {
     setForm((current) => ({ ...current, ...patch }));
@@ -104,11 +108,11 @@ export function CreateFindingDialog({
             </Field>
             <Field label="Requirement">
               <select value={form.requirementKey} onChange={(event) => {
-                const requirement = REQUIREMENTS.find((item) => item.key === event.target.value);
+                const requirement = requirements.find((item) => item.key === event.target.value);
                 update({ requirementKey: event.target.value, sourceWorkspace: form.sourceWorkspace || requirement?.source || "" });
               }} className={INPUT_CLASS}>
                 <option value="">Pilih requirement…</option>
-                {REQUIREMENTS.map((requirement) => (
+                {requirements.map((requirement) => (
                   <option key={requirement.key} value={requirement.key}>{requirement.label}</option>
                 ))}
               </select>
@@ -116,7 +120,7 @@ export function CreateFindingDialog({
             <Field label="Workspace sumber">
               <select value={form.sourceWorkspace} onChange={(event) => update({ sourceWorkspace: event.target.value })} className={INPUT_CLASS}>
                 <option value="">Pilih workspace…</option>
-                {WORKSPACE_KEYS.map((key) => (
+                {schemeWorkspaceKeys(scheme).map((key) => (
                   <option key={key} value={key}>{WORKSPACE_LABELS[key]}</option>
                 ))}
               </select>

@@ -61,7 +61,7 @@ export function DashboardView({ summary, attention, activity }: { summary: Dashb
     <div className="flex flex-col gap-4 px-6 py-6">
       <header>
         <h1 className="text-xl font-semibold">Dashboard</h1>
-        <p className="text-[13px] text-[#64748B]">Ringkasan compliance VIU – Barang Konsumsi, dihitung dari data workspace sumber dan temuan Compliance.</p>
+        <p className="text-[13px] text-[#64748B]">Ringkasan compliance VIU – Barang Konsumsi dan VKI, dihitung dari data workspace sumber dan temuan Compliance.</p>
       </header>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -71,7 +71,7 @@ export function DashboardView({ summary, attention, activity }: { summary: Dashb
         <Stat
           label="Rata-rata skor compliance"
           value={summary.averageScore === null ? "—" : `${summary.averageScore}%`}
-          hint={`${summary.lhviuIssued} LHVIU terbit`}
+          hint={`${summary.lhviuIssued} LHVIU/LHVKI terbit`}
           href={`${COMPLIANCE_HOME}/lhviu`}
         />
       </div>
@@ -168,7 +168,7 @@ export function DashboardView({ summary, attention, activity }: { summary: Dashb
       {upcoming.length > 0 && (
         <p className="text-[12px] text-[#64748B]">
           Belum tersedia: {upcoming.map((item) => item.label).join(", ")}. Compliance tidak membuat atau mengubah permohonan, tidak mengganti
-          evidence, dan tidak menyetujui atau menerbitkan LHVIU.
+          evidence, dan tidak menyetujui atau menerbitkan LHVIU/LHVKI.
         </p>
       )}
     </div>

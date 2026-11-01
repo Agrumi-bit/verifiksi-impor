@@ -7,7 +7,7 @@ import {
   type HandoverStatus,
   type Readiness,
 } from "../../consolidation";
-import { WORKSPACE_KEYS, WORKSPACE_LABELS, WORKSPACE_STATE_LABELS, type WorkspaceState, type WorkspaceStatuses } from "../../workspace-status";
+import { WORKSPACE_LABELS, WORKSPACE_STATE_LABELS, stateOf, workspaceKeysOf, type WorkspaceState, type WorkspaceStatuses } from "../../workspace-status";
 
 /** Semantic tones from the handoff design tokens (green ok, orange waiting/attention, red issue). */
 const TONES = {
@@ -66,18 +66,19 @@ export function LhviuBadge({ issued }: { issued: boolean }) {
 
 /** One dot per workspace, CR → PM, with the state in the tooltip and in screen-reader text. */
 export function WorkspaceProgress({ workspaces, completed }: { workspaces: WorkspaceStatuses; completed: number }) {
-  const description = WORKSPACE_KEYS.map((key) => `${WORKSPACE_LABELS[key]}: ${WORKSPACE_STATE_LABELS[workspaces[key]]}`).join(", ");
+  const keys = workspaceKeysOf(workspaces);
+  const description = keys.map((key) => `${WORKSPACE_LABELS[key]}: ${WORKSPACE_STATE_LABELS[stateOf(workspaces, key)]}`).join(", ");
   return (
     <div className="flex items-center gap-2">
       <span className="flex items-center gap-1" role="img" aria-label={description}>
-        {WORKSPACE_KEYS.map((key) => (
-          <span key={key} title={`${WORKSPACE_LABELS[key]}: ${WORKSPACE_STATE_LABELS[workspaces[key]]}`} className="flex flex-col items-center gap-0.5">
-            <span className={cn("size-2.5 rounded-full", STATE_DOT[workspaces[key]])} />
+        {keys.map((key) => (
+          <span key={key} title={`${WORKSPACE_LABELS[key]}: ${WORKSPACE_STATE_LABELS[stateOf(workspaces, key)]}`} className="flex flex-col items-center gap-0.5">
+            <span className={cn("size-2.5 rounded-full", STATE_DOT[stateOf(workspaces, key)])} />
             <span className="text-[9px] font-medium leading-none text-[#64748B]">{key}</span>
           </span>
         ))}
       </span>
-      <span className="text-[11.5px] tabular-nums text-[#64748B]">{completed}/{WORKSPACE_KEYS.length}</span>
+      <span className="text-[11.5px] tabular-nums text-[#64748B]">{completed}/{keys.length}</span>
     </div>
   );
 }

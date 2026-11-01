@@ -5,6 +5,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { toast } from "sonner";
 
 import type { CasePage, QuickChip, SortKey } from "../../case-list";
+import type { ComplianceScheme } from "../../scheme";
 import type { WorkspaceKey, WorkspaceState } from "../../workspace-status";
 
 export type CaseListResponse = CasePage & {
@@ -13,6 +14,8 @@ export type CaseListResponse = CasePage & {
 };
 
 export type CaseFilters = {
+  /** The list shows one scheme at a time; Reset Filter keeps it. */
+  scheme: ComplianceScheme;
   q: string;
   chip: QuickChip | "";
   lastWorkspace: WorkspaceKey | "";
@@ -21,6 +24,7 @@ export type CaseFilters = {
   to: string;
   wsSV: WorkspaceState | "";
   wsVF: WorkspaceState | "";
+  wsTA: WorkspaceState | "";
   wsPM: WorkspaceState | "";
   openIssue: "ya" | "tidak" | "";
   conflict: "ya" | "tidak" | "";
@@ -29,6 +33,7 @@ export type CaseFilters = {
 };
 
 export const EMPTY_FILTERS: CaseFilters = {
+  scheme: "konsumsi",
   q: "",
   chip: "",
   lastWorkspace: "",
@@ -37,6 +42,7 @@ export const EMPTY_FILTERS: CaseFilters = {
   to: "",
   wsSV: "",
   wsVF: "",
+  wsTA: "",
   wsPM: "",
   openIssue: "",
   conflict: "",
@@ -44,7 +50,7 @@ export const EMPTY_FILTERS: CaseFilters = {
   score: "",
 };
 
-export const ADVANCED_KEYS = ["wsSV", "wsVF", "wsPM", "openIssue", "conflict", "lhviu", "score"] as const;
+export const ADVANCED_KEYS = ["wsSV", "wsVF", "wsTA", "wsPM", "openIssue", "conflict", "lhviu", "score"] as const;
 export const QUERY_KEY = ["compliance-workspace", "applications"] as const;
 
 export function toSearchParams(filters: CaseFilters, extra: Record<string, string>): URLSearchParams {
@@ -94,7 +100,7 @@ export function useCaseList() {
     filters,
     updateFilters,
     resetFilters: () => {
-      setFilters(EMPTY_FILTERS);
+      setFilters((current) => ({ ...EMPTY_FILTERS, scheme: current.scheme }));
       setPage(1);
     },
     sort,

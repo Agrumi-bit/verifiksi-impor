@@ -1,6 +1,7 @@
 import type { CaseDetailInput, Evidence } from "./case-detail";
 import type { ComplianceStatusValue } from "./consolidation";
-import { WORKSPACE_LABELS, type WorkspaceKey } from "./workspace-status";
+import { SCHEME_META } from "./scheme";
+import { WORKSPACE_LABELS, stateOf, type WorkspaceKey } from "./workspace-status";
 
 /**
  * Compliance Dossier (pure): the final case file — one section per source workspace plus the LHVIU —
@@ -14,7 +15,7 @@ export type AdministrativeRecord = { done: boolean; at: string | null; byName: s
 
 export type DossierInput = CaseDetailInput & {
   administrative?: { finalReview: AdministrativeRecord; dossier: AdministrativeRecord };
-  outputs: { CR: { approvedLetters: number; letters: number; doneAt?: string | null; names?: string[] }; SV: WorkspaceOutput; VF: WorkspaceOutput; PM: { at: string | null; names: string[] } };
+  outputs: { CR: { approvedLetters: number; letters: number; doneAt?: string | null; names?: string[] }; SV: WorkspaceOutput; VF: WorkspaceOutput; TA?: WorkspaceOutput; PM: { at: string | null; names: string[] } };
 };
 
 export type DossierSection = {
@@ -35,6 +36,7 @@ const DONE_LABELS: Record<WorkspaceKey, string> = {
   CR: "Dokumen Lengkap",
   SV: "Survey Selesai",
   VF: "Verification Completed",
+  TA: "Technical Analysis Completed",
   PM: "Approved",
 };
 const WAITING_LABELS = { IN_PROGRESS: "Dalam Proses", ISSUE: "Ada Issue", NOT_STARTED: "Belum Mulai", COMPLETED: "Completed" } as const;
@@ -46,13 +48,13 @@ function names(list: string[]): string {
 export function buildDossier(input: DossierInput): DossierSection[] {
   const { row, outputs } = input;
   const section = (key: WorkspaceKey, title: string, step: number, completedAt: string | null, by: string[], result: string, documents: Evidence[] = []): DossierSection => {
-    const ready = row.workspaces[key] === "COMPLETED";
+    const ready = stateOf(row.workspaces, key) === "COMPLETED";
     return {
       key,
       title,
       sourceLabel: WORKSPACE_LABELS[key],
       ready,
-      status: ready ? DONE_LABELS[key] : WAITING_LABELS[row.workspaces[key]],
+      status: ready ? DONE_LABELS[key] : WAITING_LABELS[stateOf(row.workspaces, key)],
       completedAt: ready ? completedAt : null,
       completedBy: ready ? names(by) : "—",
       result: ready ? result : "—",
@@ -65,10 +67,12 @@ export function buildDossier(input: DossierInput): DossierSection[] {
     section("CR", "Customer Relation Result", 1, outputs.CR.doneAt ?? null, outputs.CR.names ?? [], `${outputs.CR.approvedLetters} dari ${outputs.CR.letters} Surat Tugas disetujui`),
     section("SV", "Survey Report", 3, outputs.SV.doneAt, outputs.SV.names, outputs.SV.pmReview ?? "—"),
     section("VF", "Verification Report", 2, outputs.VF.doneAt, outputs.VF.names, outputs.VF.pmReview ?? "—", input.legal.documents),
+    // VKI only: the Technical Analyst's report.
+    ...(row.workspaces.TA !== undefined && outputs.TA ? [section("TA", "Technical Analysis Report", 8, outputs.TA.doneAt, outputs.TA.names, outputs.TA.pmReview ?? "—")] : []),
     section("PM", "Project Manager Approval", 10, outputs.PM.at, outputs.PM.names, `${pmApproved} dari ${input.pmReviews.length} laporan disetujui`),
     {
       key: "LH",
-      title: "LHVIU Final",
+      title: `${SCHEME_META[row.scheme].output} Final`,
       sourceLabel: WORKSPACE_LABELS.PM,
       ready: row.lhviuIssued,
       status: row.lhviuIssued ? "Diterbitkan" : "Belum Terbit",
