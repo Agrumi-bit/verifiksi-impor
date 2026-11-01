@@ -402,10 +402,12 @@ export function TechnicalAnalysisReport({
           <div className="rd-card" style={{ marginTop: 12 }}>
             <div className="rd-card-label">KEPUTUSAN ANALIS</div>
             <div className="rd-card-value" style={{ fontSize: 14 }}>
+              {/* The decision date the analyst chose with the signature (same as "Disusun Oleh — Tanggal"
+                  and the cover), falling back to when the decision was saved. */}
               {data.status === "COMPLETED"
-                ? `Disetujui — ${fmtDate(data.validatedAt)}`
+                ? `Disetujui — ${fmtDate(data.signatureDate ?? data.validatedAt)}`
                 : data.status === "RETURNED"
-                  ? `Dikembalikan untuk Revisi — ${fmtDate(data.validatedAt)}`
+                  ? `Dikembalikan untuk Revisi — ${fmtDate(data.signatureDate ?? data.validatedAt)}`
                   : "Belum diputuskan"}
             </div>
             {data.validationNotes && <p style={{ margin: "6px 0 0", fontSize: 12 }}>Catatan: {data.validationNotes}</p>}
