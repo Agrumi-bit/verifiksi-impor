@@ -119,4 +119,14 @@ describe("deriveWorkspaceStatuses", () => {
     const issued = deriveWorkspaceStatuses({ applicationStatus: "COMPLETED", returnedByRole: null, assignments: allDone, lhviuIssued: true });
     assert.equal(issued.PM, "COMPLETED");
   });
+
+  it("ignores a survey assignment superseded by a rescheduled one that surveyed the locations", () => {
+    const base = { applicationStatus: "SUBMITTED", returnedByRole: null, lhviuIssued: false } as const;
+    const superseded = assignment({ scheduleType: "survey", status: "SUBMITTED", pmReviewStatus: null, locationVisits: [] });
+    const approved = assignment({ scheduleType: "survey", status: "SUBMITTED", pmReviewStatus: "APPROVED", locationVisits: [{}, {}] });
+    assert.equal(deriveWorkspaceStatuses({ ...base, assignments: [superseded, approved] }).SV, "COMPLETED");
+    // Visits not loaded, or no assignment visited anything yet: every survey assignment still counts.
+    assert.equal(deriveWorkspaceStatuses({ ...base, assignments: [{ ...superseded, locationVisits: undefined }, approved] }).SV, "IN_PROGRESS");
+    assert.equal(deriveWorkspaceStatuses({ ...base, assignments: [superseded, { ...superseded }] }).SV, "IN_PROGRESS");
+  });
 });

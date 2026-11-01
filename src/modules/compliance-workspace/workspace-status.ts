@@ -8,7 +8,9 @@
  * - Surveyor / Verifikator / Technical Analyst: every assignment of that schedule type is COMPLETED.
  *   A survey assignment never reaches COMPLETED (it stops at SUBMITTED once every location is
  *   surveyed), so for a survey "done" is the PM approving its Laporan Survey — the same rule as
- *   project-manager-workspace/stage.ts.
+ *   project-manager-workspace/stage.ts. A survey assignment without any location visit, while another
+ *   survey assignment of the case has visits, was superseded (rescheduled — its locations were surveyed
+ *   under the other one): it has no Laporan Survey to approve and does not hold the Surveyor back.
  * - Project Manager: the LHVIU is issued.
  *
  * The Technical Analyst is a workspace of VKI only. VIU Konsumsi has no Technical Analyst step: its
@@ -61,7 +63,20 @@ export type AssignmentForWorkspaceStatus = {
   status: string;
   letterStatus: string;
   pmReviewStatus: string | null;
+  /** Survey: the assignment's location visits — only their count matters here (see supersededSurveys). */
+  locationVisits?: readonly unknown[];
 };
+
+/**
+ * Survey assignments that never visited a location while another survey assignment of the same case
+ * did — superseded by a rescheduled assignment, so nothing is left for them to hand over. When visits
+ * are unknown (not loaded) or no assignment has any, every assignment counts.
+ */
+function withoutSupersededSurveys(assignments: AssignmentForWorkspaceStatus[]): AssignmentForWorkspaceStatus[] {
+  const visited = (a: AssignmentForWorkspaceStatus) => (a.locationVisits?.length ?? 0) > 0;
+  if (assignments.some((a) => a.locationVisits === undefined) || !assignments.some(visited)) return assignments;
+  return assignments.filter(visited);
+}
 
 export type WorkspaceStatusInput = {
   applicationStatus: string;
@@ -108,7 +123,7 @@ export function deriveWorkspaceStatuses(raw: WorkspaceStatusInput): WorkspaceSta
   const withTechnical = raw.scheme === "vki";
   const input = { ...raw, assignments: withTechnical ? raw.assignments : withoutTechnical(raw.assignments) };
   const ofType = (key: "SV" | "VF" | "TA") => input.assignments.filter((a) => a.scheduleType === SCHEDULE_TYPE_OF[key]);
-  const SV = scheduledWorkspaceState(ofType("SV"));
+  const SV = scheduledWorkspaceState(withoutSupersededSurveys(ofType("SV")));
   const VF = scheduledWorkspaceState(ofType("VF"));
   const TA = withTechnical ? scheduledWorkspaceState(ofType("TA")) : undefined;
 

@@ -35,6 +35,12 @@ function lhviuFields(value: unknown): { number: string | null; issuedAt: string 
   };
 }
 
+/** Whether the application declares a Gudang among its locations. */
+export function hasGudangLocation(payload: unknown): boolean {
+  const locations = (payload as { locations?: { locationType?: string }[] } | null)?.locations ?? [];
+  return locations.some((location) => location.locationType === "GUDANG");
+}
+
 function latest(dates: (Date | null | undefined)[]): string {
   const times = dates.filter((date): date is Date => Boolean(date)).map((date) => date.getTime());
   return new Date(Math.max(...times)).toISOString();
@@ -56,7 +62,9 @@ export async function loadComplianceCases(): Promise<CaseRow[]> {
       lhviuDocument: true,
       returnedByRole: true,
       company: { select: { companyName: true, nibNumber: true } },
-      assignments: { select: { scheduleType: true, status: true, letterStatus: true, pmReviewStatus: true, updatedAt: true } },
+      assignments: {
+        select: { scheduleType: true, status: true, letterStatus: true, pmReviewStatus: true, updatedAt: true, locationVisits: { select: { id: true } } },
+      },
       complianceCase: { include: { picUser: { select: { name: true } } } },
       complianceIssues: { select: { id: true, issueNumber: true, kind: true, title: true, sourceWorkspace: true, requirementKey: true, updatedAt: true } },
     },
@@ -77,6 +85,7 @@ export async function loadComplianceCases(): Promise<CaseRow[]> {
         nib: app.company?.nibNumber ?? "—",
         submittedAt: submitted.value,
         submittedIsSystemDate: submitted.isFallback,
+        hasGudang: hasGudangLocation(app.payload),
         updatedAt: latest([
           app.updatedAt,
           ...assignments.map((a) => a.updatedAt),
