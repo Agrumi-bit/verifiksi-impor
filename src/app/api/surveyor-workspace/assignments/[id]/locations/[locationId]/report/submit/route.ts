@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { resetPmReview } from "@/modules/project-manager-workspace/server/reset-pm-review";
+
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import { loadAssignmentVisit } from "@/modules/surveyor-workspace/server/load-assignment-visit";
@@ -79,6 +81,11 @@ export async function POST(
         text: `Laporan survei lokasi ${locationLabel} telah diselesaikan oleh ${session.user.name}.`,
       },
     });
+    // A new version of the survey report: the PM's earlier Approve/Tolak no longer covers it.
+    await resetPmReview(
+      visit.assignmentId,
+      `Persetujuan PM atas Laporan Survey dibatalkan otomatis karena surveyor mensubmit ulang laporan lokasi ${locationLabel} — perlu direview ulang oleh Project Manager.`,
+    );
   }
 
   const siblings = await db.assignment.findMany({

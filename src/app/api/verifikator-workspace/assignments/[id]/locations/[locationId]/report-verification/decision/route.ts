@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/get-session";
 import { setReportVerificationDecision } from "@/modules/verifikator-workspace/report-verification";
+import { resetPmReview } from "@/modules/project-manager-workspace/server/reset-pm-review";
 
 const LOCATION_TYPE_LABEL: Record<string, string> = { KANTOR: "Kantor", GUDANG: "Gudang", PABRIK: "Pabrik" };
 
@@ -47,6 +48,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     parsed.data.note?.trim() || null,
     verifikator?.name ?? "Verifikator",
     parsed.data.verifiedAt,
+  );
+
+  // A new verifikator review of the survey report: the PM's earlier Approve/Tolak no longer covers it.
+  await resetPmReview(
+    visit.assignmentId,
+    `Persetujuan PM atas Laporan Survey dibatalkan otomatis karena verifikator memperbarui review laporan lokasi ${LOCATION_TYPE_LABEL[visit.locationType] ?? visit.locationType} — perlu direview ulang oleh Project Manager.`,
   );
 
   if (parsed.data.decision === "REVISION") {

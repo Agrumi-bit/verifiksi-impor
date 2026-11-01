@@ -1,4 +1,5 @@
 import { writePmReviewedByName } from "@/modules/verifikator-workspace/report-signoff";
+import { resetPmReview } from "@/modules/project-manager-workspace/server/reset-pm-review";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -11,7 +12,8 @@ import { collectApplicationVisits, isAssignmentSurveyComplete, type SurveyPayloa
 const patchSchema = z.object({
   category: z.enum(APPROVAL_CATEGORIES),
   /** REVISION (Laporan Verifikasi Dokumen / Laporan Analisis Teknis): send the report back to its author. */
-  decision: z.enum(["APPROVED", "REJECTED", "REVISION"]),
+  /** REREVIEW: withdraw an earlier Approve/Tolak (e.g. approved by mistake) so the report can be decided again. */
+  decision: z.enum(["APPROVED", "REJECTED", "REVISION", "REREVIEW"]),
   note: z.string().trim().optional(),
   /** "Tanggal Review" (YYYY-MM-DD) chosen by the PM — prints as the report's TANGGAL TERBIT.
    * Defaults to today; never in the future. */
@@ -67,6 +69,30 @@ export async function PATCH(
   }
 
   const { category, decision, note } = parsed.data;
+
+  if (decision === "REREVIEW") {
+    if (category === "suratTugas") return NextResponse.json({ error: "Tidak tersedia untuk Surat Tugas." }, { status: 400 });
+    if (assignment.scheduleType !== CATEGORY_SCHEDULE_TYPE[category]) {
+      return NextResponse.json({ error: "Kategori tidak sesuai dengan jenis penugasan ini." }, { status: 400 });
+    }
+    if (!assignment.pmReviewStatus) return NextResponse.json({ error: "Laporan ini belum diputuskan." }, { status: 400 });
+    if (assignment.application.status === "COMPLETED") {
+      return NextResponse.json({ error: "Permohonan sudah selesai (LHVIU/LHVKI telah dicatat); keputusan tidak dapat dibatalkan." }, { status: 400 });
+    }
+    const label = category === "laporanSurvey" ? "Laporan Survey" : category === "laporanTeknis" ? "Laporan Analisis Teknis" : "Laporan Verifikasi Dokumen";
+    await resetPmReview(assignmentId, `${label} ${assignment.assignmentNumber}: keputusan Project Manager dibatalkan untuk direview ulang${note?.trim() ? ` — ${note.trim()}` : ""}.`);
+    await db.applicationAuditLog.create({
+      data: {
+        applicationId: assignment.applicationId,
+        action: "PM_REREVIEW",
+        actorId: session.user.id,
+        actorName: session.user.name ?? null,
+        actorRole: session.user.role ?? "PROJECT_MANAGER",
+        reason: `${label} ${assignment.assignmentNumber} direview ulang (keputusan sebelumnya: ${assignment.pmReviewStatus})${note?.trim() ? `: ${note.trim()}` : ""}`,
+      },
+    });
+    return NextResponse.json({ data: { pmReviewStatus: null } });
+  }
 
   if (category === "suratTugas") {
     if (assignment.letterStatus === "APPROVED") {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { MaterialIcon } from "../material-icon";
 import type { PmApplicationDetail } from "./types";
@@ -55,6 +56,24 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
   function locationsOf(assignmentNumber: string) {
     return survey!.locationVisits.filter((v) => v.assignmentNumber === assignmentNumber).length;
   }
+  /** "Review Ulang": withdraw the PM's earlier Approve/Tolak (e.g. approved by mistake) and decide again. */
+  async function reReview(assignmentId: string, assignmentNumber: string) {
+    const note = window.prompt(`Review ulang Laporan Survey ${assignmentNumber}? Keputusan sebelumnya akan dibatalkan.\n\nAlasan (opsional):`);
+    if (note === null) return;
+    const response = await fetch(`/api/project-manager-workspace/approvals/${assignmentId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category: "laporanSurvey", decision: "REREVIEW", note: note.trim() || undefined }),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal membatalkan keputusan.");
+      return;
+    }
+    toast.success(`Keputusan Laporan Survey ${assignmentNumber} dibatalkan — silakan review ulang.`);
+    refresh();
+  }
+
   function refresh() {
     setReviewing(null);
     queryClient.invalidateQueries({ queryKey: ["project-manager-workspace", "applications", data.verificationType, applicationNumber] });
@@ -261,14 +280,24 @@ export function SurveyTab({ data, applicationNumber }: { data: PmApplicationDeta
                       </div>
                       {sa.pmReviewNote && <div className="mb-2 text-[12px] text-[#6b5b4c]">Catatan: {sa.pmReviewNote}</div>}
                       {sa.pmReviewStatus && (
-                        <button
-                          type="button"
-                          onClick={() => setReviewing({ visitId: visit.id, decision: null })}
-                          className="flex items-center gap-1.5 rounded-lg border border-[#e0d5c8] bg-white px-3 py-1.75 text-[11.5px] font-bold text-[#5c4a3d]"
-                        >
-                          <MaterialIcon name="visibility" className="text-[14px]" />
-                          Lihat Review
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setReviewing({ visitId: visit.id, decision: null })}
+                            className="flex items-center gap-1.5 rounded-lg border border-[#e0d5c8] bg-white px-3 py-1.75 text-[11.5px] font-bold text-[#5c4a3d]"
+                          >
+                            <MaterialIcon name="visibility" className="text-[14px]" />
+                            Lihat Review
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => reReview(sa.id, sa.assignmentNumber)}
+                            className="flex items-center gap-1.5 rounded-lg border border-[#c98a1f] bg-[#fdf4de] px-3 py-1.75 text-[11.5px] font-bold text-[#a6791f]"
+                          >
+                            <MaterialIcon name="replay" className="text-[14px]" />
+                            Review Ulang
+                          </button>
+                        </div>
                       )}
                       {shared && (
                         <div className="mb-2 text-[11.5px] text-[#8a7565]">Berlaku untuk seluruh lokasi pada penugasan ini.</div>
