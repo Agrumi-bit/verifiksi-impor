@@ -18,9 +18,10 @@ import { AnalisisTab } from "./detail/analisis-tab";
 import type { PmApplicationDetail } from "./detail/types";
 import { viuSchemeHref, viuSchemeOf, type PmViuScheme } from "../viu-schemes";
 import { LhviuTab } from "./lhviu/lhviu-tab";
+import { BeritaAcaraTab } from "./berita-acara/berita-acara-tab";
 import "./lhviu/lhviu-combined.css";
 
-const TAB_NAMES = ["Overview", "Assignment", "Application", "Company", "Documents", "Survey", "Verification", "Analisis", "LHVIU", "Communication", "Timeline"] as const;
+const TAB_NAMES = ["Overview", "Assignment", "Application", "Company", "Documents", "Survey", "Verification", "Analisis", "Berita Acara", "LHVIU", "Communication", "Timeline"] as const;
 type TabName = (typeof TAB_NAMES)[number];
 
 const STATUS_BADGE: Record<string, string> = {
@@ -151,6 +152,7 @@ export function ApplicationDetail({ applicationNumber, jenis, scheme }: { applic
       {tab === "Survey" && <SurveyTab data={data} applicationNumber={applicationNumber} />}
       {tab === "Verification" && <VerificationTab data={data} />}
       {tab === "Analisis" && <AnalisisTab data={data} applicationNumber={applicationNumber} />}
+      {tab === "Berita Acara" && <BeritaAcaraTab data={data} applicationNumber={applicationNumber} jenis={jenis} />}
       {tab === "LHVIU" && <LhviuTab data={data} applicationNumber={applicationNumber} jenis={jenis} />}
       {tab === "Communication" && (
         messageThreadAssignmentNumber ? (

@@ -17,6 +17,8 @@ export default function ProjectManagerWorkspaceLayout({
     /^\/project-manager-workspace\/assignments\/[^/]+\/(report\/|document-report|technical-report)/.test(pathname ?? "") ||
     // LHVIU merged reports (Laporan Verifikasi / Laporan Lengkap) print the same way.
     /^\/project-manager-workspace\/applications\/[^/]+\/[^/]+\/lhviu\//.test(pathname ?? "") ||
+    // Berita Acara Pelaksanaan of an application.
+    /^\/project-manager-workspace\/applications\/[^/]+\/[^/]+\/berita-acara-report/.test(pathname ?? "") ||
     // Laporan Pelaksanaan VIU / VKI (Pelaporan Pasal 47) report.
     /^\/project-manager-workspace\/(viu\/[^/]+|vki)\/laporan-kemenperin\/laporan/.test(pathname ?? "");
 

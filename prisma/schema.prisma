@@ -122,6 +122,9 @@ model Application {
   // LHVIU: the signed Laporan Hasil VIU PDF uploaded by the Project Manager — { path, fileName, uploadedAt,
   // uploadedByName }. Read/written with SQL (project-manager-workspace/lhviu-store.ts).
   lhviuDocument       Json?
+  // Berita Acara Pelaksanaan (nomor, tanggal, tempat, penandatangan, lampiran) entered by the Project Manager.
+  // Read/written with SQL (project-manager-workspace/berita-acara-store.ts).
+  beritaAcaraPelaksanaan Json?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 

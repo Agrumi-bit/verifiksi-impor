@@ -1,0 +1,189 @@
+/* Berita Acara Pelaksanaan — formal letter on the Tribhakti letterhead, white A4 sheets. */
+.ba-doc .rd-sheet.ba-sheet {
+  background: #fff;
+  color: #111;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+.ba-doc .ba-sheet .rd-pagehead {
+  display: block;
+  padding: 18px 40px 0;
+}
+.ba-doc .ba-sheet .rd-pagehead img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.ba-doc .ba-sheet .rd-body {
+  padding: 22px 72px 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.ba-doc .ba-sheet .rd-pagefoot {
+  padding: 10px 72px 22px;
+  justify-content: flex-end;
+  font-size: 9.5px;
+  color: #777;
+}
+.ba-doc .ba-title {
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 10px 0 2px;
+}
+.ba-doc .ba-nomor {
+  text-align: center;
+  font-size: 12px;
+  margin-bottom: 26px;
+}
+.ba-doc .ba-p {
+  text-align: justify;
+  margin: 0 0 12px;
+}
+.ba-doc .ba-ident {
+  border-collapse: collapse;
+  margin: 4px 0 14px;
+}
+.ba-doc .ba-ident td {
+  vertical-align: top;
+  padding: 2px 0;
+}
+.ba-doc .ba-ident td:first-child {
+  width: 140px;
+}
+.ba-doc .ba-ident td:nth-child(2) {
+  width: 14px;
+}
+.ba-doc .ba-h {
+  font-weight: 700;
+  margin: 14px 0 8px;
+}
+.ba-doc .ba-li {
+  display: flex;
+  gap: 8px;
+  text-align: justify;
+  margin: 0 0 6px;
+}
+.ba-doc .ba-li > span:first-child {
+  flex: 0 0 auto;
+  min-width: 18px;
+}
+.ba-doc .ba-li.ba-l1 {
+  padding-left: 18px;
+}
+.ba-doc .ba-li.ba-l2 {
+  padding-left: 44px;
+}
+.ba-doc .ba-sign {
+  margin-top: 22px;
+  break-inside: avoid;
+}
+.ba-doc .ba-sign-date {
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+.ba-doc .ba-sign-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 40px;
+}
+.ba-doc .ba-sign-space {
+  height: 84px;
+}
+.ba-doc .ba-sign-name {
+  font-weight: 700;
+  text-decoration: underline;
+}
+.ba-doc .ba-lampiran-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 24px 0 10px;
+}
+
+/* ---------- lampiran ---------- */
+.ba-doc .ba-lamp-head {
+  border-bottom: 2px solid #111;
+  padding-bottom: 8px;
+  margin: 6px 0 14px;
+}
+.ba-doc .ba-lamp-no {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #555;
+}
+.ba-doc .ba-lamp-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+.ba-doc .ba-lamp-sub {
+  font-size: 11px;
+  color: #555;
+}
+.ba-doc .ba-lamp-subtitle {
+  font-weight: 700;
+  font-size: 12px;
+  margin: 14px 0 6px;
+}
+.ba-doc .ba-kv {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 11.5px;
+  margin-bottom: 6px;
+}
+.ba-doc .ba-kv td {
+  border: 1px solid #bbb;
+  padding: 5px 8px;
+  vertical-align: top;
+}
+.ba-doc .ba-kv td:first-child {
+  width: 34%;
+  background: #f4f4f4;
+  font-weight: 600;
+}
+.ba-doc .ba-table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+.ba-doc .ba-table th,
+.ba-doc .ba-table td {
+  border: 1px solid #999;
+  padding: 5px 6px;
+  vertical-align: top;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.ba-doc .ba-table th {
+  background: #e9e9e9;
+  font-weight: 700;
+}
+.ba-doc .ba-table .num {
+  text-align: right;
+}
+.ba-doc .ba-table-blank td {
+  height: 30px;
+}
+.ba-doc .ba-empty {
+  font-size: 11.5px;
+  font-style: italic;
+  color: #666;
+}
+.ba-doc .ba-check {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  margin: 0 0 6px 6px;
+}
+.ba-doc .ba-lines > div {
+  border-bottom: 1px dotted #888;
+  height: 26px;
+}
+.ba-doc .ba-sign-sm .ba-sign-space {
+  height: 64px;
+}
