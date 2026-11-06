@@ -52,6 +52,8 @@ export type ApplicationDetail = {
     status: DocVerificationStatusValue;
     rejectionNote: string;
     requestNote: string;
+    unavailable?: boolean;
+    unavailableNote?: string;
     version: number;
     uploadedByName: string | null;
     uploadedAt: string | null;

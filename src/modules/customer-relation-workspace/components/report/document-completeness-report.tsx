@@ -26,6 +26,7 @@ const tanggal = (value: string | Date | null | undefined) =>
   value ? new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "—";
 
 function StatusBadge({ doc }: { doc: CompletenessDoc }) {
+  if (doc.unavailable) return <span className="kd-badge kd-bad">Belum Tersedia</span>;
   if (doc.status === "PENDING" && !doc.lengkap) return <span className="kd-badge kd-bad">Belum Ada</span>;
   const cls = doc.status === "VALID" ? "kd-ok" : doc.status === "REJECTED" || doc.status === "NEED_REVISION" ? "kd-bad" : doc.status === "NOT_APPLICABLE" ? "kd-na" : "kd-pending";
   return <span className={`kd-badge ${cls}`}>{CR_DOCUMENT_STATUS_LABELS[doc.status]}</span>;
@@ -140,7 +141,7 @@ export function completenessFlow(data: ApplicationDetail, checkerName: string, t
       <table className="kd-table">
         <thead>
           <tr>
-            {["Total Dokumen", "Tersedia", "Belum Ada", "Valid", "Tidak Valid", "Tidak Diperlukan", "Belum Diperiksa"].map((h) => (
+            {["Total Dokumen", "Tersedia", "Belum Ada / Belum Tersedia", "Valid", "Tidak Valid", "Tidak Diperlukan", "Belum Diperiksa"].map((h) => (
               <th key={h} className="ctr">
                 {h}
               </th>
@@ -186,10 +187,12 @@ export function completenessFlow(data: ApplicationDetail, checkerName: string, t
             d.label
           ),
           compliance.def(d.key)?.persyaratan ?? "—",
-          d.lengkap ? "Ada" : "Belum Ada",
+          d.unavailable ? "Belum Tersedia" : d.lengkap ? "Ada" : "Belum Ada",
           <StatusBadge key="s" doc={d} />,
           d.lengkap ? `V${d.version} · ${tanggal(d.uploadedAt)}` : "—",
-          [d.rejectionNote, d.requestNote && `Permintaan: ${d.requestNote}`].filter(Boolean).join("\n") || "—",
+          [d.rejectionNote, d.unavailable && d.unavailableNote && `Belum tersedia: ${d.unavailableNote}`, d.requestNote && `Permintaan: ${d.requestNote}`]
+            .filter(Boolean)
+            .join("\n") || "—",
         ]),
         <div className="kd-sh">
           {String.fromCharCode(65 + gi)}. {g.title}
@@ -199,7 +202,7 @@ export function completenessFlow(data: ApplicationDetail, checkerName: string, t
     );
   });
 
-  const followUps = docs.filter((d) => d.status === "REJECTED" || d.status === "NEED_REVISION" || (!d.lengkap && d.status !== "NOT_APPLICABLE"));
+  const followUps = docs.filter((d) => d.status === "REJECTED" || d.status === "NEED_REVISION" || ((!d.lengkap || d.unavailable) && d.status !== "NOT_APPLICABLE"));
   items.push(
     rowsTable(
       "tindak",
@@ -208,8 +211,11 @@ export function completenessFlow(data: ApplicationDetail, checkerName: string, t
       followUps.map((d, i) => [
         `${i + 1}.`,
         d.label,
-        !d.lengkap ? "Belum diunggah" : CR_DOCUMENT_STATUS_LABELS[d.status],
-        d.rejectionNote || d.requestNote || (!d.lengkap ? "Perusahaan diminta mengunggah dokumen." : "Perusahaan diminta memperbaiki dokumen."),
+        d.unavailable ? "Belum tersedia" : !d.lengkap ? "Belum diunggah" : CR_DOCUMENT_STATUS_LABELS[d.status],
+        d.rejectionNote ||
+          (d.unavailable && d.unavailableNote) ||
+          d.requestNote ||
+          (!d.lengkap || d.unavailable ? "Perusahaan diminta mengunggah dokumen." : "Perusahaan diminta memperbaiki dokumen."),
       ]),
       <>
         <div className="kd-h">IV. DOKUMEN YANG PERLU DILENGKAPI / DIPERBAIKI</div>
@@ -307,7 +313,7 @@ export function DocumentCompletenessReport({ id }: { id: string }) {
         {isError && <p className="py-10 text-center text-sm text-destructive">Laporan tidak ditemukan.</p>}
         {data && (
           <A4Pages
-            items={data.vkiCheck ? vkiCheckFlow(data.vkiCheck, checker, new Date()) : completenessFlow(data, checker, new Date())}
+            items={data.vkiCheck ? vkiCheckFlow(data.vkiCheck, data.documents, checker, new Date()) : completenessFlow(data, checker, new Date())}
             renderPage={(pageNo, total, children) => (
               <Sheet pageNo={pageNo} total={total} applicationNumber={data.applicationNumber}>
                 {children}

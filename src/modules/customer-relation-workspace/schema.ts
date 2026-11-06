@@ -37,11 +37,20 @@ export const verifyDocumentSchema = z.discriminatedUnion("action", [
     action: z.literal("request"),
     note: z.string().trim().max(2000, "Catatan maksimal 2000 karakter").optional(),
   }),
+  // CR-only "Belum Tersedia": the document isn't available yet (not uploaded, or the file uploaded isn't it yet).
+  z.object({
+    action: z.literal("unavailable"),
+    note: z.string().trim().max(2000, "Catatan maksimal 2000 karakter").optional(),
+  }),
 ]);
 
 /** Stores only the "Minta Dokumen" memo — verification status itself lives on the real document version tables. */
 export const crDocumentRequestSchema = z.object({
   requestNote: z.string().trim().optional(),
+  /** CR marked the document "Belum Tersedia" — holds while the document's file is still `path` (null: none uploaded). */
+  unavailable: z
+    .object({ path: z.string().nullable(), note: z.string().optional(), at: z.string(), byName: z.string().optional() })
+    .optional(),
 });
 export type CrDocumentRequest = z.infer<typeof crDocumentRequestSchema>;
 

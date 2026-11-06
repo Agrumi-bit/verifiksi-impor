@@ -9,6 +9,9 @@ export type CompletenessDoc = {
   status: DocVerificationStatusValue;
   rejectionNote: string;
   requestNote: string;
+  /** CR's "Belum Tersedia" mark. */
+  unavailable?: boolean;
+  unavailableNote?: string;
   version: number;
   uploadedAt: string | null;
 };
@@ -17,13 +20,14 @@ export type CompletenessDoc = {
 export function completenessStats(docs: readonly CompletenessDoc[]) {
   return {
     total: docs.length,
-    tersedia: docs.filter((d) => d.lengkap).length,
-    kurang: docs.filter((d) => !d.lengkap && d.status !== "NOT_APPLICABLE").length,
+    tersedia: docs.filter((d) => d.lengkap && !d.unavailable).length,
+    kurang: docs.filter((d) => (!d.lengkap || d.unavailable) && d.status !== "NOT_APPLICABLE").length,
+    belumTersedia: docs.filter((d) => d.unavailable).length,
     valid: docs.filter((d) => d.status === "VALID").length,
     tidakValid: docs.filter((d) => d.status === "REJECTED" || d.status === "NEED_REVISION").length,
     tidakDiperlukan: docs.filter((d) => d.status === "NOT_APPLICABLE").length,
-    belumDiperiksa: docs.filter((d) => d.status === "PENDING").length,
-    reviewed: docs.filter((d) => d.status !== "PENDING").length,
+    belumDiperiksa: docs.filter((d) => d.status === "PENDING" && !d.unavailable).length,
+    reviewed: docs.filter((d) => d.status !== "PENDING" || d.unavailable).length,
   };
 }
 
@@ -37,7 +41,7 @@ export function completenessVerdict(docs: readonly CompletenessDoc[]): { key: "L
     return {
       key: "BELUM_LENGKAP",
       label: "BELUM LENGKAP",
-      text: `Dokumen permohonan belum lengkap: ${s.kurang} dokumen belum diunggah dan ${s.tidakValid} dokumen dinyatakan tidak valid. Perusahaan perlu melengkapi/memperbaiki dokumen sebagaimana tercantum pada bagian IV sebelum permohonan diproses lebih lanjut.`,
+      text: `Dokumen permohonan belum lengkap: ${s.kurang} dokumen belum tersedia/belum diunggah dan ${s.tidakValid} dokumen dinyatakan tidak valid. Perusahaan perlu melengkapi/memperbaiki dokumen sebagaimana tercantum pada bagian IV sebelum permohonan diproses lebih lanjut.`,
     };
   }
   if (s.belumDiperiksa > 0) {

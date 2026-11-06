@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, ChevronLeft, ChevronRight, HelpCircle, History, MailQuestion, Upload, X, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, ChevronLeft, ChevronRight, HelpCircle, History, MailQuestion, Upload, X, XCircle } from "lucide-react";
 
 import { PdfViewer } from "@/components/pdf-viewer";
 import { buildDisplayFileName } from "@/lib/document-filename";
 import { checklistItemCode } from "@/modules/verifikator-workspace/schema";
 import { docStatusLabel, InfoRow } from "@/modules/verifikator-workspace/components/detail/document-verification-tab";
-import { CR_DOCUMENT_STATUS_LABELS, DOC_VERIFICATION_STATUS_BADGE, type CrDocumentCheckStatus, type DocVerificationStatusValue } from "../../status";
+import { CR_UNAVAILABLE_BADGE, DOC_VERIFICATION_STATUS_BADGE, crReviewLabel, type CrDocumentCheckStatus, type DocVerificationStatusValue } from "../../status";
 
 export type DocItem = {
   key: string;
@@ -18,6 +18,9 @@ export type DocItem = {
   status: DocVerificationStatusValue;
   rejectionNote: string;
   requestNote: string;
+  /** CR marked it "Belum Tersedia" (still the same file, or still none). */
+  unavailable?: boolean;
+  unavailableNote?: string;
   version: number;
   uploadedByName: string | null;
   uploadedAt: string | null;
@@ -59,6 +62,7 @@ type Props = {
   onClose: () => void;
   onDecide: (status: CrDocumentCheckStatus, note: string) => void;
   onRequest: () => void;
+  onUnavailable: (note: string) => void;
   onShowHistory: () => void;
 };
 
@@ -70,8 +74,8 @@ type Props = {
  * diperlukan call (`CHECK_BUTTONS`), not verifikator's "Uraian yang Diperiksa" per-criterion
  * checklist.
  */
-export function DocumentReviewModal({ company, doc, isSaving, onClose, onDecide, onRequest, onShowHistory }: Props) {
-  const [note, setNote] = useState(doc.rejectionNote);
+export function DocumentReviewModal({ company, doc, isSaving, onClose, onDecide, onRequest, onUnavailable, onShowHistory }: Props) {
+  const [note, setNote] = useState(doc.rejectionNote || doc.unavailableNote || "");
   const [collapsed, setCollapsed] = useState(false);
   const [fileSize, setFileSize] = useState<string | null>(null);
   const href = doc.documentPath ? fileHref(doc.documentPath) : null;
@@ -79,7 +83,7 @@ export function DocumentReviewModal({ company, doc, isSaving, onClose, onDecide,
   const documentCode = checklistItemCode(doc.key, doc.label);
   const displayName = doc.documentPath ? buildDisplayFileName(documentCode, company, doc.version, doc.documentPath) : null;
   const format = doc.documentPath ? (doc.documentPath.split(".").pop() ?? "").toUpperCase() : null;
-  const reviewLabel = doc.status === "PENDING" && !doc.lengkap ? "Belum Ada" : CR_DOCUMENT_STATUS_LABELS[doc.status];
+  const reviewLabel = crReviewLabel(doc);
 
   useEffect(() => {
     if (!href) return;
@@ -150,7 +154,7 @@ export function DocumentReviewModal({ company, doc, isSaving, onClose, onDecide,
                     onClick={() => onDecide(status, note)}
                     className={
                       "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[12.5px] font-bold disabled:opacity-50 " +
-                      (doc.status === status
+                      (doc.status === status && !doc.unavailable
                         ? "border-[#e0662e] bg-[#fdeadd] text-[#c14a1f]"
                         : "border-[#f0ded0] bg-white text-[#4a4038] hover:bg-[#f7f2ec]")
                     }
@@ -159,6 +163,18 @@ export function DocumentReviewModal({ company, doc, isSaving, onClose, onDecide,
                     {label}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  disabled={isSaving}
+                  onClick={() => onUnavailable(note)}
+                  className={
+                    "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[12.5px] font-bold disabled:opacity-50 " +
+                    (doc.unavailable ? "border-[#d99a1e] bg-[#fdf0d5] text-[#8a5a0a]" : "border-[#f0ded0] bg-white text-[#4a4038] hover:bg-[#f7f2ec]")
+                  }
+                >
+                  <Clock className="size-4" />
+                  Dokumen Belum Tersedia
+                </button>
               </div>
               {doc.verifiedAt && (
                 <div className="mt-3 text-[10.5px] text-[#8a7565]">Diperiksa: {new Date(doc.verifiedAt).toLocaleString("id-ID")}</div>
@@ -208,7 +224,9 @@ export function DocumentReviewModal({ company, doc, isSaving, onClose, onDecide,
                   </span>
                 </InfoRow>
                 <InfoRow icon="fact_check" label="Status Pemeriksaan CR" collapsed={collapsed}>
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${DOC_VERIFICATION_STATUS_BADGE[doc.status]}`}>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${doc.unavailable ? CR_UNAVAILABLE_BADGE : DOC_VERIFICATION_STATUS_BADGE[doc.status]}`}
+                  >
                     {reviewLabel}
                   </span>
                 </InfoRow>

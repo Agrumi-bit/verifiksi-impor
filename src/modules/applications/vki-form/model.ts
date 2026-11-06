@@ -100,6 +100,33 @@ function fullAddress(loc: Partial<LocationValues> | undefined): string {
 const BUILDING_LABEL: Record<string, string> = { MILIK_SENDIRI: "Milik Sendiri", SEWA: "Sewa" };
 const LOCATION_LABEL: Record<string, string> = { KANTOR: "Kantor", PABRIK: "Pabrik", GUDANG: "Gudang" };
 
+export type ProductionTable = { key: string; title: string; headers: string[]; widths: number[]; rows: string[][]; numeric?: number[]; center?: number[] };
+
+const PRODUCTION_TITLES: [string, string][] = [
+  ["B.1", "Data kemampuan produksi setiap mesin per hari"],
+  ["B.2", "Jumlah produksi dan penggunaan bahan baku/penolong (TPT), 1 tahun sebelumnya"],
+  ["B.3", "Konversi penggunaan bahan baku/bahan penolong per jenis produk"],
+  ["B.4a", "Rencana produksi per jenis dan HS, 1 tahun ke depan"],
+  ["B.4b", "Kebutuhan bahan baku/bahan penolong per jenis dan HS, 1 tahun ke depan"],
+  ["B.5", "Penjualan dalam negeri dan tujuan ekspor per jenis dan HS, 1 tahun sebelumnya"],
+  ["B.6", "Jumlah stok terkini bahan baku/bahan penolong per jenis dan HS"],
+];
+
+/**
+ * The application's production data (Formulir section C = Pasal 30 ayat (2) huruf a) as plain tables,
+ * numbered like the Form Pemeriksaan's B. items — the Lampiran "Data Aspek Produksi".
+ */
+export function productionTables(form: VkiForm): ProductionTable[] {
+  const start = form.blocks.findIndex((b) => b.kind === "heading" && b.text.startsWith("C."));
+  const end = form.blocks.findIndex((b, i) => i > start && b.kind === "heading");
+  if (start < 0) return [];
+  const tables = form.blocks.slice(start, end < 0 ? undefined : end).filter((b): b is Extract<VkiFormBlock, { kind: "table" }> => b.kind === "table");
+  return tables.map((tb, i) => {
+    const [key, title] = PRODUCTION_TITLES[i] ?? [`B.${i + 1}`, ""];
+    return { key, title, headers: tb.headers, widths: tb.widths, rows: tb.rows, numeric: tb.numeric, center: tb.center };
+  });
+}
+
 /**
  * Rekam jejak LHVKI: the LHVKI the company declared on the application (any lembaga, with its document)
  * plus the ones this platform already issued to it — the declared row wins when the number matches.

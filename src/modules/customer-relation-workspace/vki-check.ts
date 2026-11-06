@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { TAX_PROOF_TYPE_LABELS, type TaxProofType } from "@/modules/company/schema";
-import { fileNameOf, fmtNum, mergeLhvki, tanggalId } from "@/modules/applications/vki-form/model";
+import { fileNameOf, fmtNum, mergeLhvki, tanggalId, type ProductionTable } from "@/modules/applications/vki-form/model";
 import type { DocVerificationStatusValue } from "@/modules/verifikator-workspace/status";
 
 /**
@@ -63,6 +63,9 @@ export type CheckDoc = {
   status: DocVerificationStatusValue;
   rejectionNote: string;
   requestNote: string;
+  /** CR's "Belum Tersedia" mark. */
+  unavailable?: boolean;
+  unavailableNote?: string;
 };
 
 export type VkiCheckDataRow = { key: string; label: string; ref: string; ada: boolean; summary: string; sesuai: "SESUAI" | "TIDAK_SESUAI" | null; note: string };
@@ -85,10 +88,13 @@ export type VkiCheck = {
   jenisPermohonan: "BARU" | "PERUBAHAN";
   dataRows: VkiCheckDataRow[];
   docRows: VkiCheckDocRow[];
-  electricity: { bulan: string; nominal: string; kwh: string; sesuai: boolean | null; note: string }[];
+  electricity: { docKey: string; bulan: string; nominal: string; kwh: string; sesuai: boolean | null; note: string }[];
   companyAge: "OVER_3" | "UNDER_3" | null;
   taxRows: { year: string; jenis: string; nomorTanggal: string; ada: boolean; note: string }[];
   skt: { nomor: string; tanggal: string; penerbit: string; sesuaiNpwp: boolean | null };
+  tenagaKerja: { kategori: string; jumlah: string }[];
+  /** Lampiran Data Aspek Produksi — the application's production tables (B.1–B.6). */
+  production: ProductionTable[];
   check: CrDataCheck;
 };
 
@@ -121,6 +127,7 @@ export function buildVkiCheck({
   documents,
   lhvki,
   saved,
+  production = [],
 }: {
   payload: ApplicationWizardValues;
   applicationNumber: string;
@@ -129,6 +136,7 @@ export function buildVkiCheck({
   documents: CheckDoc[];
   lhvki: { number: string; issuedAt: string; issuer: string }[];
   saved: CrDataCheck;
+  production?: ProductionTable[];
 }): VkiCheck {
   const rekamJejak = mergeLhvki(lhvki, p);
   const locations = (p.locations ?? []) as unknown as Record<string, unknown>[];
@@ -202,7 +210,7 @@ export function buildVkiCheck({
   // ---- C. documents (CR's own document checklist)
   const pick = (pred: (d: CheckDoc) => boolean) => documents.filter(pred);
   const docRow = (key: string, label: string, ref: string, docs: CheckDoc[], extra?: Partial<VkiCheckDocRow>): VkiCheckDocRow => {
-    const present = docs.filter((d) => d.lengkap && d.documentPath);
+    const present = docs.filter((d) => d.lengkap && d.documentPath && !d.unavailable);
     return {
       key,
       label,
@@ -210,7 +218,10 @@ export function buildVkiCheck({
       ada: present.length > 0,
       isian: present.map((d) => fileNameOf(d.documentPath)).join("; "),
       checkStatus: combinedStatus(docs),
-      note: docs.map((d) => [d.rejectionNote, d.requestNote].filter(Boolean).join(" — ")).filter(Boolean).join("; "),
+      note: docs
+        .map((d) => [d.unavailable && `Belum tersedia${d.unavailableNote ? `: ${d.unavailableNote}` : ""}`, d.rejectionNote, d.requestNote].filter(Boolean).join(" — "))
+        .filter(Boolean)
+        .join("; "),
       docs: present.map((d) => ({ label: d.label, path: d.documentPath! })),
       ...extra,
     };
@@ -281,11 +292,12 @@ export function buildVkiCheck({
   const electricity = (p.electricityMonths ?? []).map((m) => {
     const doc = listrik.find((d) => d.key === `vki-support:listrik:${m.id}`);
     return {
+      docKey: `vki-support:listrik:${m.id}`,
       bulan: bulanId(m.bulan),
       nominal: t(m.nominal) ? fmtNum(m.nominal) : "",
       kwh: fmtNum(m.kwh),
-      sesuai: doc ? (doc.status === "VALID" ? true : doc.status === "REJECTED" ? false : null) : null,
-      note: doc ? [doc.rejectionNote, doc.requestNote].filter(Boolean).join(" — ") : "",
+      sesuai: doc ? (doc.unavailable || doc.status === "REJECTED" ? false : doc.status === "VALID" ? true : null) : null,
+      note: doc ? [doc.unavailable && `Belum tersedia${doc.unavailableNote ? `: ${doc.unavailableNote}` : ""}`, doc.rejectionNote, doc.requestNote].filter(Boolean).join(" — ") : "",
     };
   });
 
@@ -312,6 +324,8 @@ export function buildVkiCheck({
       penerbit: t(p.sktIssuer),
       sesuaiNpwp: sktDoc ? (sktDoc.status === "VALID" ? true : sktDoc.status === "REJECTED" ? false : null) : null,
     },
+    tenagaKerja: (p.tenagaKerjaEntries ?? []).filter((e) => t(e.kategori) || t(e.jumlah)).map((e) => ({ kategori: t(e.kategori), jumlah: fmtNum(e.jumlah) })),
+    production,
     check: { ...saved, dasarKewajiban: dasar },
   };
 }

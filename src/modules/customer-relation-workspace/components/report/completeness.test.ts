@@ -27,6 +27,11 @@ describe("Laporan Kelengkapan Dokumen", () => {
     assert.equal(completenessVerdict([doc({}), doc({ lengkap: false, documentPath: null, status: "PENDING" })]).key, "BELUM_LENGKAP");
     assert.equal(completenessVerdict([doc({ status: "REJECTED" })]).key, "BELUM_LENGKAP");
   });
+  it("Belum Tersedia counts as missing even with a file", () => {
+    const docs = [doc({ status: "PENDING", unavailable: true })];
+    assert.equal(completenessVerdict(docs).key, "BELUM_LENGKAP");
+    assert.deepEqual([completenessStats(docs).tersedia, completenessStats(docs).belumTersedia, completenessStats(docs).belumDiperiksa], [0, 1, 0]);
+  });
   it("still running when uploaded documents are not yet checked", () => {
     assert.equal(completenessVerdict([doc({}), doc({ status: "PENDING" })]).key, "BELUM_SELESAI");
   });

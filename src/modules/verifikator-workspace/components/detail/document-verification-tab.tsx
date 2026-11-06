@@ -306,6 +306,8 @@ export function ComplianceTable<Row extends ComplianceRow>({
   statusLabels = DOC_VERIFICATION_STATUS_LABELS,
   reviewActionLabel = "Review",
   resolveDef = getComplianceDef,
+  reviewLabelOf,
+  reviewBadgeOf,
 }: {
   rows: Row[];
   onReview: (row: Row) => void;
@@ -316,6 +318,9 @@ export function ComplianceTable<Row extends ComplianceRow>({
    * Diperlukan") instead, since it's a narrower administrative check, not a full verification. */
   statusLabels?: Record<DocVerificationStatusValue, string>;
   reviewActionLabel?: string;
+  /** Per-row override of the Status Review label/badge (Customer Relation's "Belum Tersedia"). */
+  reviewLabelOf?: (row: Row) => string | undefined;
+  reviewBadgeOf?: (row: Row) => string | undefined;
 }) {
   return (
     <div className="overflow-auto rounded-lg border border-[#e8dccd]">
@@ -335,7 +340,7 @@ export function ComplianceTable<Row extends ComplianceRow>({
           {rows.map((row, index) => {
             const def = resolveDef(row.key);
             const docStatus = docStatusLabel(row);
-            const reviewLabel = row.status === "PENDING" && !row.documentPath ? "Belum Ada" : statusLabels[row.status];
+            const reviewLabel = reviewLabelOf?.(row) ?? (row.status === "PENDING" && !row.documentPath ? "Belum Ada" : statusLabels[row.status]);
             return (
               <tr key={row.key}>
                 <td className="border border-[#efe2d4] px-2.5 py-2.25 align-top text-[#6b5b4c]">{index + 1}</td>
@@ -364,7 +369,7 @@ export function ComplianceTable<Row extends ComplianceRow>({
                 </td>
                 <td className="border border-[#efe2d4] px-2.5 py-2.25 align-top">
                   <span
-                    className={`whitespace-nowrap rounded-full px-2 py-0.75 text-[10.5px] font-bold ${DOC_VERIFICATION_STATUS_BADGE[row.status]}`}
+                    className={`whitespace-nowrap rounded-full px-2 py-0.75 text-[10.5px] font-bold ${reviewBadgeOf?.(row) ?? DOC_VERIFICATION_STATUS_BADGE[row.status]}`}
                   >
                     {reviewLabel}
                   </span>

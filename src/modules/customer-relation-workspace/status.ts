@@ -20,6 +20,15 @@ export const CR_DOCUMENT_STATUS_LABELS: Record<DocVerificationStatusValue, strin
   NOT_APPLICABLE: "Tidak Diperlukan",
 };
 
+/** CR's review label of one document, with the CR-only "Belum Tersedia" mark on top of the shared status. */
+export function crReviewLabel(doc: { status: DocVerificationStatusValue; lengkap?: boolean; documentPath?: string | null; unavailable?: boolean }): string {
+  if (doc.unavailable) return "Belum Tersedia";
+  const present = doc.lengkap ?? Boolean(doc.documentPath);
+  return doc.status === "PENDING" && !present ? "Belum Ada" : CR_DOCUMENT_STATUS_LABELS[doc.status];
+}
+
+export const CR_UNAVAILABLE_BADGE = "bg-[#fdf0d5] text-[#8a5a0a]";
+
 export const CR_OUTCOMES = [
   "Diproses",
   "Menunggu Revisi",

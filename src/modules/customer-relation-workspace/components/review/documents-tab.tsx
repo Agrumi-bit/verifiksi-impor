@@ -9,7 +9,9 @@ import { CollapsibleCard, ComplianceTable, docStatusLabel } from "@/modules/veri
 import {
   CR_DOCUMENT_CHECK_STATUSES,
   CR_DOCUMENT_STATUS_LABELS,
+  CR_UNAVAILABLE_BADGE,
   DOC_VERIFICATION_STATUS_BADGE,
+  crReviewLabel,
   type CrDocumentCheckStatus,
   type DocVerificationStatusValue,
 } from "../../status";
@@ -46,7 +48,11 @@ function fmtDate(value: string | null): string {
 }
 
 function reviewLabel(doc: DocItem): string {
-  return doc.status === "PENDING" && !doc.lengkap ? "Belum Ada" : CR_DOCUMENT_STATUS_LABELS[doc.status];
+  return crReviewLabel(doc);
+}
+
+function reviewBadge(doc: DocItem): string {
+  return doc.unavailable ? CR_UNAVAILABLE_BADGE : DOC_VERIFICATION_STATUS_BADGE[doc.status];
 }
 
 /**
@@ -84,7 +90,10 @@ export function DocumentsTab({
   const [statusFilter, setStatusFilter] = useState("");
   const [reportShown, setReportShown] = useState(false);
 
-  async function callAction(key: string, body: { action: "check"; status: CrDocumentCheckStatus; note?: string } | { action: "request"; note?: string }) {
+  async function callAction(
+    key: string,
+    body: { action: "check"; status: CrDocumentCheckStatus; note?: string } | { action: "request"; note?: string } | { action: "unavailable"; note?: string },
+  ) {
     setSavingKey(key);
     const response = await fetch(`/api/customer-relation-workspace/applications/${applicationId}/documents/${key}`, {
       method: "POST",
@@ -104,8 +113,8 @@ export function DocumentsTab({
     const benar = documents.filter((d) => d.status === "VALID").length;
     const salah = documents.filter((d) => d.status === "REJECTED").length;
     const tidakDiperlukan = documents.filter((d) => d.status === "NOT_APPLICABLE").length;
-    const kurang = documents.filter((d) => !d.lengkap).length;
-    const reviewed = documents.filter((d) => d.status !== "PENDING").length;
+    const kurang = documents.filter((d) => !d.lengkap || d.unavailable).length;
+    const reviewed = documents.filter((d) => d.status !== "PENDING" || d.unavailable).length;
     return { total, benar, salah, tidakDiperlukan, kurang, reviewed };
   }, [documents]);
   const progressPct = stats.total ? Math.round((stats.reviewed / stats.total) * 100) : 0;
@@ -212,7 +221,14 @@ export function DocumentsTab({
                 </p>
               ))}
             </div>
-            <ComplianceTable rows={sectionDocs} onReview={setReviewingDoc} statusLabels={CR_DOCUMENT_STATUS_LABELS} resolveDef={compliance.def} />
+            <ComplianceTable
+              rows={sectionDocs}
+              onReview={setReviewingDoc}
+              statusLabels={CR_DOCUMENT_STATUS_LABELS}
+              resolveDef={compliance.def}
+              reviewLabelOf={(doc) => (doc.unavailable ? "Belum Tersedia" : undefined)}
+              reviewBadgeOf={(doc) => (doc.unavailable ? CR_UNAVAILABLE_BADGE : undefined)}
+            />
           </CollapsibleCard>
         );
       })}
@@ -314,7 +330,7 @@ export function DocumentsTab({
                     </span>
                   </div>
                   <div className="min-w-0">
-                    <span className={`inline-block rounded-full px-2.5 py-1 text-[11px] font-bold whitespace-nowrap ${DOC_VERIFICATION_STATUS_BADGE[doc.status]}`}>{reviewLabel(doc)}</span>
+                    <span className={`inline-block rounded-full px-2.5 py-1 text-[11px] font-bold whitespace-nowrap ${reviewBadge(doc)}`}>{reviewLabel(doc)}</span>
                   </div>
                   <div className="min-w-0">
                     <button
@@ -347,7 +363,7 @@ export function DocumentsTab({
                   <div className="text-[13.5px] font-bold text-[#20180f]">{doc.label}</div>
                   <div className="mt-0.5 text-[11.5px] text-[#c14a1f]">{doc.category}</div>
                   <div className="mt-3 flex items-center justify-between gap-2">
-                    <span className={`rounded-full px-2.5 py-1 text-[10.5px] font-bold ${DOC_VERIFICATION_STATUS_BADGE[doc.status]}`}>{reviewLabel(doc)}</span>
+                    <span className={`rounded-full px-2.5 py-1 text-[10.5px] font-bold ${reviewBadge(doc)}`}>{reviewLabel(doc)}</span>
                     <button
                       type="button"
                       onClick={() => setReviewingDoc(doc)}
@@ -372,6 +388,10 @@ export function DocumentsTab({
           isSaving={savingKey === reviewingDoc.key}
           onClose={() => setReviewingDoc(null)}
           onDecide={(status, note) => handleDecide(reviewingDoc, status, note)}
+          onUnavailable={(note) => {
+            callAction(reviewingDoc.key, { action: "unavailable", note });
+            setReviewingDoc(null);
+          }}
           onRequest={() => {
             setRequestModalDoc(reviewingDoc);
             setReviewingDoc(null);

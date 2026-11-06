@@ -21,6 +21,7 @@ import {
 import { CR_OUTCOMES, SCHEDULE_TYPE_DEFS, type ScheduleType } from "@/modules/customer-relation-workspace/status";
 import { effectiveSubmissionDate } from "@/modules/applications/submission-date";
 import { loadPreviousLhvki } from "@/modules/applications/vki-form/load.server";
+import { buildVkiForm, productionTables } from "@/modules/applications/vki-form/model";
 import { readCrDataCheck } from "@/modules/customer-relation-workspace/cr-data-check-store";
 import { buildVkiCheck } from "@/modules/customer-relation-workspace/vki-check";
 
@@ -79,6 +80,7 @@ export async function GET(
   const documents = checklist.map((item) => {
     const meta = item.key in COMPANY_MAPPED_DOCUMENT_KEYS ? companyMeta[COMPANY_MAPPED_DOCUMENT_KEYS[item.key]] : appMeta[item.key];
     const lengkap = Boolean(item.documentPath);
+    const mark = requests[item.key]?.unavailable;
     return {
       key: item.key,
       label: item.label,
@@ -88,6 +90,9 @@ export async function GET(
       status: meta ? toChecklistStatus(meta.verificationStatus) : "PENDING",
       rejectionNote: meta?.rejectionNote ?? "",
       requestNote: requests[item.key]?.requestNote ?? "",
+      // CR's "Belum Tersedia" mark — only while the file is still the one it was given on (a new upload clears it).
+      unavailable: Boolean(mark && (mark.path ?? null) === (item.documentPath ?? null)),
+      unavailableNote: mark?.note ?? "",
       version: meta?.version ?? 1,
       // `getApplicationDocumentMeta` fills every key with a fallback entry (createdAt-stamped,
       // see its own `fallbackMetaEntry`) even when the document was never uploaded — that
@@ -102,6 +107,7 @@ export async function GET(
 
   // VKI: Form Pemeriksaan Kelengkapan Data dan Dokumen (Pasal 30 ayat (2)) — data presence, CR's document
   // checks and CR's own Sesuai/Tidak sesuai input.
+  const previousLhvki = application.verificationType === "VKI" ? await loadPreviousLhvki(application.id, application.companyId) : [];
   const vkiCheck =
     application.verificationType === "VKI"
       ? buildVkiCheck({
@@ -110,8 +116,16 @@ export async function GET(
           submissionDate: effectiveSubmissionDate(application).value,
           category: application.applicationCategory,
           documents,
-          lhvki: await loadPreviousLhvki(application.id, application.companyId),
+          lhvki: previousLhvki,
           saved: await readCrDataCheck(application.id),
+          production: productionTables(
+            buildVkiForm({
+              payload,
+              applicationNumber: application.applicationNumber,
+              submissionDate: effectiveSubmissionDate(application).value,
+              lhvki: previousLhvki,
+            }),
+          ),
         })
       : null;
 

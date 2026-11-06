@@ -69,13 +69,32 @@ export async function POST(
     } else {
       await setApplicationDocumentVerificationStatus(id, key, doc.documentPath, application.createdAt, targetStatus, session.user.id, note ?? null, "CR");
     }
+    // A real decision replaces an earlier "Belum Tersedia" mark.
+    const marks = crDocumentRequestsSchema.parse(application.crDocumentVerifications ?? {});
+    if (marks[key]?.unavailable) {
+      delete marks[key].unavailable;
+      await db.application.update({ where: { id }, data: { crDocumentVerifications: marks } });
+    }
 
     return NextResponse.json({ data: { key, status } });
   }
 
+  if (action === "unavailable") {
+    const marks = crDocumentRequestsSchema.parse(application.crDocumentVerifications ?? {});
+    marks[key] = {
+      ...marks[key],
+      unavailable: { path: doc.documentPath ?? null, note: note || "", at: new Date().toISOString(), byName: session.user.name ?? "" },
+    };
+    await db.application.update({ where: { id }, data: { crDocumentVerifications: marks } });
+    await db.applicationMessage.create({
+      data: { applicationId: id, direction: "SYSTEM", text: `Dokumen belum tersedia: ${doc.label}${note ? " — " + note : ""}` },
+    });
+    return NextResponse.json({ data: marks[key] });
+  }
+
   // action === "request" — Customer-Relation-only memo asking the company to upload a missing document.
   const requests = crDocumentRequestsSchema.parse(application.crDocumentVerifications ?? {});
-  requests[key] = { requestNote: note || "" };
+  requests[key] = { ...requests[key], requestNote: note || "" };
   await db.application.update({ where: { id }, data: { crDocumentVerifications: requests } });
   await db.applicationMessage.create({
     data: { applicationId: id, direction: "SYSTEM", text: `Dokumen diminta: ${doc.label}${note ? " — " + note : ""}` },
