@@ -108,7 +108,8 @@ export function ApplicationDetail({ id }: Props) {
       <Section title="Application Information">
         <Item label="Verification Type" value={payload.verificationType} />
         <Item label="Application Category" value={payload.applicationCategory} />
-        <Item label="Jenis Impor" value={payload.importTypes?.join(", ")} />
+        {/* Jenis Impor is a VIU concept; a VKI may still carry a stale value from the wizard. */}
+        <Item label="Jenis Impor" value={payload.verificationType === "VIU" ? payload.importTypes?.join(", ") : "—"} />
         <Item label="Tanggal Pengajuan" value={formatSubmissionDate(data, true)} />
         <Item label="Dicatat di sistem" value={new Date(data.createdAt).toLocaleString("id-ID")} />
       </Section>
@@ -147,7 +148,7 @@ export function ApplicationDetail({ id }: Props) {
       {/* Generic product list — only meaningful for Bahan Baku Industri/Non-Industri (see
           Step6ProductInformation's own gate). A Barang-Konsumsi-only application uses
           KonsumsiApplicationReview's own "Informasi Produk" section instead. */}
-      {(payload.importTypes?.includes("BAHAN_BAKU_INDUSTRI") || payload.importTypes?.includes("BAHAN_BAKU_NON_INDUSTRI")) && (
+      {(payload.verificationType === "VKI" || payload.importTypes?.includes("BAHAN_BAKU_INDUSTRI") || payload.importTypes?.includes("BAHAN_BAKU_NON_INDUSTRI")) && (
         <Section title="Product Information">
           <Item label="Jumlah Produk" value={payload.products?.length?.toString()} />
           <Item
@@ -157,7 +158,7 @@ export function ApplicationDetail({ id }: Props) {
         </Section>
       )}
 
-      {payload.importTypes?.includes("BARANG_KONSUMSI") && (
+      {payload.verificationType === "VIU" && payload.importTypes?.includes("BARANG_KONSUMSI") && (
         <SectionErrorBoundary label="VIU Konsumsi">
           <KonsumsiApplicationReview payload={payload} brandLookupApiBase="/api/merk" />
         </SectionErrorBoundary>

@@ -46,7 +46,8 @@ export async function GET() {
       status: computeDisplayStatus(application, application.assignments),
       createdAt: application.createdAt,
       submissionDate: application.submissionDate,
-      importTypes: payload?.importTypes ?? [],
+      // VKI has no Jenis Impor (a stale wizard value may linger in its payload).
+      importTypes: application.verificationType === "VIU" ? (payload?.importTypes ?? []) : [],
       assignmentStatuses: application.assignments.map((a) => a.status),
     };
   });

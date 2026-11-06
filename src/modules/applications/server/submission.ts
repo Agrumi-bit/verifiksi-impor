@@ -69,6 +69,9 @@ export async function prepareApplicationSubmission(
   }
 
   let values: ApplicationWizardValues = parsed.data;
+  // VKI has no Jenis Impor: drop any leftover from the wizard (e.g. a VIU type picked before the
+  // verification type was switched to VKI), so it never shows up as "BARANG_KONSUMSI" on a VKI.
+  if (values.verificationType === "VKI" && values.importTypes.length > 0) values = { ...values, importTypes: [] };
 
   const denied = authorize?.(values);
   if (denied) return { ok: false, response: denied };
