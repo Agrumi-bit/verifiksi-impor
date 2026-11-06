@@ -20,6 +20,8 @@ import { CertificateReviewUploadModal } from "@/modules/applications/viu-schemes
 import { parseQualityTestChecklistKey } from "@/modules/applications/viu-schemes/konsumsi/qt-checklist-key";
 import Link from "next/link";
 import { completenessStats, completenessVerdict } from "../report/completeness";
+import { TINDAK_LANJUT_LABELS, vkiCheckConclusion, type VkiCheck } from "../../vki-check";
+import { VkiDataCheckCard } from "./vki-data-check-card";
 
 type Props = {
   applicationId: string;
@@ -29,6 +31,8 @@ type Props = {
   importTypes?: string[];
   locations?: { id: string; locationType: string }[];
   documents: DocItem[];
+  /** VKI only: Form Pemeriksaan Kelengkapan Data dan Dokumen. */
+  vkiCheck?: VkiCheck | null;
   showMarkAcceptedButton: boolean;
   onMarkAccepted: () => void;
   onChanged: () => void;
@@ -61,6 +65,7 @@ export function DocumentsTab({
   importTypes,
   locations,
   documents,
+  vkiCheck,
   showMarkAcceptedButton,
   onMarkAccepted,
   onChanged,
@@ -154,7 +159,7 @@ export function DocumentsTab({
             )}
           </div>
         </div>
-        {reportShown && <ReportPanel applicationId={applicationId} company={company} documents={documents} />}
+        {reportShown && <ReportPanel applicationId={applicationId} company={company} documents={documents} vkiCheck={vkiCheck ?? null} />}
         <div className="mb-5.5 grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
           {[
             { label: "Total Dokumen", value: stats.total, icon: FileText, color: "#2f6fe0", iconBg: "#e6effa" },
@@ -187,6 +192,8 @@ export function DocumentsTab({
           {progressPct}% selesai — {stats.total - stats.reviewed} dokumen belum diperiksa
         </div>
       </div>
+
+      {vkiCheck && <VkiDataCheckCard key={vkiCheck.check.updatedAt ?? "baru"} applicationId={applicationId} check={vkiCheck} onSaved={onChanged} />}
 
       {compliance.sections().map((def) => {
         const sectionDocs = documents.filter((doc) => doc.category === def.category);
@@ -415,7 +422,7 @@ export function DocumentsTab({
 }
 
 /** "Generate Report" result: the Laporan Kelengkapan Dokumen summary + a link to the full A4 report. */
-function ReportPanel({ applicationId, company, documents }: { applicationId: string; company: string; documents: DocItem[] }) {
+function ReportPanel({ applicationId, company, documents, vkiCheck }: { applicationId: string; company: string; documents: DocItem[]; vkiCheck: VkiCheck | null }) {
   const stats = completenessStats(documents);
   const verdict = completenessVerdict(documents);
   const tone = verdict.key === "LENGKAP" ? "text-[#1a9850]" : verdict.key === "BELUM_LENGKAP" ? "text-[#c1361f]" : "text-[#a3690a]";
@@ -425,7 +432,9 @@ function ReportPanel({ applicationId, company, documents }: { applicationId: str
         <div className="flex items-center gap-2">
           <FileText className="size-5 text-[#e0662e]" />
           <div>
-            <div className="text-[14px] font-extrabold text-[#20180f]">Laporan Kelengkapan Dokumen Permohonan</div>
+            <div className="text-[14px] font-extrabold text-[#20180f]">
+              {vkiCheck ? "Form Pemeriksaan Kelengkapan Data dan Dokumen VKI" : "Laporan Kelengkapan Dokumen Permohonan"}
+            </div>
             <div className="text-[11.5px] text-[#8a7565]">{company}</div>
           </div>
         </div>
@@ -454,9 +463,33 @@ function ReportPanel({ applicationId, company, documents }: { applicationId: str
           </div>
         ))}
       </div>
-      <div className="text-[12.5px] text-[#4a4038]">
-        <span className={`font-extrabold ${tone}`}>{verdict.label}</span> — {verdict.text}
-      </div>
+      {vkiCheck ? (
+        <VkiConclusionLine check={vkiCheck} />
+      ) : (
+        <div className="text-[12.5px] text-[#4a4038]">
+          <span className={`font-extrabold ${tone}`}>{verdict.label}</span> — {verdict.text}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VkiConclusionLine({ check }: { check: VkiCheck }) {
+  const c = vkiCheckConclusion(check);
+  const item = (label: string, ok: boolean, yes: string, no: string) => (
+    <span>
+      {label}: <span className={`font-bold ${ok ? "text-[#1a9850]" : "text-[#c1361f]"}`}>{ok ? yes : no}</span>
+    </span>
+  );
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-[#4a4038]">
+      {item("Identitas", c.identitasLengkap, "Lengkap", "Belum lengkap")}
+      {item("Data (B)", c.dataLengkap, "Lengkap", "Belum lengkap")}
+      {item("Dokumen (C)", c.dokumenLengkap, "Lengkap", "Belum lengkap")}
+      {item("Konsistensi", c.konsisten, "Sesuai", "Ada ketidaksesuaian")}
+      <span>
+        Tindak lanjut: <span className="font-bold text-[#20180f]">{TINDAK_LANJUT_LABELS[c.tindakLanjut]}</span>
+      </span>
     </div>
   );
 }

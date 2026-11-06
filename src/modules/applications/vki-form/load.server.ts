@@ -34,18 +34,7 @@ export async function loadVkiForm(ref: string): Promise<{ form: VkiForm; error: 
     return { form: null, error: NextResponse.json({ error: "Formulir Permohonan hanya untuk permohonan VKI" }, { status: 400 }) };
   }
 
-  // Rekam jejak LHVKI: LHVKI already issued to the same company on its other VKI applications.
-  const others = application.companyId
-    ? await db.application.findMany({
-        where: { companyId: application.companyId, verificationType: "VKI", id: { not: application.id } },
-        select: { lhviuDocument: true },
-      })
-    : [];
-  const lhvki = others
-    .map((o) => o.lhviuDocument as { number?: string; issuedAt?: string } | null)
-    .filter((d): d is { number: string; issuedAt: string } => lhviuIsIssued(d))
-    .map((d) => ({ number: d.number.trim(), issuedAt: d.issuedAt, issuer: LEMBAGA }))
-    .sort((a, b) => a.issuedAt.localeCompare(b.issuedAt));
+  const lhvki = await loadPreviousLhvki(application.id, application.companyId);
 
   const form = buildVkiForm({
     payload: application.payload as unknown as ApplicationWizardValues,
@@ -54,4 +43,18 @@ export async function loadVkiForm(ref: string): Promise<{ form: VkiForm; error: 
     lhvki,
   });
   return { form, error: null };
+}
+
+/** LHVKI already issued to the same company on its other VKI applications (oldest first). */
+export async function loadPreviousLhvki(applicationId: string, companyId: string | null): Promise<{ number: string; issuedAt: string; issuer: string }[]> {
+  if (!companyId) return [];
+  const others = await db.application.findMany({
+    where: { companyId, verificationType: "VKI", id: { not: applicationId } },
+    select: { lhviuDocument: true },
+  });
+  return others
+    .map((o) => o.lhviuDocument as { number?: string; issuedAt?: string } | null)
+    .filter((d): d is { number: string; issuedAt: string } => lhviuIsIssued(d))
+    .map((d) => ({ number: d.number.trim(), issuedAt: d.issuedAt, issuer: LEMBAGA }))
+    .sort((a, b) => a.issuedAt.localeCompare(b.issuedAt));
 }

@@ -18,6 +18,7 @@ import type { DocVerificationStatusValue } from "../status";
 import { missingRequiredLocationTypes, REQUIRED_LOCATION_TYPE_LABELS } from "@/modules/shared/schema";
 import { SYSTEM_DATE_NOTE } from "@/modules/applications/submission-date";
 import { VkiFormActions } from "@/modules/applications/components/vki-form/vki-form-actions";
+import type { VkiCheck } from "../vki-check";
 
 export type ApplicationDetail = {
   id: string;
@@ -34,6 +35,8 @@ export type ApplicationDetail = {
   picEmail: string;
   nibNumber?: string;
   businessAddress?: string;
+  /** VKI only: Form Pemeriksaan Kelengkapan Data dan Dokumen. */
+  vkiCheck?: VkiCheck | null;
   docsLengkap: number;
   docsTotal: number;
   complete: boolean;
@@ -287,6 +290,7 @@ export function ApplicationReview({ id }: { id: string }) {
           importTypes={data.importTypes}
           locations={data.locations}
           documents={data.documents}
+          vkiCheck={data.vkiCheck ?? null}
           showMarkAcceptedButton={showMarkAcceptedButton}
           onMarkAccepted={markAccepted}
           onChanged={invalidate}

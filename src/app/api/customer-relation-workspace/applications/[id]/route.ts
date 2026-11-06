@@ -20,6 +20,9 @@ import {
 } from "@/modules/customer-relation-workspace/schema";
 import { CR_OUTCOMES, SCHEDULE_TYPE_DEFS, type ScheduleType } from "@/modules/customer-relation-workspace/status";
 import { effectiveSubmissionDate } from "@/modules/applications/submission-date";
+import { loadPreviousLhvki } from "@/modules/applications/vki-form/load.server";
+import { readCrDataCheck } from "@/modules/customer-relation-workspace/cr-data-check-store";
+import { buildVkiCheck } from "@/modules/customer-relation-workspace/vki-check";
 
 async function loadApplication(id: string) {
   return db.application.findUnique({
@@ -97,6 +100,21 @@ export async function GET(
     };
   });
 
+  // VKI: Form Pemeriksaan Kelengkapan Data dan Dokumen (Pasal 30 ayat (2)) — data presence, CR's document
+  // checks and CR's own Sesuai/Tidak sesuai input.
+  const vkiCheck =
+    application.verificationType === "VKI"
+      ? buildVkiCheck({
+          payload,
+          applicationNumber: application.applicationNumber,
+          submissionDate: effectiveSubmissionDate(application).value,
+          category: application.applicationCategory,
+          documents,
+          lhvki: await loadPreviousLhvki(application.id, application.companyId),
+          saved: await readCrDataCheck(application.id),
+        })
+      : null;
+
   const schedules = application.assignments.map((assignment) => {
     const scheduleType = scheduleTypeOf(assignment);
     const person = assignment.surveyor ?? assignment.verifikator ?? assignment.technicalReviewer;
@@ -152,6 +170,7 @@ export async function GET(
       crFollowUpDate: application.crFollowUpDate?.toISOString() ?? null,
       crNotes: application.crNotes || "",
       documents,
+      vkiCheck,
       schedules,
       workflowStages,
       auditLogs: application.auditLogs,

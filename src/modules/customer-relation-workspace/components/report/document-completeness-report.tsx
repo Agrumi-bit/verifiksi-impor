@@ -15,6 +15,7 @@ import { schemeLabel } from "@/modules/schemes/resolvers";
 import { CR_DOCUMENT_STATUS_LABELS } from "../../status";
 import type { ApplicationDetail } from "../application-review";
 import { completenessStats, completenessVerdict, type CompletenessDoc } from "./completeness";
+import { vkiCheckFlow } from "./vki-check-report";
 
 const KOP = "/images/berita-acara/kop-berita-acara.jpg";
 const LEMBAGA = "PT Tribhakti Inspektama";
@@ -260,7 +261,7 @@ function Sheet({ pageNo, total, applicationNumber, children }: { pageNo: number;
       </div>
       <div className="rd-body">{children}</div>
       <div className="rd-pagefoot">
-        <div>Laporan Kelengkapan Dokumen · {applicationNumber}</div>
+        <div>Pemeriksaan Kelengkapan Dokumen · {applicationNumber}</div>
         <div>
           Halaman {pageNo} dari {total}
         </div>
@@ -281,6 +282,8 @@ export function DocumentCompletenessReport({ id }: { id: string }) {
     },
   });
   const checker = session?.user?.name ?? "";
+  // VKI follows the Form Pemeriksaan Kelengkapan Data dan Dokumen VKI; VIU keeps the generic report for now.
+  const title = data?.vkiCheck ? "Form Pemeriksaan Kelengkapan Data dan Dokumen VKI" : "Laporan Kelengkapan Dokumen";
   return (
     <div className="report-doc kd-doc" style={{ fontFamily: "var(--font-archivo), sans-serif" }}>
       <div className="rd-topbar">
@@ -289,14 +292,14 @@ export function DocumentCompletenessReport({ id }: { id: string }) {
         </Link>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="rd-topbar-title">
-            Laporan Kelengkapan Dokumen {data && <span className="rd-topbar-sub">&middot; {data.applicationNumber}</span>}
+            {title} {data && <span className="rd-topbar-sub">&middot; {data.applicationNumber}</span>}
           </div>
         </div>
         <div className="rd-topbar-actions">
           <button type="button" className="rd-btn" onClick={() => void printWithSignedLinks()}>
             Cetak
           </button>
-          <CurrentPagePdfButton name={`Laporan-Kelengkapan-Dokumen-${data?.applicationNumber ?? id}`} />
+          <CurrentPagePdfButton name={`${data?.vkiCheck ? "Form-Pemeriksaan-Kelengkapan-VKI" : "Laporan-Kelengkapan-Dokumen"}-${data?.applicationNumber ?? id}`} />
         </div>
       </div>
       <main className="rd-main">
@@ -304,7 +307,7 @@ export function DocumentCompletenessReport({ id }: { id: string }) {
         {isError && <p className="py-10 text-center text-sm text-destructive">Laporan tidak ditemukan.</p>}
         {data && (
           <A4Pages
-            items={completenessFlow(data, checker, new Date())}
+            items={data.vkiCheck ? vkiCheckFlow(data.vkiCheck, checker, new Date()) : completenessFlow(data, checker, new Date())}
             renderPage={(pageNo, total, children) => (
               <Sheet pageNo={pageNo} total={total} applicationNumber={data.applicationNumber}>
                 {children}

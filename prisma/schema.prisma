@@ -146,6 +146,9 @@ model Application {
   crDocumentVerifications Json?
   crFollowUpDate          DateTime?
   crNotes                 String?
+  // Form Pemeriksaan Kelengkapan Data dan Dokumen VKI — CR's Sesuai/Tidak sesuai per data item, Pasal 25 basis,
+  // batas waktu and tindak lanjut. Read/written with SQL (customer-relation-workspace/cr-data-check-store.ts).
+  crDataCheck             Json?
 
   // Latest "Kembalikan untuk Revisi" — set whenever status becomes RETURNED (by Verifikator,
   // Technical Analyst, Customer Relationship or Admin), shown on the company's return banner.
