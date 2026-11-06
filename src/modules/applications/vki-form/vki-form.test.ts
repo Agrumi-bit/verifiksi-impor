@@ -4,7 +4,7 @@ import { writeFileSync } from "node:fs";
 import { inflateRawSync } from "node:zlib";
 
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
-import { buildVkiForm, fileNameOf, fmtNum, tanggalId } from "./model";
+import { buildVkiForm, fileNameOf, fmtNum, mergeLhvki, tanggalId } from "./model";
 import { vkiFormToDocx } from "./docx.server";
 
 const payload = {
@@ -64,6 +64,18 @@ describe("Formulir Permohonan VKI", () => {
     assert.ok(t && t.kind === "table");
     assert.equal(t.rows[0][5], fmtNum(String(137.6 * 24)));
     assert.equal(t.rows[0][7], "Aktif");
+  });
+
+  it("merges declared LHVKI (with document) and issued ones", () => {
+    const merged = mergeLhvki([{ number: "595/LHVKI", issuedAt: "2026-04-24", issuer: "PT Tribhakti Inspektama" }, { number: "700/LHVKI", issuedAt: "2026-05-01", issuer: "PT Tribhakti Inspektama" }], {
+      ...payload,
+      hasPreviousLhvki: true,
+      lhvkiHistory: [{ id: "l1", nomor: "595/lhvki", tanggalTerbit: "2026-04-24", masaBerlaku: "2027-04-24", lembagaPenerbit: "PT Surveyor Indonesia", documentPath: "temporary/c5572408-459e-459b-832b-33710ba31315-LHVKI.pdf" }],
+    } as ApplicationWizardValues);
+    assert.equal(merged.length, 2);
+    assert.equal(merged[0].issuer, "PT Surveyor Indonesia");
+    assert.equal(merged[0].validUntil, "2027-04-24");
+    assert.equal(mergeLhvki([], { ...payload, hasPreviousLhvki: false, lhvkiHistory: [{ id: "x", nomor: "1" }] } as ApplicationWizardValues).length, 0);
   });
 
   it("helpers", () => {

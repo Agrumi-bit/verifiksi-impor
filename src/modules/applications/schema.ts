@@ -416,6 +416,18 @@ export const tenagaKerjaEntrySchema = z.object({
 });
 export type TenagaKerjaEntryValues = z.infer<typeof tenagaKerjaEntrySchema>;
 
+/** Rekam jejak LHVKI the company already holds (issued earlier, by any lembaga) — VKI Support Document step. */
+export const lhvkiHistoryEntrySchema = z.object({
+  id: z.string(),
+  nomor: z.string().trim().optional(),
+  tanggalTerbit: z.string().trim().optional(),
+  /** Berlaku sampai (tanggal). */
+  masaBerlaku: z.string().trim().optional(),
+  lembagaPenerbit: z.string().trim().optional(),
+  documentPath: z.string().trim().optional(),
+});
+export type LhvkiHistoryEntryValues = z.infer<typeof lhvkiHistoryEntrySchema>;
+
 /** Machine/equipment inventory — VKI Data Mesin step. */
 export const machinesSchema = z.object({
   machines: z.array(machineItemSchema).default([]),
@@ -444,6 +456,9 @@ export const vkiSupportSchema = z.object({
   vkiSupportDocs: z.array(vkiSupportDocEntrySchema).default([]),
   electricityMonths: z.array(electricityMonthSchema).default([]),
   tenagaKerjaEntries: z.array(tenagaKerjaEntrySchema).default([]),
+  /** "Pernah memiliki LHVKI sebelumnya" — the rows below are only kept when true. */
+  hasPreviousLhvki: z.boolean().optional(),
+  lhvkiHistory: z.array(lhvkiHistoryEntrySchema).default([]),
   tenagaKerjaDocumentPath: z.string().trim().optional(),
 });
 
@@ -691,6 +706,10 @@ export function createEmptyElectricityMonth(): Partial<ElectricityMonthValues> &
   return { id: crypto.randomUUID() };
 }
 
+export function createEmptyLhvkiHistory(): Partial<LhvkiHistoryEntryValues> & { id: string } {
+  return { id: crypto.randomUUID() };
+}
+
 export function createEmptyTenagaKerja(): Partial<TenagaKerjaEntryValues> & { id: string } {
   return { id: crypto.randomUUID() };
 }
@@ -823,7 +842,7 @@ export const VKI_STEP_FIELD_NAMES: Record<string, (keyof ApplicationWizardValues
   legal: LEGAL_STEP_FIELDS,
   tax: TAX_STEP_FIELDS,
   location: LOCATION_STEP_FIELDS,
-  "support-document": ["vkiSupportDocs", "electricityMonths", "tenagaKerjaEntries", "tenagaKerjaDocumentPath"],
+  "support-document": ["vkiSupportDocs", "electricityMonths", "tenagaKerjaEntries", "tenagaKerjaDocumentPath", "hasPreviousLhvki", "lhvkiHistory"],
   "data-mesin": ["machines"],
   "product-info": ["products", "rawMaterials"],
   capacity: ["capacity", "capacityDocumentPath"],

@@ -368,6 +368,17 @@ export function buildDocumentChecklist(
         documentPath: entry?.documentPath || null,
       });
     }
+    // Rekam jejak LHVKI the company declared, each with its uploaded LHVKI document.
+    if (payload.hasPreviousLhvki) {
+      for (const lhvki of payload.lhvkiHistory ?? []) {
+        items.push({
+          key: `vki-lhvki:${lhvki.id}`,
+          label: `LHVKI Sebelumnya — ${lhvki.nomor || "tanpa nomor"}${lhvki.lembagaPenerbit ? ` (${lhvki.lembagaPenerbit})` : ""}`,
+          category: "Dokumen Pendukung VKI",
+          documentPath: lhvki.documentPath || null,
+        });
+      }
+    }
   } else {
     // Bahan Baku Industri/Non Industri's own "Dokumen Pendukung" checklist, reading
     // `nonIndustriDocuments` — gated the same as Step5SupportDocument's own

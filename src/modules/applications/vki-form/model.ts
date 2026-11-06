@@ -34,7 +34,7 @@ export type VkiForm = {
   blocks: VkiFormBlock[];
 };
 
-export type VkiFormLhvki = { number: string; issuedAt: string; issuer: string };
+export type VkiFormLhvki = { number: string; issuedAt: string; issuer: string; validUntil?: string; documentPath?: string };
 
 export type VkiFormSource = {
   payload: ApplicationWizardValues;
@@ -100,6 +100,27 @@ function fullAddress(loc: Partial<LocationValues> | undefined): string {
 const BUILDING_LABEL: Record<string, string> = { MILIK_SENDIRI: "Milik Sendiri", SEWA: "Sewa" };
 const LOCATION_LABEL: Record<string, string> = { KANTOR: "Kantor", PABRIK: "Pabrik", GUDANG: "Gudang" };
 
+/**
+ * Rekam jejak LHVKI: the LHVKI the company declared on the application (any lembaga, with its document)
+ * plus the ones this platform already issued to it — the declared row wins when the number matches.
+ */
+export function mergeLhvki(issued: VkiFormLhvki[], payload: ApplicationWizardValues): VkiFormLhvki[] {
+  const declared: VkiFormLhvki[] = payload.hasPreviousLhvki
+    ? (payload.lhvkiHistory ?? [])
+        .filter((l) => t(l.nomor) || t(l.tanggalTerbit) || t(l.lembagaPenerbit) || t(l.documentPath))
+        .map((l) => ({
+          number: t(l.nomor),
+          issuedAt: t(l.tanggalTerbit),
+          validUntil: t(l.masaBerlaku),
+          issuer: t(l.lembagaPenerbit),
+          documentPath: t(l.documentPath),
+        }))
+    : [];
+  const norm = (s: string) => s.replace(/\s+/g, "").toUpperCase();
+  const extra = issued.filter((i) => !declared.some((d) => d.number && norm(d.number) === norm(i.number)));
+  return [...declared, ...extra].sort((a, b) => (a.issuedAt || "9999").localeCompare(b.issuedAt || "9999"));
+}
+
 export function buildVkiForm({ payload, applicationNumber, submissionDate, lhvki }: VkiFormSource): VkiForm {
   const p = payload;
   const blocks: VkiFormBlock[] = [];
@@ -120,6 +141,7 @@ export function buildVkiForm({ payload, applicationNumber, submissionDate, lhvki
   const supportDoc = (key: string) => (p.vkiSupportDocs ?? []).find((d) => d.key === key);
   const kota = t(kantor[0]?.city) || "………………";
   const tanggal = tanggalId(submissionDate) || "……… ………………… 20……";
+  const rekamJejak = mergeLhvki(lhvki, p);
 
   // ---- Kop + pembuka
   add({ kind: "title", lines: ["FORMULIR PERMOHONAN VERIFIKASI KEMAMPUAN INDUSTRI (VKI)", "(Perusahaan Industri)"] });
@@ -152,16 +174,23 @@ export function buildVkiForm({ payload, applicationNumber, submissionDate, lhvki
     ["Contact Person", contact || DASH],
     ["Email Perusahaan", orDash(p.companyEmail)],
     ["Jumlah Tenaga Kerja (semester tahun berjalan)", tenagaKerja ? `${tenagaKerja.toLocaleString("id-ID")} orang` : DASH],
-    ["Rekam jejak LHVKI sebelumnya", `${box(lhvki.length > 0)} Pernah${lhvki.length ? " (rincian di bawah tabel)" : ""}   ${box(lhvki.length === 0)} Belum pernah`],
+    ["Rekam jejak LHVKI sebelumnya", `${box(rekamJejak.length > 0)} Pernah${rekamJejak.length ? " (rincian di bawah tabel)" : ""}   ${box(rekamJejak.length === 0)} Belum pernah`],
   ];
   add({ kind: "fields", rows: aRows.map(([k, v], i) => [`${i + 1}. ${k}`, v]) });
-  if (lhvki.length > 0) {
+  if (rekamJejak.length > 0) {
     add({ kind: "para", text: "Rekam jejak LHVKI yang dimiliki perusahaan:" });
     add({
       kind: "table",
-      headers: ["No", "Nomor LHVKI", "Tanggal", "Penerbit"],
-      widths: [8, 40, 22, 30],
-      rows: lhvki.map((l, i) => [`${i + 1}.`, l.number, tanggalId(l.issuedAt), l.issuer]),
+      headers: ["No", "Nomor LHVKI", "Tanggal Terbit", "Masa Berlaku", "Lembaga Penerbit", "Dokumen"],
+      widths: [6, 24, 15, 15, 20, 20],
+      rows: rekamJejak.map((l, i) => [
+        `${i + 1}.`,
+        l.number || DASH,
+        tanggalId(l.issuedAt) || DASH,
+        l.validUntil ? `s.d. ${tanggalId(l.validUntil)}` : DASH,
+        l.issuer || DASH,
+        fileNameOf(l.documentPath) || DASH,
+      ]),
     });
   }
 

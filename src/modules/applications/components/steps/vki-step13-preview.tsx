@@ -100,6 +100,14 @@ export function VkiStep13Preview({ form, onEditStep }: Props) {
         />
         <SummaryItem label="Bukti Bayar Listrik" value={`${(values.electricityMonths ?? []).length} bulan`} />
         <SummaryItem label="Data Tenaga Kerja" value={`${(values.tenagaKerjaEntries ?? []).length} kategori`} />
+        <SummaryItem
+          label="Rekam Jejak LHVKI"
+          value={
+            values.hasPreviousLhvki
+              ? (values.lhvkiHistory ?? []).map((l) => [l?.nomor, l?.lembagaPenerbit].filter(Boolean).join(" — ")).filter(Boolean).join("; ") || "Pernah (belum diisi)"
+              : "Belum pernah"
+          }
+        />
       </SummarySection>
 
       <SummarySection title="7. Data Mesin" step={7} onEditStep={onEditStep}>

@@ -49,6 +49,8 @@ export function useApplicationWizard() {
       vkiSupportDocs: VKI_SUPPORT_DOC_DEFS.map((def) => ({ key: def.key })),
       electricityMonths: [],
       tenagaKerjaEntries: [],
+      hasPreviousLhvki: false,
+      lhvkiHistory: [],
       machines: [],
       rawMaterials: [],
       capacity: [],

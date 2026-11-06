@@ -47,6 +47,11 @@ export const DOCUMENT_COMPLIANCE_DEFS: Record<string, DocumentComplianceDef> = {
     referensi: "Pasal 31 ayat (1) huruf a dan Pasal 33 ayat (4) huruf b dan huruf c Permenperin Nomor 27 Tahun 2025",
     keterangan: "Diverifikasi untuk memastikan setiap perubahan perusahaan telah dituangkan dalam akta dan konsisten dengan dokumen legal perusahaan lainnya.",
   },
+  "vki-lhvki": {
+    persyaratan: "Pendukung (Jika Ada)",
+    referensi: "Rekam jejak LHVKI — Formulir Permohonan VKI huruf A angka 14 (Pasal 30 ayat (1) Permenperin Nomor 27 Tahun 2025)",
+    keterangan: "Diperiksa untuk memastikan nomor, tanggal terbit, masa berlaku, dan lembaga penerbit LHVKI yang dimiliki perusahaan sebelumnya.",
+  },
   npwp: {
     persyaratan: "Wajib",
     referensi: "Pasal 30 ayat (2) huruf b angka 1 Permenperin Nomor 27 Tahun 2025",
@@ -276,6 +281,8 @@ export function getComplianceDef(key: string): DocumentComplianceDef | undefined
   if (warehouseMatch) return DOCUMENT_COMPLIANCE_DEFS[`location:${warehouseMatch[1]}`];
   // Partner Industri keys are dynamic per partnerId (`partner:{partnerId}:nib`) — same
   // suffix-match idea as the per-location lookup above.
+  // Rekam jejak LHVKI rows are dynamic per entry (`vki-lhvki:{id}`).
+  if (key.startsWith("vki-lhvki:")) return DOCUMENT_COMPLIANCE_DEFS["vki-lhvki"];
   const partnerMatch = key.match(/^partner:[^:]+:(contract|nib|npwp|sk|lhvki)$/);
   if (partnerMatch) return DOCUMENT_COMPLIANCE_DEFS[`partner:${partnerMatch[1]}`];
   // Konsumsi's own Bukti Kemampuan Finansial checklist (`konsumsi-financial:<key>`) is a separate

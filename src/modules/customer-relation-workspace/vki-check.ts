@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 import { TAX_PROOF_TYPE_LABELS, type TaxProofType } from "@/modules/company/schema";
-import { fileNameOf, fmtNum, tanggalId } from "@/modules/applications/vki-form/model";
+import { fileNameOf, fmtNum, mergeLhvki, tanggalId } from "@/modules/applications/vki-form/model";
 import type { DocVerificationStatusValue } from "@/modules/verifikator-workspace/status";
 
 /**
@@ -127,9 +127,10 @@ export function buildVkiCheck({
   submissionDate: string;
   category: string;
   documents: CheckDoc[];
-  lhvki: { number: string; issuedAt: string }[];
+  lhvki: { number: string; issuedAt: string; issuer: string }[];
   saved: CrDataCheck;
 }): VkiCheck {
+  const rekamJejak = mergeLhvki(lhvki, p);
   const locations = (p.locations ?? []) as unknown as Record<string, unknown>[];
   const kantor = locations.find((l) => l.locationType === "KANTOR");
   const pabrik = locations.filter((l) => l.locationType === "PABRIK");
@@ -156,7 +157,18 @@ export function buildVkiCheck({
     ["Pimpinan perusahaan (setingkat direktur)", pimpinan],
     ["Perusahaan API-U mitra kontrak (jika ada)", saved.apiuMitra],
     ["Nama dan nomor kontrak", saved.kontrak],
-    ["LHVKI sebelumnya (jika ada)", lhvki.length ? lhvki.map((l) => `${l.number} (${tanggalId(l.issuedAt)})`).join("; ") : "Tidak ada"],
+    [
+      "LHVKI sebelumnya (jika ada)",
+      rekamJejak.length
+        ? rekamJejak
+            .map((l) =>
+              [l.number || "tanpa nomor", l.issuedAt && `terbit ${tanggalId(l.issuedAt)}`, l.validUntil && `berlaku s.d. ${tanggalId(l.validUntil)}`, l.issuer]
+                .filter(Boolean)
+                .join(", "),
+            )
+            .join("\n")
+        : "Tidak ada",
+    ],
   ];
   const identityComplete = Boolean(t(p.companyName) && t(p.nibNumber) && t(p.npwpNumber) && kbli && address(kantor) && pabrik.length && pimpinan);
 

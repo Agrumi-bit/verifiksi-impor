@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Controller, useFieldArray, useWatch, type UseFormReturn } from "react-hook-form";
-import { ChevronDown, ChevronUp, CheckCircle2, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, CheckCircle2, History, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { FileUploadField } from "@/components/form/file-upload-field";
 import {
   VKI_SUPPORT_DOC_DEFS,
   createEmptyElectricityMonth,
+  createEmptyLhvkiHistory,
   createEmptyTenagaKerja,
   type ApplicationWizardValues,
   type VkiSupportDocDef,
@@ -201,6 +202,104 @@ export function VkiStep6SupportDocument({ form }: Props) {
       {VKI_SUPPORT_DOC_DEFS.map((def, index) => (
         <DocCard key={def.key} def={def} index={index} form={form} />
       ))}
+
+      <LhvkiHistoryCard form={form} />
+    </div>
+  );
+}
+
+/** Rekam Jejak LHVKI — LHVKI the company already holds, with its document (Formulir Permohonan A.14). */
+function LhvkiHistoryCard({ form }: { form: UseFormReturn<ApplicationWizardValues> }) {
+  const { control, register, setValue } = form;
+  const { fields, append, remove } = useFieldArray({ control, name: "lhvkiHistory" });
+  const hasPrevious = useWatch({ control, name: "hasPreviousLhvki" }) ?? false;
+
+  function choose(value: boolean) {
+    setValue("hasPreviousLhvki", value, { shouldDirty: true });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (value && fields.length === 0) append(createEmptyLhvkiHistory() as any);
+  }
+
+  return (
+    <div className={`rounded-xl border p-4.5 ${hasPrevious && fields.length > 0 ? "border-primary/40 bg-primary/5" : "border-border"}`}>
+      <div className="flex items-start gap-2.5">
+        <History className="mt-0.5 size-4.5 shrink-0 text-muted-foreground" />
+        <div>
+          <div className="text-sm font-bold">Rekam Jejak LHVKI</div>
+          <div className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+            Laporan Hasil VKI (LHVKI) yang sudah dimiliki perusahaan sebelumnya, dari lembaga verifikasi mana pun.
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3.5 flex flex-wrap gap-2">
+        {[
+          { value: true, label: "Pernah memiliki LHVKI" },
+          { value: false, label: "Belum pernah" },
+        ].map((opt) => (
+          <button
+            key={String(opt.value)}
+            type="button"
+            onClick={() => choose(opt.value)}
+            className={`rounded-lg border px-3.5 py-1.5 text-xs font-semibold ${
+              hasPrevious === opt.value ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {hasPrevious && (
+        <div className="mt-4 flex flex-col gap-3.5">
+          {fields.map((field, index) => (
+            <div key={field.id} className="rounded-lg border border-border bg-background p-3.5">
+              <div className="mb-2.5 flex items-center justify-between">
+                <div className="text-xs font-bold">LHVKI {index + 1}</div>
+                <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <div className="mb-1 text-[11px] font-semibold text-muted-foreground">Nomor LHVKI</div>
+                  <Input placeholder="Contoh: 595/LHVKI/SI/IV/2026" {...register(`lhvkiHistory.${index}.nomor`)} />
+                </div>
+                <div>
+                  <div className="mb-1 text-[11px] font-semibold text-muted-foreground">Lembaga Penerbit</div>
+                  <Input placeholder="Contoh: PT Surveyor Indonesia" {...register(`lhvkiHistory.${index}.lembagaPenerbit`)} />
+                </div>
+                <div>
+                  <div className="mb-1 text-[11px] font-semibold text-muted-foreground">Tanggal Terbit</div>
+                  <Input type="date" {...register(`lhvkiHistory.${index}.tanggalTerbit`)} />
+                </div>
+                <div>
+                  <div className="mb-1 text-[11px] font-semibold text-muted-foreground">Masa Berlaku (sampai)</div>
+                  <Input type="date" {...register(`lhvkiHistory.${index}.masaBerlaku`)} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <Controller
+                  control={control}
+                  name={`lhvkiHistory.${index}.documentPath`}
+                  render={({ field: f }) => (
+                    <FileUploadField namespace="documents" value={f.value} onChange={f.onChange} label="Upload Dokumen LHVKI" hint="Format: PDF" />
+                  )}
+                />
+              </div>
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            className="border-dashed"
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onClick={() => append(createEmptyLhvkiHistory() as any)}
+          >
+            + Tambah LHVKI
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

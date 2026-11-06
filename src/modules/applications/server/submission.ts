@@ -72,6 +72,13 @@ export async function prepareApplicationSubmission(
   // VKI has no Jenis Impor: drop any leftover from the wizard (e.g. a VIU type picked before the
   // verification type was switched to VKI), so it never shows up as "BARANG_KONSUMSI" on a VKI.
   if (values.verificationType === "VKI" && values.importTypes.length > 0) values = { ...values, importTypes: [] };
+  // Rekam jejak LHVKI: only kept when "Pernah memiliki LHVKI" is chosen, and only rows with something filled in.
+  if (values.verificationType === "VKI") {
+    const lhvkiHistory = values.hasPreviousLhvki
+      ? (values.lhvkiHistory ?? []).filter((l) => l.nomor || l.tanggalTerbit || l.masaBerlaku || l.lembagaPenerbit || l.documentPath)
+      : [];
+    values = { ...values, lhvkiHistory };
+  }
 
   const denied = authorize?.(values);
   if (denied) return { ok: false, response: denied };
