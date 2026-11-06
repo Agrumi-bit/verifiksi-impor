@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import type { FlowItem } from "@/modules/technical-analyst-workspace/components/report/a4-pages";
 import { CR_DOCUMENT_STATUS_LABELS, type DocVerificationStatusValue } from "../../status";
 import { fileNameOf } from "@/modules/applications/vki-form/model";
-import { RENCANA_ASPEK, RENCANA_FOTO, RENCANA_PERSIAPAN } from "../../rencana-pemeriksaan";
+import { RENCANA_ASPEK, RENCANA_FOTO, RENCANA_PERSIAPAN, rencanaNo, type RencanaLokasi } from "../../rencana-pemeriksaan";
 import { TINDAK_LANJUT, TINDAK_LANJUT_LABELS, vkiCheckConclusion, vkiCheckDeficiencies, type VkiCheck } from "../../vki-check";
 
 const LEMBAGA = "PT Tribhakti Inspektama";
@@ -58,6 +58,15 @@ function rows(key: string, headers: string[], widths: string[], body: ReactNode[
     ),
   };
 }
+
+/** CR's result on one document as printed in the report ("Valid & Tersedia", "Belum Tersedia", ...). */
+function crResult(d: { status: DocVerificationStatusValue; lengkap: boolean; unavailable?: boolean }): string {
+  if (d.unavailable) return "Belum Tersedia";
+  if (d.status === "VALID") return "Valid & Tersedia";
+  if (d.status === "PENDING") return d.lengkap ? "Tersedia, Belum Diperiksa" : "Belum Ada";
+  return CR_DOCUMENT_STATUS_LABELS[d.status];
+}
+const CHECK_RESULT: Partial<Record<DocVerificationStatusValue, string>> = { VALID: "Valid & Tersedia", PENDING: "Belum Diperiksa" };
 
 const Note = ({ children }: { children: ReactNode }) => (
   <p className="kd-p" style={{ fontSize: 10, color: "#444" }}>
@@ -153,7 +162,7 @@ export function vkiCheckFlow(c: VkiCheck, documents: RincianDoc[], checkerName: 
         r.ada === null ? "" : box(r.ada),
         r.ada === null ? "" : box(!r.ada),
         r.ref,
-        [r.checkStatus && `Hasil periksa CR: ${CR_DOCUMENT_STATUS_LABELS[r.checkStatus]}`, r.note].filter(Boolean).join("\n"),
+        [r.checkStatus && `Hasil periksa CR: ${CHECK_RESULT[r.checkStatus] ?? CR_DOCUMENT_STATUS_LABELS[r.checkStatus]}`, r.note].filter(Boolean).join("\n"),
       ]),
       <div className="kd-h">C. Pemeriksaan Kelengkapan Dokumen (Pasal 30 ayat (2) huruf b)</div>,
       [3, 4],
@@ -256,8 +265,8 @@ type RincianRow = { doc: RincianDoc } | { label: string; missing: string };
 function rincianTable(key: string, list: RincianRow[], lead: ReactNode): FlowItem {
   return rows(
     key,
-    ["No", "Dokumen", "Ada", "Tidak ada", "Hasil Pemeriksaan CR", "Versi / Tgl Upload", "Catatan pemeriksa"],
-    ["5%", "31%", "6%", "8%", "15%", "14%", "21%"],
+    ["No", "Dokumen", "Ada", "Tidak ada", "Hasil Pemeriksaan CR", "Versi", "Catatan pemeriksa"],
+    ["5%", "33%", "6%", "8%", "17%", "7%", "24%"],
     list.map((r, i) => {
       if (!("doc" in r)) return [`${i + 1}.`, r.label, "", "", "—", "—", r.missing];
       const d = r.doc;
@@ -273,8 +282,8 @@ function rincianTable(key: string, list: RincianRow[], lead: ReactNode): FlowIte
         ),
         box(ada),
         box(!ada),
-        d.unavailable ? "Belum Tersedia" : d.status === "PENDING" && !d.lengkap ? "Belum Ada" : CR_DOCUMENT_STATUS_LABELS[d.status],
-        d.lengkap ? `V${d.version}${d.uploadedAt ? ` · ${tanggal(d.uploadedAt)}` : ""}` : "—",
+        crResult(d),
+        d.lengkap ? `V${d.version}` : "—",
         [d.unavailable && `Belum tersedia${d.unavailableNote ? `: ${d.unavailableNote}` : ""}`, d.rejectionNote, d.requestNote && `Permintaan: ${d.requestNote}`]
           .filter(Boolean)
           .join("\n"),
@@ -526,56 +535,70 @@ function lampiranRencana(items: FlowItem[], c: VkiCheck) {
       </div>
     ),
   });
-  items.push(
-    rows(
-      "rencana-aspek",
-      ["No", "Aspek / Metode", "Yang Diverifikasi", "Dokumen yang Perlu Disiapkan Perusahaan", "Disiapkan / Ditunjukkan di Lapangan", "Referensi Regulasi", "Siap"],
-      ["5%", "15%", "18%", "23%", "18%", "15%", "6%"],
-      RENCANA_ASPEK.map((a, i) => [
-        `${i + 1}`,
+  const section = (lokasi: RencanaLokasi, letter: string, title: string, intro: string) => {
+    items.push(
+      rows(
+        `rencana-aspek-${lokasi}`,
+        ["No", "Aspek / Metode", "Yang Diverifikasi", "Dokumen yang Perlu Disiapkan Perusahaan", "Disiapkan / Ditunjukkan di Lapangan", "Referensi Regulasi", "Siap"],
+        ["6%", "15%", "18%", "22%", "18%", "15%", "6%"],
+        RENCANA_ASPEK.filter((a) => a.lokasi === lokasi).map((a) => [
+          rencanaNo(a),
+          <>
+            <b>{a.aspek}</b>
+            <div style={{ fontStyle: "italic", color: "#555", marginTop: 2 }}>{a.metode.join(", ")}</div>
+          </>,
+          <List key="v" items={a.diverifikasi} />,
+          <List key="d" items={a.dokumen} />,
+          <List key="l" items={a.lapangan} />,
+          a.referensi.join("\n"),
+          "☐",
+        ]),
         <>
-          <b>{a.aspek}</b>
-          <div style={{ fontStyle: "italic", color: "#555", marginTop: 2 }}>{a.metode.join(", ")}</div>
+          <div className="kd-sh">
+            {letter}. {title}
+          </div>
+          <Note>{intro}</Note>
         </>,
-        <List key="v" items={a.diverifikasi} />,
-        <List key="d" items={a.dokumen} />,
-        <List key="l" items={a.lapangan} />,
-        a.referensi.join("\n"),
-        "☐",
-      ]),
-      <>
-        <div className="kd-sh">A. Rencana Pemeriksaan dan Persiapan per Aspek</div>
-        <Note>Pemohon dimohon mencentang kolom “Siap” untuk setiap aspek yang dokumen dan kondisinya sudah disiapkan.</Note>
-      </>,
-      [0, 6],
-    ),
+        [0, 6],
+      ),
+    );
+    items.push(
+      rows(
+        `rencana-foto-${lokasi}`,
+        ["No", "Objek yang Difoto", "Ketentuan Foto", "Terkait Butir", "Ada"],
+        ["6%", "32%", "40%", "14%", "8%"],
+        RENCANA_FOTO.filter((f) => f[0] === lokasi).map(([, objek, ketentuan, butir], i) => [`${i + 1}`, <b key="o">{objek}</b>, ketentuan, butir, "☐"]),
+        <div className="kd-sh">
+          Daftar Dokumentasi Foto — {lokasi === "KANTOR" ? "Kantor" : "Pabrik dan Gudang"}
+        </div>,
+        [0, 3, 4],
+      ),
+    );
+  };
+
+  section(
+    "KANTOR",
+    "A",
+    "Verifikasi di Kantor",
+    "Pemeriksaan dokumen legalitas, perpajakan, perizinan, tenaga kerja, data produksi/penjualan, dan surat pernyataan. Centang kolom “Siap” untuk setiap aspek yang dokumennya sudah disiapkan.",
+  );
+  section(
+    "PABRIK",
+    "B",
+    "Verifikasi di Pabrik dan Gudang",
+    "Survey lapangan dan dokumentasi foto atas lokasi produksi, gudang, mesin, proses produksi, produk, bahan baku, stok, unit pengolahan limbah, dan listrik. Centang kolom “Siap” untuk setiap aspek yang kondisinya sudah disiapkan.",
   );
   items.push({
     kind: "node",
     key: "rencana-persiapan",
     node: (
       <>
-        <div className="kd-sh">B. Persiapan Perusahaan pada Hari Pelaksanaan</div>
+        <div className="kd-sh">C. Persiapan Perusahaan pada Hari Pelaksanaan</div>
         <List items={RENCANA_PERSIAPAN} />
+        <Note>Setiap foto dilengkapi tanggal, waktu, dan titik koordinat (geotag) pengambilan.</Note>
       </>
     ),
   });
-  items.push(
-    rows(
-      "rencana-foto",
-      ["No", "Objek yang Difoto", "Ketentuan Foto", "Terkait Butir", "Ada"],
-      ["6%", "32%", "40%", "14%", "8%"],
-      RENCANA_FOTO.map(([objek, ketentuan, butir], i) => [`${i + 1}`, <b key="o">{objek}</b>, ketentuan, butir, "☐"]),
-      <>
-        <div className="kd-sh">C. Daftar Dokumentasi Foto</div>
-        <Note>
-          Selama survey lapangan, tim verifikasi mengambil foto berikut. Setiap foto dilengkapi tanggal, waktu, dan titik koordinat (geotag). Perusahaan dimohon
-          memastikan objek di bawah ini dapat difoto pada hari pelaksanaan.
-        </Note>
-      </>,
-      [0, 3, 4],
-    ),
-  );
   items.push({
     kind: "node",
     key: "rencana-note",
@@ -589,8 +612,8 @@ function lampiranDaftarDokumen(items: FlowItem[], documents: RincianDoc[]) {
   items.push(
     rows(
       "daftar-dokumen",
-      ["No", "Kategori", "Jenis Dokumen", "Nama File", "Versi / Tgl Upload", "Diunggah oleh", "Hasil Pemeriksaan CR"],
-      ["5%", "13%", "22%", "24%", "13%", "11%", "12%"],
+      ["No", "Kategori", "Jenis Dokumen", "Nama File", "Versi", "Hasil Pemeriksaan CR"],
+      ["5%", "15%", "26%", "30%", "7%", "17%"],
       uploaded.map((d, i) => [
         `${i + 1}.`,
         d.category ?? "—",
@@ -598,9 +621,8 @@ function lampiranDaftarDokumen(items: FlowItem[], documents: RincianDoc[]) {
         <a key="f" href={fileUrl(d.documentPath!)} target="_blank" rel="noopener noreferrer">
           {fileNameOf(d.documentPath)}
         </a>,
-        `V${d.version}${d.uploadedAt ? `\n${tanggal(d.uploadedAt)}` : ""}`,
-        d.uploadedByName || "Perusahaan",
-        d.unavailable ? "Belum Tersedia" : CR_DOCUMENT_STATUS_LABELS[d.status],
+        `V${d.version}`,
+        crResult(d),
       ]),
       <div>
         <div className="kd-h" style={{ marginTop: 0 }}>LAMPIRAN 3 — DAFTAR DOKUMEN YANG DIUNGGAH / DISERAHKAN</div>
