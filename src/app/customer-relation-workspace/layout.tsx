@@ -10,8 +10,8 @@ export default function CustomerRelationWorkspaceLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  // The printable Formulir Permohonan VKI is a standalone A4 page (no sidebar/top bar).
-  if (/^\/customer-relation-workspace\/applications\/[^/]+\/formulir-permohonan/.test(pathname ?? "")) {
+  // Printable A4 pages (Formulir Permohonan VKI, Laporan Kelengkapan Dokumen) stand alone (no sidebar/top bar).
+  if (/^\/customer-relation-workspace\/applications\/[^/]+\/(formulir-permohonan|kelengkapan-report)/.test(pathname ?? "")) {
     return <>{children}</>;
   }
   return (

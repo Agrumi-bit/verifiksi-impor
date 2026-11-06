@@ -136,6 +136,12 @@ export async function GET(
       importTypes: payload.importTypes ?? [],
       submitted: effectiveSubmissionDate(application).value,
       submittedIsSystemDate: effectiveSubmissionDate(application).isFallback,
+      // Laporan Kelengkapan Dokumen: identitas perusahaan.
+      nibNumber: payload.nibNumber || "",
+      businessAddress: (() => {
+        const kantor = payload.locations?.find((loc) => loc.locationType === "KANTOR") ?? payload.locations?.[0];
+        return kantor ? [kantor.address, kantor.city, kantor.province].filter(Boolean).join(", ") : "";
+      })(),
       picName: payload.contactFullName || "",
       picPhone: payload.contactPhone || "",
       picEmail: payload.contactEmail || "",

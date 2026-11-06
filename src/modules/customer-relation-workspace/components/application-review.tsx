@@ -32,6 +32,8 @@ export type ApplicationDetail = {
   picName: string;
   picPhone: string;
   picEmail: string;
+  nibNumber?: string;
+  businessAddress?: string;
   docsLengkap: number;
   docsTotal: number;
   complete: boolean;

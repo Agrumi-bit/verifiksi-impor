@@ -18,6 +18,8 @@ import { DocumentHistoryModal } from "./document-history-modal";
 import { DocumentReviewModal, type DocItem } from "./document-review-modal";
 import { CertificateReviewUploadModal } from "@/modules/applications/viu-schemes/konsumsi/components/certificate-review-upload-modal";
 import { parseQualityTestChecklistKey } from "@/modules/applications/viu-schemes/konsumsi/qt-checklist-key";
+import Link from "next/link";
+import { completenessStats, completenessVerdict } from "../report/completeness";
 
 type Props = {
   applicationId: string;
@@ -75,6 +77,7 @@ export function DocumentsTab({
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [reportShown, setReportShown] = useState(false);
 
   async function callAction(key: string, body: { action: "check"; status: CrDocumentCheckStatus; note?: string } | { action: "request"; note?: string }) {
     setSavingKey(key);
@@ -127,16 +130,31 @@ export function DocumentsTab({
             <div className="text-[15.5px] font-extrabold text-[#20180f]">Kelengkapan Dokumen</div>
             <div className="mt-0.5 text-[13px] text-[#8a7565]">Ringkasan status dokumen yang diunggah oleh perusahaan</div>
           </div>
-          {showMarkAcceptedButton && (
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <button
               type="button"
-              onClick={onMarkAccepted}
-              className="whitespace-nowrap rounded-lg bg-[#1f8a4c] px-3.5 py-1.75 text-[12px] font-bold text-white"
+              onClick={() => {
+                onChanged();
+                setReportShown(true);
+                toast.success("Laporan kelengkapan dokumen berhasil dibuat.");
+              }}
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#e1bfb3] bg-white px-3.5 py-1.75 text-[12px] font-bold text-[#261813]"
             >
-              Tandai Permohonan Diterima
+              <FileText className="size-3.5" />
+              Generate Report
             </button>
-          )}
+            {showMarkAcceptedButton && (
+              <button
+                type="button"
+                onClick={onMarkAccepted}
+                className="whitespace-nowrap rounded-lg bg-[#1f8a4c] px-3.5 py-1.75 text-[12px] font-bold text-white"
+              >
+                Tandai Permohonan Diterima
+              </button>
+            )}
+          </div>
         </div>
+        {reportShown && <ReportPanel applicationId={applicationId} company={company} documents={documents} />}
         <div className="mb-5.5 grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
           {[
             { label: "Total Dokumen", value: stats.total, icon: FileText, color: "#2f6fe0", iconBg: "#e6effa" },
@@ -392,6 +410,53 @@ export function DocumentsTab({
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** "Generate Report" result: the Laporan Kelengkapan Dokumen summary + a link to the full A4 report. */
+function ReportPanel({ applicationId, company, documents }: { applicationId: string; company: string; documents: DocItem[] }) {
+  const stats = completenessStats(documents);
+  const verdict = completenessVerdict(documents);
+  const tone = verdict.key === "LENGKAP" ? "text-[#1a9850]" : verdict.key === "BELUM_LENGKAP" ? "text-[#c1361f]" : "text-[#a3690a]";
+  return (
+    <div className="mb-5 rounded-[10px] border border-[#e1bfb3] bg-[#faf7f4] p-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2">
+          <FileText className="size-5 text-[#e0662e]" />
+          <div>
+            <div className="text-[14px] font-extrabold text-[#20180f]">Laporan Kelengkapan Dokumen Permohonan</div>
+            <div className="text-[11.5px] text-[#8a7565]">{company}</div>
+          </div>
+        </div>
+        <Link
+          href={`/customer-relation-workspace/applications/${applicationId}/kelengkapan-report`}
+          target="_blank"
+          className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-3.5 py-1.75 text-[12px] font-bold text-[#261813]"
+        >
+          <Eye className="size-3.5" />
+          Lihat Laporan Lengkap
+        </Link>
+      </div>
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-7">
+        {[
+          ["Total", stats.total],
+          ["Tersedia", stats.tersedia],
+          ["Belum Ada", stats.kurang],
+          ["Valid", stats.valid],
+          ["Tidak Valid", stats.tidakValid],
+          ["Tidak Diperlukan", stats.tidakDiperlukan],
+          ["Belum Diperiksa", stats.belumDiperiksa],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-lg border border-[#efe2d4] bg-white p-2.5">
+            <div className="text-[10px] font-bold uppercase text-[#8a7565]">{label}</div>
+            <div className="mt-0.5 text-[17px] font-extrabold text-[#20180f]">{value}</div>
+          </div>
+        ))}
+      </div>
+      <div className="text-[12.5px] text-[#4a4038]">
+        <span className={`font-extrabold ${tone}`}>{verdict.label}</span> — {verdict.text}
+      </div>
     </div>
   );
 }
