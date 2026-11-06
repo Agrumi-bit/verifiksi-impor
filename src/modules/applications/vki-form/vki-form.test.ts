@@ -69,6 +69,7 @@ describe("Formulir Permohonan VKI", () => {
   it("helpers", () => {
     assert.equal(tanggalId("2026-07-16T00:00:00.000Z"), "16 Juli 2026");
     assert.equal(fileNameOf("uploads/a/1712345678901-07 TERDAFTAR PAJAK.pdf"), "07 TERDAFTAR PAJAK.pdf");
+    assert.equal(fileNameOf("temporary/c5572408-459e-459b-832b-33710ba31315-SURAT_PERNYATAAN_VKI.pdf"), "SURAT_PERNYATAAN_VKI.pdf");
   });
 
   it("writes a valid .docx zip with escaped text", () => {

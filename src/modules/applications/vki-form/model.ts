@@ -77,12 +77,16 @@ function bulanId(value: string | undefined): string {
   return m ? `${BULAN[Number(m[2]) - 1] ?? ""} ${m[1]}` : t(value);
 }
 
-/** The stored path's file name ("uploads/x/171234-03.DATA TENAGA KERJA.pdf" → "03.DATA TENAGA KERJA.pdf"). */
+/**
+ * The original file name of a stored upload: `/api/uploads` prefixes every key with `${randomUUID()}-`
+ * (older keys: a timestamp) — a storage detail never shown as the document's name.
+ * "temporary/c5572408-…-SURAT_PERNYATAAN_VKI.pdf" → "SURAT_PERNYATAAN_VKI.pdf".
+ */
 export function fileNameOf(path: string | undefined | null): string {
   const s = t(path);
   if (!s) return "";
   const base = decodeURIComponent(s.split("?")[0].split("/").pop() ?? s);
-  return base.replace(/^\d{10,}[-_]/, "");
+  return base.replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "").replace(/^\d{10,}[-_]/, "");
 }
 
 function fullAddress(loc: Partial<LocationValues> | undefined): string {
