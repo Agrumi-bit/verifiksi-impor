@@ -17,6 +17,7 @@ import { TimelineTab } from "./review/timeline-tab";
 import type { DocVerificationStatusValue } from "../status";
 import { missingRequiredLocationTypes, REQUIRED_LOCATION_TYPE_LABELS } from "@/modules/shared/schema";
 import { SYSTEM_DATE_NOTE } from "@/modules/applications/submission-date";
+import { VkiFormActions } from "@/modules/applications/components/vki-form/vki-form-actions";
 
 export type ApplicationDetail = {
   id: string;
@@ -164,6 +165,9 @@ export function ApplicationReview({ id }: { id: string }) {
             {data.applicationNumber} · {data.jenis} · Diajukan {fmtDate(data.submitted)}{data.submittedIsSystemDate ? ` ${SYSTEM_DATE_NOTE}` : ""}
           </div>
         </div>
+        {data.jenis === "VKI" && (
+          <VkiFormActions href={`/customer-relation-workspace/applications/${id}/formulir-permohonan`} refId={id} className="ml-auto text-[#261813]" />
+        )}
       </div>
 
       {missingLocationTypes.length > 0 && (

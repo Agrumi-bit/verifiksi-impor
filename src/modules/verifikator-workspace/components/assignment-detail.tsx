@@ -33,6 +33,7 @@ import { TeamTab } from "./detail/team-tab";
 import { CommunicationTab } from "./detail/communication-tab";
 import { DecisionPanel } from "./detail/decision-panel";
 import { formatAssignmentDate } from "@/lib/assignment-date";
+import { vkiFormDocxPath } from "@/modules/applications/components/vki-form/vki-form-report";
 
 export type LocationVisitSummary = {
   id: string;
@@ -235,24 +236,45 @@ export function AssignmentDetail({ id }: Props) {
               </span>
             )}
           </div>
-          <div className="flex gap-2.5">
-            <button
-              type="button"
-              onClick={stubToast}
-              className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-4 py-2.25 text-[12.5px] font-semibold text-[#261813]"
-            >
-              <MaterialIcon name="visibility" className="text-[17px]" />
-              View Application
-            </button>
-            <button
-              type="button"
-              onClick={stubToast}
-              className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-4 py-2.25 text-[12.5px] font-semibold text-[#261813]"
-            >
-              <MaterialIcon name="download" className="text-[17px]" />
-              Download Application
-            </button>
-          </div>
+          {isVki ? (
+            // VKI: the application as the official Formulir Permohonan (A4 page / Word).
+            <div className="flex gap-2.5">
+              <Link
+                href={`/verifikator-workspace/applications/${encodeURIComponent(data.application.applicationNumber)}/formulir-permohonan?back=${encodeURIComponent(`/verifikator-workspace/assignments/${id}`)}`}
+                className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-4 py-2.25 text-[12.5px] font-semibold text-[#261813]"
+              >
+                <MaterialIcon name="visibility" className="text-[17px]" />
+                View Application
+              </Link>
+              <a
+                href={vkiFormDocxPath(data.application.applicationNumber)}
+                download
+                className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-4 py-2.25 text-[12.5px] font-semibold text-[#261813]"
+              >
+                <MaterialIcon name="download" className="text-[17px]" />
+                Download Application
+              </a>
+            </div>
+          ) : (
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={stubToast}
+                className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-4 py-2.25 text-[12.5px] font-semibold text-[#261813]"
+              >
+                <MaterialIcon name="visibility" className="text-[17px]" />
+                View Application
+              </button>
+              <button
+                type="button"
+                onClick={stubToast}
+                className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-4 py-2.25 text-[12.5px] font-semibold text-[#261813]"
+              >
+                <MaterialIcon name="download" className="text-[17px]" />
+                Download Application
+              </button>
+            </div>
+          )}
         </div>
         <div className="mb-4 text-[13px] text-[#8a7565]">Review and verify application documents and field reports</div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">

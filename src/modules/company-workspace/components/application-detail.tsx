@@ -49,6 +49,7 @@ import { TERMINAL_STATUSES, type ApplicationStatusValue } from "../status";
 import { getApplicationStatusDisplay, WORKFLOW_STAGE_LABELS } from "../application-status-display";
 import { formatAssignmentDate, formatRecordedAt } from "@/lib/assignment-date";
 import { formatSubmissionDate } from "@/modules/applications/submission-date";
+import { VkiFormActions } from "@/modules/applications/components/vki-form/vki-form-actions";
 
 type VerificationStatusValue = "NOT_YET_VERIFIED" | "VERIFIED" | "NEED_REVISION" | "REJECTED" | "NOT_APPLICABLE" | "EXPIRED";
 
@@ -929,6 +930,7 @@ export function CompanyApplicationDetail({ id }: Props) {
               Revisi Permohonan
             </Link>
           )}
+          {data.verificationType === "VKI" && <VkiFormActions href={`/company-workspace/applications/${id}/formulir-permohonan`} refId={id} className="text-[#261813]" />}
           <button
             type="button"
             disabled={duplicateMutation.isPending}

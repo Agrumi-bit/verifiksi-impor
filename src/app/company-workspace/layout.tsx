@@ -19,7 +19,8 @@ export default function CompanyWorkspaceLayout({
   // standalone too — a self-registered account with no companyId yet has nothing for the
   // Sidebar's company-scoped nav/data to show.
   const isStandalonePage =
-    /^\/company-workspace\/assignments\/[^/]+/.test(pathname ?? "") || pathname === "/company-workspace/onboarding";
+    /^\/company-workspace\/assignments\/[^/]+/.test(pathname ?? "") ||
+    /^\/company-workspace\/applications\/[^/]+\/formulir-permohonan/.test(pathname ?? "") || pathname === "/company-workspace/onboarding";
 
   if (isStandalonePage) {
     return <>{children}</>;

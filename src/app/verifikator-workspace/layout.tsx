@@ -14,7 +14,9 @@ export default function VerifikatorWorkspaceLayout({
   // Only the A4 print-style report preview is standalone (it mirrors the
   // Surveyor Workspace's own report view and shouldn't carry sidebar chrome).
   // Assignment Detail itself sits inside the normal Sidebar/TopNavBar shell.
-  const isStandalonePage = /^\/verifikator-workspace\/assignments\/[^/]+\/report\//.test(pathname ?? "");
+  const isStandalonePage =
+    /^\/verifikator-workspace\/assignments\/[^/]+\/report\//.test(pathname ?? "") ||
+    /^\/verifikator-workspace\/applications\/[^/]+\/formulir-permohonan/.test(pathname ?? "");
 
   if (isStandalonePage) {
     return (

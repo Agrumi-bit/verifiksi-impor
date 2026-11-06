@@ -20,6 +20,7 @@ import { viuSchemeHref, viuSchemeOf, type PmViuScheme } from "../viu-schemes";
 import { LhviuTab } from "./lhviu/lhviu-tab";
 import { BeritaAcaraTab } from "./berita-acara/berita-acara-tab";
 import "./lhviu/lhviu-combined.css";
+import { VkiFormActions } from "@/modules/applications/components/vki-form/vki-form-actions";
 
 const TAB_NAMES = ["Overview", "Assignment", "Application", "Company", "Documents", "Survey", "Verification", "Analisis", "Berita Acara", "LHVIU", "Communication", "Timeline"] as const;
 type TabName = (typeof TAB_NAMES)[number];
@@ -80,6 +81,13 @@ export function ApplicationDetail({ applicationNumber, jenis, scheme }: { applic
           <div className="text-[20px] font-extrabold text-[#20180f]">{data.applicationNumber}</div>
           <div className="mt-0.5 text-[12.5px] text-[#8a7565]">{data.verificationType === "VKI" ? "Verifikasi Kemampuan Industri" : "Verifikasi Importir Umum"}</div>
           <div className="mt-1.5 text-[13.5px] font-bold text-[#20180f]">{data.company.companyName}</div>
+          {data.verificationType === "VKI" && (
+            <VkiFormActions
+              href={`/project-manager-workspace/applications/${jenis}/${applicationNumber}/formulir-permohonan`}
+              refId={applicationNumber}
+              className="mt-2.5 text-[#261813]"
+            />
+          )}
         </div>
         <div className="flex items-start gap-6">
           <div className="text-right">

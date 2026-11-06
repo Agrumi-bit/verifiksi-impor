@@ -14,6 +14,10 @@ import { ReturnForRevisionDialog } from "./return-for-revision-dialog";
 import { ApplicationAuditHistory, type ApplicationAuditEntry } from "./application-audit-history";
 import { getAdminEditBlockReason } from "../edit-rules";
 import { formatSubmissionDate } from "@/modules/applications/submission-date";
+import "@/modules/applications/components/vki-form/vki-form.css";
+import { VkiFormInline } from "./vki-form/vki-form-blocks";
+import { VkiFormActions } from "./vki-form/vki-form-actions";
+import { useVkiForm } from "./vki-form/vki-form-report";
 
 type ApplicationDetailData = {
   id: string;
@@ -73,9 +77,10 @@ export function ApplicationDetail({ id }: Props) {
   }
 
   const { payload } = data;
+  const isVki = data.verificationType === "VKI";
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 py-10">
+    <div className={`mx-auto flex w-full flex-col gap-6 py-10 ${isVki ? "max-w-4xl px-4" : "max-w-2xl"}`}>
       <div className="flex items-center justify-between border-b border-border pb-4">
         <div>
           <p className="font-mono text-xs text-muted-foreground">
@@ -114,6 +119,38 @@ export function ApplicationDetail({ id }: Props) {
         <Item label="Dicatat di sistem" value={new Date(data.createdAt).toLocaleString("id-ID")} />
       </Section>
 
+      {isVki ? <VkiFormSection id={data.id} /> : <GenericSections payload={payload} />}
+
+      <ApplicationLocationsPanel locations={data.locationSummaries} />
+
+      <ApplicationAuditHistory entries={data.auditLogs} />
+    </div>
+  );
+}
+
+/** VKI: the application laid out as the official Formulir Permohonan (A. Data Pemohon … G. Pernyataan). */
+function VkiFormSection({ id }: { id: string }) {
+  const { data: form, isLoading, isError, error } = useVkiForm(id);
+  return (
+    <section className="flex flex-col gap-3 rounded-xl border border-border p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold">Formulir Permohonan VKI</h2>
+        <VkiFormActions href={`/formulir-permohonan/${id}`} refId={id} />
+      </div>
+      {isLoading && <p className="text-sm text-muted-foreground">Memuat formulir...</p>}
+      {isError && <p className="text-sm text-destructive">{(error as Error).message}</p>}
+      {form && (
+        <div className="overflow-x-auto rounded-lg border border-border bg-white p-6 text-[#111]" style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: 12.5, lineHeight: 1.5 }}>
+          <VkiFormInline form={form} />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function GenericSections({ payload }: { payload: ApplicationWizardValues }) {
+  return (
+    <>
       <Section title="Company Information">
         <Item label="Company Name" value={payload.companyName} />
         <Item label="Company Type" value={payload.companyType} />
@@ -164,9 +201,6 @@ export function ApplicationDetail({ id }: Props) {
         </SectionErrorBoundary>
       )}
 
-      <ApplicationLocationsPanel locations={data.locationSummaries} />
-
-      <ApplicationAuditHistory entries={data.auditLogs} />
-    </div>
+    </>
   );
 }

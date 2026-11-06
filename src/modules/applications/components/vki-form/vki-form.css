@@ -1,0 +1,114 @@
+/* Formulir Permohonan VKI — white A4 sheets in the official form layout. */
+.vf-doc .rd-sheet.vf-sheet {
+  background: #fff;
+  color: #111;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+.vf-doc .vf-sheet .rd-body {
+  padding: 40px 60px 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.vf-doc .vf-sheet .rd-pagefoot {
+  padding: 10px 60px 22px;
+  justify-content: space-between;
+  font-size: 9.5px;
+  color: #777;
+}
+.vf-form .vf-kop {
+  text-align: center;
+  border-bottom: 2px solid #111;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+}
+.vf-form .vf-kop-name {
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.vf-form .vf-kop-line {
+  font-size: 10.5px;
+  color: #333;
+}
+.vf-form .vf-title {
+  text-align: center;
+  font-weight: 700;
+  font-size: 13.5px;
+  line-height: 1.45;
+  margin: 8px 0 10px;
+}
+.vf-form .vf-p {
+  margin: 0 0 9px;
+  text-align: justify;
+  white-space: pre-line;
+}
+.vf-form .vf-p.vf-center {
+  text-align: center;
+}
+.vf-form .vf-p.vf-left {
+  text-align: left;
+}
+.vf-form .vf-p.vf-italic {
+  font-style: italic;
+}
+.vf-form .vf-h {
+  font-weight: 700;
+  font-size: 12.5px;
+  margin: 16px 0 8px;
+}
+.vf-form .vf-sh {
+  font-weight: 700;
+  margin: 10px 0 6px;
+}
+.vf-form .vf-table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  font-size: 10.5px;
+  line-height: 1.35;
+  margin-bottom: 10px;
+}
+.vf-form .vf-table th,
+.vf-form .vf-table td {
+  border: 1px solid #888;
+  padding: 4px 6px;
+  vertical-align: top;
+  text-align: left;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.vf-form .vf-table th {
+  background: #e3e3e3;
+  font-weight: 700;
+}
+.vf-form .vf-table .num {
+  text-align: right;
+}
+.vf-form .vf-table .ctr {
+  text-align: center;
+}
+.vf-form .vf-fields td:first-child {
+  width: 40%;
+  background: #f4f4f4;
+  font-weight: 600;
+}
+.vf-form .vf-empty {
+  font-style: italic;
+  color: #666;
+}
+.vf-form .vf-sign {
+  margin: 18px 0 14px;
+  break-inside: avoid;
+}
+.vf-form .vf-sign-note {
+  font-size: 9.5px;
+  font-style: italic;
+  color: #888;
+  margin: 26px 0 26px;
+}
+.vf-form .vf-sign-name {
+  font-weight: 700;
+  text-decoration: underline;
+}
