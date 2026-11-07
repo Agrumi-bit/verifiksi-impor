@@ -673,9 +673,15 @@ const DOCUMENT_CHECKLIST_ITEMS: Record<string, ChecklistItemDef[]> = {
   ),
   "vki-support:memiliki-menguasai": suratPernyataanItems(
     "memiliki-menguasai",
-    "Surat Pernyataan Memiliki atau Menguasai",
-    "Pernyataan kepemilikan atau penguasaan atas mesin/peralatan produksi.",
-    ["Status kepemilikan/penguasaan mesin dinyatakan jelas.", "Pernyataan konsisten dengan data mesin yang diajukan."],
+    "Surat Pernyataan Memiliki atau Menguasai Gudang",
+    "Pernyataan memiliki/menguasai gudang bahan baku dan/atau bahan penolong dan/atau gudang hasil produksi.",
+    ["Status kepemilikan/penguasaan gudang dinyatakan jelas.", "Pernyataan konsisten dengan lokasi gudang yang didaftarkan."],
+  ),
+  "vki-support:unit-limbah": suratPernyataanItems(
+    "unit-limbah",
+    "Surat Pernyataan Memiliki Unit Pengolahan Limbah atau Bekerja Sama dengan Pihak Lain",
+    "Pernyataan memiliki unit pengolahan limbah sesuai jenis industri, atau bekerja sama dengan pihak lain.",
+    ["Status unit pengolahan limbah (milik sendiri/kerja sama) dinyatakan jelas.", "Bila kerja sama, kontrak dengan pengolah limbah dilampirkan dan masih berlaku."],
   ),
   "vki-support:kebenaran-data": suratPernyataanItems(
     "kebenaran-data",

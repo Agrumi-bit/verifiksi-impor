@@ -4,7 +4,7 @@ import { useWatch, type UseFormReturn } from "react-hook-form";
 import { Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { VKI_SUPPORT_DOC_DEFS, type ApplicationWizardValues } from "../../schema";
+import { VKI_SUPPORT_DOC_DEFS, fasilitasText, type ApplicationWizardValues } from "../../schema";
 
 type Props = {
   form: UseFormReturn<ApplicationWizardValues>;
@@ -100,6 +100,7 @@ export function VkiStep13Preview({ form, onEditStep }: Props) {
         />
         <SummaryItem label="Bukti Bayar Listrik" value={`${(values.electricityMonths ?? []).length} bulan`} />
         <SummaryItem label="Data Tenaga Kerja" value={`${(values.tenagaKerjaEntries ?? []).length} kategori`} />
+        <SummaryItem label="Fasilitas Kepabeanan" value={fasilitasText(values) || "Belum dipilih"} />
         <SummaryItem
           label="Rekam Jejak LHVKI"
           value={

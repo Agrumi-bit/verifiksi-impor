@@ -1,7 +1,8 @@
-import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import { fasilitasText, type ApplicationWizardValues } from "@/modules/applications/schema";
 import { MACHINE_KONDISI_LABELS } from "@/modules/applications/schema";
 import { TAX_PROOF_TYPE_LABELS, type TaxProofType } from "@/modules/company/schema";
 import { splitKbliEntries, type LocationValues } from "@/modules/shared/schema";
+import { deriveCompanyAge } from "@/modules/applications/company-age";
 import {
   buildCapacityRows,
   buildMachineChecklist,
@@ -169,6 +170,9 @@ export function buildVkiForm({ payload, applicationNumber, submissionDate, lhvki
   const kota = t(kantor[0]?.city) || "………………";
   const tanggal = tanggalId(submissionDate) || "……… ………………… 20……";
   const rekamJejak = mergeLhvki(lhvki, p);
+  const limbahDoc = supportDoc("unit-limbah");
+  const limbahAda = Boolean(limbahDoc?.opsi || limbahDoc?.documentPath);
+  const limbahText = limbahDoc?.opsi === "KERJA_SAMA" ? "kerja sama dengan pihak lain" : limbahDoc?.opsi === "MILIK_SENDIRI" ? "milik sendiri" : "";
 
   // ---- Kop + pembuka
   add({ kind: "title", lines: ["FORMULIR PERMOHONAN VERIFIKASI KEMAMPUAN INDUSTRI (VKI)", "(Perusahaan Industri)"] });
@@ -194,6 +198,7 @@ export function buildVkiForm({ payload, applicationNumber, submissionDate, lhvki
     ["Perizinan Berusaha (PB-Sektor Industri)", t(p.nibNumber) ? `NIB ${t(p.nibNumber)}` : DASH],
     ["KBLI (KBLI 2020)", kbliText || DASH],
     ["Jenis Pemohon", `${BOX_ON} Perusahaan Industri   ${BOX_OFF} Perusahaan API-P`],
+    ["Fasilitas Kepabeanan", fasilitasText(p) || DASH],
     ["Alamat Kantor", kantorAddress || DASH],
     ...pabrikRows,
     ["Nama Pemohon / Penanggung Jawab", pemohon || DASH],
@@ -235,7 +240,10 @@ export function buildVkiForm({ payload, applicationNumber, submissionDate, lhvki
     ...gudang.map((g, i) => [`Lokasi Gudang${gudang.length > 1 ? ` ${i + 1}` : ""}`, fullAddress(g) || DASH] as [string, string]),
     ["Gudang Bahan Baku", `${box(hasGudang)} Ada   ${box(!hasGudang)} Tidak ada`],
     ["Gudang Barang Jadi / Hasil Produksi", `${box(hasGudang)} Ada   ${box(!hasGudang)} Tidak ada`],
-    ["Unit Pengolahan Limbah (milik sendiri atau kerja sama pihak lain)", `${BOX_OFF} Ada   ${BOX_OFF} Tidak ada`],
+    [
+      "Unit Pengolahan Limbah (milik sendiri atau kerja sama pihak lain)",
+      limbahDoc?.opsi || limbahDoc?.documentPath ? `${BOX_ON} Ada${limbahText ? ` (${limbahText})` : ""}   ${BOX_OFF} Tidak ada` : `${BOX_OFF} Ada   ${BOX_OFF} Tidak ada`,
+    ],
     [
       "Dasar Penguasaan Lokasi",
       [penguasaan.join("; "), memilikiDoc?.documentPath ? "surat pernyataan terlampir" : ""].filter(Boolean).join("; ") || DASH,
@@ -396,7 +404,7 @@ export function buildVkiForm({ payload, applicationNumber, submissionDate, lhvki
   add({ kind: "heading", text: "D. DOKUMEN YANG DIUNGGAH / DILAMPIRKAN (Pasal 30 ayat (2) huruf b)" });
   const electricityFiles = (p.electricityMonths ?? []).map((m) => fileNameOf(m.documentPath)).filter(Boolean);
   const taxFiles = (p.taxProofs ?? []).map((tp) => fileNameOf(tp.docPath)).filter(Boolean);
-  const under3 = p.companyAge === "UNDER_3";
+  const under3 = (p.companyAge ?? deriveCompanyAge(p.nibIssueDate, submissionDate)) === "UNDER_3";
   const sktFile = fileNameOf(p.sktDocumentPath);
   const machineDocs = (p.machines ?? []).filter((m) => t(m.nama)).length;
   const docRow = (no: number, label: string, info: string): string[] => [`${no}.`, label, box(Boolean(info)), box(!info), info || DASH];
@@ -413,11 +421,11 @@ export function buildVkiForm({ payload, applicationNumber, submissionDate, lhvki
       docRow(2, "Perizinan Berusaha", [t(p.nibNumber) && `NIB ${t(p.nibNumber)}`, fileNameOf(p.nibDocumentPath)].filter(Boolean).join("; ")),
       docRow(3, "Data tenaga kerja", fileNameOf(p.tenagaKerjaDocumentPath) || (tenagaKerja ? `${tenagaKerja.toLocaleString("id-ID")} orang (diisi pada sistem)` : "")),
       docRow(4, "Data mesin dan peralatan produksi", machineDocs ? `${machineDocs} jenis mesin (diisi pada sistem)` : ""),
-      docRow(5, "Gambar alur proses produksi", fileNameOf(supportDoc("alur-proses")?.documentPath)),
+      docRow(5, "Gambar alur proses produksi", fileNameOf(supportDoc("gambar-alur-proses")?.documentPath) || fileNameOf(supportDoc("alur-proses")?.documentPath)),
       docRow(
         6,
         "Surat pernyataan bermeterai dan ditandatangani pimpinan setingkat direktur: memiliki/menguasai gudang bahan baku dan/atau bahan penolong dan/atau gudang hasil produksi; dan/atau memiliki unit pengolahan limbah (Lampiran II huruf G)",
-        fileNameOf(memilikiDoc?.documentPath),
+        [fileNameOf(memilikiDoc?.documentPath), fileNameOf(limbahDoc?.documentPath), fileNameOf(limbahDoc?.kontrakDocumentPath)].filter(Boolean).join("; "),
       ),
       docRow(
         7,
@@ -425,6 +433,9 @@ export function buildVkiForm({ payload, applicationNumber, submissionDate, lhvki
         pajakInfo,
       ),
       docRow(8, "Bukti pembayaran listrik 3 (tiga) bulan sebelumnya", electricityFiles.join("; ")),
+      ...(p.fasilitas === "KAWASAN_BERIKAT" || p.fasilitas === "KITE"
+        ? [docRow(9, `SKEP fasilitas ${fasilitasText({ ...p, fasilitasSkepNumber: "", fasilitasSkepDate: "" })}`, [t(p.fasilitasSkepNumber), fileNameOf(p.fasilitasSkepDocumentPath)].filter(Boolean).join("; "))]
+        : []),
     ],
   });
 
@@ -525,7 +536,7 @@ export function buildVkiForm({ payload, applicationNumber, submissionDate, lhvki
   add({
     kind: "para",
     align: "left",
-    text: `a. memiliki/menguasai:\n     1. ${box(hasGudang)} gudang bahan baku dan/atau bahan penolong; dan/atau\n     2. ${box(hasGudang)} gudang hasil produksi; dan/atau\nb. ${BOX_OFF} memiliki unit pengolahan limbah sesuai dengan jenis industri atau bekerja sama dengan pihak lain.`,
+    text: `a. memiliki/menguasai:\n     1. ${box(hasGudang)} gudang bahan baku dan/atau bahan penolong; dan/atau\n     2. ${box(hasGudang)} gudang hasil produksi; dan/atau\nb. ${box(limbahAda)} memiliki unit pengolahan limbah sesuai dengan jenis industri atau bekerja sama dengan pihak lain.`,
   });
   add({
     kind: "para",

@@ -50,8 +50,9 @@ describe("Formulir Permohonan VKI", () => {
     assert.ok(a && a.kind === "fields");
     const map = Object.fromEntries(a.rows);
     assert.equal(map["1. Nama Perusahaan"], "PT Contoh Industri");
-    assert.equal(map["13. Jumlah Tenaga Kerja (semester tahun berjalan)"], "134 orang");
-    assert.match(map["14. Rekam jejak LHVKI sebelumnya"], /^☒ Pernah/);
+    assert.equal(map["14. Jumlah Tenaga Kerja (semester tahun berjalan)"], "134 orang");
+    assert.equal(map["7. Fasilitas Kepabeanan"], "—");
+    assert.match(map["15. Rekam jejak LHVKI sebelumnya"], /^☒ Pernah/);
   });
 
   it("has every section A–G and the lampiran", () => {

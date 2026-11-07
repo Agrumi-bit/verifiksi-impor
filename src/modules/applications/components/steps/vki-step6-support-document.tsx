@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useFieldArray, useWatch, type UseFormReturn } from "react-hook-form";
-import { ChevronDown, ChevronUp, CheckCircle2, History, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, CheckCircle2, History, Landmark, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,10 @@ import {
   VKI_SUPPORT_DOC_DEFS,
   createEmptyElectricityMonth,
   createEmptyLhvkiHistory,
+  FASILITAS_LABELS,
+  FASILITAS_VALUES,
+  KITE_JENIS_LABELS,
+  KITE_JENIS_VALUES,
   createEmptyTenagaKerja,
   type ApplicationWizardValues,
   type VkiSupportDocDef,
@@ -145,6 +149,56 @@ function TenagaKerjaBody({ form }: { form: UseFormReturn<ApplicationWizardValues
   );
 }
 
+/** Gambar alur proses — a plain upload (no nomor surat). */
+function UploadOnlyBody({ form, index }: { form: UseFormReturn<ApplicationWizardValues>; index: number }) {
+  return (
+    <Controller
+      control={form.control}
+      name={`vkiSupportDocs.${index}.documentPath`}
+      render={({ field }) => <FileUploadField namespace="documents" value={field.value} onChange={field.onChange} label="Upload Dokumen" hint="Format: PDF / JPG / PNG" />}
+    />
+  );
+}
+
+/** Unit pengolahan limbah — milik sendiri or kerja sama (then also the cooperation contract). */
+function LimbahBody({ form, index }: { form: UseFormReturn<ApplicationWizardValues>; index: number }) {
+  const opsi = useWatch({ control: form.control, name: `vkiSupportDocs.${index}.opsi` });
+  return (
+    <div className="flex flex-col gap-3.5">
+      <div>
+        <div className="mb-1.5 text-xs font-semibold text-muted-foreground">Status Unit Pengolahan Limbah</div>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { value: "MILIK_SENDIRI", label: "Memiliki unit pengolahan limbah sendiri" },
+            { value: "KERJA_SAMA", label: "Bekerja sama dengan pihak lain" },
+          ].map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => form.setValue(`vkiSupportDocs.${index}.opsi`, o.value, { shouldDirty: true })}
+              className={`rounded-lg border px-3.5 py-1.5 text-xs font-semibold ${
+                opsi === o.value ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <RegularDocBody form={form} index={index} />
+      {opsi === "KERJA_SAMA" && (
+        <Controller
+          control={form.control}
+          name={`vkiSupportDocs.${index}.kontrakDocumentPath`}
+          render={({ field }) => (
+            <FileUploadField namespace="documents" value={field.value} onChange={field.onChange} label="Upload Kontrak Kerja Sama Pengolahan Limbah" hint="Format: PDF" />
+          )}
+        />
+      )}
+    </div>
+  );
+}
+
 function DocCard({ def, index, form }: { def: VkiSupportDocDef; index: number; form: UseFormReturn<ApplicationWizardValues> }) {
   const [open, setOpen] = useState(false);
   const doc = useWatch({ control: form.control, name: `vkiSupportDocs.${index}` });
@@ -152,9 +206,11 @@ function DocCard({ def, index, form }: { def: VkiSupportDocDef; index: number; f
   const tenagaKerjaEntries = useWatch({ control: form.control, name: "tenagaKerjaEntries" });
 
   const isFilled =
-    def.type === "regular"
+    def.type === "regular" || def.type === "limbah"
       ? Boolean(doc?.nomorSurat && doc?.documentPath)
-      : def.type === "electricity"
+      : def.type === "upload"
+        ? Boolean(doc?.documentPath)
+        : def.type === "electricity"
         ? (electricityMonths ?? []).length > 0
         : (tenagaKerjaEntries ?? []).length > 0;
 
@@ -181,6 +237,8 @@ function DocCard({ def, index, form }: { def: VkiSupportDocDef; index: number; f
       {open && (
         <div className="border-t border-border bg-background p-4.5">
           {def.type === "regular" && <RegularDocBody form={form} index={index} />}
+          {def.type === "limbah" && <LimbahBody form={form} index={index} />}
+          {def.type === "upload" && <UploadOnlyBody form={form} index={index} />}
           {def.type === "electricity" && <ElectricityBody form={form} />}
           {def.type === "tenagaKerja" && <TenagaKerjaBody form={form} />}
         </div>
@@ -190,6 +248,15 @@ function DocCard({ def, index, form }: { def: VkiSupportDocDef; index: number; f
 }
 
 export function VkiStep6SupportDocument({ form }: Props) {
+  // Entries are matched by key, not by position — drafts saved before a document type was added
+  // get the missing entries appended, so no card ever shows another document's data.
+  const docs = useWatch({ control: form.control, name: "vkiSupportDocs" }) ?? [];
+  useEffect(() => {
+    const current = form.getValues("vkiSupportDocs") ?? [];
+    const missing = VKI_SUPPORT_DOC_DEFS.filter((def) => !current.some((d) => d.key === def.key));
+    if (missing.length) form.setValue("vkiSupportDocs", [...current, ...missing.map((def) => ({ key: def.key }))]);
+  }, [form]);
+
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -199,9 +266,12 @@ export function VkiStep6SupportDocument({ form }: Props) {
         </p>
       </div>
 
-      {VKI_SUPPORT_DOC_DEFS.map((def, index) => (
-        <DocCard key={def.key} def={def} index={index} form={form} />
-      ))}
+      <FasilitasCard form={form} />
+
+      {VKI_SUPPORT_DOC_DEFS.map((def) => {
+        const index = docs.findIndex((d) => d.key === def.key);
+        return index < 0 ? null : <DocCard key={def.key} def={def} index={index} form={form} />;
+      })}
 
       <LhvkiHistoryCard form={form} />
     </div>
@@ -298,6 +368,66 @@ function LhvkiHistoryCard({ form }: { form: UseFormReturn<ApplicationWizardValue
           >
             + Tambah LHVKI
           </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Fasilitas kepabeanan — Kawasan Berikat / KITE (Pembebasan, Pengembalian, IKM) with its SKEP, or Non Fasilitas. */
+function FasilitasCard({ form }: { form: UseFormReturn<ApplicationWizardValues> }) {
+  const { control, register, setValue } = form;
+  const fasilitas = useWatch({ control, name: "fasilitas" });
+  const kiteJenis = useWatch({ control, name: "kiteJenis" });
+  const withSkep = fasilitas === "KAWASAN_BERIKAT" || fasilitas === "KITE";
+  const chip = (active: boolean) =>
+    `rounded-lg border px-3.5 py-1.5 text-xs font-semibold ${active ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground"}`;
+
+  return (
+    <div className={`rounded-xl border p-4.5 ${fasilitas ? "border-primary/40 bg-primary/5" : "border-border"}`}>
+      <div className="flex items-start gap-2.5">
+        <Landmark className="mt-0.5 size-4.5 shrink-0 text-muted-foreground" />
+        <div>
+          <div className="text-sm font-bold">Fasilitas Kepabeanan</div>
+          <div className="mt-0.5 text-xs leading-relaxed text-muted-foreground">Fasilitas yang dimiliki perusahaan: Kawasan Berikat, KITE, atau tidak memiliki fasilitas.</div>
+        </div>
+      </div>
+      <div className="mt-3.5 flex flex-wrap gap-2">
+        {FASILITAS_VALUES.map((v) => (
+          <button key={v} type="button" onClick={() => setValue("fasilitas", v, { shouldDirty: true })} className={chip(fasilitas === v)}>
+            {FASILITAS_LABELS[v]}
+          </button>
+        ))}
+      </div>
+      {fasilitas === "KITE" && (
+        <div className="mt-3">
+          <div className="mb-1.5 text-xs font-semibold text-muted-foreground">Jenis KITE</div>
+          <div className="flex flex-wrap gap-2">
+            {KITE_JENIS_VALUES.map((v) => (
+              <button key={v} type="button" onClick={() => setValue("kiteJenis", v, { shouldDirty: true })} className={chip(kiteJenis === v)}>
+                {KITE_JENIS_LABELS[v]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {withSkep && (
+        <div className="mt-3.5 flex flex-col gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <div className="mb-1 text-[11px] font-semibold text-muted-foreground">Nomor SKEP</div>
+              <Input placeholder="Contoh: KEP-123/WBC.08/2024" {...register("fasilitasSkepNumber")} />
+            </div>
+            <div>
+              <div className="mb-1 text-[11px] font-semibold text-muted-foreground">Tanggal SKEP</div>
+              <Input type="date" {...register("fasilitasSkepDate")} />
+            </div>
+          </div>
+          <Controller
+            control={control}
+            name="fasilitasSkepDocumentPath"
+            render={({ field }) => <FileUploadField namespace="documents" value={field.value} onChange={field.onChange} label="Upload Dokumen SKEP" hint="Format: PDF" />}
+          />
         </div>
       )}
     </div>

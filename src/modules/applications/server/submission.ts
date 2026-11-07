@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
+import { deriveCompanyAge } from "@/modules/applications/company-age";
 import { applicationSubmitSchema, type ApplicationWizardValues, type LocationValues } from "@/modules/applications/schema";
 import { findDisallowedViuImportType, viuKbliRequirementMessage } from "@/modules/applications/viu-kbli-requirements";
 import { konsumsiScheme } from "@/modules/applications/viu-schemes/konsumsi/registry";
@@ -74,6 +75,21 @@ export async function prepareApplicationSubmission(
   if (values.verificationType === "VKI" && values.importTypes.length > 0) values = { ...values, importTypes: [] };
   // Rekam jejak LHVKI: only kept when "Pernah memiliki LHVKI" is chosen, and only rows with something filled in.
   if (values.verificationType === "VKI") {
+    // Umur Perizinan Berusaha (Pasal 30 ayat (2) huruf b angka 7) defaults to what the NIB's issue date implies.
+    if (!values.companyAge) values = { ...values, companyAge: deriveCompanyAge(values.nibIssueDate, values.submissionDate || new Date()) };
+    // Fasilitas: SKEP only for Kawasan Berikat / KITE, jenis KITE only for KITE.
+    const withSkep = values.fasilitas === "KAWASAN_BERIKAT" || values.fasilitas === "KITE";
+    values = {
+      ...values,
+      kiteJenis: values.fasilitas === "KITE" ? (values.kiteJenis ?? null) : null,
+      fasilitasSkepNumber: withSkep ? values.fasilitasSkepNumber : "",
+      fasilitasSkepDate: withSkep ? values.fasilitasSkepDate : "",
+      fasilitasSkepDocumentPath: withSkep ? values.fasilitasSkepDocumentPath : "",
+      // Unit pengolahan limbah: the cooperation contract only applies to KERJA_SAMA.
+      vkiSupportDocs: (values.vkiSupportDocs ?? []).map((d) =>
+        d.key === "unit-limbah" && d.opsi !== "KERJA_SAMA" ? { ...d, kontrakDocumentPath: "" } : d,
+      ),
+    };
     const lhvkiHistory = values.hasPreviousLhvki
       ? (values.lhvkiHistory ?? []).filter((l) => l.nomor || l.tanggalTerbit || l.masaBerlaku || l.lembagaPenerbit || l.documentPath)
       : [];

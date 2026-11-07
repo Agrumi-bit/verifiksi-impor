@@ -364,8 +364,25 @@ export function buildDocumentChecklist(
         // "Memiliki/Menguasai" is about building/facility ownership, not a
         // generic declaration — it belongs with the location documents it
         // corroborates rather than the other Surat Pernyataan items.
-        category: def.key === "memiliki-menguasai" ? "Dokumen Lokasi" : "Surat Pernyataan",
+        category: def.key === "memiliki-menguasai" ? "Dokumen Lokasi" : def.key === "gambar-alur-proses" ? "Dokumen Pendukung VKI" : "Surat Pernyataan",
         documentPath: entry?.documentPath || null,
+      });
+      if (def.type === "limbah" && entry?.opsi === "KERJA_SAMA") {
+        items.push({
+          key: `vki-support:${def.key}:kontrak`,
+          label: "Kontrak Kerja Sama Pengolahan Limbah",
+          category: "Surat Pernyataan",
+          documentPath: entry.kontrakDocumentPath || null,
+        });
+      }
+    }
+    // Fasilitas kepabeanan (Kawasan Berikat / KITE) — its SKEP.
+    if (payload.fasilitas === "KAWASAN_BERIKAT" || payload.fasilitas === "KITE") {
+      items.push({
+        key: "vki-fasilitas:skep",
+        label: `SKEP Fasilitas ${payload.fasilitas === "KITE" ? "KITE" : "Kawasan Berikat"}${payload.fasilitasSkepNumber ? ` — ${payload.fasilitasSkepNumber}` : ""}`,
+        category: "Dokumen Pendukung VKI",
+        documentPath: payload.fasilitasSkepDocumentPath || null,
       });
     }
     // Rekam jejak LHVKI the company declared, each with its uploaded LHVKI document.

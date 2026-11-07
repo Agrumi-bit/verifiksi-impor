@@ -78,7 +78,7 @@ const COMPANY_FIELDS: Readonly<Record<string, readonly DocumentDataField[]>> = {
   skt: [text("sktNumber", "Nomor Surat Keterangan Terdaftar (SKT)"), text("sktIssuer", "KPP Terdaftar"), date("sktDate", "Tanggal Terdaftar")],
 };
 
-const SURAT_PERNYATAAN_KEYS = ["tidak-diperjualbelikan", "memiliki-menguasai", "kebenaran-data", "alur-proses"];
+const SURAT_PERNYATAAN_KEYS = ["tidak-diperjualbelikan", "memiliki-menguasai", "unit-limbah", "kebenaran-data", "alur-proses"];
 const SURAT_PERNYATAAN_FIELDS = [text("nomorSurat", "Nomor Surat Pernyataan"), date("tanggal", "Tanggal Surat Pernyataan"), text("penandatangan", "Nama Penandatangan")];
 
 /** Mirrors WAREHOUSE_REGISTRATION_TYPES / their labels (shared/schema.ts, document-checklist-items.ts). */

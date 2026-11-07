@@ -147,7 +147,7 @@ export function vkiCheckFlow(c: VkiCheck, documents: RincianDoc[], checkerName: 
         r.sub ? <span style={{ paddingLeft: 10, display: "block" }}>{r.label}</span> : r.label,
         r.docs.length ? (
           <>
-            {r.key === "1" || r.key === "2" ? <div>{r.isian.split("; ")[0]}</div> : null}
+            {r.key === "1" || r.key === "2" ? <div>{r.isian.split("; ")[0]}</div> : r.keterangan ? <div>{r.keterangan}</div> : null}
             {r.docs.map((d, i) => (
               <div key={i}>
                 <a href={fileUrl(d.path)} target="_blank" rel="noopener noreferrer">
@@ -340,6 +340,7 @@ function rincianDokumen(items: FlowItem[], c: VkiCheck, documents: RincianDoc[])
           {box(c.companyAge === "OVER_3")} 3 tahun atau lebih (isi bukti bayar pajak 3 tahun)
           {"\n"}
           {box(c.companyAge === "UNDER_3")} Kurang dari 3 tahun (isi surat keterangan terdaftar pajak)
+          {c.companyAgeDerived && "\n(Tidak diisi pada permohonan — ditentukan dari tanggal terbit NIB terhadap tanggal pengajuan.)"}
         </p>
       </>,
       [5],
@@ -392,7 +393,7 @@ function rincianDokumen(items: FlowItem[], c: VkiCheck, documents: RincianDoc[])
       "rd-5",
       [
         one("vki-support:alur-proses", "Surat Pernyataan Alur Proses Produksi"),
-        { label: "Gambar alur proses produksi", missing: "Belum ada kolom unggah terpisah pada sistem — dilampirkan bersama Surat Pernyataan Alur Proses bila ada." },
+        one("vki-support:gambar-alur-proses", "Gambar Alur Proses Produksi"),
       ],
       sub("V. Pemeriksaan Administratif Alur Produksi"),
     ),
@@ -406,10 +407,9 @@ function rincianDokumen(items: FlowItem[], c: VkiCheck, documents: RincianDoc[])
         one("vki-support:tidak-diperjualbelikan", "Surat Pernyataan Tidak Akan Diperjualbelikan atau Dipindahtangankan"),
         one("vki-support:kebenaran-data", "Surat Pernyataan Kebenaran Data"),
         one("vki-support:memiliki-menguasai", "Surat Pernyataan memiliki/menguasai gudang bahan baku dan/atau hasil produksi"),
-        {
-          label: "Surat Pernyataan memiliki unit pengolahan limbah atau bekerja sama dengan pihak lain",
-          missing: "Belum ada kolom unggah terpisah pada sistem (Pasal 30 ayat (2) huruf b angka 6 huruf b — sesuai keadaan pemohon).",
-        },
+        one("vki-support:unit-limbah", "Surat Pernyataan memiliki unit pengolahan limbah atau bekerja sama dengan pihak lain"),
+        ...take((d) => d.key === "vki-support:unit-limbah:kontrak"),
+        ...take((d) => d.key === "vki-fasilitas:skep"),
         ...take((d) => d.key.startsWith("vki-lhvki:")),
       ],
       sub("VI. Pemeriksaan Administratif Dokumen Pendukung VKI"),
@@ -595,7 +595,6 @@ function lampiranRencana(items: FlowItem[], c: VkiCheck) {
       <>
         <div className="kd-sh">C. Persiapan Perusahaan pada Hari Pelaksanaan</div>
         <List items={RENCANA_PERSIAPAN} />
-        <Note>Setiap foto dilengkapi tanggal, waktu, dan titik koordinat (geotag) pengambilan.</Note>
       </>
     ),
   });

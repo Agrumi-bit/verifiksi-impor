@@ -51,6 +51,7 @@ export function useApplicationWizard() {
       tenagaKerjaEntries: [],
       hasPreviousLhvki: false,
       lhvkiHistory: [],
+      fasilitas: null,
       machines: [],
       rawMaterials: [],
       capacity: [],

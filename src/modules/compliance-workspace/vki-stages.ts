@@ -76,8 +76,10 @@ export type VkiStageInput = {
 const STATEMENT_LABELS: Record<string, string> = {
   "tidak-diperjualbelikan": "Surat Pernyataan Tidak Akan Diperjualbelikan atau Dipindahtangankan",
   "kebenaran-data": "Surat Pernyataan Kebenaran Data dan Dokumen",
-  "memiliki-menguasai": "Surat Pernyataan Memiliki/Menguasai Gudang dan/atau Unit Pengolahan Limbah",
-  "alur-proses": "Gambar Alur Proses Produksi",
+  "memiliki-menguasai": "Surat Pernyataan Memiliki/Menguasai Gudang",
+  "unit-limbah": "Surat Pernyataan Memiliki Unit Pengolahan Limbah atau Bekerja Sama dengan Pihak Lain",
+  "alur-proses": "Surat Pernyataan Alur Proses Produksi",
+  "gambar-alur-proses": "Gambar Alur Proses Produksi",
 };
 
 /** The Technical Analyst writes Keterangan/Kesimpulan as rich text — Compliance shows it as plain text. */

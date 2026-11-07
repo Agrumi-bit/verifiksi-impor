@@ -1,9 +1,10 @@
 import { z } from "zod";
 
-import type { ApplicationWizardValues } from "@/modules/applications/schema";
+import { fasilitasText, type ApplicationWizardValues } from "@/modules/applications/schema";
 import { TAX_PROOF_TYPE_LABELS, type TaxProofType } from "@/modules/company/schema";
 import { fileNameOf, fmtNum, mergeLhvki, tanggalId, type ProductionTable } from "@/modules/applications/vki-form/model";
 import type { DocVerificationStatusValue } from "@/modules/verifikator-workspace/status";
+import { deriveCompanyAge } from "@/modules/applications/company-age";
 
 /**
  * "Form Pemeriksaan Kelengkapan Data dan Dokumen VKI" — Customer Relationship's administrative check
@@ -79,6 +80,8 @@ export type VkiCheckDocRow = {
   checkStatus: DocVerificationStatusValue | null;
   note: string;
   docs: { label: string; path: string }[];
+  /** Shown above the document links (6b: milik sendiri / kerja sama). */
+  keterangan?: string;
   sub?: boolean;
 };
 
@@ -90,6 +93,8 @@ export type VkiCheck = {
   docRows: VkiCheckDocRow[];
   electricity: { docKey: string; bulan: string; nominal: string; kwh: string; sesuai: boolean | null; note: string }[];
   companyAge: "OVER_3" | "UNDER_3" | null;
+  /** True when the age wasn't stated on the application but follows from the NIB's issue date. */
+  companyAgeDerived: boolean;
   taxRows: { year: string; jenis: string; nomorTanggal: string; ada: boolean; note: string }[];
   skt: { nomor: string; tanggal: string; penerbit: string; sesuaiNpwp: boolean | null };
   tenagaKerja: { kategori: string; jumlah: string }[];
@@ -163,6 +168,7 @@ export function buildVkiCheck({
     ["Alamat kantor", address(kantor)],
     ["Alamat pabrik/lokasi produksi", pabrik.map(address).filter(Boolean).join("\n")],
     ["Pimpinan perusahaan (setingkat direktur)", pimpinan],
+    ["Fasilitas kepabeanan", fasilitasText(p) || "Belum diisi pada permohonan"],
     ["Perusahaan API-U mitra kontrak (jika ada)", saved.apiuMitra],
     ["Nama dan nomor kontrak", saved.kontrak],
     [
@@ -249,12 +255,12 @@ export function buildVkiCheck({
       note: "",
       docs: [],
     },
-    docRow("5", "Gambar alur proses produksi", "Pasal 30 ayat (2) huruf b angka 5", pick((d) => d.key === "vki-support:alur-proses")),
+    docRow("5", "Gambar alur proses produksi", "Pasal 30 ayat (2) huruf b angka 5", pick((d) => d.key === "vki-support:gambar-alur-proses" || d.key === "vki-support:alur-proses")),
     docRow(
       "6",
       "Surat pernyataan bermeterai, ditandatangani pimpinan setingkat direktur, sesuai format Lampiran II",
       "Pasal 30 ayat (2) huruf b angka 6; Lampiran II huruf G",
-      pick((d) => d.key === "vki-support:memiliki-menguasai"),
+      pick((d) => d.key === "vki-support:memiliki-menguasai" || d.key.startsWith("vki-support:unit-limbah")),
     ),
     {
       key: "6a",
@@ -268,14 +274,18 @@ export function buildVkiCheck({
       sub: true,
     },
     {
-      key: "6b",
-      label: "Menyatakan memiliki unit pengolahan limbah atau bekerja sama dengan pihak lain",
-      ref: "Pasal 30 ayat (2) huruf b angka 6 huruf b; Lampiran II huruf G",
+      ...docRow(
+        "6b",
+        "Menyatakan memiliki unit pengolahan limbah atau bekerja sama dengan pihak lain",
+        "Pasal 30 ayat (2) huruf b angka 6 huruf b; Lampiran II huruf G",
+        pick((d) => d.key.startsWith("vki-support:unit-limbah")),
+      ),
+      ...(() => {
+        const limbah = (p.vkiSupportDocs ?? []).find((d) => d.key === "unit-limbah");
+        const opsi = limbah?.opsi === "KERJA_SAMA" ? "Kerja sama dengan pihak lain" : limbah?.opsi === "MILIK_SENDIRI" ? "Milik sendiri" : "";
+        return opsi ? { keterangan: opsi, isian: opsi } : {};
+      })(),
       ada: null,
-      isian: "",
-      checkStatus: null,
-      note: "",
-      docs: [],
       sub: true,
     },
     docRow(
@@ -316,7 +326,8 @@ export function buildVkiCheck({
     dataRows,
     docRows,
     electricity,
-    companyAge: (p.companyAge as "OVER_3" | "UNDER_3" | null | undefined) ?? null,
+    companyAge: p.companyAge ?? deriveCompanyAge(p.nibIssueDate, submissionDate),
+    companyAgeDerived: !p.companyAge && Boolean(deriveCompanyAge(p.nibIssueDate, submissionDate)),
     taxRows,
     skt: {
       nomor: t(p.sktNumber),

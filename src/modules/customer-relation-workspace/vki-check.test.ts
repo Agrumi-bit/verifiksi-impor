@@ -56,3 +56,17 @@ describe("Form Pemeriksaan Kelengkapan VKI", () => {
     assert.equal(k.tindakLanjut, "LENGKAPI");
   });
 });
+
+describe("Fasilitas dan unit pengolahan limbah", () => {
+  it("prints the facility and maps the limbah statement to 6b", async () => {
+    const { fasilitasText } = await import("@/modules/applications/schema");
+    assert.equal(fasilitasText({ fasilitas: "KITE", kiteJenis: "IKM", fasilitasSkepNumber: "KEP-1" }), "KITE IKM (No. SKEP KEP-1)");
+    assert.equal(fasilitasText({ fasilitas: "NON_FASILITAS" }), "Non Fasilitas");
+    const p = { ...payload, fasilitas: "KAWASAN_BERIKAT", vkiSupportDocs: [{ key: "unit-limbah", opsi: "KERJA_SAMA" }] } as unknown as ApplicationWizardValues;
+    const c = buildVkiCheck({ payload: p, applicationNumber: "A", submissionDate: "2026-09-01", category: "NEW", documents: [doc("vki-support:unit-limbah"), doc("vki-support:unit-limbah:kontrak")], lhvki: [], saved: parseCrDataCheck(null) });
+    const r6b = c.docRows.find((r) => r.key === "6b")!;
+    assert.equal(r6b.keterangan, "Kerja sama dengan pihak lain");
+    assert.equal(r6b.docs.length, 2);
+    assert.equal(Object.fromEntries(c.identity)["Fasilitas kepabeanan"], "Kawasan Berikat");
+  });
+});

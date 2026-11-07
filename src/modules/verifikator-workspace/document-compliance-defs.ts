@@ -47,6 +47,26 @@ export const DOCUMENT_COMPLIANCE_DEFS: Record<string, DocumentComplianceDef> = {
     referensi: "Pasal 31 ayat (1) huruf a dan Pasal 33 ayat (4) huruf b dan huruf c Permenperin Nomor 27 Tahun 2025",
     keterangan: "Diverifikasi untuk memastikan setiap perubahan perusahaan telah dituangkan dalam akta dan konsisten dengan dokumen legal perusahaan lainnya.",
   },
+  "vki-support:unit-limbah": {
+    persyaratan: "Wajib (Sesuai Keadaan Pemohon)",
+    referensi: "Pasal 30 ayat (2) huruf b angka 6 huruf b dan Lampiran II huruf G Permenperin Nomor 27 Tahun 2025",
+    keterangan: "Diperiksa untuk memastikan perusahaan memiliki unit pengolahan limbah sesuai jenis industri atau bekerja sama dengan pihak lain.",
+  },
+  "vki-support:unit-limbah:kontrak": {
+    persyaratan: "Pendukung (Jika Kerja Sama)",
+    referensi: "Pasal 30 ayat (2) huruf b angka 6 huruf b Permenperin Nomor 27 Tahun 2025",
+    keterangan: "Diperiksa untuk memastikan kerja sama pengolahan limbah dengan pihak lain masih berlaku.",
+  },
+  "vki-support:gambar-alur-proses": {
+    persyaratan: "Wajib",
+    referensi: "Pasal 30 ayat (2) huruf b angka 5 Permenperin Nomor 27 Tahun 2025",
+    keterangan: "Diperiksa untuk memastikan gambar alur proses produksi sesuai dengan mesin, bahan baku, dan produk yang diajukan.",
+  },
+  "vki-fasilitas:skep": {
+    persyaratan: "Pendukung (Jika Memiliki Fasilitas)",
+    referensi: "Fasilitas kepabeanan (Kawasan Berikat / KITE) — dasar pertimbangan penggunaan bahan baku impor",
+    keterangan: "Diperiksa untuk memastikan nomor, tanggal, dan masa berlaku SKEP fasilitas Kawasan Berikat atau KITE.",
+  },
   "vki-lhvki": {
     persyaratan: "Pendukung (Jika Ada)",
     referensi: "Rekam jejak LHVKI — Formulir Permohonan VKI huruf A angka 14 (Pasal 30 ayat (1) Permenperin Nomor 27 Tahun 2025)",

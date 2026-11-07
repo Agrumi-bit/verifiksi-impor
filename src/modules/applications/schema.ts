@@ -397,6 +397,10 @@ export const vkiSupportDocEntrySchema = z.object({
   tanggal: z.string().trim().optional(),
   penandatangan: z.string().trim().optional(),
   documentPath: z.string().trim().optional(),
+  /** Unit pengolahan limbah: MILIK_SENDIRI | KERJA_SAMA. */
+  opsi: z.string().trim().optional(),
+  /** Unit pengolahan limbah (KERJA_SAMA): the cooperation contract with the waste processor. */
+  kontrakDocumentPath: z.string().trim().optional(),
 });
 export type VkiSupportDocEntryValues = z.infer<typeof vkiSupportDocEntrySchema>;
 
@@ -415,6 +419,30 @@ export const tenagaKerjaEntrySchema = z.object({
   jumlah: z.string().trim().optional(),
 });
 export type TenagaKerjaEntryValues = z.infer<typeof tenagaKerjaEntrySchema>;
+
+export const FASILITAS_VALUES = ["KAWASAN_BERIKAT", "KITE", "NON_FASILITAS"] as const;
+export type FasilitasValue = (typeof FASILITAS_VALUES)[number];
+export const FASILITAS_LABELS: Record<FasilitasValue, string> = {
+  KAWASAN_BERIKAT: "Kawasan Berikat",
+  KITE: "KITE",
+  NON_FASILITAS: "Non Fasilitas",
+};
+export const KITE_JENIS_VALUES = ["PEMBEBASAN", "PENGEMBALIAN", "IKM"] as const;
+export type KiteJenisValue = (typeof KITE_JENIS_VALUES)[number];
+export const KITE_JENIS_LABELS: Record<KiteJenisValue, string> = {
+  PEMBEBASAN: "KITE Pembebasan",
+  PENGEMBALIAN: "KITE Pengembalian",
+  IKM: "KITE IKM",
+};
+
+/** "Kawasan Berikat (SKEP …)", "KITE Pembebasan (SKEP …)", "Non Fasilitas" — or "" when not chosen. */
+export function fasilitasText(v: { fasilitas?: FasilitasValue | null; kiteJenis?: KiteJenisValue | null; fasilitasSkepNumber?: string; fasilitasSkepDate?: string }): string {
+  if (!v.fasilitas) return "";
+  if (v.fasilitas === "NON_FASILITAS") return FASILITAS_LABELS.NON_FASILITAS;
+  const name = v.fasilitas === "KITE" ? (v.kiteJenis ? KITE_JENIS_LABELS[v.kiteJenis] : "KITE") : FASILITAS_LABELS.KAWASAN_BERIKAT;
+  const skep = [v.fasilitasSkepNumber && `No. SKEP ${v.fasilitasSkepNumber}`, v.fasilitasSkepDate].filter(Boolean).join(", ");
+  return skep ? `${name} (${skep})` : name;
+}
 
 /** Rekam jejak LHVKI the company already holds (issued earlier, by any lembaga) — VKI Support Document step. */
 export const lhvkiHistoryEntrySchema = z.object({
@@ -459,6 +487,12 @@ export const vkiSupportSchema = z.object({
   /** "Pernah memiliki LHVKI sebelumnya" — the rows below are only kept when true. */
   hasPreviousLhvki: z.boolean().optional(),
   lhvkiHistory: z.array(lhvkiHistoryEntrySchema).default([]),
+  /** Fasilitas kepabeanan: Kawasan Berikat, KITE (Pembebasan/Pengembalian/IKM) or none — with its SKEP. */
+  fasilitas: z.enum(FASILITAS_VALUES).nullable().optional(),
+  kiteJenis: z.enum(KITE_JENIS_VALUES).nullable().optional(),
+  fasilitasSkepNumber: z.string().trim().optional(),
+  fasilitasSkepDate: z.string().trim().optional(),
+  fasilitasSkepDocumentPath: z.string().trim().optional(),
   tenagaKerjaDocumentPath: z.string().trim().optional(),
 });
 
@@ -714,7 +748,7 @@ export function createEmptyTenagaKerja(): Partial<TenagaKerjaEntryValues> & { id
   return { id: crypto.randomUUID() };
 }
 
-export type VkiSupportDocType = "regular" | "electricity" | "tenagaKerja";
+export type VkiSupportDocType = "regular" | "electricity" | "tenagaKerja" | "limbah" | "upload";
 
 export type VkiSupportDocDef = {
   key: string;
@@ -733,9 +767,15 @@ export const VKI_SUPPORT_DOC_DEFS: VkiSupportDocDef[] = [
   },
   {
     key: "memiliki-menguasai",
-    title: "Surat Pernyataan Memiliki atau Menguasai",
-    desc: "Pernyataan kepemilikan atau penguasaan atas mesin/peralatan produksi.",
+    title: "Surat Pernyataan Memiliki atau Menguasai Gudang",
+    desc: "Pernyataan memiliki/menguasai gudang bahan baku dan/atau bahan penolong dan/atau gudang hasil produksi (Lampiran II huruf G).",
     type: "regular",
+  },
+  {
+    key: "unit-limbah",
+    title: "Surat Pernyataan Memiliki Unit Pengolahan Limbah atau Bekerja Sama dengan Pihak Lain",
+    desc: "Pernyataan memiliki unit pengolahan limbah sesuai jenis industri, atau bekerja sama dengan pihak lain (Lampiran II huruf G).",
+    type: "limbah",
   },
   {
     key: "kebenaran-data",
@@ -748,6 +788,12 @@ export const VKI_SUPPORT_DOC_DEFS: VkiSupportDocDef[] = [
     title: "Surat Pernyataan Alur Proses",
     desc: "Pernyataan mengenai alur proses produksi yang dijalankan.",
     type: "regular",
+  },
+  {
+    key: "gambar-alur-proses",
+    title: "Gambar Alur Proses Produksi",
+    desc: "Gambar/diagram alur proses produksi dari bahan baku sampai produk jadi (Pasal 30 ayat (2) huruf b angka 5).",
+    type: "upload",
   },
   {
     key: "listrik",
@@ -840,9 +886,9 @@ export const VKI_STEP_FIELD_NAMES: Record<string, (keyof ApplicationWizardValues
   company: VIU_STEP_FIELD_NAMES.company,
   "application-info": VIU_STEP_FIELD_NAMES["application-info"],
   legal: LEGAL_STEP_FIELDS,
-  tax: TAX_STEP_FIELDS,
+  tax: [...TAX_STEP_FIELDS, "companyAge", "taxProofs", "sktNumber", "sktIssuer", "sktDate", "sktDocumentPath"],
   location: LOCATION_STEP_FIELDS,
-  "support-document": ["vkiSupportDocs", "electricityMonths", "tenagaKerjaEntries", "tenagaKerjaDocumentPath", "hasPreviousLhvki", "lhvkiHistory"],
+  "support-document": ["vkiSupportDocs", "electricityMonths", "tenagaKerjaEntries", "tenagaKerjaDocumentPath", "hasPreviousLhvki", "lhvkiHistory", "fasilitas", "kiteJenis", "fasilitasSkepNumber", "fasilitasSkepDate", "fasilitasSkepDocumentPath"],
   "data-mesin": ["machines"],
   "product-info": ["products", "rawMaterials"],
   capacity: ["capacity", "capacityDocumentPath"],
