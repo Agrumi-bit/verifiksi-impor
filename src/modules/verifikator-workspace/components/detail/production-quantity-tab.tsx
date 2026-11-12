@@ -55,6 +55,28 @@ const EMPTY_CAPACITY_DRAFT: CapacityDraft = {
   satuan: "",
 };
 
+type RawMaterialDraft = {
+  jenis: string;
+  hsCode: string;
+  hsDesc: string;
+  deskripsi: string;
+  kategori: "BAHAN_BAKU" | "BAHAN_PENOLONG";
+  productId: string;
+  penggunaan: string;
+  satuan: string;
+};
+
+const EMPTY_RAW_MATERIAL_DRAFT: RawMaterialDraft = {
+  jenis: "",
+  hsCode: "",
+  hsDesc: "",
+  deskripsi: "",
+  kategori: "BAHAN_BAKU",
+  productId: "",
+  penggunaan: "",
+  satuan: "",
+};
+
 type KbliOption = { code: string; description: string; category?: "UTAMA" | "PENDUKUNG" };
 
 type RawMaterialUsageRow = {
@@ -369,6 +391,8 @@ function RawMaterialUsageTable({
   onSaveValue,
   onNavigateToRawMaterial,
   splitRencanaKebutuhan = false,
+  onDelete,
+  deletingRowId = null,
 }: {
   rows: RawMaterialUsageRow[];
   valueField: "penggunaan" | "dataStock" | "rencanaKebutuhan";
@@ -382,6 +406,9 @@ function RawMaterialUsageTable({
   onNavigateToRawMaterial: (row: RawMaterialUsageRow) => void;
   /** Rencana Kebutuhan only — swaps the single value column for Dalam Negeri / Luar Negeri / Negara Asal (rencana impor). */
   splitRencanaKebutuhan?: boolean;
+  /** When set (and canEdit), adds an Aksi column with a delete button per row. */
+  onDelete?: (row: RawMaterialUsageRow) => void;
+  deletingRowId?: string | null;
 }) {
   const [sortField, setSortField] = useState<RawMaterialSortField | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -410,7 +437,8 @@ function RawMaterialUsageTable({
     return sortDirection === "asc" ? sorted : sorted.reverse();
   }, [rows, sortField, sortDirection]);
 
-  const columnCount = splitRencanaKebutuhan ? 11 : 8;
+  const showDelete = canEdit && Boolean(onDelete);
+  const columnCount = (splitRencanaKebutuhan ? 11 : 8) + (showDelete ? 1 : 0);
 
   return (
     <table className="w-full min-w-205 border-collapse text-[12px]">
@@ -448,6 +476,7 @@ function RawMaterialUsageTable({
           />
           <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">Status</th>
           <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">Keterangan</th>
+          {showDelete && <th className="border border-[#c14a1f] px-3 py-2.25 text-left text-[11px] font-bold text-white">Aksi</th>}
         </tr>
       </thead>
       <tbody>
@@ -576,6 +605,19 @@ function RawMaterialUsageTable({
                   keterangan || "—"
                 )}
               </td>
+              {showDelete && (
+                <td className="border border-[#efe2d4] px-3 py-2.25 text-center">
+                  <button
+                    type="button"
+                    title="Hapus bahan baku/penolong"
+                    disabled={deletingRowId === r.id}
+                    onClick={() => onDelete?.(r)}
+                    className="inline-flex items-center justify-center rounded-md border border-[#f1c4bd] bg-white p-1 text-[#dc2626] hover:bg-[#fdf1ef] disabled:opacity-50"
+                  >
+                    <MaterialIcon name="delete" className="text-[15px]" />
+                  </button>
+                </td>
+              )}
             </tr>
           );
         })}
@@ -598,6 +640,10 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
   const [savingCapacity, setSavingCapacity] = useState(false);
   const [deletingCapacityId, setDeletingCapacityId] = useState<string | null>(null);
   const [clearingLegacyCapacity, setClearingLegacyCapacity] = useState(false);
+  const [isAddingRawMaterial, setIsAddingRawMaterial] = useState(false);
+  const [newRawMaterial, setNewRawMaterial] = useState<RawMaterialDraft>(EMPTY_RAW_MATERIAL_DRAFT);
+  const [savingRawMaterial, setSavingRawMaterial] = useState(false);
+  const [deletingRawMaterialRowId, setDeletingRawMaterialRowId] = useState<string | null>(null);
   const canEdit = assignmentStatus === "SUBMITTED";
 
   const queryKey = ["verifikator-workspace", "assignments", assignmentId, "production-quantity"];
@@ -638,6 +684,9 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
   const rawMaterialConversion = data?.rawMaterialConversion ?? [];
   const sales = data?.sales ?? [];
   const productionQtyRows = data?.rows ?? [];
+  const productOptions = productionQtyRows
+    .filter((r) => r.section === "sebelumnya")
+    .map((r) => ({ productId: r.productId, label: [r.jenisProduk || r.deskripsiProduk, r.hsCode].filter(Boolean).join(" — ") }));
 
   // Satuan (bahan baku, Jumlah Produksi, Penjualan) defaults to the HS Code's unit (master data): a
   // row still without one gets it saved — one at a time, so concurrent PATCHes don't overwrite each
@@ -829,6 +878,91 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
       return;
     }
     toast.success("Baris kapasitas lama dihapus.");
+    queryClient.invalidateQueries({ queryKey });
+  }
+
+  async function postJson(path: string, method: "POST" | "PATCH", body: unknown) {
+    const response = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/${path}`, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const json = await response.json().catch(() => null);
+    return { ok: response.ok, json };
+  }
+
+  /** Adds a raw material the applicant didn't list: the raw material itself, its product pairing
+   * (when a product is picked) and its usage figure — three existing endpoints, in order. */
+  async function handleAddRawMaterial() {
+    if (!canEdit) return;
+    const draft = newRawMaterial;
+    if (!draft.jenis.trim() && !draft.hsCode.trim()) {
+      toast.error("Isi jenis bahan baku atau HS Code.");
+      return;
+    }
+    setSavingRawMaterial(true);
+    try {
+      const created = await postJson("raw-materials", "POST", {
+        jenis: draft.jenis,
+        hsCode: draft.hsCode,
+        hsDesc: draft.hsDesc,
+        deskripsi: draft.deskripsi,
+      });
+      const rawMaterialId: string | undefined = created.json?.data?.id;
+      if (!created.ok || !rawMaterialId) {
+        toast.error(created.json?.error ?? "Gagal menambahkan bahan baku");
+        return;
+      }
+      if (draft.productId) {
+        const conversion = await postJson("raw-material-conversions", "POST", {
+          productId: draft.productId,
+          rawMaterialId,
+          kategori: draft.kategori,
+        });
+        if (!conversion.ok) toast.error(conversion.json?.error ?? "Bahan baku ditambahkan, tetapi gagal menautkan ke produk");
+      }
+      const usage = await postJson("production-data", "PATCH", {
+        source: "rawMaterialUsage",
+        itemId: rawMaterialId,
+        fields: { penggunaan: draft.penggunaan, satuan: draft.satuan || unitForHsCode(draft.hsCode) },
+      });
+      if (!usage.ok) {
+        toast.error(usage.json?.error ?? "Bahan baku ditambahkan, tetapi gagal menyimpan volume penggunaan");
+        return;
+      }
+      toast.success("Bahan baku/penolong ditambahkan.");
+      setIsAddingRawMaterial(false);
+      setNewRawMaterial(EMPTY_RAW_MATERIAL_DRAFT);
+    } finally {
+      setSavingRawMaterial(false);
+      queryClient.invalidateQueries({ queryKey });
+    }
+  }
+
+  /** A raw material paired with several products shows one row per product: deleting such a row
+   * only removes that pairing. Otherwise the raw material itself is removed (with its usage,
+   * stock, rencana kebutuhan and conversion data). */
+  async function handleDeleteRawMaterial(row: RawMaterialUsageRow) {
+    if (!canEdit) return;
+    const label = row.jenis || row.hsDesc || row.hsCode || "bahan baku ini";
+    const pairingCount = rawMaterialUsage.filter((r) => r.rawMaterialId === row.rawMaterialId).length;
+    const pairingOnly = pairingCount > 1 && Boolean(row.conversionId);
+    const message = pairingOnly
+      ? `Hapus tautan "${label}" ke produk "${row.productName || "—"}"? Bahan baku tetap ada untuk produk lainnya.`
+      : `Hapus "${label}"? Data penggunaan, stok, rencana kebutuhan dan konversinya juga ikut terhapus. Tindakan ini tidak bisa dibatalkan.`;
+    if (!window.confirm(message)) return;
+    setDeletingRawMaterialRowId(row.id);
+    const url = pairingOnly
+      ? `/api/verifikator-workspace/assignments/${assignmentId}/raw-material-conversions?conversionId=${encodeURIComponent(row.conversionId ?? "")}`
+      : `/api/verifikator-workspace/assignments/${assignmentId}/raw-materials?rawMaterialId=${encodeURIComponent(row.rawMaterialId)}`;
+    const response = await fetch(url, { method: "DELETE" });
+    setDeletingRawMaterialRowId(null);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal menghapus bahan baku");
+      return;
+    }
+    toast.success(pairingOnly ? "Tautan bahan baku ke produk dihapus." : "Bahan baku/penolong dihapus.");
     queryClient.invalidateQueries({ queryKey });
   }
 
@@ -1248,6 +1382,143 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
         title="Penggunaan Bahan Baku/Penolong Periode Satu Tahun Sebelumnya"
         desc="Volume penggunaan bahan baku dan/atau bahan penolong pada periode satu tahun sebelumnya"
       >
+        {canEdit && !isAddingRawMaterial && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsAddingRawMaterial(true);
+                setNewRawMaterial({ ...EMPTY_RAW_MATERIAL_DRAFT, productId: productOptions.length === 1 ? productOptions[0].productId : "" });
+              }}
+              className="flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-3 py-1.5 text-[11.5px] font-semibold text-[#261813]"
+            >
+              <MaterialIcon name="add" className="text-[14px]" />
+              Tambah Bahan Baku/Penolong
+            </button>
+          </div>
+        )}
+        {isAddingRawMaterial && (
+          <div className="mb-3 rounded-lg border border-dashed border-[#2f6fe0] bg-[#f5f8fe] p-3.5">
+            <div className="mb-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <div>
+                <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Jenis Bahan Baku/Penolong</div>
+                <input
+                  type="text"
+                  value={newRawMaterial.jenis}
+                  onChange={(e) => setNewRawMaterial((prev) => ({ ...prev, jenis: e.target.value }))}
+                  className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1.5 text-[11.5px] text-[#20180f] outline-none"
+                />
+              </div>
+              <div>
+                <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">HS Code</div>
+                <SearchSelectInput
+                  value={newRawMaterial.hsCode}
+                  onChange={(value) => setNewRawMaterial((prev) => ({ ...prev, hsCode: value }))}
+                  onSelectOption={(option) =>
+                    setNewRawMaterial((prev) => ({
+                      ...prev,
+                      hsCode: option.value,
+                      hsDesc: option.hint ?? "",
+                      satuan: prev.satuan || unitForHsCode(option.value),
+                    }))
+                  }
+                  options={hsCodeOptionsForUnit}
+                  placeholder="Cari atau ketik HS Code..."
+                />
+              </div>
+            </div>
+            <div className="mb-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <div>
+                <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Uraian Barang (HS)</div>
+                <input
+                  type="text"
+                  value={newRawMaterial.hsDesc}
+                  onChange={(e) => setNewRawMaterial((prev) => ({ ...prev, hsDesc: e.target.value }))}
+                  placeholder="Terisi otomatis dari master data HS Code"
+                  className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1.5 text-[11.5px] text-[#20180f] outline-none"
+                />
+              </div>
+              <div>
+                <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Deskripsi Bahan Baku</div>
+                <input
+                  type="text"
+                  value={newRawMaterial.deskripsi}
+                  onChange={(e) => setNewRawMaterial((prev) => ({ ...prev, deskripsi: e.target.value }))}
+                  className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1.5 text-[11.5px] text-[#20180f] outline-none"
+                />
+              </div>
+            </div>
+            <div className="mb-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-4">
+              <div>
+                <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Kategori</div>
+                <select
+                  value={newRawMaterial.kategori}
+                  onChange={(e) => setNewRawMaterial((prev) => ({ ...prev, kategori: e.target.value as RawMaterialDraft["kategori"] }))}
+                  className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1.5 text-[11.5px] text-[#20180f] outline-none"
+                >
+                  <option value="BAHAN_BAKU">Bahan Baku</option>
+                  <option value="BAHAN_PENOLONG">Bahan Penolong</option>
+                </select>
+              </div>
+              <div>
+                <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Untuk Produk</div>
+                <select
+                  value={newRawMaterial.productId}
+                  onChange={(e) => setNewRawMaterial((prev) => ({ ...prev, productId: e.target.value }))}
+                  className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1.5 text-[11.5px] text-[#20180f] outline-none"
+                >
+                  <option value="">— Tanpa produk —</option>
+                  {productOptions.map((p) => (
+                    <option key={p.productId} value={p.productId}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Volume Penggunaan</div>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={newRawMaterial.penggunaan}
+                  onChange={(e) => setNewRawMaterial((prev) => ({ ...prev, penggunaan: e.target.value }))}
+                  className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1.5 text-[11.5px] text-[#20180f] outline-none"
+                />
+              </div>
+              <div>
+                <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[#8a7565]">Satuan</div>
+                <UnitSelect
+                  value={newRawMaterial.satuan}
+                  onChange={(value) => setNewRawMaterial((prev) => ({ ...prev, satuan: value }))}
+                  placeholder="Pilih satuan"
+                  className="w-full rounded-md border border-[#e8dccd] bg-white px-2 py-1.5 text-[11.5px] text-[#20180f] outline-none focus:border-[#e0662e]"
+                />
+              </div>
+            </div>
+            <p className="mb-2.5 text-[11px] text-[#8a7565]">
+              Bahan baku baru juga muncul di tabel Stok Terkini dan Rencana Kebutuhan; jika produk dipilih, juga di Konversi.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={savingRawMaterial}
+                onClick={() => setIsAddingRawMaterial(false)}
+                className="rounded-lg border border-[#e1bfb3] bg-white px-3 py-1.5 text-[11.5px] font-semibold text-[#261813] disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={savingRawMaterial}
+                onClick={handleAddRawMaterial}
+                className="flex items-center gap-1.5 rounded-lg bg-[#2f6fe0] px-3 py-1.5 text-[11.5px] font-semibold text-white disabled:opacity-50"
+              >
+                <MaterialIcon name="save" className="text-[13px]" />
+                {savingRawMaterial ? "Menyimpan..." : "Simpan"}
+              </button>
+            </div>
+          </div>
+        )}
         <RawMaterialUsageTable
           rows={rawMaterialUsage}
           valueField="penggunaan"
@@ -1259,6 +1530,8 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
           onSaveKeterangan={saveRawMaterialKeterangan}
           onSaveValue={saveRawMaterialValue}
           onNavigateToRawMaterial={handleNavigateToRawMaterial}
+          onDelete={handleDeleteRawMaterial}
+          deletingRowId={deletingRawMaterialRowId}
         />
         {rawMaterialUsage.length > 0 && (
           <ConclusionEditor

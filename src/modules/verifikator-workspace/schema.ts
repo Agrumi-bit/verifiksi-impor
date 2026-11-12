@@ -17,6 +17,7 @@ import {
   PRODUCT_VERIFICATION_STATUSES,
   MACHINE_VERIFICATION_STATUSES,
   PRODUCTION_QTY_VERIFICATION_STATUSES,
+  rawMaterialUsageRowKey,
   type DocVerificationStatusValue,
 } from "./status";
 import type { ChecklistKonsumsiBrandContext } from "./konsumsi-brand-context";
@@ -969,6 +970,41 @@ export function buildRawMaterialUsageChecklist(payload: ApplicationWizardValues)
       };
     });
   });
+}
+
+const RAW_MATERIAL_USAGE_TOPICS = ["penggunaan", "stok", "rencana-kebutuhan"] as const;
+
+/**
+ * Raw material usage row ids carry their position (`rawMaterialId:i:j`), so adding or removing a
+ * raw material or a product pairing shifts the ids of the rows after it — and with them the keys
+ * their Penggunaan / Stok / Rencana Kebutuhan decisions are stored under. Call this with the
+ * checklist before and after such a change: each decision moves to the row that has the same raw
+ * material and product, and decisions of rows that no longer exist are dropped. Every other key
+ * (product rows, summaries) is kept as is.
+ */
+export function remapRawMaterialUsageDecisions(
+  before: RawMaterialUsageRow[],
+  after: RawMaterialUsageRow[],
+  decisions: ProductionQtyVerifications,
+): ProductionQtyVerifications {
+  const pairKey = (r: RawMaterialUsageRow) => `${r.rawMaterialId}|${r.productId ?? ""}`;
+  const afterByPair = new Map(after.map((r) => [pairKey(r), r]));
+  const rowKeys = new Set<string>();
+  const moved: ProductionQtyVerifications = {};
+  for (const r of before) {
+    const next = afterByPair.get(pairKey(r));
+    for (const topic of RAW_MATERIAL_USAGE_TOPICS) {
+      const oldKey = rawMaterialUsageRowKey(topic, r.id);
+      rowKeys.add(oldKey);
+      const entry = decisions[oldKey];
+      if (entry && next) moved[rawMaterialUsageRowKey(topic, next.id)] = entry;
+    }
+  }
+  const result: ProductionQtyVerifications = {};
+  for (const [key, entry] of Object.entries(decisions)) {
+    if (!rowKeys.has(key)) result[key] = entry;
+  }
+  return { ...result, ...moved };
 }
 
 export type RawMaterialConversionRow = {

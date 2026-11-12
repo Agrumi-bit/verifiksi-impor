@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
 import { getServerSession } from "@/lib/get-session";
+import { saveRawMaterialPayload } from "@/modules/verifikator-workspace/raw-material-usage-store";
 import { RAW_MATERIAL_CONVERSION_KATEGORI, type ApplicationWizardValues } from "@/modules/applications/schema";
 
 async function findOwnedAssignment(assignmentNumber: string, verifikatorId: string) {
@@ -74,10 +75,7 @@ export async function POST(
   const newEntry = { id: randomUUID(), ...parsed.data };
   const rawMaterialConversions = [...(payload.rawMaterialConversions ?? []), newEntry];
 
-  await db.application.update({
-    where: { id: assignment.applicationId },
-    data: { payload: { ...payload, rawMaterialConversions } },
-  });
+  await saveRawMaterialPayload(assignment, { ...payload, rawMaterialConversions });
 
   return NextResponse.json({ data: newEntry }, { status: 201 });
 }
@@ -123,10 +121,7 @@ export async function PATCH(
     c.id === parsed.data.id ? { ...c, ...parsed.data } : c,
   );
 
-  await db.application.update({
-    where: { id: assignment.applicationId },
-    data: { payload: { ...payload, rawMaterialConversions } },
-  });
+  await saveRawMaterialPayload(assignment, { ...payload, rawMaterialConversions });
 
   return NextResponse.json({ data: { ...existing, ...parsed.data } });
 }
@@ -162,10 +157,7 @@ export async function DELETE(
   const payload = assignment.application.payload as ApplicationWizardValues;
   const rawMaterialConversions = (payload.rawMaterialConversions ?? []).filter((c) => c.id !== conversionId);
 
-  await db.application.update({
-    where: { id: assignment.applicationId },
-    data: { payload: { ...payload, rawMaterialConversions } },
-  });
+  await saveRawMaterialPayload(assignment, { ...payload, rawMaterialConversions });
 
   return NextResponse.json({ data: { id: conversionId } });
 }

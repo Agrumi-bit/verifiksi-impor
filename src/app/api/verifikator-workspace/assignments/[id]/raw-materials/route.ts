@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { isAssignmentReviewable } from "@/modules/applications/assignment-review-state";
 import { getServerSession } from "@/lib/get-session";
+import { saveRawMaterialPayload } from "@/modules/verifikator-workspace/raw-material-usage-store";
 import type { ApplicationWizardValues } from "@/modules/applications/schema";
 
 const rawMaterialDataSchema = z.object({
@@ -166,10 +167,7 @@ export async function DELETE(
   );
   const rawMaterialUsage = (payload.rawMaterialUsage ?? []).filter((u) => u.rawMaterialId !== rawMaterialId);
 
-  await db.application.update({
-    where: { id: assignment.applicationId },
-    data: { payload: { ...payload, rawMaterials, rawMaterialConversions, rawMaterialUsage } },
-  });
+  await saveRawMaterialPayload(assignment, { ...payload, rawMaterials, rawMaterialConversions, rawMaterialUsage });
 
   return NextResponse.json({ data: { id: rawMaterialId } });
 }
