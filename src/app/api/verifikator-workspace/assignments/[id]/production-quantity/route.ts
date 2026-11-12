@@ -133,6 +133,20 @@ export async function GET(
       })),
       rawMaterialConversion,
       sales,
+      // Pick lists for the add-row forms (products / raw materials already on the application).
+      products: (payload.products ?? []).map((p) => ({
+        id: p.id,
+        name: p.materialType ?? "",
+        hsCode: p.hsCode ?? "",
+        deskripsi: p.deskripsi ?? "",
+      })),
+      rawMaterials: (payload.rawMaterials ?? []).map((r) => ({
+        id: r.id,
+        jenis: r.jenis ?? "",
+        hsCode: r.hsCode ?? "",
+        hsDesc: r.hsDesc ?? "",
+        deskripsi: r.deskripsi ?? "",
+      })),
       sebelumnyaConclusion: summaryConclusion(decisions, PRODUCTION_QTY_SEBELUMNYA_SUMMARY_KEY),
       penggunaanConclusion: summaryConclusion(decisions, PRODUCTION_QTY_PENGGUNAAN_SUMMARY_KEY),
       stokConclusion: summaryConclusion(decisions, PRODUCTION_QTY_STOK_SUMMARY_KEY),

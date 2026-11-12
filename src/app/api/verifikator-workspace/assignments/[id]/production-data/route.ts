@@ -6,6 +6,7 @@ import { isAssignmentReviewable } from "@/modules/applications/assignment-review
 import { getServerSession } from "@/lib/get-session";
 import { updateApplicationPayload } from "@/lib/application-payload";
 import { kbliMasterDescriptions } from "@/modules/master-data/kbli-lookup.server";
+import { productionQtyVerificationsSchema } from "@/modules/verifikator-workspace/schema";
 
 const SOURCE_CONFIG = {
   // capacity rows are matched by their own id now, not productId — see capacityItemSchema for
@@ -118,15 +119,26 @@ export async function PATCH(
 
       const isNew = index === -1;
       // rawMaterialUsage rows aren't seeded anywhere — a raw material linked to a product in
-      // Product Verification has no usage row until the first edit here creates one. Every
-      // other source is still 1:1-seeded elsewhere (capacity has its own add/delete route;
-      // productionQty/sales are seeded per product), so a missing row there stays a real 404.
-      if (isNew && source !== "rawMaterialUsage") {
+      // Product Verification has no usage row until the first edit here creates one.
+      // productionQty/sales rows are seeded per product, but verifikator can delete one (see
+      // DELETE below) and add it back here — allowed only for a product that exists.
+      // Capacity has its own add/delete route, so a missing row there stays a real 404.
+      const productExists = (freshPayload.products ?? []).some((p) => p.id === itemId);
+      if (isNew && source === "capacity") {
+        return { payload: freshPayload, result: { ok: false } };
+      }
+      if (isNew && (source === "productionQty" || source === "sales") && !productExists) {
         return { payload: freshPayload, result: { ok: false } };
       }
 
+      const blankRow: Record<Source, Record<string, unknown>> = {
+        capacity: {},
+        rawMaterialUsage: { rawMaterialId: itemId },
+        productionQty: { productId: itemId, perTahunSebelumnya: "", perTahunRencana: "", satuan: "" },
+        sales: { productId: itemId, dalamNegeri: "", luarNegeri: "", negaraTujuan: "", satuan: "" },
+      };
       const merged: Record<string, unknown> = isNew
-        ? { rawMaterialId: itemId, ...filteredFields }
+        ? { ...blankRow[source], ...filteredFields }
         : { ...list[index], ...filteredFields };
       // A legacy capacity row (no `id` of its own yet) converges onto the new shape the first
       // time it's edited, so future edits/deletes address it by a real id instead of productId.
@@ -155,4 +167,62 @@ export async function PATCH(
   }
 
   return NextResponse.json({ data: result.item });
+}
+
+const deleteSourceSchema = z.enum(["productionQty", "sales"]);
+
+/**
+ * Removes one product's row from Jumlah Produksi (productionQty — the same row feeds both the
+ * "Satu Tahun Sebelumnya" and "Rencana" tables) or from Penjualan (sales). The product itself
+ * stays in Product Verification; the row can be added back through PATCH above. Row-level
+ * decisions of a removed productionQty row are dropped with it.
+ */
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await getServerSession();
+  const verifikatorId = session?.user.id;
+  if (!verifikatorId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const assignment = await findOwnedAssignment(id, verifikatorId);
+  if (!assignment) {
+    return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
+  }
+  if (!isAssignmentReviewable(assignment)) {
+    return NextResponse.json(
+      { error: "Data hanya dapat dihapus saat assignment berstatus Submitted." },
+      { status: 400 },
+    );
+  }
+
+  const { searchParams } = new URL(request.url);
+  const source = deleteSourceSchema.safeParse(searchParams.get("source"));
+  const itemId = searchParams.get("itemId");
+  if (!source.success || !itemId) {
+    return NextResponse.json({ error: "source dan itemId wajib diisi" }, { status: 400 });
+  }
+
+  const removed = await updateApplicationPayload<boolean>(assignment.applicationId, (freshPayload) => {
+    const list = (freshPayload[source.data] ?? []) as Array<{ productId?: string }>;
+    const next = list.filter((item) => item.productId !== itemId);
+    return { payload: { ...freshPayload, [source.data]: next }, result: next.length !== list.length };
+  });
+  if (!removed) {
+    return NextResponse.json({ error: "Data tidak ditemukan" }, { status: 404 });
+  }
+
+  if (source.data === "productionQty") {
+    const decisions = productionQtyVerificationsSchema.parse(assignment.productionQtyVerifications ?? {});
+    const rowKeys = [`sebelumnya:${itemId}`, `rencana:${itemId}`];
+    if (rowKeys.some((key) => key in decisions)) {
+      const remaining = Object.fromEntries(Object.entries(decisions).filter(([key]) => !rowKeys.includes(key)));
+      await db.assignment.update({ where: { id: assignment.id }, data: { productionQtyVerifications: remaining } });
+    }
+  }
+
+  return NextResponse.json({ data: { source: source.data, itemId } });
 }
