@@ -5,7 +5,7 @@ import { ReportLoadProgress } from "@/modules/surveyor-workspace/components/repo
 import { fmtNum, parseRekapBahanBaku, type ElectricityMonth } from "../detail/analysis-types";
 import { capacitySummary, materialNeeds, materialTotals } from "../../lhvki-summary";
 import type { CapacityRow, MachineChecklistItem, RawMaterialConversionRow, RawMaterialUsageRow } from "@/modules/verifikator-workspace/schema";
-import { computeListrik, LISTRIK_TEXT, resolveListrikTariff, TARIF_LAINNYA } from "../../listrik-calc";
+import { computeListrik, LISTRIK_TEXT, listrikBebanFormula, resolveListrikTariff, TARIF_LAINNYA } from "../../listrik-calc";
 import { BOTTLENECK_TEXT, computeBottleneck } from "../../kapasitas-calc";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -457,7 +457,10 @@ export function TechnicalAnalysisReport({
         k !== "rekapBahanBaku" &&
         k !== "kapasitasVki" &&
         // Energi Listrik: hari operasi and tarif are printed in section C below.
-        !(key === "listrik" && (k === "hariOperasiPerBulan" || k === "tarifId" || k === "tarifLainnyaGolongan" || k === "tarifLainnyaPerKwh")) &&
+        !(
+          key === "listrik" &&
+          (k === "hariOperasiPerBulan" || k === "tarifId" || k === "tarifLainnyaGolongan" || k === "tarifLainnyaPerKwh" || k === "utilisasiProduksi")
+        ) &&
         // Kapasitas: the chosen bottleneck is printed in section B below.
         !(key === "kapasitas" && k === "mesinBottleneck") &&
         !looksLikeHtml(v),
@@ -547,15 +550,15 @@ export function TechnicalAnalysisReport({
               {sub("C. Beban Produksi Teoritis")}
               {para(LISTRIK_TEXT.beban)}
               <ReportStatGrid
+                columns={2}
                 items={[
                   { label: "Total Daya Terpasang", value: `${fmtNum(calc.totalPower, 2)} kW` },
                   { label: "Total Power Consumption per Hari", value: `${fmtNum(calc.totalDailyConsumption, 2)} kWh/hari` },
                   { label: "Jumlah Hari Operasi per Bulan", value: `${fmtNum(calc.hariOperasiPerBulan, 2)} hari/bulan` },
+                  { label: "Faktor Utilisasi Produksi", value: `${fmtNum(calc.utilisasi * 100, 2)}%` },
                 ]}
               />
-              {formula(
-                `${fmtNum(calc.totalDailyConsumption, 2)} kWh/hari × 85% = ${fmtNum(calc.rataRataBeban, 2)} kWh (mesin) + ${fmtNum(calc.nonOperasional, 2)} kWh (non-operasional, 15%) = ${fmtNum(calc.totalKebutuhanHarian, 2)} kWh/hari`,
-              )}
+              {formula(listrikBebanFormula(calc, (n) => `${fmtNum(n, 2)} kWh`))}
               <ReportHero
                 label={`Total Power Consumption Perusahaan per Bulan (${fmtNum(calc.hariOperasiPerBulan, 2)} hari operasi)`}
                 value={`${fmtNum(calc.totalMonthlyConsumption, 0)} kWh`}

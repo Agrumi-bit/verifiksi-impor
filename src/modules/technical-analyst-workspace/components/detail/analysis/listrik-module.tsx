@@ -3,7 +3,15 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { fmtNum, type ModuleProps } from "../analysis-types";
-import { computeListrik, DEFAULT_HARI_OPERASI_PER_BULAN, LISTRIK_TEXT, resolveListrikTariff, TARIF_LAINNYA } from "../../../listrik-calc";
+import {
+  computeListrik,
+  DEFAULT_HARI_OPERASI_PER_BULAN,
+  LISTRIK_TEXT,
+  listrikBebanFormula,
+  resolveListrikTariff,
+  suggestUtilisasi,
+  TARIF_LAINNYA,
+} from "../../../listrik-calc";
 import { AnalystNote, ConclusionCard, EditableStatBox, Formula, Paragraphs, ResultBanner, Section, HeroStat, Table, Td, StatusPill, ToggleSwitch } from "./shared";
 
 type ElectricityTariffRow = {
@@ -57,20 +65,20 @@ export function ListrikModule({
   const isTarifLainnya = inputs.tarifId === TARIF_LAINNYA;
   const selectedTariffNominal = resolveListrikTariff(inputs, tariffs)?.perKwh ?? null;
   // Same calculation as the printed Laporan Analisis Teknis (listrik-calc.ts).
+  const listrikCalc = computeListrik(data.machines, data.electricityMonths, inputs, selectedTariffNominal);
   const {
     machineRows,
     totalPower,
     totalDailyConsumption,
-    rataRataBeban,
-    nonOperasional,
-    totalKebutuhanHarian,
     hariOperasiPerBulan,
     totalMonthlyConsumption,
     estimasiPembayaran,
     varianceRows,
     maxAbsVariance,
     overall,
-  } = computeListrik(data.machines, data.electricityMonths, inputs, selectedTariffNominal);
+  } = listrikCalc;
+  const utilisasiSaran = suggestUtilisasi(data.productionQty ?? [], data.capacity ?? []);
+  const fmtPct = (n: number) => n.toLocaleString("id-ID", { maximumFractionDigits: 2 });
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -148,8 +156,37 @@ export function ListrikModule({
             placeholder={String(DEFAULT_HARI_OPERASI_PER_BULAN)}
           />
         </div>
+        <div className="mb-4 rounded-[9px] bg-[#f7f2ec] px-3.5 py-3">
+          <div className="text-[11px] text-[#8a7565]">Faktor Utilisasi Produksi</div>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              inputMode="decimal"
+              value={inputs.utilisasiProduksi ?? ""}
+              disabled={!canEdit}
+              onChange={(e) => onInputChange("utilisasiProduksi", e.target.value.replace(/[^\d.,]/g, ""))}
+              placeholder="100"
+              className="w-28 rounded-md border border-[#e8dccd] bg-white px-2 py-1.5 text-[15px] font-extrabold text-[#20180f] outline-none disabled:opacity-60"
+            />
+            <span className="text-[13px] font-bold text-[#20180f]">% dari kapasitas</span>
+            {canEdit && utilisasiSaran && (
+              <button
+                type="button"
+                onClick={() => onInputChange("utilisasiProduksi", fmtPct(utilisasiSaran.pct))}
+                className="rounded-md border border-[#e1bfb3] bg-white px-2.5 py-1 text-[11.5px] font-semibold text-[#261813]"
+              >
+                Pakai {fmtPct(utilisasiSaran.pct)}%
+              </button>
+            )}
+          </div>
+          <div className="mt-1.5 text-[11px] leading-relaxed text-[#8a7565]">
+            Tingkat produksi aktual terhadap kapasitas, dikalikan ke beban mesin. Kosongkan untuk 100% (semua mesin berproduksi penuh).
+            {utilisasiSaran &&
+              ` Saran dari data: realisasi produksi ${fmtNum(utilisasiSaran.realisasi, 0)} ${utilisasiSaran.satuan} ÷ kapasitas terpasang ${fmtNum(utilisasiSaran.kapasitas, 0)} ${utilisasiSaran.satuan} = ${fmtPct(utilisasiSaran.pct)}%.`}
+          </div>
+        </div>
         <Formula>
-          {fmtNum(totalDailyConsumption, 2)} kWh/hari × 85% = {fmtNum(rataRataBeban, 2)} kWh (mesin) + {fmtNum(nonOperasional, 2)} kWh (non-operasional, 15%) = {fmtNum(totalKebutuhanHarian, 2)} kWh/hari
+          {listrikBebanFormula(listrikCalc, (n) => `${fmtNum(n, 2)} kWh`)}
         </Formula>
         <HeroStat
           label={`Total Power Consumption Perusahaan per Bulan (${fmtNum(hariOperasiPerBulan, 2)} hari operasi)`}

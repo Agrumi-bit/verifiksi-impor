@@ -13,6 +13,44 @@ export const LISTRIK_NON_OPERASIONAL = 0.15;
 /** Hari operasi per bulan used when the analyst leaves "Jumlah Hari Operasi per Bulan" empty. */
 export const DEFAULT_HARI_OPERASI_PER_BULAN = 26;
 
+/**
+ * Faktor Utilisasi Produksi (inputs.utilisasiProduksi, in %): the share of capacity the plant actually
+ * runs at, applied on top of the load factor. Empty or out of range (≤0 or >100) means 100% — every
+ * machine at full production, the calculation as it was before this input existed.
+ */
+export function utilisasiFraction(inputs: Record<string, string> | undefined): number {
+  const pct = parseNumeric(inputs?.utilisasiProduksi);
+  return pct !== null && pct > 0 && pct <= 100 ? pct / 100 : 1;
+}
+
+/**
+ * Suggested Faktor Utilisasi Produksi: realisasi produksi 1 tahun sebelumnya ÷ kapasitas terpasang,
+ * summed over rows in the same unit. Null when there's nothing to compare or the units differ.
+ */
+export function suggestUtilisasi(
+  productionQty: readonly { section: string; jumlah: string; satuan: string }[],
+  capacity: readonly { kapasitasTerpasang: string; satuan: string }[],
+): { pct: number; realisasi: number; kapasitas: number; satuan: string } | null {
+  const realisasiRows = productionQty.filter((r) => r.section === "sebelumnya" && parseNumeric(r.jumlah) !== null);
+  const kapasitasRows = capacity.filter((c) => parseNumeric(c.kapasitasTerpasang) !== null);
+  if (!realisasiRows.length || !kapasitasRows.length) return null;
+  const units = new Set([...realisasiRows, ...kapasitasRows].map((r) => (r.satuan ?? "").trim().toUpperCase()));
+  if (units.size !== 1) return null;
+  const realisasi = realisasiRows.reduce((s, r) => s + (parseNumeric(r.jumlah) ?? 0), 0);
+  const kapasitas = kapasitasRows.reduce((s, c) => s + (parseNumeric(c.kapasitasTerpasang) ?? 0), 0);
+  if (kapasitas <= 0 || realisasi <= 0) return null;
+  return { pct: Math.min(100, (realisasi / kapasitas) * 100), realisasi, kapasitas, satuan: realisasiRows[0].satuan };
+}
+
+/** "x/hari × 85% [× utilisasi y%] = … (mesin) + … (non-operasional, 15%) = …/hari", one wording everywhere. */
+export function listrikBebanFormula(
+  calc: { totalDailyConsumption: number; rataRataBeban: number; nonOperasional: number; totalKebutuhanHarian: number; utilisasi: number },
+  kwh: (value: number) => string,
+): string {
+  const utilisasi = calc.utilisasi < 1 ? ` × utilisasi ${(calc.utilisasi * 100).toLocaleString("id-ID", { maximumFractionDigits: 2 })}%` : "";
+  return `${kwh(calc.totalDailyConsumption)}/hari × ${LISTRIK_LOAD_FACTOR * 100}%${utilisasi} = ${kwh(calc.rataRataBeban)} (mesin) + ${kwh(calc.nonOperasional)} (non-operasional, ${LISTRIK_NON_OPERASIONAL * 100}%) = ${kwh(calc.totalKebutuhanHarian)}/hari`;
+}
+
 /** Golongan Tarif Listrik value for a tariff not in Master Data: name and Rp/kWh typed by the analyst. */
 export const TARIF_LAINNYA = "LAINNYA";
 
@@ -64,7 +102,8 @@ export function computeListrik(
   });
   const totalPower = machineRows.reduce((sum, m) => sum + (m.totalDaya ?? 0), 0);
   const totalDailyConsumption = machineRows.reduce((sum, m) => sum + (m.dayaPerHari ?? 0), 0);
-  const rataRataBeban = totalDailyConsumption * LISTRIK_LOAD_FACTOR;
+  const utilisasi = utilisasiFraction(inputs);
+  const rataRataBeban = totalDailyConsumption * LISTRIK_LOAD_FACTOR * utilisasi;
   const nonOperasional = rataRataBeban * LISTRIK_NON_OPERASIONAL;
   const totalKebutuhanHarian = rataRataBeban + nonOperasional;
   const hariOperasiInput = parseNumeric(inputs?.hariOperasiPerBulan);
@@ -85,6 +124,7 @@ export function computeListrik(
     machineRows,
     totalPower,
     totalDailyConsumption,
+    utilisasi,
     rataRataBeban,
     nonOperasional,
     totalKebutuhanHarian,

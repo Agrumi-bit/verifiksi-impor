@@ -2,7 +2,7 @@ import { TECHNICAL_MODULE_STATUS_LABELS, type TechnicalModuleStatusValue } from 
 import { capacitySummary, materialNeeds, rencanaKebutuhanOf } from "@/modules/technical-analyst-workspace/lhvki-summary";
 import type { TechnicalAnalysisData } from "@/modules/technical-analyst-workspace/schema";
 import { computeBottleneck } from "@/modules/technical-analyst-workspace/kapasitas-calc";
-import { computeListrik } from "@/modules/technical-analyst-workspace/listrik-calc";
+import { computeListrik, listrikBebanFormula } from "@/modules/technical-analyst-workspace/listrik-calc";
 import { parseNumeric } from "@/modules/technical-analyst-workspace/components/detail/analysis-types";
 import type {
   CapacityRow,
@@ -663,12 +663,13 @@ function energiAnalysis(input: VkiStageInput): AnalysisPart[] {
           ["Total Daya Terpasang", kw(calc.totalPower)],
           ["Total Power Consumption per Hari", `${kwh(calc.totalDailyConsumption)}/hari`],
           ["Jumlah Hari Operasi per Bulan", `${formatQuantity(calc.hariOperasiPerBulan)} hari/bulan`],
+          ["Faktor Utilisasi Produksi", `${formatQuantity(Math.round(calc.utilisasi * 10000) / 100)}%`],
           [`Total Power Consumption Perusahaan per Bulan (${formatQuantity(calc.hariOperasiPerBulan)} hari operasi)`, formatQuantity(Math.round(calc.totalMonthlyConsumption), "kWh")],
           ["Golongan Tarif Listrik", input.tariff?.label ?? "—"],
           ["Tarif Nominal per kWh", input.tariff?.perKwh != null ? `${rupiah(input.tariff.perKwh, 2)} / kWh` : "—"],
           ["Estimasi Jumlah Pembayaran Listrik per Bulan", rupiah(calc.estimasiPembayaran)],
         ],
-        formula: `${kwh(calc.totalDailyConsumption)}/hari × 85% = ${kwh(calc.rataRataBeban)} (mesin) + ${kwh(calc.nonOperasional)} (non-operasional, 15%) = ${kwh(calc.totalKebutuhanHarian)}/hari`,
+        formula: listrikBebanFormula(calc, kwh),
         tables: [
           {
             title: "Sumber Energi Listrik Selain PLN",
