@@ -401,6 +401,10 @@ export const vkiSupportDocEntrySchema = z.object({
   opsi: z.string().trim().optional(),
   /** Unit pengolahan limbah (KERJA_SAMA): the cooperation contract with the waste processor. */
   kontrakDocumentPath: z.string().trim().optional(),
+  /** Memiliki/menguasai gudang: which warehouses the company declares (Lampiran II huruf G).
+   * VKI doesn't ask for a separate Gudang location, so this is the only place it's recorded. */
+  gudangBahanBaku: z.boolean().optional(),
+  gudangHasilProduksi: z.boolean().optional(),
 });
 export type VkiSupportDocEntryValues = z.infer<typeof vkiSupportDocEntrySchema>;
 

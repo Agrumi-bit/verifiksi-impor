@@ -232,14 +232,19 @@ export function buildVkiForm({ payload, applicationNumber, submissionDate, lhvki
   const penguasaan = locations
     .filter((l) => l.buildingStatus)
     .map((l) => `${LOCATION_LABEL[l.locationType ?? ""] ?? l.locationType}: ${BUILDING_LABEL[l.buildingStatus ?? ""] ?? l.buildingStatus}`);
-  const hasGudang = gudang.length > 0;
+  // Gudang: declared on the Surat Pernyataan Memiliki/Menguasai Gudang card (VKI has no separate
+  // Gudang location); falls back to a Gudang location for applications filled before that existed.
+  const gudangDoc = supportDoc("memiliki-menguasai");
+  const hasGudangLocation = gudang.length > 0;
+  const gudangBahanBaku = gudangDoc?.gudangBahanBaku ?? hasGudangLocation;
+  const gudangHasilProduksi = gudangDoc?.gudangHasilProduksi ?? hasGudangLocation;
   const memilikiDoc = supportDoc("memiliki-menguasai");
   const bRows: [string, string][] = [
     ["Lokasi Kantor", kantorAddress || DASH],
     ...pabrikRows.map(([k, v]) => [k.replace("Alamat", "Lokasi"), v] as [string, string]),
     ...gudang.map((g, i) => [`Lokasi Gudang${gudang.length > 1 ? ` ${i + 1}` : ""}`, fullAddress(g) || DASH] as [string, string]),
-    ["Gudang Bahan Baku", `${box(hasGudang)} Ada   ${box(!hasGudang)} Tidak ada`],
-    ["Gudang Barang Jadi / Hasil Produksi", `${box(hasGudang)} Ada   ${box(!hasGudang)} Tidak ada`],
+    ["Gudang Bahan Baku", `${box(gudangBahanBaku)} Ada   ${box(!gudangBahanBaku)} Tidak ada`],
+    ["Gudang Barang Jadi / Hasil Produksi", `${box(gudangHasilProduksi)} Ada   ${box(!gudangHasilProduksi)} Tidak ada`],
     [
       "Unit Pengolahan Limbah (milik sendiri atau kerja sama pihak lain)",
       limbahDoc?.opsi || limbahDoc?.documentPath ? `${BOX_ON} Ada${limbahText ? ` (${limbahText})` : ""}   ${BOX_OFF} Tidak ada` : `${BOX_OFF} Ada   ${BOX_OFF} Tidak ada`,
@@ -536,7 +541,7 @@ export function buildVkiForm({ payload, applicationNumber, submissionDate, lhvki
   add({
     kind: "para",
     align: "left",
-    text: `a. memiliki/menguasai:\n     1. ${box(hasGudang)} gudang bahan baku dan/atau bahan penolong; dan/atau\n     2. ${box(hasGudang)} gudang hasil produksi; dan/atau\nb. ${box(limbahAda)} memiliki unit pengolahan limbah sesuai dengan jenis industri atau bekerja sama dengan pihak lain.`,
+    text: `a. memiliki/menguasai:\n     1. ${box(gudangBahanBaku)} gudang bahan baku dan/atau bahan penolong; dan/atau\n     2. ${box(gudangHasilProduksi)} gudang hasil produksi; dan/atau\nb. ${box(limbahAda)} memiliki unit pengolahan limbah sesuai dengan jenis industri atau bekerja sama dengan pihak lain.`,
   });
   add({
     kind: "para",

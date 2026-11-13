@@ -79,6 +79,24 @@ describe("Formulir Permohonan VKI", () => {
     assert.equal(mergeLhvki([], { ...payload, hasPreviousLhvki: false, lhvkiHistory: [{ id: "x", nomor: "1" }] } as ApplicationWizardValues).length, 0);
   });
 
+  it("gudang rows follow the Surat Pernyataan Memiliki/Menguasai Gudang declaration", () => {
+    const rowsOf = (p: ApplicationWizardValues) => {
+      const f = buildVkiForm({ payload: p, applicationNumber: "APP-VKI-2", submissionDate: "2026-07-16T00:00:00.000Z", lhvki: [] });
+      const b = f.blocks.filter((x) => x.kind === "fields")[1];
+      assert.ok(b && b.kind === "fields");
+      const map = Object.fromEntries(b.rows.map(([k, v]) => [k.replace(/^\d+\. /, ""), v]));
+      return [map["Gudang Bahan Baku"], map["Gudang Barang Jadi / Hasil Produksi"]];
+    };
+    const noGudangLocation = { ...payload, locations: payload.locations.filter((l) => l.locationType !== "GUDANG") } as ApplicationWizardValues;
+    const declared = {
+      ...noGudangLocation,
+      vkiSupportDocs: [{ key: "memiliki-menguasai", gudangBahanBaku: true, gudangHasilProduksi: false }],
+    } as ApplicationWizardValues;
+    assert.deepEqual(rowsOf(declared).map((v) => v.startsWith("\u2612")), [true, false]);
+    assert.deepEqual(rowsOf(noGudangLocation).map((v) => v.startsWith("\u2612")), [false, false]);
+    assert.deepEqual(rowsOf(payload).map((v) => v.startsWith("\u2612")), [true, true]);
+  });
+
   it("helpers", () => {
     assert.equal(tanggalId("2026-07-16T00:00:00.000Z"), "16 Juli 2026");
     assert.equal(fileNameOf("uploads/a/1712345678901-07 TERDAFTAR PAJAK.pdf"), "07 TERDAFTAR PAJAK.pdf");

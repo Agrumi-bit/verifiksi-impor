@@ -160,6 +160,46 @@ function UploadOnlyBody({ form, index }: { form: UseFormReturn<ApplicationWizard
   );
 }
 
+/** Memiliki/menguasai gudang — which warehouses are declared (Ada/Tidak ada per gudang), plus the surat itself. */
+function GudangBody({ form, index }: { form: UseFormReturn<ApplicationWizardValues>; index: number }) {
+  const doc = useWatch({ control: form.control, name: `vkiSupportDocs.${index}` });
+  const rows = [
+    { field: "gudangBahanBaku" as const, label: "Gudang bahan baku dan/atau bahan penolong" },
+    { field: "gudangHasilProduksi" as const, label: "Gudang barang jadi / hasil produksi" },
+  ];
+  return (
+    <div className="flex flex-col gap-3.5">
+      <div className="flex flex-col gap-2">
+        <div className="text-xs font-semibold text-muted-foreground">Gudang yang dimiliki/dikuasai</div>
+        {rows.map((r) => {
+          const value = doc?.[r.field];
+          return (
+            <div key={r.field} className="flex flex-wrap items-center gap-2">
+              <span className="min-w-64 text-xs">{r.label}</span>
+              {[
+                { v: true, label: "Ada" },
+                { v: false, label: "Tidak ada" },
+              ].map((o) => (
+                <button
+                  key={o.label}
+                  type="button"
+                  onClick={() => form.setValue(`vkiSupportDocs.${index}.${r.field}`, o.v, { shouldDirty: true })}
+                  className={`rounded-lg border px-3.5 py-1.5 text-xs font-semibold ${
+                    value === o.v ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+      <RegularDocBody form={form} index={index} />
+    </div>
+  );
+}
+
 /** Unit pengolahan limbah — milik sendiri or kerja sama (then also the cooperation contract). */
 function LimbahBody({ form, index }: { form: UseFormReturn<ApplicationWizardValues>; index: number }) {
   const opsi = useWatch({ control: form.control, name: `vkiSupportDocs.${index}.opsi` });
@@ -236,7 +276,7 @@ function DocCard({ def, index, form }: { def: VkiSupportDocDef; index: number; f
       </button>
       {open && (
         <div className="border-t border-border bg-background p-4.5">
-          {def.type === "regular" && <RegularDocBody form={form} index={index} />}
+          {def.type === "regular" && (def.key === "memiliki-menguasai" ? <GudangBody form={form} index={index} /> : <RegularDocBody form={form} index={index} />)}
           {def.type === "limbah" && <LimbahBody form={form} index={index} />}
           {def.type === "upload" && <UploadOnlyBody form={form} index={index} />}
           {def.type === "electricity" && <ElectricityBody form={form} />}
