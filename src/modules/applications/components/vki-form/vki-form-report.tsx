@@ -10,7 +10,7 @@ import { A4Pages } from "@/modules/technical-analyst-workspace/components/report
 import { CurrentPagePdfButton } from "@/modules/technical-analyst-workspace/components/report/pdf-download-button";
 import { printWithSignedLinks } from "@/lib/print-with-signed-links";
 import type { VkiForm } from "@/modules/applications/vki-form/model";
-import { vkiFormFlow } from "./vki-form-blocks";
+import { VkiFormKop, vkiFormFlow } from "./vki-form-blocks";
 
 export function vkiFormApiPath(ref: string): string {
   return `/api/applications/${encodeURIComponent(ref)}/formulir-vki`;
@@ -33,9 +33,12 @@ export function useVkiForm(ref: string, enabled = true) {
   });
 }
 
-function Sheet({ pageNo, total, applicationNumber, children }: { pageNo: number; total: number; applicationNumber: string; children: ReactNode }) {
+function Sheet({ form, pageNo, total, applicationNumber, children }: { form: VkiForm; pageNo: number; total: number; applicationNumber: string; children: ReactNode }) {
   return (
     <section className="rd-sheet vf-sheet">
+      <div className="rd-pagehead vf-pagehead vf-form">
+        <VkiFormKop form={form} pageNo={pageNo} total={total} />
+      </div>
       <div className="rd-body vf-form">{children}</div>
       <div className="rd-pagefoot">
         <div>Formulir Permohonan VKI · {applicationNumber}</div>
@@ -79,7 +82,7 @@ export function VkiFormReport({ refId, backHref, backLabel = "← Kembali ke Per
           <A4Pages
             items={vkiFormFlow(data)}
             renderPage={(pageNo, total, children) => (
-              <Sheet pageNo={pageNo} total={total} applicationNumber={data.applicationNumber}>
+              <Sheet form={data} pageNo={pageNo} total={total} applicationNumber={data.applicationNumber}>
                 {children}
               </Sheet>
             )}

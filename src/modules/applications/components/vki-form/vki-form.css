@@ -17,20 +17,50 @@
   font-size: 9.5px;
   color: #777;
 }
+.vf-doc .vf-sheet .rd-pagehead.vf-pagehead {
+  display: block;
+  padding: 32px 60px 0;
+}
+.vf-doc .vf-sheet .rd-pagehead.vf-pagehead + .rd-body {
+  padding-top: 16px;
+}
+/* Kop surat PT Tribhakti Inspektama: logo kiri, kotak dokumen terkendali kanan. */
 .vf-form .vf-kop {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   border-bottom: 2px solid #111;
   padding-bottom: 8px;
   margin-bottom: 14px;
 }
-.vf-form .vf-kop-name {
-  font-size: 15px;
-  font-weight: 700;
-  text-transform: uppercase;
+.vf-form .vf-kop-logo img {
+  display: block;
+  width: 200px;
+  height: auto;
 }
-.vf-form .vf-kop-line {
-  font-size: 10.5px;
-  color: #333;
+.vf-form .vf-kop-doc {
+  border-collapse: collapse;
+  width: 250px;
+  font-size: 10px;
+  line-height: 1.35;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.vf-form .vf-kop-doc th,
+.vf-form .vf-kop-doc td {
+  background: #e36c0a;
+  color: #fff;
+  font-weight: 700;
+  border: 1px solid #fff;
+  padding: 1px 6px;
+}
+.vf-form .vf-kop-doc th {
+  text-align: left;
+  width: 46%;
+}
+.vf-form .vf-kop-doc td {
+  text-align: center;
 }
 .vf-form .vf-title {
   text-align: center;

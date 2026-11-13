@@ -88,21 +88,33 @@ function blockNode(b: VkiFormBlock): ReactNode {
   }
 }
 
-export function VkiFormKop({ form }: { form: VkiForm }) {
+/** Kop surat PT Tribhakti Inspektama — repeated at the top of every A4 sheet with its page number. */
+export function VkiFormKop({ form, pageNo, total }: { form: VkiForm; pageNo?: number; total?: number }) {
+  const rows: [string, string][] = [...form.kop.rows, ["Halaman", pageNo && total ? `${pageNo} dari ${total}` : "—"]];
   return (
     <div className="vf-kop">
-      {form.kopLines.map((l, i) => (
-        <div key={i} className={i === 0 ? "vf-kop-name" : "vf-kop-line"}>
-          {l}
-        </div>
-      ))}
+      <div className="vf-kop-logo">
+        {/* eslint-disable-next-line @next/next/no-img-element -- printed sheet, plain img keeps print/PDF simple */}
+        <img src={form.kop.logoPath} alt={form.kop.logoAlt} />
+      </div>
+      <table className="vf-kop-doc">
+        <tbody>
+          {rows.map(([label, value]) => (
+            <tr key={label}>
+              <th>{label}</th>
+              <td>{value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
 /** The form as A4 flow items: headings travel with what follows, tables split row by row (header repeated). */
 export function vkiFormFlow(form: VkiForm): FlowItem[] {
-  const items: FlowItem[] = [{ kind: "node", key: "kop", node: <VkiFormKop form={form} /> }];
+  // The kop is page chrome (see the Sheet in vki-form-report.tsx), not part of the flow.
+  const items: FlowItem[] = [];
   let pendingLead: ReactNode[] = [];
   let breakNext = false;
   const flushLead = (key: string) => {

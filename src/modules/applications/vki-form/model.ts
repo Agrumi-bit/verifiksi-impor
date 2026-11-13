@@ -28,10 +28,24 @@ export type VkiFormBlock =
   | { kind: "sign"; dateLine: string; role: string; note: string; name: string }
   | { kind: "pagebreak" };
 
+/** Kop surat PT Tribhakti Inspektama: logo + kotak dokumen terkendali (Halaman x dari y is added per page). */
+export type VkiFormKop = { logoPath: string; logoAlt: string; rows: [string, string][] };
+
+export const VKI_FORM_KOP: VkiFormKop = {
+  logoPath: "/images/kop/logo-tribhakti.png",
+  logoAlt: "Tribhakti — Laboratory & Integrated Services",
+  rows: [
+    ["No. Dokumen", "FM.PU-012.1.1.1"],
+    ["No. Terbitan", "2"],
+    ["No. Revisi", "0"],
+    ["Berlaku Mulai", "03 September 2025"],
+  ],
+};
+
 export type VkiForm = {
   applicationNumber: string;
   companyName: string;
-  kopLines: string[];
+  kop: VkiFormKop;
   blocks: VkiFormBlock[];
 };
 
@@ -513,7 +527,7 @@ export function buildVkiForm({ payload, applicationNumber, submissionDate, lhvki
   return {
     applicationNumber,
     companyName,
-    kopLines: [companyName, kantorAddress, [t(p.companyPhone) && `Telp. ${t(p.companyPhone)}`, t(p.companyEmail)].filter(Boolean).join(" · ")].filter(Boolean),
+    kop: VKI_FORM_KOP,
     blocks,
   };
 }

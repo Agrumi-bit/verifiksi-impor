@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { deflateRawSync } from "node:zlib";
 
 import type { VkiForm, VkiFormBlock } from "./model";
@@ -101,21 +103,66 @@ function block(b: VkiFormBlock): string {
   }
 }
 
-function documentXml(form: VkiForm): string {
-  const kop = form.kopLines
-    .map((l, i) =>
-      para(l, { bold: i === 0, size: i === 0 ? 28 : 18, align: "center", after: 0, border: i === form.kopLines.length - 1 }),
-    )
+// ---------- kop surat (page header on every page) ----------
+const ORANGE = "E36C0A";
+const LOGO_W_EMU = 1872000; // 5.2 cm
+const LOGO_H_EMU = Math.round((LOGO_W_EMU * 107) / 288); // logo-tribhakti.png is 288×107 px
+
+/** The Tribhakti logo from public/ (copied into the production image); the header drops it if missing. */
+function readLogo(logoPath: string): Buffer | null {
+  try {
+    return readFileSync(path.join(process.cwd(), "public", logoPath.replace(/^\/+/, "")));
+  } catch {
+    return null;
+  }
+}
+
+const NS =
+  'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+
+function logoDrawing(alt: string): string {
+  return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${LOGO_W_EMU}" cy="${LOGO_H_EMU}"/><wp:docPr id="1" name="Logo" descr="${esc(alt)}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="1" name="logo-tribhakti.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdLogo"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${LOGO_W_EMU}" cy="${LOGO_H_EMU}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+}
+
+const field = (instr: string) =>
+  `<w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="16"/></w:rPr><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="16"/></w:rPr><w:instrText xml:space="preserve"> ${instr} </w:instrText></w:r><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="16"/></w:rPr><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="16"/></w:rPr><w:t>1</w:t></w:r><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="16"/></w:rPr><w:fldChar w:fldCharType="end"/></w:r>`;
+
+function headerXml(form: VkiForm, hasLogo: boolean): string {
+  const LOGO_COL = 5800;
+  const LABEL_COL = 1700;
+  const VALUE_COL = CONTENT_W - LOGO_COL - LABEL_COL;
+  const white = 'w:val="single" w:sz="6" w:space="0" w:color="FFFFFF"';
+  const docCell = (w: number, content: string, align: "left" | "center") =>
+    `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:tcBorders><w:top ${white}/><w:left ${white}/><w:bottom ${white}/><w:right ${white}/></w:tcBorders><w:shd w:val="clear" w:color="auto" w:fill="${ORANGE}"/></w:tcPr><w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="${align}"/></w:pPr>${content}</w:p></w:tc>`;
+  const text = (v: string) => runs(v, { bold: true, color: "FFFFFF", size: 16 });
+  const rows: [string, string | null][] = [...form.kop.rows, ["Halaman", null]];
+  const none = 'w:val="nil"';
+  const trs = rows
+    .map(([label, value], i) => {
+      const logoCell =
+        i === 0
+          ? `<w:tc><w:tcPr><w:tcW w:w="${LOGO_COL}" w:type="dxa"/><w:vMerge w:val="restart"/><w:tcBorders><w:top ${none}/><w:left ${none}/><w:bottom ${none}/><w:right ${none}/></w:tcBorders><w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr>${hasLogo ? logoDrawing(form.kop.logoAlt) : runs("TRIBHAKTI", { bold: true, size: 32 })}</w:p></w:tc>`
+          : `<w:tc><w:tcPr><w:tcW w:w="${LOGO_COL}" w:type="dxa"/><w:vMerge/><w:tcBorders><w:top ${none}/><w:left ${none}/><w:bottom ${none}/><w:right ${none}/></w:tcBorders></w:tcPr><w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p></w:tc>`;
+      const valueContent = value === null ? `${field("PAGE")}${text(" dari ")}${field("NUMPAGES")}` : text(value);
+      return `<w:tr>${logoCell}${docCell(LABEL_COL, text(label), "left")}${docCell(VALUE_COL, valueContent, "center")}</w:tr>`;
+    })
     .join("");
-  const body = kop + para("", { after: 120 }) + form.blocks.map(block).join("");
-  const sect = `<w:sectPr><w:pgSz w:w="${PAGE_W}" w:h="${PAGE_H}"/><w:pgMar w:top="${MARGIN}" w:right="${MARGIN}" w:bottom="${MARGIN}" w:left="${MARGIN}" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr>`;
+  const table = `<w:tbl><w:tblPr><w:tblW w:w="${CONTENT_W}" w:type="dxa"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="80" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${LOGO_COL}"/><w:gridCol w:w="${LABEL_COL}"/><w:gridCol w:w="${VALUE_COL}"/></w:tblGrid>${trs}</w:tbl>`;
+  const rule = '<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="12" w:space="1" w:color="000000"/></w:pBdr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>';
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr ${NS}>${table}${rule}</w:hdr>`;
+}
+
+function documentXml(form: VkiForm): string {
+  const body = form.blocks.map(block).join("");
+  const sect = `<w:sectPr><w:headerReference w:type="default" r:id="rIdHeader"/><w:pgSz w:w="${PAGE_W}" w:h="${PAGE_H}"/><w:pgMar w:top="${MARGIN + 1300}" w:right="${MARGIN}" w:bottom="${MARGIN}" w:left="${MARGIN}" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr>`;
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body}${sect}</w:body></w:document>`;
 }
 
 const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:eastAsia="Arial" w:cs="Arial"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="id-ID"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>`;
-const CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`;
+const CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`;
 const ROOT_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
-const DOC_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+const DOC_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rIdHeader" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/></Relationships>`;
+const HEADER_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdLogo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo-tribhakti.png"/></Relationships>`;
 
 // ---------- minimal zip (deflate) ----------
 const CRC_TABLE = (() => {
@@ -181,11 +228,14 @@ export function zip(files: { name: string; data: string | Buffer }[]): Buffer {
 }
 
 export function vkiFormToDocx(form: VkiForm): Buffer {
+  const logo = readLogo(form.kop.logoPath);
   return zip([
     { name: "[Content_Types].xml", data: CONTENT_TYPES },
     { name: "_rels/.rels", data: ROOT_RELS },
     { name: "word/document.xml", data: documentXml(form) },
     { name: "word/styles.xml", data: STYLES },
     { name: "word/_rels/document.xml.rels", data: DOC_RELS },
+    { name: "word/header1.xml", data: headerXml(form, Boolean(logo)) },
+    ...(logo ? [{ name: "word/_rels/header1.xml.rels", data: HEADER_RELS }, { name: "word/media/logo-tribhakti.png", data: logo }] : []),
   ]);
 }
