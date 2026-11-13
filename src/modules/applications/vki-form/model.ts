@@ -14,8 +14,8 @@ import {
 
 /**
  * "Formulir Permohonan VKI" — the application rendered in the format of the official request
- * form (Permenperin 27/2025 Pasal 30 ayat (1) dan (2)): A. Data Pemohon … G. Pernyataan plus the
- * Lampiran surat pernyataan. One neutral block model, drawn by both the A4 page (Cetak / Unduh
+ * form (Permenperin 27/2025 Pasal 30 ayat (1) dan (2)): A. Data Pemohon … G. Pernyataan (the
+ * surat pernyataan itself is an uploaded document, not reprinted here). One neutral block model, drawn by both the A4 page (Cetak / Unduh
  * PDF) and the Word (.docx) export, so the two never drift apart.
  */
 export type VkiFormBlock =
@@ -171,7 +171,6 @@ export function buildVkiForm({ payload, applicationNumber, submissionDate, lhvki
   const tanggal = tanggalId(submissionDate) || "……… ………………… 20……";
   const rekamJejak = mergeLhvki(lhvki, p);
   const limbahDoc = supportDoc("unit-limbah");
-  const limbahAda = Boolean(limbahDoc?.opsi || limbahDoc?.documentPath);
   const limbahText = limbahDoc?.opsi === "KERJA_SAMA" ? "kerja sama dengan pihak lain" : limbahDoc?.opsi === "MILIK_SENDIRI" ? "milik sendiri" : "";
 
   // ---- Kop + pembuka
@@ -510,46 +509,6 @@ export function buildVkiForm({ payload, applicationNumber, submissionDate, lhvki
   add({ kind: "para", text: "Demikian permohonan ini kami sampaikan. Data dan dokumen yang kami sampaikan adalah benar dan dapat dipertanggungjawabkan." });
   const signName = [pemohon || "(………………………………)", jabatan].filter(Boolean).join(", ");
   add({ kind: "sign", dateLine: `${kota}, ${tanggal}`, role: "Pemohon,", note: "meterai Rp10.000,00 + tanda tangan + cap perusahaan", name: signName });
-
-  // ---- Lampiran: surat pernyataan memiliki/menguasai gudang / unit pengolahan limbah
-  add({ kind: "pagebreak" });
-  add({ kind: "heading", text: "LAMPIRAN" });
-  add({
-    kind: "para",
-    italic: true,
-    text: "Format Surat Pernyataan Memiliki atau Menguasai Gudang dan/atau Memiliki Unit Pengolahan Limbah (Lampiran II huruf G Permenperin 27/2025)",
-  });
-  add({ kind: "title", lines: ["SURAT PERNYATAAN"] });
-  add({ kind: "para", text: "Yang bertanda tangan di bawah ini:" });
-  add({
-    kind: "fields",
-    rows: [
-      ["Nama", pemohon || DASH],
-      ["Jabatan", jabatan || DASH],
-    ],
-  });
-  add({ kind: "para", text: "dalam hal ini bertindak untuk dan atas nama:" });
-  add({
-    kind: "fields",
-    rows: [
-      ["Nama Perusahaan", companyName],
-      ["Nomor Induk Berusaha", orDash(p.nibNumber)],
-      ["Alamat Kantor", kantorAddress || DASH],
-    ],
-  });
-  add({ kind: "para", text: "dengan ini menyatakan bahwa:" });
-  add({
-    kind: "para",
-    align: "left",
-    text: `a. memiliki/menguasai:\n     1. ${box(gudangBahanBaku)} gudang bahan baku dan/atau bahan penolong; dan/atau\n     2. ${box(gudangHasilProduksi)} gudang hasil produksi; dan/atau\nb. ${box(limbahAda)} memiliki unit pengolahan limbah sesuai dengan jenis industri atau bekerja sama dengan pihak lain.`,
-  });
-  add({
-    kind: "para",
-    text: "Surat Pernyataan ini dibuat dengan sebenar-benarnya dan dapat dipertanggungjawabkan untuk dipergunakan dalam proses Verifikasi Kemampuan Industri.",
-  });
-  add({ kind: "para", text: "Demikian, atas perhatian dan kerja sama Saudara, kami sampaikan terima kasih." });
-  add({ kind: "sign", dateLine: `${kota}, ${tanggal}`, role: "Yang menyatakan,", note: "meterai Rp10.000,00 + tanda tangan + cap perusahaan", name: signName });
-  add({ kind: "para", italic: true, text: "*) centang sesuai kebutuhan; penandatangan adalah pimpinan perusahaan setingkat direktur" });
 
   return {
     applicationNumber,

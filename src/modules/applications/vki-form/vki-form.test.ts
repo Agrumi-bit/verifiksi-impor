@@ -55,9 +55,9 @@ describe("Formulir Permohonan VKI", () => {
     assert.match(map["15. Rekam jejak LHVKI sebelumnya"], /^☒ Pernah/);
   });
 
-  it("has every section A–G and the lampiran", () => {
+  it("has every section A–G and no lampiran surat pernyataan", () => {
     const headings = form.blocks.filter((b) => b.kind === "heading").map((b) => (b.kind === "heading" ? b.text.slice(0, 2) : ""));
-    assert.deepEqual(headings, ["A.", "B.", "C.", "D.", "E.", "F.", "G.", "LA"]);
+    assert.deepEqual(headings, ["A.", "B.", "C.", "D.", "E.", "F.", "G."]);
   });
 
   it("machine capacity per day is for one machine", () => {
