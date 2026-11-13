@@ -11,11 +11,11 @@ export default function VerifikatorWorkspaceLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  // Only the A4 print-style report preview is standalone (it mirrors the
-  // Surveyor Workspace's own report view and shouldn't carry sidebar chrome).
+  // The A4 print-style reports (lokasi report, Laporan Verifikasi Dokumen) are standalone: they
+  // shouldn't carry sidebar/top bar chrome, or "Save as PDF" prints it with the document.
   // Assignment Detail itself sits inside the normal Sidebar/TopNavBar shell.
   const isStandalonePage =
-    /^\/verifikator-workspace\/assignments\/[^/]+\/report\//.test(pathname ?? "") ||
+    /^\/verifikator-workspace\/assignments\/[^/]+\/(report\/|document-report)/.test(pathname ?? "") ||
     /^\/verifikator-workspace\/applications\/[^/]+\/formulir-permohonan/.test(pathname ?? "");
 
   if (isStandalonePage) {
