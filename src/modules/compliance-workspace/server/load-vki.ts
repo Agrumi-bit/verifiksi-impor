@@ -2,8 +2,8 @@ import "server-only";
 
 import { db } from "@/lib/db";
 import { effectiveSubmissionDate } from "@/modules/applications/submission-date";
-import { parseNumeric } from "@/modules/technical-analyst-workspace/components/detail/analysis-types";
 import { technicalAnalysisDataSchema } from "@/modules/technical-analyst-workspace/schema";
+import { resolveListrikTariff, TARIF_LAINNYA } from "@/modules/technical-analyst-workspace/listrik-calc";
 import {
   buildCapacityRows,
   buildMachineChecklist,
@@ -73,11 +73,13 @@ export async function loadVkiStage(applicationId: string): Promise<VkiStageInput
   const analysis = technicalAnalysisDataSchema.safeParse(latestOf("technical")?.technicalAnalysisData ?? {});
   const production = productionQtyVerificationsSchema.safeParse(latestOf("dokumen")?.productionQtyVerifications ?? {});
   const productDecisions = productVerificationsSchema.safeParse(latestOf("dokumen")?.productVerifications ?? {});
-  const tarifId = analysis.success ? analysis.data.listrik?.inputs?.tarifId : undefined;
-  const tariffRow = tarifId
-    ? await db.electricityTariffMasterData.findUnique({ where: { id: tarifId }, select: { kelompok: true, golongan: true, batasDaya: true, tarifPerKwh: true } })
-    : null;
-  const tariff = tariffRow ? { label: `${tariffRow.kelompok} — ${tariffRow.golongan} (${tariffRow.batasDaya})`, perKwh: parseNumeric(tariffRow.tarifPerKwh) } : null;
+  const listrikInputs = analysis.success ? analysis.data.listrik?.inputs : undefined;
+  const tarifId = listrikInputs?.tarifId;
+  const tariffRow =
+    tarifId && tarifId !== TARIF_LAINNYA
+      ? await db.electricityTariffMasterData.findUnique({ where: { id: tarifId }, select: { id: true, kelompok: true, golongan: true, batasDaya: true, tarifPerKwh: true } })
+      : null;
+  const tariff = resolveListrikTariff(listrikInputs, tariffRow ? [tariffRow] : []);
 
   return {
     submittedAt: effectiveSubmissionDate(application).value,

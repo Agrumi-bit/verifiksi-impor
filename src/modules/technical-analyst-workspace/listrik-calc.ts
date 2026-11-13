@@ -13,6 +13,29 @@ export const LISTRIK_NON_OPERASIONAL = 0.15;
 /** Hari operasi per bulan used when the analyst leaves "Jumlah Hari Operasi per Bulan" empty. */
 export const DEFAULT_HARI_OPERASI_PER_BULAN = 26;
 
+/** Golongan Tarif Listrik value for a tariff not in Master Data: name and Rp/kWh typed by the analyst. */
+export const TARIF_LAINNYA = "LAINNYA";
+
+export type ListrikTariffOption = { id: string; kelompok: string; golongan: string; batasDaya: string; tarifPerKwh: string };
+
+/**
+ * The tariff the analyst chose for the estimated monthly bill: a Master Data row (inputs.tarifId), or
+ * "Golongan lainnya" with its own name (inputs.tarifLainnyaGolongan) and Rp/kWh (inputs.tarifLainnyaPerKwh).
+ */
+export function resolveListrikTariff(
+  inputs: Record<string, string> | undefined,
+  tariffs: readonly ListrikTariffOption[] | undefined | null,
+): { label: string; perKwh: number | null } | null {
+  const tarifId = inputs?.tarifId;
+  if (!tarifId) return null;
+  if (tarifId === TARIF_LAINNYA) {
+    const golongan = (inputs?.tarifLainnyaGolongan ?? "").trim();
+    return { label: `${golongan || "Golongan lainnya"} (tarif diisi manual)`, perKwh: parseNumeric(inputs?.tarifLainnyaPerKwh) };
+  }
+  const row = tariffs?.find((t) => t.id === tarifId);
+  return row ? { label: `${row.kelompok} — ${row.golongan} (${row.batasDaya})`, perKwh: parseNumeric(row.tarifPerKwh) } : null;
+}
+
 export type ListrikVarianceMeta = { label: string; bg: string; color: string };
 
 export function listrikVarianceLabel(pct: number | null): ListrikVarianceMeta {

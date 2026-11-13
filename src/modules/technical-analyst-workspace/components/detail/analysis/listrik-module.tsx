@@ -2,8 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { fmtNum, parseNumeric, type ModuleProps } from "../analysis-types";
-import { computeListrik, DEFAULT_HARI_OPERASI_PER_BULAN, LISTRIK_TEXT } from "../../../listrik-calc";
+import { fmtNum, type ModuleProps } from "../analysis-types";
+import { computeListrik, DEFAULT_HARI_OPERASI_PER_BULAN, LISTRIK_TEXT, resolveListrikTariff, TARIF_LAINNYA } from "../../../listrik-calc";
 import { AnalystNote, ConclusionCard, EditableStatBox, Formula, Paragraphs, ResultBanner, Section, HeroStat, Table, Td, StatusPill, ToggleSwitch } from "./shared";
 
 type ElectricityTariffRow = {
@@ -54,8 +54,8 @@ export function ListrikModule({
   submitting,
 }: ModuleProps) {
   const { data: tariffs, isLoading: tariffsLoading } = useElectricityTariffs();
-  const selectedTariff = tariffs?.find((t) => t.id === inputs.tarifId) ?? null;
-  const selectedTariffNominal = parseNumeric(selectedTariff?.tarifPerKwh);
+  const isTarifLainnya = inputs.tarifId === TARIF_LAINNYA;
+  const selectedTariffNominal = resolveListrikTariff(inputs, tariffs)?.perKwh ?? null;
   // Same calculation as the printed Laporan Analisis Teknis (listrik-calc.ts).
   const {
     machineRows,
@@ -160,7 +160,7 @@ export function ListrikModule({
           <div>
             <div className="mb-1.5 text-[11.5px] font-bold text-[#20180f]">Golongan Tarif Listrik</div>
             <select
-              value={selectedTariff?.id ?? ""}
+              value={isTarifLainnya ? TARIF_LAINNYA : (tariffs?.find((t) => t.id === inputs.tarifId)?.id ?? "")}
               disabled={!canEdit || tariffsLoading}
               onChange={(e) => onInputChange("tarifId", e.target.value)}
               className="w-full rounded-lg bg-[#f7f2ec] px-3 py-2.5 text-[13px] text-[#20180f] outline-none disabled:opacity-60"
@@ -172,13 +172,40 @@ export function ListrikModule({
                   {t.kelompok} — {t.golongan} ({t.batasDaya})
                 </option>
               ))}
+              {!tariffsLoading && <option value={TARIF_LAINNYA}>Golongan lainnya (isi tarif sendiri)</option>}
             </select>
+            {isTarifLainnya && (
+              <input
+                type="text"
+                value={inputs.tarifLainnyaGolongan ?? ""}
+                disabled={!canEdit}
+                onChange={(e) => onInputChange("tarifLainnyaGolongan", e.target.value)}
+                placeholder="Nama golongan, mis. tarif efektif rekening PLN / tarif kawasan industri"
+                className="mt-2 w-full rounded-lg bg-[#f7f2ec] px-3 py-2.5 text-[13px] text-[#20180f] outline-none disabled:opacity-60"
+              />
+            )}
           </div>
           <div>
             <div className="mb-1.5 text-[11.5px] font-bold text-[#20180f]">Tarif Nominal per kWh</div>
-            <div className="rounded-lg bg-[#f7f2ec] px-3 py-2.5 text-[13px] font-bold text-[#20180f]">
-              {selectedTariffNominal !== null ? `Rp ${fmtNum(selectedTariffNominal, 2)} / kWh` : "—"}
-            </div>
+            {isTarifLainnya ? (
+              <div className="flex items-center gap-2 rounded-lg bg-[#f7f2ec] px-3 py-2.5 text-[13px] font-bold text-[#20180f]">
+                <span>Rp</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={inputs.tarifLainnyaPerKwh ?? ""}
+                  disabled={!canEdit}
+                  onChange={(e) => onInputChange("tarifLainnyaPerKwh", e.target.value)}
+                  placeholder="mis. 1.428,50"
+                  className="min-w-0 flex-1 bg-transparent outline-none disabled:opacity-60"
+                />
+                <span>/ kWh</span>
+              </div>
+            ) : (
+              <div className="rounded-lg bg-[#f7f2ec] px-3 py-2.5 text-[13px] font-bold text-[#20180f]">
+                {selectedTariffNominal !== null ? `Rp ${fmtNum(selectedTariffNominal, 2)} / kWh` : "—"}
+              </div>
+            )}
           </div>
         </div>
         <HeroStat label="Estimasi Jumlah Pembayaran Listrik per Bulan" value={estimasiPembayaran !== null ? `Rp ${fmtNum(estimasiPembayaran, 0)}` : "—"} />

@@ -2,10 +2,10 @@
 
 import type { ReactNode } from "react";
 import { ReportLoadProgress } from "@/modules/surveyor-workspace/components/report/report-load-progress";
-import { fmtNum, parseNumeric, parseRekapBahanBaku, type ElectricityMonth } from "../detail/analysis-types";
+import { fmtNum, parseRekapBahanBaku, type ElectricityMonth } from "../detail/analysis-types";
 import { capacitySummary, materialNeeds, materialTotals } from "../../lhvki-summary";
 import type { CapacityRow, MachineChecklistItem, RawMaterialConversionRow, RawMaterialUsageRow } from "@/modules/verifikator-workspace/schema";
-import { computeListrik, LISTRIK_TEXT } from "../../listrik-calc";
+import { computeListrik, LISTRIK_TEXT, resolveListrikTariff, TARIF_LAINNYA } from "../../listrik-calc";
 import { BOTTLENECK_TEXT, computeBottleneck } from "../../kapasitas-calc";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -304,7 +304,7 @@ export function TechnicalAnalysisReport({
   const inputValue = (key: string, value: string): string => {
     if (key !== "tarifId") return value;
     const t = tariffs?.find((row) => row.id === value);
-    return t ? `${t.kelompok} — ${t.golongan} (${t.batasDaya}) · Rp ${t.tarifPerKwh}/kWh` : "—";
+    return t ? `${t.kelompok} — ${t.golongan} (${t.batasDaya}) · Rp ${t.tarifPerKwh}/kWh` : value === TARIF_LAINNYA ? "Golongan lainnya" : "—";
   };
 
   if (isLoading) return <p className="mx-auto max-w-4xl py-10 text-sm text-muted-foreground">Memuat laporan...</p>;
@@ -457,7 +457,7 @@ export function TechnicalAnalysisReport({
         k !== "rekapBahanBaku" &&
         k !== "kapasitasVki" &&
         // Energi Listrik: hari operasi and tarif are printed in section C below.
-        !(key === "listrik" && (k === "hariOperasiPerBulan" || k === "tarifId")) &&
+        !(key === "listrik" && (k === "hariOperasiPerBulan" || k === "tarifId" || k === "tarifLainnyaGolongan" || k === "tarifLainnyaPerKwh")) &&
         // Kapasitas: the chosen bottleneck is printed in section B below.
         !(key === "kapasitas" && k === "mesinBottleneck") &&
         !looksLikeHtml(v),
@@ -512,8 +512,8 @@ export function TechnicalAnalysisReport({
       });
     }
     if (key === "listrik") {
-      const tariff = tariffs?.find((t) => t.id === mod.inputs?.tarifId) ?? null;
-      const tarifNominal = parseNumeric(tariff?.tarifPerKwh);
+      const tariff = resolveListrikTariff(mod.inputs, tariffs);
+      const tarifNominal = tariff?.perKwh ?? null;
       const calc = computeListrik(data.machines ?? [], data.electricityMonths ?? [], mod.inputs, tarifNominal);
       const rp = (v: number | null) => (v === null ? "—" : `Rp ${fmtNum(v, 0)}`);
       const sub = (title: string) => (
@@ -563,7 +563,7 @@ export function TechnicalAnalysisReport({
               <ReportStatGrid
                 columns={2}
                 items={[
-                  { label: "Golongan Tarif Listrik", value: tariff ? `${tariff.kelompok} — ${tariff.golongan} (${tariff.batasDaya})` : "—" },
+                  { label: "Golongan Tarif Listrik", value: tariff?.label ?? "—" },
                   { label: "Tarif Nominal per kWh", value: tarifNominal !== null ? `Rp ${fmtNum(tarifNominal, 2)} / kWh` : "—" },
                 ]}
               />
