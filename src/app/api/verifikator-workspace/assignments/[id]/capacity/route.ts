@@ -72,6 +72,45 @@ export async function POST(
   return NextResponse.json({ data: newRow }, { status: 201 });
 }
 
+const documentSchema = z.object({ capacityDocumentPath: z.string().trim() });
+
+/** Uploads or replaces the Dokumen Pembuktian Kapasitas (payload.capacityDocumentPath); empty removes it. */
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await getServerSession();
+  const verifikatorId = session?.user.id;
+  if (!verifikatorId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const assignment = await findOwnedAssignment(id, verifikatorId);
+  if (!assignment) {
+    return NextResponse.json({ error: "Penugasan tidak ditemukan" }, { status: 404 });
+  }
+  if (!isAssignmentReviewable(assignment)) {
+    return NextResponse.json(
+      { error: "Dokumen pembuktian kapasitas hanya dapat diganti saat assignment berstatus Submitted." },
+      { status: 400 },
+    );
+  }
+
+  const parsed = documentSchema.safeParse(await request.json().catch(() => ({})));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Data tidak valid" }, { status: 400 });
+  }
+
+  const capacityDocumentPath = parsed.data.capacityDocumentPath || undefined;
+  await updateApplicationPayload(assignment.applicationId, (payload) => ({
+    payload: { ...payload, capacityDocumentPath },
+    result: undefined,
+  }));
+
+  return NextResponse.json({ data: { capacityDocumentPath: capacityDocumentPath ?? null } });
+}
+
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },

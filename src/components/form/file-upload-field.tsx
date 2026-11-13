@@ -61,19 +61,35 @@ export function FileUploadField({
 
   if (value) {
     return (
-      <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm">
-        <span className="flex min-w-0 items-center gap-2">
-          <FileCheck2 className="size-4 shrink-0 text-primary" />
-          <span className="truncate">{fileName ?? value.split("/").pop()}</span>
-        </span>
-        <button
-          type="button"
-          onClick={handleRemove}
-          className="shrink-0 text-muted-foreground hover:text-foreground"
-          aria-label="Hapus file"
-        >
-          <X className="size-4" />
-        </button>
+      <div>
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm">
+          <span className="flex min-w-0 items-center gap-2">
+            <FileCheck2 className="size-4 shrink-0 text-primary" />
+            <span className="truncate">{fileName ?? value.split("/").pop()}</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-2">
+            {/* Replace in one step — picking a new file swaps it in without removing the old one first. */}
+            <label
+              className={cn(
+                "flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground",
+                isUploading && "pointer-events-none opacity-60",
+              )}
+            >
+              {isUploading ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+              {isUploading ? "Mengunggah..." : "Ganti"}
+              <input type="file" accept={accept} className="hidden" onChange={handleFileChange} disabled={isUploading} />
+            </label>
+            <button
+              type="button"
+              onClick={handleRemove}
+              className="text-muted-foreground hover:text-foreground"
+              aria-label="Hapus file"
+            >
+              <X className="size-4" />
+            </button>
+          </span>
+        </div>
+        {error && <span className="mt-1 block text-xs text-destructive">{error}</span>}
       </div>
     );
   }

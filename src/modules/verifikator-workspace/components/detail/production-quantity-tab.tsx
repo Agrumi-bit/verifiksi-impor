@@ -4,6 +4,7 @@ import { CountryNamesMultiSelect } from "@/modules/master-data/components/countr
 import { UnitSelect } from "@/modules/master-data/components/unit-select";
 import { useHsCodeOptions } from "@/modules/applications/hooks/use-hs-code-options";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { appendUploadFile } from "@/lib/image-compress";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -632,6 +633,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
   const [clearingLegacyCapacity, setClearingLegacyCapacity] = useState(false);
   const [addingForm, setAddingForm] = useState<AddingForm>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [uploadingCapacityDoc, setUploadingCapacityDoc] = useState(false);
   const [deletingRawMaterialRowId, setDeletingRawMaterialRowId] = useState<string | null>(null);
   const canEdit = assignmentStatus === "SUBMITTED";
 
@@ -860,6 +862,38 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
     }
     toast.success("Baris kapasitas lama dihapus.");
     queryClient.invalidateQueries({ queryKey });
+  }
+
+  /** Dokumen Pembuktian Kapasitas: upload the file, then point payload.capacityDocumentPath at it. */
+  async function handleCapacityDocumentChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !canEdit) return;
+    setUploadingCapacityDoc(true);
+    try {
+      const formData = new FormData();
+      await appendUploadFile(formData, file);
+      formData.append("namespace", "documents");
+      const uploaded = await fetch("/api/uploads", { method: "POST", body: formData });
+      if (!uploaded.ok) throw new Error("upload");
+      const { path } = (await uploaded.json()) as { path: string };
+      const saved = await fetch(`/api/verifikator-workspace/assignments/${assignmentId}/capacity`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ capacityDocumentPath: path }),
+      });
+      if (!saved.ok) {
+        const body = await saved.json().catch(() => null);
+        toast.error(body?.error ?? "Gagal menyimpan dokumen pembuktian kapasitas");
+        return;
+      }
+      toast.success("Dokumen pembuktian kapasitas diperbarui.");
+      queryClient.invalidateQueries({ queryKey });
+    } catch {
+      toast.error("Gagal mengunggah file, coba lagi.");
+    } finally {
+      setUploadingCapacityDoc(false);
+    }
   }
 
   function closeAddForm() {
@@ -1321,19 +1355,36 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
             </tbody>
           </table>
         </div>
-        {capacityDocumentPath ? (
-          <a
-            href={fileHref(capacityDocumentPath)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-bold text-[#2f6fe0]"
-          >
-            <MaterialIcon name="description" className="text-[16px]" />
-            Lihat Dokumen Pembuktian Kapasitas
-          </a>
-        ) : (
-          <div className="mt-3 text-[12px] text-[#a68f80]">Dokumen pembuktian kapasitas belum diunggah.</div>
-        )}
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          {capacityDocumentPath ? (
+            <a
+              href={fileHref(capacityDocumentPath)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#2f6fe0]"
+            >
+              <MaterialIcon name="description" className="text-[16px]" />
+              Lihat Dokumen Pembuktian Kapasitas
+            </a>
+          ) : (
+            <div className="text-[12px] text-[#a68f80]">Dokumen pembuktian kapasitas belum diunggah.</div>
+          )}
+          {canEdit && (
+            <label
+              className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-3 py-1.5 text-[11.5px] font-semibold text-[#261813] ${uploadingCapacityDoc ? "pointer-events-none opacity-60" : ""}`}
+            >
+              <MaterialIcon name="upload_file" className="text-[14px]" />
+              {uploadingCapacityDoc ? "Mengunggah..." : capacityDocumentPath ? "Ganti Dokumen" : "Unggah Dokumen"}
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                className="hidden"
+                onChange={handleCapacityDocumentChange}
+                disabled={uploadingCapacityDoc}
+              />
+            </label>
+          )}
+        </div>
       </CollapsibleSection>
 
       <CollapsibleSection
