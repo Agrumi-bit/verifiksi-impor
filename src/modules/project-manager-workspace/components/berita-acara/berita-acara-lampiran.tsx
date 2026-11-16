@@ -3,7 +3,16 @@ import type { ReactNode } from "react";
 import type { FlowItem } from "@/modules/technical-analyst-workspace/components/report/a4-pages";
 import { formatAssignmentDate } from "@/lib/assignment-date";
 import type { PmApplicationDetail } from "../detail/types";
-import { SCHEME_NAME, tanggalPanjang, tanggalParts, type BeritaAcara, type BeritaAcaraScheme, type LampiranDef } from "../../berita-acara";
+import {
+  OPENING_AGENDA,
+  SCHEME_NAME,
+  emptyBeritaAcaraForms,
+  tanggalPanjang,
+  tanggalParts,
+  type BeritaAcara,
+  type BeritaAcaraScheme,
+  type LampiranDef,
+} from "../../berita-acara";
 
 /**
  * The lampiran pages of the Berita Acara Pelaksanaan. Data lampiran print the application's own detail
@@ -122,10 +131,20 @@ function rowsItem(
   };
 }
 
-const blankRows = (count: number, cols: number): ReactNode[][] =>
-  Array.from({ length: count }, (_, i) => [String(i + 1), ...Array.from({ length: cols - 1 }, () => "")]);
 
-function SignPair({ ba, left = "Lembaga Pelaksana", right = "Pemohon" }: { ba: BeritaAcara; left?: string; right?: string }) {
+function SignPair({
+  ba,
+  left = "Lembaga Pelaksana",
+  right = "Pemohon",
+  leftName,
+  rightName,
+}: {
+  ba: BeritaAcara;
+  left?: string;
+  right?: string;
+  leftName?: string;
+  rightName?: string;
+}) {
   return (
     <div className="ba-sign ba-sign-sm">
       <div className="ba-sign-cols">
@@ -133,28 +152,35 @@ function SignPair({ ba, left = "Lembaga Pelaksana", right = "Pemohon" }: { ba: B
           <div>{left}</div>
           <div>{ba.lembagaNama}</div>
           <div className="ba-sign-space" />
-          <div>(………………………………………)</div>
+          <div>({leftName || "………………………………………"})</div>
         </div>
         <div>
           <div>{right}</div>
           <div>{ba.namaPerusahaan}</div>
           <div className="ba-sign-space" />
-          <div>(………………………………………)</div>
+          <div>({rightName || "………………………………………"})</div>
         </div>
       </div>
     </div>
   );
 }
 
-function eventRows(ba: BeritaAcara, scheme: BeritaAcaraScheme): [string, ReactNode][] {
+function eventRows(ba: BeritaAcara, scheme: BeritaAcaraScheme, waktu?: { waktuMulai: string; waktuSelesai: string }): [string, ReactNode][] {
   const p = tanggalParts(ba.tanggal);
   return [
     ["Kegiatan", `${SCHEME_NAME[scheme]} (${scheme})`],
     ["Perusahaan", ba.namaPerusahaan],
     ["Hari / Tanggal", p ? `${p.hari}, ${tanggalPanjang(ba.tanggal)}` : "……………………………"],
     ["Tempat", ba.tempat || "……………………………"],
-    ["Waktu", "…………… s.d. …………… WIB"],
+    ["Waktu", `${waktu?.waktuMulai || "……………"} s.d. ${waktu?.waktuSelesai || "……………"} WIB`],
   ];
+}
+
+/** Filled rows first, then blank numbered rows up to `minRows` so more can be written in on site. */
+function filledRows(filled: string[][], minRows: number, cols: number): ReactNode[][] {
+  const rows: ReactNode[][] = filled.map((cells, i) => [String(i + 1), ...cells]);
+  for (let i = rows.length; i < minRows; i++) rows.push([String(i + 1), ...Array.from({ length: cols - 1 }, () => "")]);
+  return rows;
 }
 
 function payloadOf(data: PmApplicationDetail): Record<string, unknown> {
@@ -165,6 +191,7 @@ export function lampiranItems(def: LampiranDef, no: string, data: PmApplicationD
   const k = `lamp-${def.key}`;
   const head = <Heading no={no} title={def.title} sub={`${ba.namaPerusahaan} · ${data.applicationNumber}`} />;
   const pl = payloadOf(data);
+  const forms = ba.forms ?? emptyBeritaAcaraForms();
 
   switch (def.key) {
     case "opening":
@@ -176,41 +203,48 @@ export function lampiranItems(def: LampiranDef, no: string, data: PmApplicationD
           node: (
             <>
               {head}
-              <KeyValue rows={eventRows(ba, scheme)} />
+              <KeyValue rows={eventRows(ba, scheme, forms.opening)} />
               <SubTitle>Agenda Opening Meeting</SubTitle>
-              {[
-                "Perkenalan tim verifikasi beserta peran dan tanggung jawab masing-masing personel",
-                `Penyampaian tujuan, metodologi, dan tahapan ${scheme}`,
-                "Konfirmasi ruang lingkup verifikasi, agenda kegiatan, serta jadwal pemeriksaan lapangan",
-                "Penyepakatan mekanisme komunikasi dan klarifikasi selama kegiatan berlangsung",
-              ].map((t) => (
+              {OPENING_AGENDA(scheme).map((t, i) => (
                 <div key={t} className="ba-check">
-                  <span>☐</span>
+                  <span>{forms.opening.agenda.includes(i) ? "☑" : "☐"}</span>
                   <span>{t}</span>
                 </div>
               ))}
               <SubTitle>Catatan</SubTitle>
-              <div className="ba-lines">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <div key={i} />
-                ))}
-              </div>
+              {forms.opening.catatan ? (
+                <div className="ba-notes">{forms.opening.catatan}</div>
+              ) : (
+                <div className="ba-lines">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <div key={i} />
+                  ))}
+                </div>
+              )}
             </>
           ),
         },
-        { kind: "node", key: `${k}-ttd`, node: <SignPair ba={ba} /> },
+        { kind: "node", key: `${k}-ttd`, node: <SignPair ba={ba} leftName={forms.opening.ttdLembaga} rightName={forms.opening.ttdPerusahaan} /> },
       ];
 
     case "hadir":
       return [
-        rowsItem(`${k}-t`, ["No", "Nama", "Instansi / Perusahaan", "Jabatan", "Tanda Tangan"], blankRows(15, 5), {
+        rowsItem(
+          `${k}-t`,
+          ["No", "Nama", "Instansi / Perusahaan", "Jabatan", "Tanda Tangan"],
+          filledRows(
+            forms.hadir.peserta.filter((p) => p.nama || p.instansi || p.jabatan).map((p) => [p.nama, p.instansi, p.jabatan, ""]),
+            15,
+            5,
+          ),
+          {
           breakBefore: true,
           blank: true,
           widths: ["6%", "28%", "26%", "20%", "20%"],
           lead: (
             <>
               {head}
-              <KeyValue rows={eventRows(ba, scheme).slice(0, 4)} />
+              <KeyValue rows={eventRows(ba, scheme, forms.hadir)} />
             </>
           ),
         }),
@@ -218,18 +252,31 @@ export function lampiranItems(def: LampiranDef, no: string, data: PmApplicationD
 
     case "bak":
       return [
-        rowsItem(`${k}-t`, ["No", "Hal yang Diklarifikasi", "Penjelasan Perusahaan", "Keterangan"], blankRows(8, 4), {
-          breakBefore: true,
-          blank: true,
-          widths: ["6%", "32%", "38%", "24%"],
-          lead: (
-            <>
-              {head}
-              <KeyValue rows={eventRows(ba, scheme).slice(0, 4)} />
-            </>
+        rowsItem(
+          `${k}-t`,
+          ["No", "Hal yang Diklarifikasi", "Penjelasan Perusahaan", "Keterangan"],
+          filledRows(
+            forms.bak.items.filter((it) => it.hal || it.penjelasan || it.keterangan).map((it) => [it.hal, it.penjelasan, it.keterangan]),
+            forms.bak.items.some((it) => it.hal || it.penjelasan || it.keterangan) ? 0 : 8,
+            4,
           ),
-        }),
-        { kind: "node", key: `${k}-ttd`, node: <SignPair ba={ba} left="Verifikator" right="Pihak Perusahaan" /> },
+          {
+            breakBefore: true,
+            blank: true,
+            widths: ["6%", "32%", "38%", "24%"],
+            lead: (
+              <>
+                {head}
+                <KeyValue rows={eventRows(ba, scheme, forms.bak)} />
+              </>
+            ),
+          },
+        ),
+        {
+          kind: "node",
+          key: `${k}-ttd`,
+          node: <SignPair ba={ba} left="Verifikator" right="Pihak Perusahaan" leftName={forms.bak.ttdVerifikator} rightName={forms.bak.ttdPerusahaan} />,
+        },
       ];
 
     case "registrasi": {

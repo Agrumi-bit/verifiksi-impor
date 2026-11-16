@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { LAMPIRAN_CATALOG, beritaAcaraSchema, defaultLampiranOtomatis, lampiranList, roman, missingFields, nomorPlaceholder, parseBeritaAcara, schemeOf, tanggalPanjang, tanggalParts } from "./berita-acara";
+import { LAMPIRAN_CATALOG, beritaAcaraSchema, emptyBeritaAcaraForms, defaultLampiranOtomatis, lampiranList, roman, missingFields, nomorPlaceholder, parseBeritaAcara, schemeOf, tanggalPanjang, tanggalParts } from "./berita-acara";
 
 const valid = {
   nomor: "BA/VKI/26/04/001",
@@ -17,6 +17,7 @@ const valid = {
   picJabatan: "",
   lampiranOtomatis: defaultLampiranOtomatis("VKI"),
   lampiranTambahan: [] as string[],
+  forms: emptyBeritaAcaraForms(),
 };
 
 describe("Berita Acara Pelaksanaan", () => {
@@ -58,5 +59,20 @@ describe("Berita Acara Pelaksanaan", () => {
     assert.equal(row?.lampiranOtomatis.length, 8);
     assert.equal(parseBeritaAcara(null), null);
     assert.equal(parseBeritaAcara({ nomor: 3 }), null);
+  });
+  it("reads Berita Acara saved before the forms existed, with empty forms", () => {
+    const { forms: _forms, ...old } = valid;
+    void _forms;
+    const parsed = parseBeritaAcara({ ...old, updatedAt: "2026-11-01T00:00:00.000Z" });
+    assert.ok(parsed);
+    assert.deepEqual(parsed.forms.bak.items, []);
+    assert.deepEqual(parsed.forms.opening.agenda, []);
+    assert.equal(parsed.forms.hadir.waktuMulai, "");
+  });
+
+  it("validates the form isian (jam HH:MM)", () => {
+    const filled = { ...valid, forms: { ...valid.forms, bak: { ...valid.forms.bak, waktuMulai: "09:00", items: [{ hal: "Daya mesin", penjelasan: "Total per jenis", keterangan: "" }] } } };
+    assert.equal(beritaAcaraSchema.safeParse(filled).success, true);
+    assert.equal(beritaAcaraSchema.safeParse({ ...filled, forms: { ...filled.forms, bak: { ...filled.forms.bak, waktuMulai: "9 pagi" } } }).success, false);
   });
 });

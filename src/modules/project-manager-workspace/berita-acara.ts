@@ -8,6 +8,54 @@ import { z } from "zod";
  */
 export const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
+const TIME_KEY = /^([01]\d|2[0-3]):[0-5]\d$/;
+const timeSchema = z.union([z.literal(""), z.string().regex(TIME_KEY, "Jam tidak valid")]).default("");
+const text = (max: number) => z.string().trim().max(max).default("");
+
+/** Agenda printed on the Opening Meeting form (ticked when it was covered). */
+export const OPENING_AGENDA = (scheme: BeritaAcaraScheme) => [
+  "Perkenalan tim verifikasi beserta peran dan tanggung jawab masing-masing personel",
+  `Penyampaian tujuan, metodologi, dan tahapan ${scheme}`,
+  "Konfirmasi ruang lingkup verifikasi, agenda kegiatan, serta jadwal pemeriksaan lapangan",
+  "Penyepakatan mekanisme komunikasi dan klarifikasi selama kegiatan berlangsung",
+];
+
+/** Form lampiran filled in by the PM (Opening Meeting, Daftar Hadir, Berita Acara Klarifikasi). Empty = printed blank. */
+export const openingFormSchema = z.object({
+  waktuMulai: timeSchema,
+  waktuSelesai: timeSchema,
+  /** Index of each OPENING_AGENDA item that was covered. */
+  agenda: z.array(z.number().int().min(0).max(9)).max(10).default([]),
+  catatan: text(4000),
+  ttdLembaga: text(200),
+  ttdPerusahaan: text(200),
+});
+export const hadirFormSchema = z.object({
+  waktuMulai: timeSchema,
+  waktuSelesai: timeSchema,
+  peserta: z
+    .array(z.object({ nama: text(200), instansi: text(200), jabatan: text(200) }))
+    .max(60)
+    .default([]),
+});
+export const bakFormSchema = z.object({
+  waktuMulai: timeSchema,
+  waktuSelesai: timeSchema,
+  items: z
+    .array(z.object({ hal: text(1000), penjelasan: text(2000), keterangan: text(1000) }))
+    .max(60)
+    .default([]),
+  ttdVerifikator: text(200),
+  ttdPerusahaan: text(200),
+});
+export const beritaAcaraFormsSchema = z.object({
+  opening: openingFormSchema.prefault({}),
+  hadir: hadirFormSchema.prefault({}),
+  bak: bakFormSchema.prefault({}),
+});
+export type BeritaAcaraForms = z.infer<typeof beritaAcaraFormsSchema>;
+export const emptyBeritaAcaraForms = (): BeritaAcaraForms => beritaAcaraFormsSchema.parse({});
+
 export const beritaAcaraSchema = z.object({
   nomor: z.string().trim().max(120),
   /** Tanggal pelaksanaan (YYYY-MM-DD) — "Pada hari ini … tanggal … bulan … tahun …". */
@@ -27,6 +75,8 @@ export const beritaAcaraSchema = z.object({
   lampiranOtomatis: z.array(z.string().max(40)).max(20),
   /** Further attachments (paper documents) — only listed, one per line. */
   lampiranTambahan: z.array(z.string().trim().min(1).max(300)).max(30),
+  /** Isian form lampiran — absent on Berita Acara saved before the forms could be filled in. */
+  forms: beritaAcaraFormsSchema.prefault({}),
 });
 
 export type BeritaAcaraInput = z.infer<typeof beritaAcaraSchema>;

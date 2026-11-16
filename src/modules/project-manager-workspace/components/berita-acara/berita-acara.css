@@ -187,3 +187,13 @@
 .ba-doc .ba-sign-sm .ba-sign-space {
   height: 64px;
 }
+
+.ba-doc .ba-notes {
+  white-space: pre-wrap;
+  border: 1px solid #c9c9c9;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.55;
+  min-height: 60px;
+}

@@ -10,6 +10,8 @@ import type { PmApplicationDetail } from "../detail/types";
 import {
   DEFAULT_LEMBAGA,
   LAMPIRAN_CATALOG,
+  OPENING_AGENDA,
+  emptyBeritaAcaraForms,
   defaultLampiranOtomatis,
   DEFAULT_TEMPAT,
   SCHEME_NAME,
@@ -18,8 +20,17 @@ import {
   schemeOf,
   tanggalParts,
   type BeritaAcara,
+  type BeritaAcaraForms,
   type BeritaAcaraInput,
 } from "../../berita-acara";
+
+type SubTab = "data" | "opening" | "hadir" | "bak";
+const SUB_TABS: { key: SubTab; label: string }[] = [
+  { key: "data", label: "Data Berita Acara" },
+  { key: "opening", label: "Opening Meeting" },
+  { key: "hadir", label: "Daftar Hadir" },
+  { key: "bak", label: "Berita Acara Klarifikasi" },
+];
 
 type Form = Omit<BeritaAcaraInput, "lampiranTambahan"> & { lampiranTambahan: string };
 
@@ -58,10 +69,11 @@ function defaultsFrom(data: PmApplicationDetail): Form {
     picJabatan: data.payload?.contactDesignation ?? "",
     lampiranOtomatis: defaultLampiranOtomatis(scheme),
     lampiranTambahan: "",
+    forms: emptyBeritaAcaraForms(),
   };
 }
 
-const toForm = (ba: BeritaAcara): Form => ({ ...ba, lampiranTambahan: ba.lampiranTambahan.join("\n") });
+const toForm = (ba: BeritaAcara): Form => ({ ...ba, forms: ba.forms ?? emptyBeritaAcaraForms(), lampiranTambahan: ba.lampiranTambahan.join("\n") });
 const toInput = (form: Form): BeritaAcaraInput => ({
   ...form,
   lampiranTambahan: form.lampiranTambahan
@@ -128,6 +140,7 @@ function BeritaAcaraForm({
   const scheme = schemeOf(data.verificationType);
   const [form, setForm] = useState<Form>(() => (saved ? toForm(saved) : defaultsFrom(data)));
   const [saving, setSaving] = useState(false);
+  const [sub, setSub] = useState<SubTab>("data");
 
   const surveyDates = useMemo(
     () => [...new Set((data.assignments.survey?.locationVisits ?? []).map((v) => v.surveyDate).filter((d): d is string => Boolean(d)))].sort(),
@@ -135,6 +148,9 @@ function BeritaAcaraForm({
   );
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((prev) => ({ ...prev, [k]: v }));
+  const setForms = <K extends keyof BeritaAcaraForms>(k: K, patch: Partial<BeritaAcaraForms[K]>) =>
+    setForm((prev) => ({ ...prev, forms: { ...prev.forms, [k]: { ...prev.forms[k], ...patch } } }));
+  const lampiranOff = (key: string) => !form.lampiranOtomatis.includes(key);
   const parts = tanggalParts(form.tanggal);
   const missing = missingFields(toInput(form));
   const dirty = JSON.stringify(toInput(form)) !== JSON.stringify(saved ? toInput(toForm(saved)) : null);
@@ -174,6 +190,31 @@ function BeritaAcaraForm({
           )}
         </div>
 
+        <div className="mb-4 flex flex-wrap gap-1.5 border-b border-[#f0ded0]">
+          {SUB_TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setSub(t.key)}
+              className={`-mb-px rounded-t-lg border-b-2 px-3.5 py-2 text-[12.5px] font-bold ${
+                sub === t.key ? "border-[#e0662e] text-[#c14a1f]" : "border-transparent text-[#8a7565] hover:text-[#20180f]"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {sub !== "data" && lampiranOff(sub) && (
+          <div className="mb-3 rounded-lg bg-[#fff6e5] px-3.5 py-2.5 text-[12px] text-[#8a5a10]">
+            Lampiran ini belum dicentang di &quot;Lampiran dari Sistem&quot; (tab Data Berita Acara), jadi isiannya tidak ikut tercetak.
+          </div>
+        )}
+        {sub === "opening" && <OpeningForm scheme={scheme} value={form.forms.opening} onChange={(p) => setForms("opening", p)} />}
+        {sub === "hadir" && <HadirForm value={form.forms.hadir} onChange={(p) => setForms("hadir", p)} picNama={form.picNama} picJabatan={form.picJabatan} namaPerusahaan={form.namaPerusahaan} lembaga={form.lembagaNama} />}
+        {sub === "bak" && <BakForm value={form.forms.bak} onChange={(p) => setForms("bak", p)} />}
+
+        {sub === "data" && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Field label="Nomor Berita Acara" hint={`Contoh: ${nomorPlaceholder(scheme, form.tanggal)}`}>
             <input className={INPUT} value={form.nomor} placeholder={nomorPlaceholder(scheme, form.tanggal)} onChange={(e) => set("nomor", e.target.value)} />
@@ -258,6 +299,7 @@ function BeritaAcaraForm({
             />
           </Field>
         </div>
+        )}
 
         {missing.length > 0 && (
           <div className="mt-4 rounded-lg bg-[#fff6e5] px-3.5 py-2.5 text-[12px] text-[#8a5a10]">Belum diisi: {missing.join(", ")}.</div>
@@ -289,6 +331,170 @@ function BeritaAcaraForm({
           {!saved && <span className="text-[11.5px] text-[#a68f80]">Simpan terlebih dahulu untuk membuka dokumen.</span>}
         </div>
       </div>
+    </div>
+  );
+}
+
+const ADD_BTN = "flex items-center gap-1.5 rounded-lg border border-[#e1bfb3] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#261813]";
+const DEL_BTN = "rounded-md border border-[#f1c4bd] bg-white p-1 text-[#dc2626] hover:bg-[#fdf1ef]";
+
+function WaktuFields({ value, onChange }: { value: { waktuMulai: string; waktuSelesai: string }; onChange: (p: { waktuMulai?: string; waktuSelesai?: string }) => void }) {
+  return (
+    <>
+      <Field label="Waktu Mulai" hint="Tercetak: “… s.d. … WIB”; kosongkan untuk diisi tangan.">
+        <input type="time" className={INPUT} value={value.waktuMulai} onChange={(e) => onChange({ waktuMulai: e.target.value })} />
+      </Field>
+      <Field label="Waktu Selesai">
+        <input type="time" className={INPUT} value={value.waktuSelesai} onChange={(e) => onChange({ waktuSelesai: e.target.value })} />
+      </Field>
+    </>
+  );
+}
+
+/** Form Opening Meeting — waktu, agenda yang dibahas, catatan, nama penandatangan. */
+function OpeningForm({
+  scheme,
+  value,
+  onChange,
+}: {
+  scheme: "VKI" | "VIU";
+  value: BeritaAcaraForms["opening"];
+  onChange: (p: Partial<BeritaAcaraForms["opening"]>) => void;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <WaktuFields value={value} onChange={onChange} />
+      <div className="flex flex-col gap-1.5 md:col-span-2">
+        <span className="text-[11.5px] font-bold text-[#6b5b4c]">Agenda Opening Meeting yang dibahas</span>
+        {OPENING_AGENDA(scheme).map((t, i) => (
+          <label key={t} className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-[#f0ded0] px-3 py-2 text-[12.5px] text-[#20180f]">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={value.agenda.includes(i)}
+              onChange={(e) => onChange({ agenda: e.target.checked ? [...value.agenda, i].sort() : value.agenda.filter((x) => x !== i) })}
+            />
+            <span>{t}</span>
+          </label>
+        ))}
+      </div>
+      <Field label="Catatan" hint="Kosongkan untuk mencetak baris kosong yang diisi tangan." wide>
+        <textarea className={`${INPUT} min-h-28`} value={value.catatan} onChange={(e) => onChange({ catatan: e.target.value })} />
+      </Field>
+      <Field label="Penandatangan Lembaga Pelaksana">
+        <input className={INPUT} value={value.ttdLembaga} onChange={(e) => onChange({ ttdLembaga: e.target.value })} />
+      </Field>
+      <Field label="Penandatangan Pemohon">
+        <input className={INPUT} value={value.ttdPerusahaan} onChange={(e) => onChange({ ttdPerusahaan: e.target.value })} />
+      </Field>
+    </div>
+  );
+}
+
+/** Daftar Hadir — peserta (nama, instansi, jabatan); tanda tangan tetap di kertas. */
+function HadirForm({
+  value,
+  onChange,
+  picNama,
+  picJabatan,
+  namaPerusahaan,
+  lembaga,
+}: {
+  value: BeritaAcaraForms["hadir"];
+  onChange: (p: Partial<BeritaAcaraForms["hadir"]>) => void;
+  picNama: string;
+  picJabatan: string;
+  namaPerusahaan: string;
+  lembaga: string;
+}) {
+  const peserta = value.peserta;
+  const update = (i: number, patch: Partial<(typeof peserta)[number]>) => onChange({ peserta: peserta.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <WaktuFields value={value} onChange={onChange} />
+      <div className="flex flex-col gap-2 md:col-span-2">
+        <span className="text-[11.5px] font-bold text-[#6b5b4c]">Peserta</span>
+        <span className="text-[11px] text-[#a68f80]">Dicetak berurutan, lalu baris kosong hingga 15 baris untuk peserta lain. Kolom tanda tangan diisi di lokasi.</span>
+        {peserta.map((p, i) => (
+          <div key={i} className="grid grid-cols-[24px_1fr_1fr_1fr_32px] items-center gap-2">
+            <span className="text-[12px] text-[#8a7565]">{i + 1}.</span>
+            <input className={INPUT} placeholder="Nama" value={p.nama} onChange={(e) => update(i, { nama: e.target.value })} />
+            <input className={INPUT} placeholder="Instansi / Perusahaan" value={p.instansi} onChange={(e) => update(i, { instansi: e.target.value })} />
+            <input className={INPUT} placeholder="Jabatan" value={p.jabatan} onChange={(e) => update(i, { jabatan: e.target.value })} />
+            <button type="button" title="Hapus peserta" className={DEL_BTN} onClick={() => onChange({ peserta: peserta.filter((_, j) => j !== i) })}>
+              <MaterialIcon name="delete" className="text-[16px]" />
+            </button>
+          </div>
+        ))}
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className={ADD_BTN} onClick={() => onChange({ peserta: [...peserta, { nama: "", instansi: "", jabatan: "" }] })}>
+            <MaterialIcon name="add" className="text-[15px]" />
+            Tambah Peserta
+          </button>
+          {picNama && !peserta.some((p) => p.nama === picNama) && (
+            <button
+              type="button"
+              className={ADD_BTN}
+              onClick={() => onChange({ peserta: [...peserta, { nama: picNama, instansi: namaPerusahaan, jabatan: picJabatan }] })}
+            >
+              <MaterialIcon name="person_add" className="text-[15px]" />
+              Tambah PIC Pemohon ({picNama})
+            </button>
+          )}
+          <button type="button" className={ADD_BTN} onClick={() => onChange({ peserta: [...peserta, { nama: "", instansi: lembaga, jabatan: "Verifikator" }] })}>
+            <MaterialIcon name="badge" className="text-[15px]" />
+            Tambah Tim {lembaga}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Berita Acara Klarifikasi — hal yang diklarifikasi, penjelasan perusahaan, keterangan. */
+function BakForm({ value, onChange }: { value: BeritaAcaraForms["bak"]; onChange: (p: Partial<BeritaAcaraForms["bak"]>) => void }) {
+  const items = value.items;
+  const update = (i: number, patch: Partial<(typeof items)[number]>) => onChange({ items: items.map((it, j) => (j === i ? { ...it, ...patch } : it)) });
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <WaktuFields value={value} onChange={onChange} />
+      <div className="flex flex-col gap-2.5 md:col-span-2">
+        <span className="text-[11.5px] font-bold text-[#6b5b4c]">Butir Klarifikasi</span>
+        <span className="text-[11px] text-[#a68f80]">Kosongkan semua butir untuk mencetak tabel kosong 8 baris yang diisi tangan.</span>
+        {items.map((it, i) => (
+          <div key={i} className="rounded-lg border border-[#f0ded0] p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-[12px] font-bold text-[#20180f]">Butir {i + 1}</span>
+              <button type="button" title="Hapus butir" className={DEL_BTN} onClick={() => onChange({ items: items.filter((_, j) => j !== i) })}>
+                <MaterialIcon name="delete" className="text-[16px]" />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
+              <Field label="Hal yang Diklarifikasi">
+                <textarea className={`${INPUT} min-h-20`} value={it.hal} onChange={(e) => update(i, { hal: e.target.value })} />
+              </Field>
+              <Field label="Penjelasan Perusahaan">
+                <textarea className={`${INPUT} min-h-20`} value={it.penjelasan} onChange={(e) => update(i, { penjelasan: e.target.value })} />
+              </Field>
+              <Field label="Keterangan">
+                <textarea className={`${INPUT} min-h-20`} value={it.keterangan} onChange={(e) => update(i, { keterangan: e.target.value })} />
+              </Field>
+            </div>
+          </div>
+        ))}
+        <div>
+          <button type="button" className={ADD_BTN} onClick={() => onChange({ items: [...items, { hal: "", penjelasan: "", keterangan: "" }] })}>
+            <MaterialIcon name="add" className="text-[15px]" />
+            Tambah Butir Klarifikasi
+          </button>
+        </div>
+      </div>
+      <Field label="Penandatangan Verifikator">
+        <input className={INPUT} value={value.ttdVerifikator} onChange={(e) => onChange({ ttdVerifikator: e.target.value })} />
+      </Field>
+      <Field label="Penandatangan Pihak Perusahaan">
+        <input className={INPUT} value={value.ttdPerusahaan} onChange={(e) => onChange({ ttdPerusahaan: e.target.value })} />
+      </Field>
     </div>
   );
 }
