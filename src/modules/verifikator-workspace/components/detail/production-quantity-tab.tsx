@@ -367,6 +367,37 @@ type RawMaterialUsageValueField =
   | "rencanaKebutuhanNegaraAsal"
   | "satuan";
 
+/**
+ * Keterangan per baris — editable in every status (not only Tidak Sesuai). Saves on blur, and only
+ * when the text actually changed; plain text (the column isn't a rich-text field).
+ */
+function KeteranganCell({
+  value,
+  status,
+  canEdit,
+  onSave,
+}: {
+  value: string;
+  status: ProductionQtyVerificationStatusValue;
+  canEdit: boolean;
+  onSave: (value: string) => void;
+}) {
+  if (!canEdit) return <>{value || "—"}</>;
+  return (
+    <textarea
+      key={value}
+      defaultValue={value}
+      rows={value.length > 60 ? 3 : 1}
+      onBlur={(event) => {
+        const next = event.target.value.trim();
+        if (next !== value.trim()) onSave(next);
+      }}
+      placeholder={status === "TIDAK_SESUAI" ? "Jelaskan ketidaksesuaian..." : "Tambahkan keterangan..."}
+      className={`w-full min-w-[180px] resize-y rounded-md border bg-white px-2 py-1 text-[11.5px] leading-snug text-[#20180f] outline-none focus:border-[#e0662e] ${status === "TIDAK_SESUAI" ? "border-[#e8b1a3]" : "border-[#e8dccd]"}`}
+    />
+  );
+}
+
 function RawMaterialUsageTable({
   rows,
   valueField,
@@ -581,17 +612,7 @@ function RawMaterialUsageTable({
                 </span>
               </td>
               <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
-                {status === "TIDAK_SESUAI" && canEdit ? (
-                  <input
-                    type="text"
-                    defaultValue={keterangan}
-                    onBlur={(event) => onSaveKeterangan(r, topic, event.target.value)}
-                    placeholder="Jelaskan ketidaksesuaian..."
-                    className="w-full rounded-md border border-[#e8b1a3] bg-white px-2 py-1 text-[11.5px] text-[#20180f] outline-none"
-                  />
-                ) : (
-                  keterangan || "—"
-                )}
+                <KeteranganCell value={keterangan} status={status} canEdit={canEdit} onSave={(value) => onSaveKeterangan(r, topic, value)} />
               </td>
               {showDelete && (
                 <td className="border border-[#efe2d4] px-3 py-2.25 text-center">
@@ -777,6 +798,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
       toast.error("Gagal menyimpan keterangan");
       return;
     }
+    toast.success("Keterangan disimpan.");
     queryClient.invalidateQueries({ queryKey });
   }
 
@@ -1015,6 +1037,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
       toast.error("Gagal menyimpan keterangan");
       return;
     }
+    toast.success("Keterangan disimpan.");
     queryClient.invalidateQueries({ queryKey });
   }
 
@@ -1090,17 +1113,7 @@ export function ProductionQuantityTab({ assignmentId, assignmentStatus, onNaviga
           </span>
         </td>
         <td className="border border-[#efe2d4] px-3 py-2.25 text-[#4a4038]">
-          {row.status === "TIDAK_SESUAI" && canEdit ? (
-            <input
-              type="text"
-              defaultValue={row.keterangan}
-              onBlur={(event) => saveKeterangan(row, event.target.value)}
-              placeholder="Jelaskan ketidaksesuaian..."
-              className="w-full rounded-md border border-[#e8b1a3] bg-white px-2 py-1 text-[11.5px] text-[#20180f] outline-none"
-            />
-          ) : (
-            row.keterangan || "—"
-          )}
+          <KeteranganCell value={row.keterangan} status={row.status} canEdit={canEdit} onSave={(value) => saveKeterangan(row, value)} />
         </td>
         {canEdit && (
           <td className="border border-[#efe2d4] px-3 py-2.25 text-center">
