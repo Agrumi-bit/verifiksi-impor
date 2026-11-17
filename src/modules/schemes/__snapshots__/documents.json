@@ -86,9 +86,34 @@
       "basis": "Pasal 30 ayat (2) huruf b angka 6 jo. ayat (3)"
     },
     {
-      "id": "alur-proses",
+      "id": "sp-unit-limbah",
+      "sifat": "WAJIB",
+      "basis": "Pasal 30 ayat (2) huruf b angka 6 jo. ayat (3)"
+    },
+    {
+      "id": "kontrak-limbah",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "Pasal 30 ayat (2) huruf b angka 6 jo. ayat (3)"
+    },
+    {
+      "id": "gambar-alur-proses",
       "sifat": "WAJIB",
       "basis": "Pasal 30 ayat (2) huruf b angka 5"
+    },
+    {
+      "id": "alur-proses",
+      "sifat": "PENDUKUNG",
+      "basis": "Pasal 30 ayat (2) huruf b angka 5"
+    },
+    {
+      "id": "skep-fasilitas",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "INTERNAL_LVI"
+    },
+    {
+      "id": "lhvki-sebelumnya",
+      "sifat": "PENDUKUNG_JIKA_ADA",
+      "basis": "Pasal 30 ayat (1)"
     },
     {
       "id": "listrik",

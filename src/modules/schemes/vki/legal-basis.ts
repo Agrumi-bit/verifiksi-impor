@@ -16,6 +16,8 @@ export const VKI_LEGAL_BASIS = {
   listrik: pasal("Pasal 30 ayat (2) huruf b angka 8", "Bukti pembayaran listrik 3 (tiga) bulan sebelumnya"),
   spTidakDiperjualbelikan: terkait("Pasal 8 ayat (2) huruf a angka 2 huruf c)", "Persyaratan permohonan Pertimbangan Teknis bagi Perusahaan API-P (format Lampiran II huruf A); dikumpulkan sebagai pendukung VKI"),
   spKebenaranData: terkait("Pasal 8 ayat (2) huruf a angka 2 huruf d)", "Persyaratan permohonan Pertimbangan Teknis (format Lampiran II huruf D); dikumpulkan sebagai pendukung VKI"),
+  fasilitas: internalLvi("Tidak dipersyaratkan Pasal 30 ayat (2); SKEP fasilitas kepabeanan (Kawasan Berikat / KITE) diperiksa sebagai pendukung pertimbangan penggunaan bahan baku impor"),
+  lhvkiSebelumnya: pasal("Pasal 30 ayat (1)", "Rekam jejak LHVKI yang dimiliki sebelumnya — Formulir Permohonan VKI huruf A angka 14"),
   akta: internalLvi("Tidak dipersyaratkan Pasal 30 ayat (2); diperiksa sebagai pendukung identitas perusahaan yang dimuat LHVKI (Pasal 32 ayat (3) huruf b)"),
   lapangan: pasal("Pasal 31 ayat (2) huruf a", "Penilaian kesesuaian data dan dokumen dengan kondisi di lapangan"),
   verification: pasal("Pasal 31"),

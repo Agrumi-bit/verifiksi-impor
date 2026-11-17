@@ -424,6 +424,53 @@ function suratPernyataan(keterangan: string, isiDeskripsi: string, pasalKeterang
   };
 }
 
+const PASAL_30_B_5 = `Pasal 30 ayat (2) huruf b angka 5 ${PERMENPERIN}`;
+
+const gambarAlurProses: DocumentNarrative = {
+  keterangan: "Gambar/diagram alur proses produksi dari bahan baku sampai produk jadi.",
+  intro: () => [
+    `Verifikasi terhadap Gambar Alur Proses Produksi dilakukan untuk memastikan bahwa tahapan proses produksi yang dijalankan perusahaan — dari penerimaan bahan baku/bahan penolong sampai menjadi produk jadi — sesuai dengan mesin/peralatan produksi, bahan baku, dan produk yang diajukan dalam permohonan ${VKI}, sesuai dengan ketentuan ${PASAL_30_B_5}.`,
+  ],
+  findings: (p) => [
+    `Berdasarkan hasil pemeriksaan dokumen, ${p.company} menyampaikan Gambar Alur Proses Produksi yang menggambarkan urutan tahapan proses produksi perusahaan.`,
+    "Hasil verifikasi menunjukkan bahwa tahapan proses pada gambar alur proses dibandingkan dengan daftar mesin/peralatan produksi, input bahan baku, dan output produk yang diajukan dalam permohonan.",
+  ],
+  conclusion: (p) =>
+    `Berdasarkan hasil verifikasi dokumen, ${p.company} ${p.memenuhi ? "telah menyampaikan" : "belum menyampaikan secara lengkap"} Gambar Alur Proses Produksi. Dengan demikian, aspek ini dinyatakan ${status(p)} sesuai dengan ketentuan ${PASAL_30_B_5}.`,
+};
+
+const kontrakLimbah: DocumentNarrative = {
+  keterangan: "Kontrak kerja sama pengolahan limbah dengan pihak lain (jika perusahaan bekerja sama).",
+  intro: () => [
+    `Verifikasi terhadap Kontrak Kerja Sama Pengolahan Limbah dilakukan untuk memastikan bahwa kerja sama pengolahan limbah dengan pihak lain yang dinyatakan perusahaan masih berlaku, sesuai dengan ketentuan ${PASAL_30_B_6}.`,
+  ],
+  findings: (p) => [
+    `Berdasarkan hasil pemeriksaan dokumen, ${p.company} menyampaikan Kontrak Kerja Sama Pengolahan Limbah ${letterIdentity(p)}.`,
+  ],
+  conclusion: (p) =>
+    `Berdasarkan hasil verifikasi dokumen, ${p.company} ${p.memenuhi ? "telah menyampaikan" : "belum menyampaikan secara lengkap"} Kontrak Kerja Sama Pengolahan Limbah. Dengan demikian, aspek ini dinyatakan ${status(p)} sebagai dokumen pendukung.`,
+};
+
+const skepFasilitas: DocumentNarrative = {
+  keterangan: "SKEP fasilitas kepabeanan Kawasan Berikat atau KITE (jika perusahaan memiliki fasilitas).",
+  intro: () => [
+    "Verifikasi terhadap SKEP Fasilitas dilakukan untuk memastikan nomor, tanggal, dan masa berlaku fasilitas Kawasan Berikat atau KITE yang dimiliki perusahaan sebagai dasar pertimbangan penggunaan bahan baku impor.",
+  ],
+  findings: (p) => [`Berdasarkan hasil pemeriksaan dokumen, ${p.company} menyampaikan ${p.title} ${letterIdentity(p)}.`],
+  conclusion: (p) =>
+    `Berdasarkan hasil verifikasi dokumen, ${p.company} ${p.memenuhi ? "telah menyampaikan" : "belum menyampaikan secara lengkap"} ${p.title}. Dengan demikian, aspek ini dinyatakan ${status(p)} sebagai dokumen pendukung.`,
+};
+
+const lhvkiSebelumnya: DocumentNarrative = {
+  keterangan: "LHVKI yang dimiliki perusahaan sebelumnya (jika ada).",
+  intro: () => [
+    `Verifikasi terhadap LHVKI yang dimiliki sebelumnya dilakukan untuk memastikan nomor, tanggal terbit, masa berlaku, dan lembaga penerbit hasil ${VKI} yang pernah diperoleh perusahaan.`,
+  ],
+  findings: (p) => [`Berdasarkan hasil pemeriksaan dokumen, ${p.company} menyampaikan ${p.title} ${letterIdentity(p)}.`],
+  conclusion: (p) =>
+    `Berdasarkan hasil verifikasi dokumen, ${p.company} ${p.memenuhi ? "telah menyampaikan" : "belum menyampaikan secara lengkap"} ${p.title}. Dengan demikian, aspek ini dinyatakan ${status(p)} sebagai dokumen pendukung.`,
+};
+
 // ---------------------------------------------------------------------------------------------
 // Chapters
 // ---------------------------------------------------------------------------------------------
@@ -506,6 +553,16 @@ export const VKI_NARRATIVE: SchemeNarrative = {
     "warehouse-registration": warehouseRegistration,
     "warehouse-layout": warehouseLayout,
     "sp-memiliki-menguasai": spMemilikiMenguasai,
+    "sp-unit-limbah": suratPernyataan(
+      "Pernyataan memiliki unit pengolahan limbah sesuai jenis industri, atau bekerja sama dengan pihak lain.",
+      "perusahaan memiliki unit pengolahan limbah sesuai dengan jenis industrinya, atau bekerja sama dengan pihak lain dalam pengolahan limbah.",
+      "Pernyataan ini menjadi dasar pemeriksaan pengelolaan limbah di lokasi pabrik.",
+      L.spGudangLimbah,
+    ),
+    "kontrak-limbah": kontrakLimbah,
+    "gambar-alur-proses": gambarAlurProses,
+    "skep-fasilitas": skepFasilitas,
+    "lhvki-sebelumnya": lhvkiSebelumnya,
     "alur-proses": suratPernyataan(
       "Pernyataan mengenai alur proses produksi yang dijalankan.",
       "alur proses produksi yang dijalankan perusahaan telah sesuai dengan kapasitas dan produk yang dimohonkan.",

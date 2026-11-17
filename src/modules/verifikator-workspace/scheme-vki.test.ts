@@ -70,12 +70,15 @@ const CITATION_FIXED: Record<string, string> = {
   "vki-support:kebenaran-data": "Pasal 8 ayat (2) huruf a angka 2 huruf d) Peraturan Menteri Perindustrian Nomor 27 Tahun 2025",
 };
 
+/** Checklist keys the legacy text never covered (they were dropped from the checklist before). */
+const NEW_IN_SCHEME = new Set(["vki-support:gambar-alur-proses", "vki-support:unit-limbah", "vki-support:unit-limbah:kontrak", "vki-fasilitas:skep"]);
+
 describe("VKI checklist & report (scheme module)", () => {
   const items = buildDocumentChecklist(payload, null, [], [], new Map());
   const keys = items.map((i) => i.key);
 
   it("keeps every VKI checklist document (Pabrik, surat pernyataan, listrik, tenaga kerja)", () => {
-    for (const k of ["location:L2:ownership:SHM", "vki-support:memiliki-menguasai", "vki-support:alur-proses", "vki-support:tenaga-kerja", "vki-support:listrik:m1", "tax-support:skf"]) {
+    for (const k of ["location:L2:ownership:SHM", "vki-support:memiliki-menguasai", "vki-support:alur-proses", "vki-support:gambar-alur-proses", "vki-support:tenaga-kerja", "vki-support:listrik:m1", "tax-support:skf"]) {
       assert.ok(keys.includes(k), k);
     }
   });
@@ -115,6 +118,12 @@ describe("VKI checklist & report (scheme module)", () => {
       let compared = 0;
       for (const category of report.orderCategories([...new Set(rows.map((r) => r.category))])) {
         for (const d of report.buildCategoryDocs(category, rows, ctx)) {
+          if (NEW_IN_SCHEME.has(d.key) || d.key.startsWith("vki-lhvki:")) {
+            const text = [...d.intro(ctx), ...d.findings(ctx), d.kesimpulan(ctx).text].join(" ");
+            assert.deepEqual(findForbiddenTerms("VKI", text), [], `${d.key}: ${text}`);
+            compared++;
+            continue;
+          }
           const old = legacy.find((l) => l.key === d.key);
           assert.ok(old, `no legacy text for ${d.key}`);
           assert.deepEqual(d.findings(ctx), old.findings(ctx), `${d.key} findings`);
