@@ -1,8 +1,8 @@
 "use client";
 
 import { capacitySummary, parseKapasitasVki } from "../../../lhvki-summary";
-import { BOTTLENECK_TEXT, computeBottleneck } from "../../../kapasitas-calc";
-import { fmtNum, parseNumeric, type ModuleProps } from "../analysis-types";
+import { BOTTLENECK_TEXT, computeBottleneck, parsePerbandinganRencana, rencanaComparison, type PerbandinganRencanaEntry } from "../../../kapasitas-calc";
+import { fmtNum, type ModuleProps } from "../analysis-types";
 import { AnalystNote, ConclusionCard, HeroStat, Paragraphs, ResultBanner, Section, StatBoxes, Table, Td, StatusPill } from "./shared";
 
 export function KapasitasModule({
@@ -43,32 +43,17 @@ export function KapasitasModule({
     onInputChange("kapasitasVki", JSON.stringify({ ...kapasitasVki, [id]: value }));
   }
 
-  const byProduct = new Map<string, { jenisProduk: string; deskripsi: string; hsCode: string; satuan: string; sebelumnya: string; rencana: string }>();
-  for (const item of data.productionQty) {
-    const existing = byProduct.get(item.productId) ?? {
-      jenisProduk: item.jenisProduk,
-      deskripsi: item.deskripsiProduk,
-      hsCode: item.hsCode,
-      satuan: item.satuan,
-      sebelumnya: "",
-      rencana: "",
-    };
-    if (item.section === "sebelumnya") existing.sebelumnya = item.jumlah;
-    if (item.section === "rencana") existing.rencana = item.jumlah;
-    byProduct.set(item.productId, existing);
+  // D. — Vol. Perhitungan and Status per product: typed/chosen by the analyst, else from the bottleneck.
+  const comparisonRows = rencanaComparison(data.productionQty, kapasitasLiniTahunan, inputs);
+  function setPerbandingan(productId: string, patch: PerbandinganRencanaEntry) {
+    const current = parsePerbandinganRencana(inputs.perbandinganRencana);
+    onInputChange("perbandinganRencana", JSON.stringify({ ...current, [productId]: { ...current[productId], ...patch } }));
   }
-  const comparisonRows = [...byProduct.entries()].map(([productId, row]) => {
-    const rencanaNum = parseNumeric(row.rencana);
-    const sesuai = kapasitasLiniTahunan === null || rencanaNum === null ? null : rencanaNum <= kapasitasLiniTahunan;
-    return { productId, ...row, rencanaNum, sesuai };
-  });
 
-  const utilisasiPct =
-    kapasitasLiniTahunan && comparisonRows.length
-      ? Math.round(
-          (comparisonRows.reduce((sum, r) => sum + (r.rencanaNum ?? 0), 0) / (kapasitasLiniTahunan * comparisonRows.length)) * 100,
-        )
-      : null;
+  const utilisasiRows = comparisonRows.filter((r) => r.volPerhitungan && r.rencanaNum !== null);
+  const utilisasiPct = utilisasiRows.length
+    ? Math.round((utilisasiRows.reduce((sum, r) => sum + (r.rencanaNum ?? 0) / (r.volPerhitungan ?? 1), 0) / utilisasiRows.length) * 100)
+    : null;
   const anyTidakSesuai = comparisonRows.some((r) => r.sesuai === false);
 
   return (
@@ -232,16 +217,53 @@ export function KapasitasModule({
               <Td>{row.hsCode || "—"}</Td>
               <Td>{row.sebelumnya || "—"}</Td>
               <Td>{row.rencana || "—"}</Td>
-              <Td strong>{kapasitasLiniTahunan !== null ? fmtNum(kapasitasLiniTahunan, 0) : "—"}</Td>
+              <Td strong>
+                {canEdit ? (
+                  <div className="flex flex-col gap-1">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={row.override.vol ?? ""}
+                      onChange={(e) => setPerbandingan(row.productId, { vol: e.target.value.replace(/[^\d.,]/g, "") })}
+                      placeholder={kapasitasLiniTahunan !== null ? fmtNum(kapasitasLiniTahunan, 0) : "Isi volume"}
+                      className="w-36 rounded-md border border-[#e8dccd] bg-white px-2 py-1 text-[12.5px] font-bold text-[#20180f] outline-none focus:border-[#e0662e]"
+                    />
+                    <span className="text-[10.5px] font-normal text-[#a68f80]">
+                      {row.volManual
+                        ? `Diisi analis${kapasitasLiniTahunan !== null ? ` · bottleneck ${fmtNum(kapasitasLiniTahunan, 0)}` : ""}`
+                        : "Otomatis dari bottleneck"}
+                    </span>
+                  </div>
+                ) : row.volPerhitungan !== null ? (
+                  fmtNum(row.volPerhitungan, 0)
+                ) : (
+                  "—"
+                )}
+              </Td>
               <Td>{row.satuan || "—"}</Td>
               <td className="border border-[#efe2d4] px-3 py-2">
-                {row.sesuai === null ? (
-                  "—"
-                ) : row.sesuai ? (
-                  <StatusPill label="Sesuai" bg="#e2f7ea" color="#1a9850" />
-                ) : (
-                  <StatusPill label="Tidak Sesuai" bg="#fbe4de" color="#c1361f" />
-                )}
+                <div className="flex flex-col items-start gap-1">
+                  {row.sesuai === null ? (
+                    "—"
+                  ) : row.sesuai ? (
+                    <StatusPill label="Sesuai" bg="#e2f7ea" color="#1a9850" />
+                  ) : (
+                    <StatusPill label="Tidak Sesuai" bg="#fbe4de" color="#c1361f" />
+                  )}
+                  {canEdit && (
+                    <select
+                      value={row.override.status ?? ""}
+                      onChange={(e) => setPerbandingan(row.productId, { status: e.target.value as PerbandinganRencanaEntry["status"] })}
+                      className="rounded-md border border-[#e8dccd] bg-white px-1.5 py-1 text-[11.5px] text-[#20180f] outline-none"
+                    >
+                      <option value="">
+                        Otomatis{row.autoSesuai === null ? "" : row.autoSesuai ? " (Sesuai)" : " (Tidak Sesuai)"}
+                      </option>
+                      <option value="SESUAI">Sesuai</option>
+                      <option value="TIDAK_SESUAI">Tidak Sesuai</option>
+                    </select>
+                  )}
+                </div>
               </td>
             </tr>
           ))}
@@ -273,8 +295,8 @@ export function KapasitasModule({
           text={
             utilisasiPct !== null
               ? anyTidakSesuai
-                ? `Terdapat rencana produksi yang melebihi kapasitas lini hasil perhitungan (rata-rata utilisasi ${utilisasiPct}%).`
-                : `Rencana produksi berada dalam kapasitas lini hasil perhitungan (rata-rata utilisasi ${utilisasiPct}%).`
+                ? `Terdapat rencana produksi yang dinilai tidak sesuai dengan kapasitas hasil perhitungan (rata-rata utilisasi ${utilisasiPct}%).`
+                : `Rencana produksi dinilai sesuai dengan kapasitas hasil perhitungan (rata-rata utilisasi ${utilisasiPct}%).`
               : "Belum dapat dihitung — data mesin atau rencana produksi belum lengkap."
           }
         />

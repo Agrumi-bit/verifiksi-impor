@@ -462,7 +462,7 @@ export function TechnicalAnalysisReport({
           (k === "hariOperasiPerBulan" || k === "tarifId" || k === "tarifLainnyaGolongan" || k === "tarifLainnyaPerKwh" || k === "utilisasiProduksi")
         ) &&
         // Kapasitas: the chosen bottleneck is printed in section B below.
-        !(key === "kapasitas" && k === "mesinBottleneck") &&
+        !(key === "kapasitas" && (k === "mesinBottleneck" || k === "perbandinganRencana")) &&
         !looksLikeHtml(v),
     );
     const rekapBahanBaku = Object.values(parseRekapBahanBaku(mod.inputs?.rekapBahanBaku));

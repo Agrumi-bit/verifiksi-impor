@@ -3,6 +3,7 @@ import { capacitySummary, materialNeeds, rencanaKebutuhanOf } from "@/modules/te
 import type { TechnicalAnalysisData } from "@/modules/technical-analyst-workspace/schema";
 import { computeBottleneck } from "@/modules/technical-analyst-workspace/kapasitas-calc";
 import { computeListrik, listrikBebanFormula } from "@/modules/technical-analyst-workspace/listrik-calc";
+import { rencanaComparison } from "@/modules/technical-analyst-workspace/kapasitas-calc";
 import { parseNumeric } from "@/modules/technical-analyst-workspace/components/detail/analysis-types";
 import type {
   CapacityRow,
@@ -713,14 +714,9 @@ function kapasitasAnalysis(input: VkiStageInput): AnalysisPart[] {
   const line = computeBottleneck(input.machines, input.kapasitasInputs);
   const unit = line.satuanLini;
   const yearly = line.kapasitasLiniTahunan;
-  // One row per product: last year's and the planned volume, as on Verifikasi Jumlah Produksi.
-  const byProduct = new Map<string, { product: string; hsCode: string; unit: string; previous: string; plan: string }>();
-  for (const item of input.productionQty) {
-    const row = byProduct.get(item.productId) ?? { product: item.jenisProduk, hsCode: item.hsCode, unit: item.satuan, previous: "", plan: "" };
-    if (item.section === "sebelumnya") row.previous = item.jumlah;
-    else row.plan = item.jumlah;
-    byProduct.set(item.productId, row);
-  }
+  // One row per product: last year's and the planned volume, against the yearly capacity (the analyst's
+  // own figure and status where set) — as on the Technical Analyst's Kapasitas tab.
+  const comparison = rencanaComparison(input.productionQty, yearly, input.kapasitasInputs);
   return lettered(
     [
       {
@@ -782,19 +778,15 @@ function kapasitasAnalysis(input: VkiStageInput): AnalysisPart[] {
           {
             title: "",
             headers: ["Produk", "HS Code", "Vol. Sebelumnya", "Vol. Rencana", "Vol. Perhitungan (Tahunan)", "Satuan", "Status"],
-            rows: [...byProduct.values()].map((row): AnalysisCell[] => {
-              const plan = parseNumeric(row.plan);
-              return [
-                row.product || "—",
-                row.hsCode || "—",
-                formatQuantity(parseNumeric(row.previous)),
-                formatQuantity(plan),
-                formatQuantity(yearly === null ? null : Math.round(yearly)),
-                row.unit || "—",
-                // Within the line's yearly capacity — as the Technical Analyst judges it.
-                yearly === null || plan === null ? "—" : plan <= yearly ? { text: "Sesuai", tone: "green" } : { text: "Tidak Sesuai", tone: "red" },
-              ];
-            }),
+            rows: comparison.map((row): AnalysisCell[] => [
+              row.jenisProduk || "—",
+              row.hsCode || "—",
+              formatQuantity(parseNumeric(row.sebelumnya)),
+              formatQuantity(row.rencanaNum),
+              formatQuantity(row.volPerhitungan === null ? null : Math.round(row.volPerhitungan)),
+              row.satuan || "—",
+              row.sesuai === null ? "—" : row.sesuai ? { text: "Sesuai", tone: "green" } : { text: "Tidak Sesuai", tone: "red" },
+            ]),
             empty: "Belum ada data rencana produksi.",
           },
         ],

@@ -12,6 +12,56 @@ export const DEFAULT_HARI_EFEKTIF_PER_TAHUN = 312;
 export const BOTTLENECK_TEXT =
   "Kapasitas produksi keseluruhan lini ditentukan oleh tahapan proses dengan kapasitas produksi harian terkecil (bottleneck), karena tahapan tersebut membatasi kapasitas produksi lini secara menyeluruh.";
 
+/**
+ * D. Perbandingan Kapasitas dengan Rencana Produksi — per product, the analyst can type the yearly
+ * capacity it's compared against (default: the bottleneck line's kapasitas per tahun) and set the
+ * status by hand (default: rencana ≤ kapasitas). Stored as JSON in inputs.perbandinganRencana,
+ * keyed by productId.
+ */
+export type PerbandinganRencanaEntry = { vol?: string; status?: "SESUAI" | "TIDAK_SESUAI" | "" };
+
+export function parsePerbandinganRencana(raw: string | undefined): Record<string, PerbandinganRencanaEntry> {
+  if (!raw) return {};
+  try {
+    const value = JSON.parse(raw) as unknown;
+    return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, PerbandinganRencanaEntry>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function rencanaComparison(
+  productionQty: readonly { productId: string; section: string; jenisProduk: string; deskripsiProduk: string; hsCode: string; satuan: string; jumlah: string }[],
+  kapasitasLiniTahunan: number | null,
+  inputs: Record<string, string> | undefined,
+) {
+  const overrides = parsePerbandinganRencana(inputs?.perbandinganRencana);
+  const byProduct = new Map<string, { jenisProduk: string; deskripsi: string; hsCode: string; satuan: string; sebelumnya: string; rencana: string }>();
+  for (const item of productionQty) {
+    const row = byProduct.get(item.productId) ?? {
+      jenisProduk: item.jenisProduk,
+      deskripsi: item.deskripsiProduk,
+      hsCode: item.hsCode,
+      satuan: item.satuan,
+      sebelumnya: "",
+      rencana: "",
+    };
+    if (item.section === "sebelumnya") row.sebelumnya = item.jumlah;
+    if (item.section === "rencana") row.rencana = item.jumlah;
+    byProduct.set(item.productId, row);
+  }
+  return [...byProduct.entries()].map(([productId, row]) => {
+    const override = overrides[productId] ?? {};
+    const manualVol = parseNumeric(override.vol);
+    const volPerhitungan = manualVol ?? kapasitasLiniTahunan;
+    const rencanaNum = parseNumeric(row.rencana);
+    const autoSesuai = volPerhitungan === null || rencanaNum === null ? null : rencanaNum <= volPerhitungan;
+    const statusManual = override.status === "SESUAI" || override.status === "TIDAK_SESUAI";
+    const sesuai = statusManual ? override.status === "SESUAI" : autoSesuai;
+    return { productId, ...row, rencanaNum, volPerhitungan, volManual: manualVol !== null, autoSesuai, sesuai, statusManual, override };
+  });
+}
+
 export function computeBottleneck(machines: readonly MachineChecklistItem[], inputs: Record<string, string> | undefined) {
   // Same figures the verifikator sees on Verifikasi Mesin: Kapasitas/Hari = jumlah × kapasitas/jam ×
   // jam operasi, Kapasitas/Tahun = Kapasitas/Hari × hari efektif per tahun of that machine.
