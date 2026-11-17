@@ -10,6 +10,7 @@ import {
 } from "@/modules/schemes";
 import { createComplianceResolver, type ComplianceResolver } from "./scheme-compliance";
 import { qualityTestReviewValues } from "./konsumsi-quality-test";
+import { KITE_JENIS_LABELS } from "@/modules/applications/schema";
 import {
   buildElectricityDocuments,
   buildLocationDocuments,
@@ -146,6 +147,64 @@ function fmtTanggal(value: string): string {
     : parsed.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
+/** VKI documents the legacy report never printed: their data block, from the application payload. */
+function vkiSupportDoc(row: ReportRow): DocDetail | null {
+  const hasDocument = Boolean(row.documentPath);
+  const field = (label: string, value: string | null | undefined): DocField => ({ label, value: value || "—", ok: Boolean(value) });
+  const date = (value: string | null | undefined) => (value ? fmtTanggal(value) : null);
+  const upload: DocField = { label: "Status Unggah", value: hasDocument ? "Diunggah" : "Belum Diunggah", ok: hasDocument };
+  const limbah = (ctx: NarrativeContext) => (ctx.payload.vkiSupportDocs ?? []).find((d) => d.key === "unit-limbah");
+  const opsiLabel = (opsi: string | undefined) => (opsi === "KERJA_SAMA" ? "Bekerja Sama dengan Pihak Lain" : opsi === "MILIK_SENDIRI" ? "Memiliki Unit Pengolahan Limbah Sendiri" : null);
+  if (row.key === "vki-support:unit-limbah") {
+    return {
+      ...genericDoc(row),
+      fields: (ctx) => {
+        const e = limbah(ctx);
+        return [
+          field("Nomor Surat Pernyataan", e?.nomorSurat),
+          field("Tanggal Surat Pernyataan", date(e?.tanggal)),
+          field("Nama Penandatangan", e?.penandatangan),
+          field("Pengolahan Limbah", opsiLabel(e?.opsi)),
+          upload,
+        ];
+      },
+    };
+  }
+  if (row.key === "vki-support:unit-limbah:kontrak") {
+    return {
+      ...genericDoc(row),
+      fields: (ctx) => [field("Pengolahan Limbah", opsiLabel(limbah(ctx)?.opsi)), field("Nama Dokumen", row.label), upload],
+    };
+  }
+  if (row.key === "vki-fasilitas:skep") {
+    return {
+      ...genericDoc(row),
+      fields: (ctx) => {
+        const p = ctx.payload;
+        const jenis = p.fasilitas === "KITE" ? (p.kiteJenis ? KITE_JENIS_LABELS[p.kiteJenis] : "KITE") : p.fasilitas === "KAWASAN_BERIKAT" ? "Kawasan Berikat" : null;
+        return [field("Jenis Fasilitas", jenis), field("Nomor SKEP", p.fasilitasSkepNumber), field("Tanggal SKEP", date(p.fasilitasSkepDate)), upload];
+      },
+    };
+  }
+  const lhvkiId = row.key.match(/^vki-lhvki:(.+)$/)?.[1];
+  if (lhvkiId) {
+    return {
+      ...genericDoc(row),
+      fields: (ctx) => {
+        const e = (ctx.payload.lhvkiHistory ?? []).find((l) => l.id === lhvkiId);
+        return [
+          field("Nomor LHVKI", e?.nomor),
+          field("Tanggal Terbit", date(e?.tanggalTerbit)),
+          field("Berlaku Sampai", date(e?.masaBerlaku)),
+          field("Lembaga Penerbit", e?.lembagaPenerbit),
+          upload,
+        ];
+      },
+    };
+  }
+  return null;
+}
+
 export function createSchemeReport(source: {
   verificationType: string;
   payload: NarrativeContext["payload"];
@@ -230,7 +289,7 @@ export function createSchemeReport(source: {
             ? brandEvidenceDoc(row, brandEvidenceId)
             : qualityTestMatch
               ? qualityTestDoc(row, qualityTestMatch[1], qualityTestMatch[2])
-              : genericDoc(row));
+              : (vkiSupportDoc(row) ?? genericDoc(row)));
         const found = defFor(row.key, ctx);
         const text: DocumentNarrative | string = found
           ? (getScheme(found.scheme).narrative?.documents[found.def.id] ?? belumDiatur(found.scheme, `narasi dokumen "${found.def.label}"`))

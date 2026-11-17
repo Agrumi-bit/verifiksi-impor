@@ -445,7 +445,7 @@ const kontrakLimbah: DocumentNarrative = {
     `Verifikasi terhadap Kontrak Kerja Sama Pengolahan Limbah dilakukan untuk memastikan bahwa kerja sama pengolahan limbah dengan pihak lain yang dinyatakan perusahaan masih berlaku, sesuai dengan ketentuan ${PASAL_30_B_6}.`,
   ],
   findings: (p) => [
-    `Berdasarkan hasil pemeriksaan dokumen, ${p.company} menyampaikan Kontrak Kerja Sama Pengolahan Limbah ${letterIdentity(p)}.`,
+    `Berdasarkan hasil pemeriksaan dokumen, ${p.company} menyatakan pengolahan limbah dilakukan dengan cara ${p.field("Pengolahan Limbah").toLowerCase()} dan menyampaikan Kontrak Kerja Sama Pengolahan Limbah sebagai bukti kerja sama tersebut.`,
   ],
   conclusion: (p) =>
     `Berdasarkan hasil verifikasi dokumen, ${p.company} ${p.memenuhi ? "telah menyampaikan" : "belum menyampaikan secara lengkap"} Kontrak Kerja Sama Pengolahan Limbah. Dengan demikian, aspek ini dinyatakan ${status(p)} sebagai dokumen pendukung.`,
@@ -456,9 +456,11 @@ const skepFasilitas: DocumentNarrative = {
   intro: () => [
     "Verifikasi terhadap SKEP Fasilitas dilakukan untuk memastikan nomor, tanggal, dan masa berlaku fasilitas Kawasan Berikat atau KITE yang dimiliki perusahaan sebagai dasar pertimbangan penggunaan bahan baku impor.",
   ],
-  findings: (p) => [`Berdasarkan hasil pemeriksaan dokumen, ${p.company} menyampaikan ${p.title} ${letterIdentity(p)}.`],
+  findings: (p) => [
+    `Berdasarkan hasil pemeriksaan dokumen, ${p.company} memiliki fasilitas ${p.field("Jenis Fasilitas")} dengan SKEP Nomor ${p.field("Nomor SKEP")} tanggal ${p.field("Tanggal SKEP")}.`,
+  ],
   conclusion: (p) =>
-    `Berdasarkan hasil verifikasi dokumen, ${p.company} ${p.memenuhi ? "telah menyampaikan" : "belum menyampaikan secara lengkap"} ${p.title}. Dengan demikian, aspek ini dinyatakan ${status(p)} sebagai dokumen pendukung.`,
+    `Berdasarkan hasil verifikasi dokumen, ${p.company} ${p.memenuhi ? "telah menyampaikan" : "belum menyampaikan secara lengkap"} SKEP fasilitas ${p.field("Jenis Fasilitas")}. Dengan demikian, aspek ini dinyatakan ${status(p)} sebagai dokumen pendukung.`,
 };
 
 const lhvkiSebelumnya: DocumentNarrative = {
@@ -466,9 +468,11 @@ const lhvkiSebelumnya: DocumentNarrative = {
   intro: () => [
     `Verifikasi terhadap LHVKI yang dimiliki sebelumnya dilakukan untuk memastikan nomor, tanggal terbit, masa berlaku, dan lembaga penerbit hasil ${VKI} yang pernah diperoleh perusahaan.`,
   ],
-  findings: (p) => [`Berdasarkan hasil pemeriksaan dokumen, ${p.company} menyampaikan ${p.title} ${letterIdentity(p)}.`],
+  findings: (p) => [
+    `Berdasarkan hasil pemeriksaan dokumen, ${p.company} memiliki LHVKI Nomor ${p.field("Nomor LHVKI")} yang diterbitkan oleh ${p.field("Lembaga Penerbit")} pada tanggal ${p.field("Tanggal Terbit")} dan berlaku sampai dengan ${p.field("Berlaku Sampai")}.`,
+  ],
   conclusion: (p) =>
-    `Berdasarkan hasil verifikasi dokumen, ${p.company} ${p.memenuhi ? "telah menyampaikan" : "belum menyampaikan secara lengkap"} ${p.title}. Dengan demikian, aspek ini dinyatakan ${status(p)} sebagai dokumen pendukung.`,
+    `Berdasarkan hasil verifikasi dokumen, ${p.company} ${p.memenuhi ? "telah menyampaikan" : "belum menyampaikan secara lengkap"} LHVKI Nomor ${p.field("Nomor LHVKI")} yang dimiliki sebelumnya. Dengan demikian, aspek ini dinyatakan ${status(p)} sebagai dokumen pendukung.`,
 };
 
 // ---------------------------------------------------------------------------------------------
