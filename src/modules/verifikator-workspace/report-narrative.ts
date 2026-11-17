@@ -51,6 +51,9 @@ export type DocDetail = {
   documentPath: (ctx: NarrativeContext) => string | null | undefined;
   /** Preview image aspect ratio (width/height) — defaults to "0.77" (A4-like) in DocImage; override for documents shaped like a physical card, e.g. NPWP at "18/11". */
   imageAspectRatio?: string;
+  /** "wide": the document image is printed across the page (about half a page tall) under the data,
+   * for drawings that must stay legible, e.g. Gambar Alur Proses Produksi. */
+  imageLayout?: "wide";
   intro: (ctx: NarrativeContext) => string[];
   fields: (ctx: NarrativeContext) => DocField[];
   findings: (ctx: NarrativeContext) => string[];

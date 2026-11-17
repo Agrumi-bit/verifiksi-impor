@@ -333,6 +333,41 @@ export function DocImage({
   );
 }
 
+/** A drawing printed across the page, about half an A4 page tall, whole (contain, never cropped). */
+export function WideDocImage({ path, label }: { path: string | null | undefined; label: string }) {
+  const url = fileUrl(path);
+  const isImage = path ? /\.(jpg|jpeg|jfif|png|webp)$/i.test(path) : false;
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const box = { width: "100%", height: 470, marginTop: 14, borderRadius: 10, background: "#fff", border: "1px solid #d9e6da", overflow: "hidden" } as const;
+  if (!url) {
+    return (
+      <div style={{ ...box, border: "1px dashed #c8dbc9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10.5, color: "#5a7a63" }}>
+        Dokumen belum diunggah
+      </div>
+    );
+  }
+  if (!isImage && thumbFailed) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" style={{ ...box, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "#5a7a63", textDecoration: "none" }}>
+        <MaterialIcon name="picture_as_pdf" style={{ fontSize: 32 }} />
+        <span style={{ fontSize: 10 }}>Lihat Dokumen PDF</span>
+      </a>
+    );
+  }
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" style={{ ...box, display: "block", padding: 6 }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={isImage ? `${url}&variant=report` : `${thumbnailUrl(path)}&width=1600`}
+        alt={label}
+        decoding="async"
+        style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+        onError={isImage ? undefined : () => setThumbFailed(true)}
+      />
+    </a>
+  );
+}
+
 export function Badge({ children, color, bg }: { children: ReactNode; color: string; bg: string }) {
   return (
     <span style={{ background: bg, color, fontSize: 8.5, fontWeight: 700, padding: "2px 8px", borderRadius: 9, whiteSpace: "nowrap" }}>
@@ -1825,14 +1860,25 @@ export function DocumentVerificationReport({ assignmentId, backHref, basePath = 
                               {p}
                             </p>
                           ))}
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 200px", gap: 20 }}>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                              {doc.fields(ctx).map((f) => (
-                                <FieldRow key={f.label} label={f.label} value={f.value} ok={f.ok} pending={isPending} />
-                              ))}
+                          {doc.imageLayout === "wide" ? (
+                            <>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                                {doc.fields(ctx).map((f) => (
+                                  <FieldRow key={f.label} label={f.label} value={f.value} ok={f.ok} pending={isPending} />
+                                ))}
+                              </div>
+                              <WideDocImage path={doc.documentPath(ctx)} label={doc.title} />
+                            </>
+                          ) : (
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 200px", gap: 20 }}>
+                              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                {doc.fields(ctx).map((f) => (
+                                  <FieldRow key={f.label} label={f.label} value={f.value} ok={f.ok} pending={isPending} />
+                                ))}
+                              </div>
+                              <DocImage path={doc.documentPath(ctx)} label={doc.title} aspectRatio={doc.imageAspectRatio} />
                             </div>
-                            <DocImage path={doc.documentPath(ctx)} label={doc.title} aspectRatio={doc.imageAspectRatio} />
-                          </div>
+                          )}
                           {/* The verifikator's own observation replaces the standard findings text. */}
                           {!verifierNote &&
                             doc.findings(ctx).map((p, pi) => (

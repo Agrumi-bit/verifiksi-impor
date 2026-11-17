@@ -202,6 +202,7 @@ function vkiSupportDoc(row: ReportRow): DocDetail | null {
       },
     };
   }
+  if (row.key === "vki-support:gambar-alur-proses") return { ...genericDoc(row), imageLayout: "wide" };
   return null;
 }
 
